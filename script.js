@@ -57,6 +57,7 @@ let activeChatChannel = 'geral';
 let refreshTimer = null;
 let refreshInProgress = false;
 let documentRecords = loadDocumentRecords();
+window.editingDocId = null;
 
 const chatChannels = {
   geral: "Chat geral",
@@ -406,7 +407,7 @@ function setupAutoRefresh() {
     if (document.visibilityState === "visible") {
       refreshFromSupabase();
     }
-  }, 2000);
+  }, 15000);
 }
 
 function setupRealtime() {
@@ -583,19 +584,21 @@ async function lerDenuncia(id) {
       renderAll();
     } else {
       try {
-        const { error } = await supabaseClient
+        const { data: updated, error } = await supabaseClient
           .from(TABLES.denuncias)
           .update({ status: "Lida" })
-          .eq("id", id);
+          .eq("id", id)
+          .select()
+          .single();
         
-        if (error) throw error;
+        if (error || !updated) throw error || new Error("Nenhuma linha alterada.");
         
         denuncia.status = "Lida";
         saveLocalData();
         renderAll();
       } catch (err) {
         console.error("Erro ao atualizar status da denúncia no Supabase:", err);
-        showModal("Erro", "Erro ao atualizar o status no banco de dados. Verifique a conexão ou as permissões.", "error");
+        showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada. Você precisa rodar o script SQL de UPDATE no painel do Supabase para consertar as permissões.", "error");
       }
     }
   }
@@ -657,7 +660,11 @@ function renderDocumentRecords() {
       <article class="item-card">
         <div class="item-topline">
           <p class="item-title">${escapeHtml(documentLabels[item.type] || item.type)}</p>
-          <span class="tag">${escapeHtml(item.createdAt)}</span>
+          <div>
+            <span class="tag">${escapeHtml(item.createdAt)}</span>
+            <button type="button" class="tag" style="cursor: pointer; border: none; margin-left: 6px; background: var(--teal-surface); color: var(--teal-dark);" onclick="editarDocumento('${item.id}')">Editar</button>
+            <button type="button" class="tag alert" style="cursor: pointer; border: none; margin-left: 6px;" onclick="excluirDocumento('${item.id}')">Excluir</button>
+          </div>
         </div>
         <p>${escapeHtml(item.summary)}</p>
         <p class="item-meta">${escapeHtml(item.details)}</p>
@@ -737,6 +744,16 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
     document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
     document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
+
+    // Cancela a edição se o usuário trocar de aba de documento
+    if (window.editingDocId) {
+      window.editingDocId = null;
+      document.querySelectorAll("[data-doc-form]").forEach(form => {
+        form.reset();
+        const btn = form.querySelector("button[type='submit']");
+        if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+      });
+    }
   });
 });
 
@@ -752,13 +769,31 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
       .map(([key, value]) => `${key}: ${value}`)
       .join(" | ");
 
-    documentRecords.unshift({
-      id: crypto.randomUUID(),
-      type: event.currentTarget.dataset.docForm,
-      summary: String(collaborator),
-      details: details || "Registro salvo",
-      createdAt: todayLabel(),
-    });
+    if (window.editingDocId) {
+      // Atualiza o documento existente
+      const index = documentRecords.findIndex(d => d.id === window.editingDocId);
+      if (index > -1) {
+        documentRecords[index] = {
+          ...documentRecords[index],
+          summary: String(collaborator),
+          details: details || "Registro salvo",
+          formData: Object.fromEntries(entries),
+        };
+      }
+      window.editingDocId = null;
+      const btn = event.currentTarget.querySelector("button[type='submit']");
+      if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+    } else {
+      // Cria um novo documento
+      documentRecords.unshift({
+        id: crypto.randomUUID(),
+        type: event.currentTarget.dataset.docForm,
+        summary: String(collaborator),
+        details: details || "Registro salvo",
+        formData: Object.fromEntries(entries),
+        createdAt: todayLabel(),
+      });
+    }
 
     saveDocumentRecords();
     renderDocumentRecords();
@@ -866,3 +901,42 @@ if (setupLogin()) {
 
 // Vincula a função globalmente ao escopo de janela (window) para que o atributo onclick do HTML consiga disparar a leitura.
 window.lerDenuncia = lerDenuncia;
+
+// Lógica para preparar os formulários com os dados de um documento existente
+window.editarDocumento = function(id) {
+  const doc = documentRecords.find(d => d.id === id);
+  if (!doc) return;
+
+  window.editingDocId = id;
+
+  document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
+  document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
+  
+  const tabButton = document.querySelector(`.doc-tab[data-doc="${doc.type}"]`);
+  if (tabButton) tabButton.classList.add("active");
+  
+  const viewElement = document.getElementById(`doc-${doc.type}`);
+  if (viewElement) viewElement.classList.add("active");
+
+  const form = document.querySelector(`form[data-doc-form="${doc.type}"]`);
+  if (form && doc.formData) {
+    Object.entries(doc.formData).forEach(([key, value]) => {
+      if (form.elements[key]) form.elements[key].value = value;
+    });
+    const btn = form.querySelector("button[type='submit']");
+    if (btn) {
+      if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+      btn.textContent = "Salvar alterações";
+    }
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+
+// Lógica de exclusão rápida
+window.excluirDocumento = function(id) {
+  if (confirm("Tem certeza que deseja excluir este registro?")) {
+    documentRecords = documentRecords.filter(d => d.id !== id);
+    saveDocumentRecords();
+    renderDocumentRecords();
+  }
+};
