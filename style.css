@@ -989,3 +989,71 @@ form[data-public-denuncia="true"] .primary-button {
     padding: 12px 14px;
   }
 }
+
+/* ==========================================================================
+   MODAL CUSTOMIZADO
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 24, 22, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 24px;
+  opacity: 0;
+  animation: modalFadeIn 0.2s forwards ease-out;
+}
+
+@keyframes modalFadeIn {
+  to { opacity: 1; }
+}
+
+.modal-card {
+  width: min(100%, 480px);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  transform: scale(0.95);
+  animation: modalScaleUp 0.2s forwards ease-out;
+}
+
+@keyframes modalScaleUp {
+  to { transform: scale(1); }
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.modal-header.error { color: var(--danger); }
+.modal-header.info { color: var(--teal-dark); }
+
+.modal-body {
+  padding: 24px;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  background: var(--surface-soft);
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-footer .primary-button {
+  width: auto;
+  min-height: 40px;
+  padding: 0 24px;
+}

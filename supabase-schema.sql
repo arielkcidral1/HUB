@@ -44,6 +44,7 @@ alter table public.hub_vagas enable row level security;
 
 drop policy if exists "hub_denuncias_public_read" on public.hub_denuncias;
 drop policy if exists "hub_denuncias_public_insert" on public.hub_denuncias;
+drop policy if exists "hub_denuncias_public_update" on public.hub_denuncias;
 drop policy if exists "hub_chat_public_read" on public.hub_chat_messages;
 drop policy if exists "hub_chat_public_insert" on public.hub_chat_messages;
 drop policy if exists "hub_malotes_public_read" on public.hub_malotes;
@@ -53,6 +54,7 @@ drop policy if exists "hub_vagas_public_insert" on public.hub_vagas;
 
 create policy "hub_denuncias_public_read" on public.hub_denuncias for select to anon, authenticated using (true);
 create policy "hub_denuncias_public_insert" on public.hub_denuncias for insert to anon, authenticated with check (true);
+create policy "hub_denuncias_public_update" on public.hub_denuncias for update to anon, authenticated using (true);
 create policy "hub_chat_public_read" on public.hub_chat_messages for select to anon, authenticated using (true);
 create policy "hub_chat_public_insert" on public.hub_chat_messages for insert to anon, authenticated with check (true);
 create policy "hub_malotes_public_read" on public.hub_malotes for select to anon, authenticated using (true);
@@ -61,7 +63,7 @@ create policy "hub_vagas_public_read" on public.hub_vagas for select to anon, au
 create policy "hub_vagas_public_insert" on public.hub_vagas for insert to anon, authenticated with check (true);
 
 grant usage on schema public to anon, authenticated;
-grant select, insert on public.hub_denuncias to anon, authenticated;
+grant select, insert, update on public.hub_denuncias to anon, authenticated;
 grant select, insert on public.hub_chat_messages to anon, authenticated;
 grant select, insert on public.hub_malotes to anon, authenticated;
 grant select, insert on public.hub_vagas to anon, authenticated;

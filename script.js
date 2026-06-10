@@ -234,6 +234,28 @@ function badgeClass(value) {
   return ["Urgente", "Alta", "Aberta"].includes(value) ? "tag alert" : "tag";
 }
 
+function showModal(title, text, type = "info") {
+  const existing = document.getElementById("custom-modal");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "custom-modal";
+  overlay.className = "modal-overlay";
+
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header ${type}">
+        ${escapeHtml(title)}
+      </div>
+      <div class="modal-body">${escapeHtml(text)}</div>
+      <div class="modal-footer">
+        <button class="primary-button" onclick="document.getElementById('custom-modal').remove()">Entendi</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
 function formatFileSize(bytes) {
   if (!bytes) return "";
   if (bytes < 1024) return `${bytes} B`;
@@ -458,7 +480,7 @@ async function addItem(collection, values) {
   } catch (error) {
     console.error("Erro ao salvar no Supabase:", error);
     setSyncStatus("Erro no Supabase", false);
-    alert("Nao foi possivel salvar no Supabase. Confira se as tabelas hub_* existem no projeto EIXO.");
+    showModal("Erro ao Salvar", "Nao foi possivel salvar no Supabase. Confira se as tabelas hub_* existem no projeto EIXO.", "error");
   }
 }
 
@@ -525,8 +547,12 @@ async function lerDenuncia(id) {
   const denuncia = data.denuncias.find(item => String(item.id) === String(id));
   if (!denuncia) return;
 
-  // Mostra o relato em formato de alerta nativo do navegador
-  alert(`Visualização da Denúncia\n-------------------------------\nCategoria: ${denuncia.categoria}\nRecebida em: ${denuncia.createdAt}\nStatus Atual: ${denuncia.status}\n\nRelato:\n"${denuncia.descricao}"`);
+  // Mostra o relato em formato de modal customizado
+  showModal(
+    "Visualização da Denúncia",
+    `Categoria: ${denuncia.categoria}\nRecebida em: ${denuncia.createdAt}\nStatus Atual: ${denuncia.status}\n\nRelato:\n"${denuncia.descricao}"`,
+    "info"
+  );
 
   // Se a denúncia ainda constar como Não lida ("Aberta"), movemos para "Lida"
   if (denuncia.status === "Aberta") {
@@ -548,6 +574,7 @@ async function lerDenuncia(id) {
         renderAll();
       } catch (err) {
         console.error("Erro ao atualizar status da denúncia no Supabase:", err);
+        showModal("Erro", "Erro ao atualizar o status no banco de dados. Verifique a conexão ou as permissões.", "error");
       }
     }
   }
@@ -772,7 +799,7 @@ if (chatForm) {
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
       setSyncStatus("Erro no anexo", false);
-      alert("Nao foi possivel enviar o arquivo. Confira o bucket hub-chat-files no Supabase.");
+      showModal("Erro no Anexo", "Nao foi possivel enviar o arquivo. Confira o bucket hub-chat-files no Supabase.", "error");
     }
   });
 }
