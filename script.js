@@ -513,9 +513,9 @@ function renderCards(targetId, items, template) {
 }
 
 function renderDashboard() {
-  if (!document.getElementById("metric-denuncias")) return;
-
-  document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status !== "Lida" && item.status !== "Fechada").length;
+  if (document.getElementById("metric-denuncias")) {
+    document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status !== "Lida" && item.status !== "Fechada").length;
+  }
   if (document.getElementById("metric-comunicados")) {
     document.getElementById("metric-comunicados").textContent = data.comunicados.length;
   }
@@ -529,54 +529,23 @@ function renderDashboard() {
     document.getElementById("metric-documentos").textContent = documentRecords.length;
   }
 
-  // Filtra itens prioritários (apenas denúncias abertas/urgentes e anexos recentes)
-  const priorityItems = [
-    ...data.denuncias
-      .filter(item => item.status === "Aberta" || item.status === "Urgente")
-      .map((item) => ({
-        title: `Denúncia: ${item.categoria}`,
-        text: item.descricao,
-        tag: item.status,
-        date: item.createdAt,
-      })),
-    ...data.comunicados
-      .filter((item) => item.arquivo)
-      .map((item) => ({ 
-        title: `Arquivo: ${item.arquivo.name}`, 
-        text: item.mensagem || "Anexo compartilhado no chat", 
-        tag: "RH", 
-        date: item.createdAt 
-      })),
-  ].slice(0, 6);
+  const target = document.getElementById("dashboard-nao-lidas");
+  if (!target) return;
 
-  // Compila atividades de todos os outros módulos na lista de recentes
-  const recentItems = [
-    ...data.malotes.map((item) => ({ title: `Malote: ${item.destino}`, text: item.epis, tag: item.status, date: item.createdAt })),
-    ...data.vagas.map((item) => ({ title: `Vaga: ${item.cargo}`, text: item.projeto, tag: item.status, date: item.createdAt })),
-    ...documentRecords.map((item) => ({ title: `Doc: ${documentLabels[item.type] || item.type}`, text: item.summary, tag: "Registro", date: item.createdAt }))
-  ].slice(0, 6);
+  const naoLidas = data.denuncias.filter(item => item.status === "Aberta");
+  
+  const cardTemplate = (item) => `
+    <article class="item-card" style="cursor: pointer;" onclick="lerDenuncia('${item.id}')">
+      <div class="item-topline">
+        <p class="item-title">${escapeHtml(item.categoria || "Denúncia")}</p>
+        <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
+      </div>
+      <p>${escapeHtml(item.descricao.substring(0, 120))}${item.descricao.length > 120 ? '...' : ''}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt)}</p>
+    </article>
+  `;
 
-  const priorityTarget = document.getElementById("priority-list");
-  if (priorityTarget) {
-    if (priorityItems.length === 0) {
-      priorityTarget.innerHTML = '<p class="empty-state">Nenhuma pendência prioritária no momento.</p>';
-    } else {
-      priorityTarget.innerHTML = priorityItems
-        .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${badgeClass(item.tag)}">${escapeHtml(item.tag)}</span></div><p>${escapeHtml(item.text)}</p><p class="item-meta" style="margin-top: 6px; font-size: 12px;">${escapeHtml(item.date)}</p></li>`)
-        .join("");
-    }
-  }
-
-  const recentTarget = document.getElementById("recent-list");
-  if (recentTarget) {
-    if (recentItems.length === 0) {
-      recentTarget.innerHTML = '<p class="empty-state">Nenhuma atividade recente registrada.</p>';
-    } else {
-      recentTarget.innerHTML = recentItems
-        .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${badgeClass(item.tag)}">${escapeHtml(item.tag)}</span></div><p>${escapeHtml(item.text)}</p><p class="item-meta" style="margin-top: 6px; font-size: 12px;">${escapeHtml(item.date)}</p></li>`)
-        .join("");
-    }
-  }
+  renderCards("dashboard-nao-lidas", naoLidas, cardTemplate);
 }
 
 // Lógica de abertura de denúncia para leitura e transição de estado automática
