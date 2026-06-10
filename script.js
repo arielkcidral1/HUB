@@ -269,15 +269,11 @@ function formatFileSize(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function encodeChatMessage(channel, message) {
-  return `[hub-channel:${channel || "geral"}] ${message || ""}`.trim();
-}
-
 function parseChatMessage(row) {
   const text = row.mensagem || "";
   const match = text.match(/^\[hub-channel:([^\]]+)\]\s*/);
   return {
-    canal: row.canal || match?.[1] || "geral",
+    canal: match ? match[1] : (row.canal || "geral"),
     mensagem: match ? text.slice(match[0].length) : text,
   };
 }
@@ -367,7 +363,8 @@ function toDbPayload(collection, values) {
   if (collection === "comunicados") {
     return {
       autor: values.autor,
-      mensagem: encodeChatMessage(values.canal || "geral", values.mensagem || ""),
+      canal: values.canal || "geral",
+      mensagem: values.mensagem || "",
       arquivo_nome: values.arquivo?.name || null,
       arquivo_tamanho: values.arquivo?.size || null,
       arquivo_tipo: values.arquivo?.type || null,
@@ -521,9 +518,6 @@ function renderDashboard() {
   document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status !== "Lida" && item.status !== "Fechada").length;
   if (document.getElementById("metric-comunicados")) {
     document.getElementById("metric-comunicados").textContent = data.comunicados.length;
-  }
-  if (document.getElementById("chat-total")) {
-    document.getElementById("chat-total").textContent = data.comunicados.length;
   }
   if (document.getElementById("metric-malotes")) {
     document.getElementById("metric-malotes").textContent = data.malotes.filter((item) => item.status === "Em transito").length;
@@ -746,13 +740,6 @@ function renderChat() {
   if (title) title.textContent = chatChannels[activeChatChannel] || "Chat geral";
   if (subtitle) subtitle.textContent = activeChatChannel === "geral" ? "Mensagens e arquivos compartilhados pela equipe" : `Conversa com ${chatChannels[activeChatChannel]}`;
 
-  if (document.getElementById("chat-total")) {
-    document.getElementById("chat-total").textContent = data.comunicados.filter((item) => (item.canal || "geral") === "geral").length;
-  }
-  document.querySelectorAll("[data-channel-count]").forEach((counter) => {
-    const channel = counter.dataset.channelCount;
-    counter.textContent = data.comunicados.filter((item) => (item.canal || "geral") === channel).length;
-  });
 
   const messages = data.comunicados.filter((item) => (item.canal || "geral") === activeChatChannel);
 
