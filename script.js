@@ -294,12 +294,9 @@ async function loadFromSupabase() {
 
     data = Object.fromEntries(requests);
     saveLocalData();
-    setSyncStatus("Supabase EIXO online", true);
     renderAll();
   } catch (error) {
-    console.error("Erro ao carregar Supabase:", error);
-    setSyncStatus("Supabase pendente", false);
-    renderAll();
+
   }
 }
 
