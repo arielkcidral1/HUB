@@ -263,10 +263,23 @@
                     <a class="secondary-link" href="docs/checklist-admissao-fredy-pneus-filiais.xlsx" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>Filial<input name="filial" required /></label>
-                  <label>Cargo<input name="cargo" required /></label>
-                  <label>Data de admissao<input name="data" type="date" /></label>
-                  <label>Etapas concluidas<textarea name="observacoes" rows="4" placeholder="Documentos, exames, contrato, beneficios..."></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>CPF<input name="cpf" required /></label>
+                    <label>Cargo<input name="cargo" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Filial / Unidade<input name="filial" required /></label>
+                    <label>Data de admissao<input name="data" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Exame Admissional<select name="exame_admissional"><option>Pendente</option><option>Apto</option><option>Inapto</option></select></label>
+                    <label>Entrega de Documentos<select name="entrega_documentos"><option>Pendente</option><option>Completa</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Entrega de EPIs / Uniforme<select name="entrega_epis"><option>Nao se aplica</option><option>Pendente</option><option>Entregue</option></select></label>
+                    <label>Contrato Assinado<select name="contrato_assinado"><option>Pendente</option><option>Assinado</option></select></label>
+                  </div>
+                  <label>Observacoes gerais<textarea name="observacoes" rows="3" placeholder="Informacoes adicionais sobre a integracao..."></textarea></label>
                   <button class="primary-button" type="submit">Salvar checklist</button>
                 </form>
               </section>
@@ -281,10 +294,17 @@
                     <a class="secondary-link" href="docs/entrevista-ausencia-fredy-pneus.docx" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>Filial / setor<input name="filial" /></label>
-                  <label>Periodo da ausencia<input name="periodo" /></label>
-                  <label>Motivo informado<textarea name="motivo" rows="4" required></textarea></label>
-                  <label>Acao combinada<textarea name="acao" rows="3"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Filial / Setor<input name="filial" required /></label>
+                    <label>Data(s) da ausencia<input name="data_ausencia" required placeholder="Ex: 12/04 a 14/04" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Tipo de ocorrencia<select name="tipo_ocorrencia"><option>Falta justificada (Atestado)</option><option>Falta injustificada</option><option>Atraso</option><option>Saida antecipada</option></select></label>
+                    <label>Apresentou Comprovante?<select name="apresentou_comprovante"><option>Sim</option><option>Nao</option><option>Nao se aplica</option></select></label>
+                  </div>
+                  <label>Motivo detalhado (Justificativa)<textarea name="motivo" rows="3" required></textarea></label>
+                  <label>Medida Adotada<select name="medida_adotada"><option>Orientacao verbal</option><option>Advertencia verbal</option><option>Advertencia escrita</option><option>Suspensao</option><option>Apenas registro (Abonado)</option></select></label>
+                  <label>Observacoes do Gestor / RH<textarea name="acao" rows="2"></textarea></label>
                   <button class="primary-button" type="submit">Salvar entrevista</button>
                 </form>
               </section>
@@ -299,9 +319,24 @@
                     <a class="secondary-link" href="docs/entrevista-de-desligamento.doc" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>Cargo<input name="cargo" /></label>
-                  <label>Motivo do desligamento<select name="motivo"><option>Pedido de demissao</option><option>Desligamento pela empresa</option><option>Termino de contrato</option><option>Outro</option></select></label>
-                  <label>Feedback do colaborador<textarea name="feedback" rows="5"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Cargo<input name="cargo" required /></label>
+                    <label>Filial / Setor<input name="filial" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Data de Admissao<input name="data_admissao" type="date" required /></label>
+                    <label>Data de Desligamento<input name="data_desligamento" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Iniciativa do Desligamento<select name="iniciativa_desligamento"><option>Pedido de demissao</option><option>Demissao sem justa causa</option><option>Demissao com justa causa</option><option>Termino de contrato</option></select></label>
+                    <label>Motivo Principal<select name="motivo"><option>Nova oportunidade</option><option>Insatisfacao com o salario</option><option>Ambiente de trabalho</option><option>Relacionamento com gestor</option><option>Desempenho/Produtividade</option><option>Reestruturacao/Corte</option><option>Outros</option></select></label>
+                  </div>
+                  <label>O que mais gostava na empresa?<textarea name="pontos_positivos" rows="2"></textarea></label>
+                  <label>O que poderia ser melhorado? (Ambiente, processos, lideranca)<textarea name="pontos_melhoria" rows="2"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Recomendaria a empresa para amigos?<select name="recomendaria"><option>Sim</option><option>Nao</option></select></label>
+                  </div>
+                  <label>Outros comentarios / Feedback final<textarea name="feedback" rows="3"></textarea></label>
                   <button class="primary-button" type="submit">Salvar desligamento</button>
                 </form>
               </section>
@@ -316,9 +351,17 @@
                     <a class="secondary-link" href="docs/formulario-adesao-plano-saude-odonto.docx" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>CPF<input name="cpf" /></label>
-                  <label>Plano<select name="plano"><option>Saude</option><option>Odonto</option><option>Saude e odonto</option></select></label>
-                  <label>Dependentes<textarea name="dependentes" rows="4" placeholder="Nome, parentesco e documento"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 16px;">
+                    <label>CPF<input name="cpf" required /></label>
+                    <label>RG<input name="rg" /></label>
+                    <label>Data de Nasc.<input name="data_nasc" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Tipo de Solicitacao<select name="tipo_solicitacao"><option>Inclusao Novo Titular</option><option>Inclusao de Dependente</option><option>Cancelamento/Exclusao</option></select></label>
+                    <label>Plano Solicitado<select name="plano"><option>Plano de Saude</option><option>Plano Odontologico</option><option>Saude + Odonto</option></select></label>
+                  </div>
+                  <label>Dados dos Dependentes (Nome completo, CPF, Parentesco e Data de Nasc.)<textarea name="dependentes" rows="4" placeholder="Ex: Maria da Silva, CPF 000.000.000-00, Conjuge, 10/05/1990"></textarea></label>
+                  <label>Autorizacao de Desconto<select name="autoriza_desconto"><option>Ciente e autorizo o desconto em folha</option><option>Nao se aplica (cancelamento)</option></select></label>
                   <button class="primary-button" type="submit">Salvar adesao</button>
                 </form>
               </section>
@@ -333,10 +376,22 @@
                     <a class="secondary-link" href="docs/formulario-feedback-operacional.docx" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>Lider<input name="lider" /></label>
-                  <label>Pontos positivos<textarea name="positivos" rows="3"></textarea></label>
-                  <label>Pontos de melhoria<textarea name="melhorias" rows="3"></textarea></label>
-                  <label>Plano de acao<textarea name="acao" rows="3"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Cargo / Funcao<input name="cargo" required /></label>
+                    <label>Gestor / Lider Avaliador<input name="lider" required /></label>
+                  </div>
+                  <label>Data do Feedback<input name="data_feedback" type="date" required /></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Assiduidade e Pontualidade<select name="aval_assiduidade"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                    <label>Produtividade e Qualidade<select name="aval_produtividade"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Trabalho em Equipe<select name="aval_equipe"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                    <label>Seguranca e uso de EPIs<select name="aval_seguranca"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                  </div>
+                  <label>Principais Pontos Fortes (O que o colaborador faz bem?)<textarea name="positivos" rows="3" required></textarea></label>
+                  <label>Pontos a Desenvolver (O que precisa melhorar?)<textarea name="melhorias" rows="3" required></textarea></label>
+                  <label>Plano de Acao / Metas para o proximo ciclo<textarea name="acao" rows="3" required></textarea></label>
                   <button class="primary-button" type="submit">Salvar feedback</button>
                 </form>
               </section>
@@ -351,9 +406,13 @@
                     <a class="secondary-link" href="docs/formulario-feedback-fredy-pneus.docx" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>Setor<input name="setor" /></label>
-                  <label>Avaliacao geral<select name="avaliacao"><option>Excelente</option><option>Bom</option><option>Regular</option><option>Precisa melhorar</option></select></label>
-                  <label>Observacoes<textarea name="observacoes" rows="5"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Setor<input name="setor" required /></label>
+                    <label>Data do Registro<input name="data_registro" type="date" required /></label>
+                  </div>
+                  <label>Tipo de Feedback<select name="tipo_feedback"><option>Orientacao / Alinhamento de rotina</option><option>Elogio / Reconhecimento</option><option>Correcao Disciplinar</option></select></label>
+                  <label>Situacao / Comportamento Observado (Descreva o fato)<textarea name="situacao" rows="4" required></textarea></label>
+                  <label>Reacao do Colaborador e Compromisso Assumido<textarea name="observacoes" rows="4" required></textarea></label>
                   <button class="primary-button" type="submit">Salvar feedback</button>
                 </form>
               </section>
