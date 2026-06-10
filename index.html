@@ -219,63 +219,133 @@
         </section>
 
         <section class="view" id="documentos">
-          <div class="single-workspace">
-            <div class="panel">
+          <div class="document-workspace">
+            <aside class="panel doc-menu">
               <div class="panel-header split-header">
                 <div>
-                  <h2>Documentos e formularios</h2>
-                  <p class="item-meta">Modelos oficiais para rotinas de RH</p>
+                  <h2>Rotinas RH</h2>
+                  <p class="item-meta">Formularios digitais</p>
                 </div>
               </div>
+              <button class="doc-tab active" data-doc="admissao" type="button">Checklist de Admissao</button>
+              <button class="doc-tab" data-doc="ausencia" type="button">Entrevista ausencia</button>
+              <button class="doc-tab" data-doc="desligamento" type="button">Entrevista desligamento</button>
+              <button class="doc-tab" data-doc="beneficios" type="button">Plano saude e odonto</button>
+              <button class="doc-tab" data-doc="feedback-operacional" type="button">Feedback operacional</button>
+              <button class="doc-tab" data-doc="feedback-fredy" type="button">Feedback Fredy Pneus</button>
+            </aside>
 
-              <div class="document-grid">
-                <article class="document-card">
-                  <div>
-                    <p class="item-title">Checklist de Admissao - filiais</p>
-                    <p class="item-meta">Planilha XLSX para controle de admissao</p>
+            <div class="doc-content">
+              <section class="doc-view active" id="doc-admissao">
+                <form class="panel doc-form" data-doc-form="admissao">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Checklist de Admissao</h2>
+                      <p class="item-meta">Controle de documentos e etapas de entrada</p>
+                    </div>
+                    <a class="secondary-link" href="docs/checklist-admissao-fredy-pneus-filiais.xlsx" download>Baixar modelo</a>
                   </div>
-                  <a class="secondary-link" href="docs/checklist-admissao-fredy-pneus-filiais.xlsx" download>Baixar</a>
-                </article>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <label>Filial<input name="filial" required /></label>
+                  <label>Cargo<input name="cargo" required /></label>
+                  <label>Data de admissao<input name="data" type="date" /></label>
+                  <label>Etapas concluidas<textarea name="observacoes" rows="4" placeholder="Documentos, exames, contrato, beneficios..."></textarea></label>
+                  <button class="primary-button" type="submit">Salvar checklist</button>
+                </form>
+              </section>
 
-                <article class="document-card">
-                  <div>
-                    <p class="item-title">Entrevista ausencia</p>
-                    <p class="item-meta">Documento DOCX para registro de ausencia</p>
+              <section class="doc-view" id="doc-ausencia">
+                <form class="panel doc-form" data-doc-form="ausencia">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Entrevista ausencia</h2>
+                      <p class="item-meta">Registro de ausencia e plano de acompanhamento</p>
+                    </div>
+                    <a class="secondary-link" href="docs/entrevista-ausencia-fredy-pneus.docx" download>Baixar modelo</a>
                   </div>
-                  <a class="secondary-link" href="docs/entrevista-ausencia-fredy-pneus.docx" download>Baixar</a>
-                </article>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <label>Filial / setor<input name="filial" /></label>
+                  <label>Periodo da ausencia<input name="periodo" /></label>
+                  <label>Motivo informado<textarea name="motivo" rows="4" required></textarea></label>
+                  <label>Acao combinada<textarea name="acao" rows="3"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar entrevista</button>
+                </form>
+              </section>
 
-                <article class="document-card">
-                  <div>
-                    <p class="item-title">Entrevista de Desligamento</p>
-                    <p class="item-meta">Modelo DOC para desligamentos</p>
+              <section class="doc-view" id="doc-desligamento">
+                <form class="panel doc-form" data-doc-form="desligamento">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Entrevista de Desligamento</h2>
+                      <p class="item-meta">Registro dos pontos de saida do colaborador</p>
+                    </div>
+                    <a class="secondary-link" href="docs/entrevista-de-desligamento.doc" download>Baixar modelo</a>
                   </div>
-                  <a class="secondary-link" href="docs/entrevista-de-desligamento.doc" download>Baixar</a>
-                </article>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <label>Cargo<input name="cargo" /></label>
+                  <label>Motivo do desligamento<select name="motivo"><option>Pedido de demissao</option><option>Desligamento pela empresa</option><option>Termino de contrato</option><option>Outro</option></select></label>
+                  <label>Feedback do colaborador<textarea name="feedback" rows="5"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar desligamento</button>
+                </form>
+              </section>
 
-                <article class="document-card">
-                  <div>
-                    <p class="item-title">Adesao plano de saude e odonto</p>
-                    <p class="item-meta">Formulario DOCX para beneficios</p>
+              <section class="doc-view" id="doc-beneficios">
+                <form class="panel doc-form" data-doc-form="beneficios">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Adesao plano de saude e odonto</h2>
+                      <p class="item-meta">Solicitacao de inclusao em beneficios</p>
+                    </div>
+                    <a class="secondary-link" href="docs/formulario-adesao-plano-saude-odonto.docx" download>Baixar modelo</a>
                   </div>
-                  <a class="secondary-link" href="docs/formulario-adesao-plano-saude-odonto.docx" download>Baixar</a>
-                </article>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <label>CPF<input name="cpf" /></label>
+                  <label>Plano<select name="plano"><option>Saude</option><option>Odonto</option><option>Saude e odonto</option></select></label>
+                  <label>Dependentes<textarea name="dependentes" rows="4" placeholder="Nome, parentesco e documento"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar adesao</button>
+                </form>
+              </section>
 
-                <article class="document-card">
-                  <div>
-                    <p class="item-title">Feedback operacional</p>
-                    <p class="item-meta">Formulario DOCX de feedback operacional</p>
+              <section class="doc-view" id="doc-feedback-operacional">
+                <form class="panel doc-form" data-doc-form="feedback-operacional">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Feedback operacional</h2>
+                      <p class="item-meta">Acompanhamento de desempenho operacional</p>
+                    </div>
+                    <a class="secondary-link" href="docs/formulario-feedback-operacional.docx" download>Baixar modelo</a>
                   </div>
-                  <a class="secondary-link" href="docs/formulario-feedback-operacional.docx" download>Baixar</a>
-                </article>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <label>Lider<input name="lider" /></label>
+                  <label>Pontos positivos<textarea name="positivos" rows="3"></textarea></label>
+                  <label>Pontos de melhoria<textarea name="melhorias" rows="3"></textarea></label>
+                  <label>Plano de acao<textarea name="acao" rows="3"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar feedback</button>
+                </form>
+              </section>
 
-                <article class="document-card">
-                  <div>
-                    <p class="item-title">Feedback Fredy Pneus</p>
-                    <p class="item-meta">Formulario DOCX de feedback geral</p>
+              <section class="doc-view" id="doc-feedback-fredy">
+                <form class="panel doc-form" data-doc-form="feedback-fredy">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Feedback Fredy Pneus</h2>
+                      <p class="item-meta">Registro geral de feedback e acompanhamento</p>
+                    </div>
+                    <a class="secondary-link" href="docs/formulario-feedback-fredy-pneus.docx" download>Baixar modelo</a>
                   </div>
-                  <a class="secondary-link" href="docs/formulario-feedback-fredy-pneus.docx" download>Baixar</a>
-                </article>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <label>Setor<input name="setor" /></label>
+                  <label>Avaliacao geral<select name="avaliacao"><option>Excelente</option><option>Bom</option><option>Regular</option><option>Precisa melhorar</option></select></label>
+                  <label>Observacoes<textarea name="observacoes" rows="5"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar feedback</button>
+                </form>
+              </section>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <h2>Registros salvos</h2>
+                </div>
+                <div class="card-list" id="document-records"></div>
               </div>
             </div>
           </div>

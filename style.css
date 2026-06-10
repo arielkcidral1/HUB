@@ -621,6 +621,52 @@ textarea:focus {
   gap: 12px;
 }
 
+.document-workspace {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.doc-menu {
+  align-self: start;
+}
+
+.doc-tab {
+  width: 100%;
+  min-height: 42px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdfc;
+  color: var(--ink);
+  padding: 0 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.doc-tab.active,
+.doc-tab:hover {
+  border-color: rgba(15, 118, 110, 0.35);
+  background: #e4f3ef;
+}
+
+.doc-content {
+  display: grid;
+  gap: 18px;
+}
+
+.doc-view {
+  display: none;
+}
+
+.doc-view.active {
+  display: block;
+}
+
+.doc-form {
+  display: grid;
+}
+
 .document-card {
   display: flex;
   align-items: center;
@@ -661,7 +707,8 @@ textarea:focus {
   .metric-grid,
   .section-grid,
   .workspace,
-  .chat-workspace {
+  .chat-workspace,
+  .document-workspace {
     grid-template-columns: 1fr;
   }
 

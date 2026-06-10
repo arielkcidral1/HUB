@@ -1,4 +1,5 @@
 const STORAGE_KEY = "hub-rh-data";
+const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const SESSION_KEY = "hub-rh-session";
 const LOGIN_NAME = "ariel";
 const LOGIN_PASSWORD = "arielc";
@@ -51,6 +52,16 @@ const defaultData = {
 
 let data = loadLocalData();
 let supabaseClient = null;
+let documentRecords = loadDocumentRecords();
+
+const documentLabels = {
+  admissao: "Checklist de Admissao",
+  ausencia: "Entrevista ausencia",
+  desligamento: "Entrevista de Desligamento",
+  beneficios: "Adesao plano saude e odonto",
+  "feedback-operacional": "Feedback operacional",
+  "feedback-fredy": "Feedback Fredy Pneus",
+};
 
 function isLoginMatch(value, expected) {
   return String(value || "").trim().toLowerCase() === expected;
@@ -151,6 +162,18 @@ function loadLocalData() {
   } catch {
     return defaultData;
   }
+}
+
+function loadDocumentRecords() {
+  try {
+    return JSON.parse(localStorage.getItem(DOCUMENT_RECORDS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDocumentRecords() {
+  localStorage.setItem(DOCUMENT_RECORDS_KEY, JSON.stringify(documentRecords));
 }
 
 function saveLocalData() {
@@ -411,6 +434,31 @@ function renderAll() {
       <p class="item-meta">${escapeHtml(item.createdAt)}</p>
     </article>
   `);
+
+  renderDocumentRecords();
+}
+
+function renderDocumentRecords() {
+  const target = document.getElementById("document-records");
+  if (!target) return;
+
+  if (!documentRecords.length) {
+    target.innerHTML = '<p class="empty-state">Nenhum registro salvo ainda.</p>';
+    return;
+  }
+
+  target.innerHTML = documentRecords
+    .map((item) => `
+      <article class="item-card">
+        <div class="item-topline">
+          <p class="item-title">${escapeHtml(documentLabels[item.type] || item.type)}</p>
+          <span class="tag">${escapeHtml(item.createdAt)}</span>
+        </div>
+        <p>${escapeHtml(item.summary)}</p>
+        <p class="item-meta">${escapeHtml(item.details)}</p>
+      </article>
+    `)
+    .join("");
 }
 
 function renderChat() {
@@ -452,6 +500,41 @@ document.querySelectorAll(".nav-item").forEach((button) => {
     document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
     document.getElementById(button.dataset.view).classList.add("active");
+  });
+});
+
+document.querySelectorAll(".doc-tab").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
+    document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
+    button.classList.add("active");
+    document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
+  });
+});
+
+document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
+  formElement.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const entries = [...form.entries()].filter(([, value]) => String(value || "").trim());
+    const collaborator = form.get("colaborador") || form.get("cargo") || "Registro sem colaborador";
+    const details = entries
+      .filter(([key]) => key !== "colaborador")
+      .slice(0, 4)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(" | ");
+
+    documentRecords.unshift({
+      id: crypto.randomUUID(),
+      type: event.currentTarget.dataset.docForm,
+      summary: String(collaborator),
+      details: details || "Registro salvo",
+      createdAt: todayLabel(),
+    });
+
+    saveDocumentRecords();
+    renderDocumentRecords();
+    event.currentTarget.reset();
   });
 });
 
