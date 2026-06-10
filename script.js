@@ -869,7 +869,8 @@ const denunciaForm = document.getElementById("denuncia-form");
 if (denunciaForm) {
   denunciaForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.target;
+    const form = new FormData(formElement);
     const message = String(form.get("mensagem") || form.get("descricao") || "").trim();
     if (!message) return;
 
@@ -881,7 +882,7 @@ if (denunciaForm) {
     });
 
     if (success) {
-      event.currentTarget.reset();
+      formElement.reset();
       const feedback = document.getElementById("denuncia-feedback");
       if (feedback) {
         feedback.textContent = "Denuncia enviada com sucesso. Obrigado pelo relato.";
@@ -906,7 +907,8 @@ const chatForm = document.getElementById("chat-form");
 if (chatForm) {
   chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.target;
+    const form = new FormData(formElement);
     const file = form.get("arquivo");
     const message = String(form.get("mensagem") || "").trim();
 
@@ -932,7 +934,7 @@ if (chatForm) {
     });
 
     if (success) {
-      event.currentTarget.reset();
+      formElement.reset();
       document.getElementById("selected-file").textContent = "Nenhum arquivo selecionado";
     }
   });
@@ -942,14 +944,15 @@ const maloteForm = document.getElementById("malote-form");
 if (maloteForm) {
   maloteForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.target;
+    const form = new FormData(formElement);
     const success = await addItem("malotes", {
       destino: form.get("destino"),
       epis: form.get("epis"),
       status: form.get("status"),
     });
     if (success) {
-      event.currentTarget.reset();
+      formElement.reset();
     }
   });
 }
@@ -958,14 +961,15 @@ const vagaForm = document.getElementById("vaga-form");
 if (vagaForm) {
   vagaForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.target;
+    const form = new FormData(formElement);
     const success = await addItem("vagas", {
       cargo: form.get("cargo"),
       projeto: form.get("projeto"),
       status: form.get("status"),
     });
     if (success) {
-      event.currentTarget.reset();
+      formElement.reset();
     }
   });
 }
@@ -974,7 +978,8 @@ const candidaturaForm = document.getElementById("candidatura-form");
 if (candidaturaForm) {
   candidaturaForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.target;
+    const form = new FormData(formElement);
     const vaga_id = form.get("vaga_id");
     const nome = form.get("nome");
     const cpf = form.get("cpf");
@@ -1002,7 +1007,7 @@ if (candidaturaForm) {
 
       const success = await addItem("candidaturas", { vaga_id, nome, cpf, curriculo_url: fileUrl });
       if (success) {
-        event.currentTarget.reset();
+        formElement.reset();
         showModal("Sucesso", "Seu currículo foi enviado com sucesso!", "info");
       }
     } catch (error) {
