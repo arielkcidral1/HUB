@@ -1,4 +1,7 @@
 const STORAGE_KEY = "hub-rh-data";
+const SESSION_KEY = "hub-rh-session";
+const LOGIN_NAME = "ariel";
+const LOGIN_PASSWORD = "arielc";
 const TABLES = {
   denuncias: "hub_denuncias",
   comunicados: "hub_chat_messages",
@@ -48,6 +51,62 @@ const defaultData = {
 
 let data = loadLocalData();
 let supabaseClient = null;
+
+function isLoginMatch(value, expected) {
+  return String(value || "").trim().toLowerCase() === expected;
+}
+
+function isAuthenticated() {
+  return sessionStorage.getItem(SESSION_KEY) === "active";
+}
+
+function showApp() {
+  document.getElementById("login-screen")?.classList.add("is-hidden");
+  document.getElementById("app-shell")?.classList.remove("is-locked");
+}
+
+function showLogin() {
+  document.getElementById("login-screen")?.classList.remove("is-hidden");
+  document.getElementById("app-shell")?.classList.add("is-locked");
+}
+
+function setupLogin() {
+  const loginForm = document.getElementById("login-form");
+  const logoutButton = document.getElementById("logout-button");
+
+  if (!loginForm) return true;
+
+  if (isAuthenticated()) {
+    showApp();
+  } else {
+    showLogin();
+  }
+
+  loginForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const nameOk = isLoginMatch(form.get("nome"), LOGIN_NAME);
+    const passwordOk = isLoginMatch(form.get("senha"), LOGIN_PASSWORD);
+
+    if (!nameOk || !passwordOk) {
+      document.getElementById("login-error").textContent = "Nome ou senha incorretos.";
+      return;
+    }
+
+    sessionStorage.setItem(SESSION_KEY, "active");
+    document.getElementById("login-error").textContent = "";
+    event.currentTarget.reset();
+    showApp();
+    initializeAppData();
+  });
+
+  logoutButton?.addEventListener("click", () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    showLogin();
+  });
+
+  return isAuthenticated();
+}
 
 function getSupabaseClient() {
   const config = window.HUB_SUPABASE;
@@ -459,5 +518,11 @@ if (vagaForm) {
   });
 }
 
-supabaseClient = getSupabaseClient();
-loadFromSupabase();
+function initializeAppData() {
+  supabaseClient = getSupabaseClient();
+  loadFromSupabase();
+}
+
+if (setupLogin()) {
+  initializeAppData();
+}

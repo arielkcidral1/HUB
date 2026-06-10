@@ -7,7 +7,27 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <section class="login-screen" id="login-screen">
+      <form class="login-card" id="login-form">
+        <div class="brand login-brand">
+          <div class="brand-mark">H</div>
+          <div>
+            <strong>HUB</strong>
+            <span>Acesso do RH</span>
+          </div>
+        </div>
+        <label>Nome
+          <input name="nome" autocomplete="username" required />
+        </label>
+        <label>Senha
+          <input name="senha" type="password" autocomplete="current-password" required />
+        </label>
+        <p class="login-error" id="login-error" role="alert"></p>
+        <button class="primary-button" type="submit">Entrar</button>
+      </form>
+    </section>
+
+    <div class="app-shell is-locked" id="app-shell">
       <aside class="sidebar" aria-label="Navegacao principal">
         <div class="brand">
           <div class="brand-mark">H</div>
@@ -36,6 +56,7 @@
             <span class="status-dot"></span>
             <span id="sync-status">Conectando Supabase</span>
           </div>
+          <button class="logout-button" id="logout-button" type="button">Sair</button>
         </header>
 
         <section class="hero-panel" aria-label="Resumo do HUB">
