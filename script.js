@@ -1,4 +1,4 @@
-const STORAGE_KEY = "hub-rh-data";
+﻿const STORAGE_KEY = "hub-rh-data";
 const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const SESSION_KEY = "hub-rh-session";
 const LOGIN_NAME = "ariel";
@@ -25,7 +25,7 @@ const defaultData = {
     {
       id: crypto.randomUUID(),
       autor: "Marina Souza",
-      mensagem: "Revisar pendencias de beneficios, vagas e entregas de EPI.",
+      mensagem: "Revisar pendencias de benefícios, vagas e entregas de EPI.",
       arquivo: null,
       createdAt: "Hoje",
     },
@@ -261,7 +261,7 @@ function mapRows(collection, rows) {
       identificacao: row.identificacao,
       categoria: row.categoria,
       descricao: row.descricao,
-      status: row.status,
+      status: row.status || "Aberta", // Garante o mapeamento do status
       createdAt: formatDateTime(row.created_at),
     }));
   }
@@ -477,7 +477,7 @@ function renderCards(targetId, items, template) {
 function renderDashboard() {
   if (!document.getElementById("metric-denuncias")) return;
 
-  document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status !== "Fechada").length;
+  document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status !== "Lida" && item.status !== "Fechada").length;
   if (document.getElementById("metric-comunicados")) {
     document.getElementById("metric-comunicados").textContent = data.comunicados.length;
   }
@@ -520,16 +520,59 @@ function renderDashboard() {
   }
 }
 
+// Lógica de abertura de denúncia para leitura e transição de estado automática
+async function lerDenuncia(id) {
+  const denuncia = data.denuncias.find(item => String(item.id) === String(id));
+  if (!denuncia) return;
+
+  // Mostra o relato em formato de alerta nativo do navegador
+  alert(`Visualização da Denúncia\n-------------------------------\nCategoria: ${denuncia.categoria}\nRecebida em: ${denuncia.createdAt}\nStatus Atual: ${denuncia.status}\n\nRelato:\n"${denuncia.descricao}"`);
+
+  // Se a denúncia ainda constar como Não lida ("Aberta"), movemos para "Lida"
+  if (denuncia.status === "Aberta") {
+    if (!supabaseClient) {
+      denuncia.status = "Lida";
+      saveLocalData();
+      renderAll();
+    } else {
+      try {
+        const { error } = await supabaseClient
+          .from(TABLES.denuncias)
+          .update({ status: "Lida" })
+          .eq("id", id);
+        
+        if (error) throw error;
+        
+        denuncia.status = "Lida";
+        saveLocalData();
+        renderAll();
+      } catch (err) {
+        console.error("Erro ao atualizar status da denúncia no Supabase:", err);
+      }
+    }
+  }
+}
+
 function renderAll() {
   renderDashboard();
 
-  renderCards("denuncias-list", data.denuncias, (item) => `
-    <article class="item-card">
-      <div class="item-topline"><p class="item-title">Denuncia anonima</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
-      <p>${escapeHtml(item.descricao)}</p>
+  // Filtra as denúncias entre as listas de Não Lidas e Lidas
+  const naoLidas = data.denuncias.filter(item => item.status === "Aberta");
+  const lidas = data.denuncias.filter(item => item.status === "Lida");
+
+  const cardTemplate = (item) => `
+    <article class="item-card" style="cursor: pointer;" onclick="lerDenuncia('${item.id}')">
+      <div class="item-topline">
+        <p class="item-title">Denuncia anonima</p>
+        <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
+      </div>
+      <p>${escapeHtml(item.descricao.substring(0, 80))}${item.descricao.length > 80 ? '...' : ''}</p>
       <p class="item-meta">${escapeHtml(item.createdAt)}</p>
     </article>
-  `);
+  `;
+
+  renderCards("denuncias-nao-lidas", naoLidas, cardTemplate);
+  renderCards("denuncias-lidas", lidas, cardTemplate);
 
   renderChat();
 
@@ -773,3 +816,5 @@ if (setupLogin()) {
   initializeAppData();
 }
 
+// Vincula a função globalmente ao escopo de janela (window) para que o atributo onclick do HTML consiga disparar a leitura.
+window.lerDenuncia = lerDenuncia;

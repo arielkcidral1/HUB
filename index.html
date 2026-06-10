@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
@@ -100,16 +100,29 @@
         </section>
 
         <section class="view" id="denuncias">
-          <div class="single-workspace">
-            <div class="panel">
-              <div class="panel-header split-header">
-                <div>
-                  <h2>Denuncias anonimas recebidas</h2>
-                  <p class="item-meta">Este painel e somente para visualizacao do RH</p>
-                </div>
-                <a class="secondary-link" href="denuncia.html" target="_blank" rel="noreferrer">Abrir canal publico</a>
+          <div class="panel" style="margin-bottom: 24px;">
+            <div class="panel-header split-header" style="margin-bottom: 0;">
+              <div>
+                <h2>Gestão de Denúncias Anônimas</h2>
+                <p class="item-meta">Clique numa denúncia para ler o conteúdo e movê-la para a lista de Lidas</p>
               </div>
-              <div class="card-list denuncia-list" id="denuncias-list"></div>
+              <a class="secondary-link" href="denuncia.html" target="_blank" rel="noreferrer">Abrir canal publico</a>
+            </div>
+          </div>
+
+          <div class="workspace">
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Não Lidas</h2>
+              </div>
+              <div class="card-list denuncia-list" id="denuncias-nao-lidas"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Lidas</h2>
+              </div>
+              <div class="card-list denuncia-list" id="denuncias-lidas"></div>
             </div>
           </div>
         </section>
@@ -120,7 +133,7 @@
               <div class="panel-header">
                 <h2>Canais</h2>
               </div>
-                            <button class="channel-item active" data-chat-channel="geral" type="button">
+              <button class="channel-item active" data-chat-channel="geral" type="button">
                 <span>Chat geral</span>
                 <strong id="chat-total">0</strong>
               </button>
@@ -362,4 +375,3 @@
     <script src="script.js"></script>
   </body>
 </html>
-
