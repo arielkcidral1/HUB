@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Portal de Vagas | HUB RH</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="public-layout">
+      <div class="public-container">
+        <header class="public-header">
+          <p class="eyebrow">Trabalhe conosco</p>
+          <h1>Vagas Abertas</h1>
+        </header>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Oportunidades Disponíveis</h2>
+          </div>
+          <div class="activity-list" id="public-vagas-list">
+            <p class="empty-state">Carregando vagas...</p>
+          </div>
+        </div>
+
+        <form class="panel" id="candidatura-form" data-public-vagas="true">
+          <div class="panel-header">
+            <h2>Envie seu Currículo</h2>
+          </div>
+          <p class="public-description">Preencha seus dados para se candidatar. É permitido o envio de apenas um currículo por CPF para cada vaga.</p>
+          
+          <label>Selecione a Vaga
+            <select name="vaga_id" id="vaga-select" required><option value="">Carregando...</option></select>
+          </label>
+          <label>Seu Nome Completo
+            <input name="nome" required placeholder="Ex: João da Silva" />
+          </label>
+          <label>Seu CPF
+            <input name="cpf" required placeholder="000.000.000-00" pattern="\d{3}\.?\d{3}\.?\d{3}-?\d{2}" title="Digite o CPF corretamente" />
+          </label>
+          <label>Seu Currículo (PDF ou Word)<input name="curriculo" type="file" accept=".pdf,.doc,.docx" required /></label>
+          <button class="primary-button" type="submit">Enviar Currículo</button>
+        </form>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

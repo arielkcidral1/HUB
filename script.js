@@ -8,6 +8,7 @@ const TABLES = {
   comunicados: "hub_chat_messages",
   malotes: "hub_malotes",
   vagas: "hub_vagas",
+  candidaturas: "hub_candidaturas",
 };
 
 const defaultData = {
@@ -48,6 +49,7 @@ const defaultData = {
       createdAt: "Hoje",
     },
   ],
+  candidaturas: [],
 };
 
 let data = loadLocalData();
@@ -81,52 +83,54 @@ function isAuthenticated() {
   return sessionStorage.getItem(SESSION_KEY) === "active";
 }
 
-function showApp() {
-  document.getElementById("login-screen")?.classList.add("is-hidden");
-  document.getElementById("app-shell")?.classList.remove("is-locked");
+function isPublicPage() {
+  return Boolean(document.querySelector("[data-public-denuncia]") || document.querySelector("[data-public-vagas]"));
 }
 
-function showLogin() {
-  document.getElementById("login-screen")?.classList.remove("is-hidden");
-  document.getElementById("app-shell")?.classList.add("is-locked");
+function isLoginPage() {
+  return window.location.pathname.endsWith('login.html');
 }
 
 function setupLogin() {
   const loginForm = document.getElementById("login-form");
   const logoutButton = document.getElementById("logout-button");
 
-  if (!loginForm) return true;
-
+  // Redirecionamentos Inteligentes
   if (isAuthenticated()) {
-    showApp();
+    if (isLoginPage()) {
+      window.location.href = "index.html";
+      return false;
+    }
   } else {
-    showLogin();
+    if (!isLoginPage() && !isPublicPage()) {
+      window.location.href = "login.html";
+      return false;
+    }
   }
 
-  loginForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const nameOk = isLoginMatch(form.get("nome"), LOGIN_NAME);
-    const passwordOk = isLoginMatch(form.get("senha"), LOGIN_PASSWORD);
-
-    if (!nameOk || !passwordOk) {
-      document.getElementById("login-error").textContent = "Nome ou senha incorretos.";
-      return;
-    }
-
-    sessionStorage.setItem(SESSION_KEY, "active");
-    document.getElementById("login-error").textContent = "";
-    event.currentTarget.reset();
-    showApp();
-    initializeAppData();
-  });
+  if (loginForm) {
+    loginForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const form = new FormData(event.currentTarget);
+      const nameOk = isLoginMatch(form.get("nome"), LOGIN_NAME);
+      const passwordOk = isLoginMatch(form.get("senha"), LOGIN_PASSWORD);
+  
+      if (!nameOk || !passwordOk) {
+        document.getElementById("login-error").textContent = "Nome ou senha incorretos.";
+        return;
+      }
+  
+      sessionStorage.setItem(SESSION_KEY, "active");
+      window.location.href = "index.html";
+    });
+  }
 
   logoutButton?.addEventListener("click", () => {
     sessionStorage.removeItem(SESSION_KEY);
-    showLogin();
+    window.location.href = "login.html";
   });
 
-  return isAuthenticated();
+  return isAuthenticated() || isPublicPage();
 }
 
 function getSupabaseClient() {
@@ -150,10 +154,6 @@ function setSyncStatus(text, isOnline = false) {
   document.querySelector(".status-dot")?.classList.toggle("offline", !isOnline);
 }
 
-function isPublicComplaintPage() {
-  return Boolean(document.querySelector("[data-public-denuncia]"));
-}
-
 function loadLocalData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return defaultData;
@@ -173,6 +173,7 @@ function loadLocalData() {
       comunicados: parsed.comunicados || [],
       malotes: parsed.malotes || [],
       vagas: parsed.vagas || [],
+      candidaturas: parsed.candidaturas || [],
     };
   } catch {
     return defaultData;
@@ -317,6 +318,17 @@ function mapRows(collection, rows) {
     }));
   }
 
+  if (collection === "candidaturas") {
+    return rows.map((row) => ({
+      id: row.id,
+      vaga_id: row.vaga_id,
+      nome: row.nome,
+      cpf: row.cpf,
+      curriculo_url: row.curriculo_url,
+      createdAt: formatDate(row.created_at),
+    }));
+  }
+
   return rows.map((row) => ({
     id: row.id,
     cargo: row.cargo,
@@ -390,7 +402,7 @@ async function loadFromSupabase(options = {}) {
 }
 
 async function refreshFromSupabase() {
-  if (!supabaseClient || refreshInProgress || isPublicComplaintPage()) return;
+  if (!supabaseClient || refreshInProgress || isPublicPage()) return;
 
   refreshInProgress = true;
   try {
@@ -401,7 +413,7 @@ async function refreshFromSupabase() {
 }
 
 function setupAutoRefresh() {
-  if (refreshTimer || isPublicComplaintPage()) return;
+  if (refreshTimer || isPublicPage()) return;
 
   refreshTimer = window.setInterval(() => {
     if (document.visibilityState === "visible") {
@@ -604,8 +616,36 @@ async function lerDenuncia(id) {
   }
 }
 
+function renderPublicVagas() {
+  const select = document.getElementById("vaga-select");
+  const list = document.getElementById("public-vagas-list");
+  if (!select || !list) return;
+
+  const openVagas = data.vagas.filter(v => v.status === "Aberta");
+
+  if (!openVagas.length) {
+    list.innerHTML = '<p class="empty-state">Nenhuma vaga aberta no momento.</p>';
+    select.innerHTML = '<option value="">Nenhuma vaga disponível</option>';
+    select.disabled = true;
+    return;
+  }
+
+  list.innerHTML = openVagas.map(v => `
+    <article class="item-card">
+      <div class="item-topline">
+        <p class="item-title">${escapeHtml(v.cargo)}</p>
+        <span class="tag">${escapeHtml(v.projeto)}</span>
+      </div>
+    </article>
+  `).join("");
+
+  select.disabled = false;
+  select.innerHTML = '<option value="">Selecione uma vaga...</option>' + openVagas.map(v => `<option value="${v.id}">${escapeHtml(v.cargo)} - ${escapeHtml(v.projeto)}</option>`).join("");
+}
+
 function renderAll() {
   renderDashboard();
+  renderPublicVagas();
 
   // Filtra as denúncias entre as listas de Não Lidas e Lidas
   const naoLidas = data.denuncias.filter(item => item.status === "Aberta");
@@ -635,13 +675,28 @@ function renderAll() {
     </article>
   `);
 
-  renderCards("vagas-list", data.vagas, (item) => `
-    <article class="item-card">
-      <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
-      <p>${escapeHtml(item.projeto)}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt)}</p>
-    </article>
-  `);
+  renderCards("vagas-list", data.vagas, (item) => {
+    const candidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id) === String(item.id));
+    let candidaturasHtml = `<p style="margin-top: 8px; font-size: 13px; color: var(--muted);">Nenhum currículo recebido.</p>`;
+    
+    if (candidaturas.length > 0) {
+      candidaturasHtml = candidaturas.map(c => `
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+          <p style="margin: 0; font-size: 13px; font-weight: 600;">${escapeHtml(c.nome)} <span style="font-weight: normal; color: var(--muted);">(CPF: ${escapeHtml(c.cpf)})</span></p>
+          <a href="${escapeHtml(c.curriculo_url)}" target="_blank" class="secondary-link" style="min-height: 28px; padding: 0 10px; font-size: 12px;">Ver Currículo</a>
+        </div>
+      `).join("");
+    }
+
+    return `
+      <article class="item-card">
+        <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
+        <p>${escapeHtml(item.projeto)}</p>
+        <p class="item-meta">${escapeHtml(item.createdAt)}</p>
+        <div style="margin-top: 16px; background: var(--surface-soft); padding: 16px; border-radius: var(--radius-md);"><p style="margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--teal);">Currículos Recebidos (${candidaturas.length})</p>${candidaturasHtml}</div>
+      </article>
+    `;
+  });
 
   renderDocumentRecords();
 }
@@ -888,11 +943,53 @@ if (vagaForm) {
   });
 }
 
+const candidaturaForm = document.getElementById("candidatura-form");
+if (candidaturaForm) {
+  candidaturaForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const vaga_id = form.get("vaga_id");
+    const nome = form.get("nome");
+    const cpf = form.get("cpf");
+    const curriculo = form.get("curriculo");
+
+    if (!vaga_id || !nome || !cpf || !curriculo || !curriculo.name) return;
+
+    const existing = (data.candidaturas || []).find(c => String(c.vaga_id) === String(vaga_id) && c.cpf === cpf);
+    if (existing) {
+      showModal("Aviso", "Você já enviou um currículo para esta vaga com este CPF.", "error");
+      return;
+    }
+
+    try {
+      let fileUrl = "Arquivo local (não enviado)";
+      if (supabaseClient) {
+        const safeName = curriculo.name.replace(/[^a-z0-9_.-]/gi, "-");
+        const path = `${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+        const { error: uploadError } = await supabaseClient.storage.from("hub-curriculos").upload(path, curriculo);
+        if (uploadError) throw uploadError;
+        
+        const { data: publicData } = supabaseClient.storage.from("hub-curriculos").getPublicUrl(path);
+        fileUrl = publicData.publicUrl;
+      }
+
+      await addItem("candidaturas", { vaga_id, nome, cpf, curriculo_url: fileUrl });
+      event.currentTarget.reset();
+      showModal("Sucesso", "Seu currículo foi enviado com sucesso!", "info");
+    } catch (error) {
+      console.error(error);
+      if (error.code === "23505") {
+        showModal("Aviso", "Você já enviou um currículo para esta vaga com este CPF.", "error");
+      } else {
+        showModal("Erro", "Não foi possível enviar o currículo. Verifique sua conexão e tente novamente.", "error");
+      }
+    }
+  });
+}
+
 function initializeAppData() {
   supabaseClient = getSupabaseClient();
-  if (isPublicComplaintPage()) return;
-
-  loadFromSupabase();
+  loadFromSupabase({ setupLive: !isPublicPage() });
 }
 
 if (setupLogin()) {

@@ -7,27 +7,7 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <section class="login-screen" id="login-screen">
-      <form class="login-card" id="login-form">
-        <div class="brand login-brand">
-          <div class="brand-mark">H</div>
-          <div>
-            <strong>HUB</strong>
-            <span>Acesso do RH</span>
-          </div>
-        </div>
-        <label>Nome
-          <input name="nome" autocomplete="username" required />
-        </label>
-        <label>Senha
-          <input name="senha" type="password" autocomplete="current-password" required />
-        </label>
-        <p class="login-error" id="login-error" role="alert"></p>
-        <button class="primary-button" type="submit">Entrar</button>
-      </form>
-    </section>
-
-    <div class="app-shell is-locked" id="app-shell">
+    <div class="app-shell" id="app-shell">
       <aside class="sidebar" aria-label="Navegacao principal">
         <div class="brand">
           <div class="brand-mark">H</div>
@@ -207,8 +187,11 @@
         <section class="view" id="vagas">
           <div class="workspace">
             <form class="panel form-panel" id="vaga-form">
-              <div class="panel-header">
-                <h2>Cadastrar vaga</h2>
+              <div class="panel-header split-header">
+                <div>
+                  <h2>Cadastrar vaga</h2>
+                </div>
+                <a class="secondary-link" href="vagas.html" target="_blank" rel="noreferrer">Ver portal publico</a>
               </div>
               <label>Cargo
                 <input name="cargo" placeholder="Ex: Tecnico de Seguranca" required />
