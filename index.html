@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HUB | RH</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegacao principal">
+        <div class="brand">
+          <div class="brand-mark">H</div>
+          <div>
+            <strong>HUB</strong>
+            <span>Equipe de RH</span>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item active" data-view="dashboard" type="button">Painel</button>
+          <button class="nav-item" data-view="denuncias" type="button">Canal de Denuncia</button>
+          <button class="nav-item" data-view="comunicacao" type="button">Comunicacao RH</button>
+          <button class="nav-item" data-view="malotes" type="button">Malotes de EPI</button>
+          <button class="nav-item" data-view="vagas" type="button">Vagas e Projetos</button>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Central operacional</p>
+            <h1>HUB</h1>
+          </div>
+          <div class="user-chip">
+            <span class="status-dot"></span>
+            <span id="sync-status">Conectando Supabase</span>
+          </div>
+        </header>
+
+        <section class="hero-panel" aria-label="Resumo do HUB">
+          <img src="assets/hub-operations.png" alt="Mesa organizada com documentos de RH, envelope confidencial, EPIs e cartoes de vagas" />
+          <div class="hero-copy">
+            <p>Gestao integrada para denuncias, comunicados, malotes de EPI e vagas do projeto.</p>
+          </div>
+        </section>
+
+        <section class="view active" id="dashboard">
+          <div class="metric-grid">
+            <article class="metric-card">
+              <span>Denuncias abertas</span>
+              <strong id="metric-denuncias">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Mensagens do RH</span>
+              <strong id="metric-comunicados">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Malotes em transito</span>
+              <strong id="metric-malotes">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Vagas abertas</span>
+              <strong id="metric-vagas">0</strong>
+            </article>
+          </div>
+
+          <div class="section-grid">
+            <article class="panel">
+              <div class="panel-header">
+                <h2>Fila de prioridade</h2>
+              </div>
+              <ul class="activity-list" id="priority-list"></ul>
+            </article>
+            <article class="panel">
+              <div class="panel-header">
+                <h2>Ultimas atualizacoes</h2>
+              </div>
+              <ul class="activity-list" id="recent-list"></ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="denuncias">
+          <div class="workspace">
+            <form class="panel form-panel" id="denuncia-form">
+              <div class="panel-header">
+                <h2>Novo relato</h2>
+              </div>
+              <label>Identificacao
+                <select name="identificacao">
+                  <option>Anonimo</option>
+                  <option>Identificado</option>
+                </select>
+              </label>
+              <label>Categoria
+                <select name="categoria">
+                  <option>Assedio</option>
+                  <option>Conduta inadequada</option>
+                  <option>Seguranca</option>
+                  <option>Outro</option>
+                </select>
+              </label>
+              <label>Descricao
+                <textarea name="descricao" rows="5" placeholder="Registre os fatos principais" required></textarea>
+              </label>
+              <button class="primary-button" type="submit">Registrar denuncia</button>
+            </form>
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Casos recebidos</h2>
+              </div>
+              <div class="card-list" id="denuncias-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="comunicacao">
+          <div class="chat-workspace">
+            <aside class="panel chat-sidebar">
+              <div class="panel-header">
+                <h2>Canais</h2>
+              </div>
+              <button class="channel-item active" type="button">
+                <span>Equipe RH</span>
+                <strong id="chat-total">0</strong>
+              </button>
+              <button class="channel-item" type="button">
+                <span>Beneficios</span>
+                <strong>2</strong>
+              </button>
+              <button class="channel-item" type="button">
+                <span>Recrutamento</span>
+                <strong>1</strong>
+              </button>
+            </aside>
+
+            <div class="panel chat-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Chat interno do RH</h2>
+                  <p class="item-meta">Mensagens e arquivos compartilhados pela equipe</p>
+                </div>
+              </div>
+              <div class="chat-feed" id="chat-feed" aria-live="polite"></div>
+              <form class="chat-composer" id="chat-form">
+                <label class="file-button" for="chat-file">Anexar arquivo</label>
+                <input id="chat-file" name="arquivo" type="file" />
+                <input name="mensagem" placeholder="Escreva uma mensagem para o RH" autocomplete="off" />
+                <button class="primary-button send-button" type="submit">Enviar</button>
+                <p class="selected-file" id="selected-file">Nenhum arquivo selecionado</p>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="malotes">
+          <div class="workspace">
+            <form class="panel form-panel" id="malote-form">
+              <div class="panel-header">
+                <h2>Cadastrar malote</h2>
+              </div>
+              <label>Destino
+                <input name="destino" placeholder="Unidade, setor ou colaborador" required />
+              </label>
+              <label>EPIs
+                <textarea name="epis" rows="4" placeholder="Capacete, luvas, oculos..." required></textarea>
+              </label>
+              <label>Status
+                <select name="status">
+                  <option>Separacao</option>
+                  <option>Em transito</option>
+                  <option>Entregue</option>
+                </select>
+              </label>
+              <button class="primary-button" type="submit">Salvar malote</button>
+            </form>
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Malotes cadastrados</h2>
+              </div>
+              <div class="card-list" id="malotes-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="vagas">
+          <div class="workspace">
+            <form class="panel form-panel" id="vaga-form">
+              <div class="panel-header">
+                <h2>Cadastrar vaga</h2>
+              </div>
+              <label>Cargo
+                <input name="cargo" placeholder="Ex: Tecnico de Seguranca" required />
+              </label>
+              <label>Projeto
+                <input name="projeto" placeholder="Nome do projeto" required />
+              </label>
+              <label>Status
+                <select name="status">
+                  <option>Aberta</option>
+                  <option>Triagem</option>
+                  <option>Entrevistas</option>
+                  <option>Fechada</option>
+                </select>
+              </label>
+              <button class="primary-button" type="submit">Salvar vaga</button>
+            </form>
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Vagas do projeto</h2>
+              </div>
+              <div class="card-list" id="vagas-list"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
