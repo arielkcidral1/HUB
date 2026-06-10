@@ -478,7 +478,7 @@ async function addItem(collection, values) {
     });
     saveLocalData();
     renderAll();
-    return;
+    return true;
   }
 
   try {
@@ -494,10 +494,12 @@ async function addItem(collection, values) {
     saveLocalData();
     setSyncStatus("Supabase EIXO online", true);
     renderAll();
+    return true;
   } catch (error) {
     console.error("Erro ao salvar no Supabase:", error);
     setSyncStatus("Erro no Supabase", false);
     showModal("Erro ao Salvar", "Nao foi possivel salvar no Supabase. Confira se as tabelas hub_* existem no projeto EIXO.", "error");
+    return false;
   }
 }
 
@@ -871,17 +873,19 @@ if (denunciaForm) {
     const message = String(form.get("mensagem") || form.get("descricao") || "").trim();
     if (!message) return;
 
-    await addItem("denuncias", {
+    const success = await addItem("denuncias", {
       identificacao: "Anonimo",
       categoria: "Denuncia anonima",
       descricao: message,
       status: "Aberta",
     });
 
-    event.currentTarget.reset();
-    const feedback = document.getElementById("denuncia-feedback");
-    if (feedback) {
-      feedback.textContent = "Denuncia enviada com sucesso. Obrigado pelo relato.";
+    if (success) {
+      event.currentTarget.reset();
+      const feedback = document.getElementById("denuncia-feedback");
+      if (feedback) {
+        feedback.textContent = "Denuncia enviada com sucesso. Obrigado pelo relato.";
+      }
     }
   });
 }
@@ -890,7 +894,11 @@ const chatFile = document.getElementById("chat-file");
 if (chatFile) {
   chatFile.addEventListener("change", (event) => {
     const file = event.currentTarget.files[0];
-    document.getElementById("selected-file").textContent = file ? `${file.name} - ${formatFileSize(file.size)}` : "Nenhum arquivo selecionado";
+    if (file) {
+      document.getElementById("selected-file").innerHTML = `${escapeHtml(file.name)} - ${formatFileSize(file.size)} <button type="button" onclick="document.getElementById('chat-file').value=''; document.getElementById('selected-file').textContent='Nenhum arquivo selecionado';" style="margin-left: 8px; background: none; border: none; color: var(--danger); cursor: pointer; font-weight: bold;" title="Remover anexo">X</button>`;
+    } else {
+      document.getElementById("selected-file").textContent = "Nenhum arquivo selecionado";
+    }
   });
 }
 
@@ -904,20 +912,28 @@ if (chatForm) {
 
     if (!message && (!file || !file.name)) return;
 
-    try {
-      const fileUrl = file && file.name ? await uploadChatFile(file) : null;
-      await addItem("comunicados", {
-        autor: "Voce",
-        canal: activeChatChannel,
-        mensagem: message,
-        arquivo: file && file.name ? { name: file.name, size: file.size, type: file.type, url: fileUrl } : null,
-      });
+    let fileUrl = null;
+    if (file && file.name) {
+      try {
+        fileUrl = await uploadChatFile(file);
+      } catch (error) {
+        console.error("Erro ao enviar arquivo:", error);
+        setSyncStatus("Erro no anexo", false);
+        showModal("Erro no Anexo", "Nao foi possivel enviar o arquivo. Confira o bucket hub-chat-files no Supabase.", "error");
+        return; // Interrompe o envio se o arquivo falhar!
+      }
+    }
+
+    const success = await addItem("comunicados", {
+      autor: "Voce",
+      canal: activeChatChannel,
+      mensagem: message,
+      arquivo: file && file.name ? { name: file.name, size: file.size, type: file.type, url: fileUrl } : null,
+    });
+
+    if (success) {
       event.currentTarget.reset();
       document.getElementById("selected-file").textContent = "Nenhum arquivo selecionado";
-    } catch (error) {
-      console.error("Erro ao enviar arquivo:", error);
-      setSyncStatus("Erro no anexo", false);
-      showModal("Erro no Anexo", "Nao foi possivel enviar o arquivo. Confira o bucket hub-chat-files no Supabase.", "error");
     }
   });
 }
@@ -927,12 +943,14 @@ if (maloteForm) {
   maloteForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await addItem("malotes", {
+    const success = await addItem("malotes", {
       destino: form.get("destino"),
       epis: form.get("epis"),
       status: form.get("status"),
     });
-    event.currentTarget.reset();
+    if (success) {
+      event.currentTarget.reset();
+    }
   });
 }
 
@@ -941,12 +959,14 @@ if (vagaForm) {
   vagaForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await addItem("vagas", {
+    const success = await addItem("vagas", {
       cargo: form.get("cargo"),
       projeto: form.get("projeto"),
       status: form.get("status"),
     });
-    event.currentTarget.reset();
+    if (success) {
+      event.currentTarget.reset();
+    }
   });
 }
 
@@ -980,9 +1000,11 @@ if (candidaturaForm) {
         fileUrl = publicData.publicUrl;
       }
 
-      await addItem("candidaturas", { vaga_id, nome, cpf, curriculo_url: fileUrl });
-      event.currentTarget.reset();
-      showModal("Sucesso", "Seu currículo foi enviado com sucesso!", "info");
+      const success = await addItem("candidaturas", { vaga_id, nome, cpf, curriculo_url: fileUrl });
+      if (success) {
+        event.currentTarget.reset();
+        showModal("Sucesso", "Seu currículo foi enviado com sucesso!", "info");
+      }
     } catch (error) {
       console.error(error);
       if (error.code === "23505") {
