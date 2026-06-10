@@ -80,6 +80,7 @@ function badgeClass(value) {
 
 function renderCards(targetId, items, template) {
   const target = document.getElementById(targetId);
+  if (!target) return;
   if (!items.length) {
     target.innerHTML = '<p class="empty-state">Nenhum registro cadastrado ainda.</p>';
     return;
@@ -89,7 +90,10 @@ function renderCards(targetId, items, template) {
 }
 
 function renderDashboard() {
-  document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status !== "Fechada").length;
+  const metricDenuncias = document.getElementById("metric-denuncias");
+  if (!metricDenuncias) return;
+
+  metricDenuncias.textContent = data.denuncias.filter((item) => item.status !== "Fechada").length;
   document.getElementById("metric-comunicados").textContent = data.comunicados.length;
   document.getElementById("metric-malotes").textContent = data.malotes.filter((item) => item.status === "Em transito").length;
   document.getElementById("metric-vagas").textContent = data.vagas.filter((item) => item.status !== "Fechada").length;
@@ -174,49 +178,62 @@ document.querySelectorAll(".nav-item").forEach((button) => {
   });
 });
 
-document.getElementById("denuncia-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  addItem("denuncias", {
-    identificacao: form.get("identificacao"),
-    categoria: form.get("categoria"),
-    descricao: form.get("descricao"),
-    status: "Aberta",
+const denunciaForm = document.getElementById("denuncia-form");
+if (denunciaForm) {
+  denunciaForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    addItem("denuncias", {
+      identificacao: "Anônimo",
+      categoria: "Denúncia",
+      descricao: form.get("descricao"),
+      status: "Aberta",
+    });
+    event.currentTarget.reset();
+    alert("Sua denúncia foi registrada com sucesso e de forma segura!");
   });
-  event.currentTarget.reset();
-});
+}
 
-document.getElementById("comunicado-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  addItem("comunicados", {
-    titulo: form.get("titulo"),
-    prioridade: form.get("prioridade"),
-    mensagem: form.get("mensagem"),
+const comunicadoForm = document.getElementById("comunicado-form");
+if (comunicadoForm) {
+  comunicadoForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    addItem("comunicados", {
+      titulo: form.get("titulo"),
+      prioridade: form.get("prioridade"),
+      mensagem: form.get("mensagem"),
+    });
+    event.currentTarget.reset();
   });
-  event.currentTarget.reset();
-});
+}
 
-document.getElementById("malote-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  addItem("malotes", {
-    destino: form.get("destino"),
-    epis: form.get("epis"),
-    status: form.get("status"),
+const maloteForm = document.getElementById("malote-form");
+if (maloteForm) {
+  maloteForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    addItem("malotes", {
+      destino: form.get("destino"),
+      epis: form.get("epis"),
+      status: form.get("status"),
+    });
+    event.currentTarget.reset();
   });
-  event.currentTarget.reset();
-});
+}
 
-document.getElementById("vaga-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  addItem("vagas", {
-    cargo: form.get("cargo"),
-    projeto: form.get("projeto"),
-    status: form.get("status"),
+const vagaForm = document.getElementById("vaga-form");
+if (vagaForm) {
+  vagaForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    addItem("vagas", {
+      cargo: form.get("cargo"),
+      projeto: form.get("projeto"),
+      status: form.get("status"),
+    });
+    event.currentTarget.reset();
   });
-  event.currentTarget.reset();
-});
+}
 
 renderAll();

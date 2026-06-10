@@ -373,6 +373,38 @@ textarea:focus {
   color: var(--muted);
 }
 
+/* Estilos da Página Pública (Canal de Denúncias) */
+.public-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.public-container {
+  width: 100%;
+  max-width: 560px;
+}
+
+.public-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.public-header h1 {
+  margin-top: 8px;
+  color: var(--teal-dark);
+}
+
+.public-description {
+  margin-bottom: 24px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;
