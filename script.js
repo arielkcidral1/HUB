@@ -52,7 +52,19 @@ const defaultData = {
 
 let data = loadLocalData();
 let supabaseClient = null;
+let realtimeChannel = null;
+let activeChatChannel = 'geral';
+let refreshTimer = null;
+let refreshInProgress = false;
 let documentRecords = loadDocumentRecords();
+
+const chatChannels = {
+  geral: "Chat geral",
+  ariel: "Ariel",
+  rh: "Equipe RH",
+  dp: "Departamento Pessoal",
+  lideranca: "Lideranca",
+};
 
 const documentLabels = {
   admissao: "Checklist de Admissao",
@@ -140,6 +152,10 @@ function setSyncStatus(text, isOnline = false) {
   document.querySelector(".status-dot")?.classList.toggle("offline", !isOnline);
 }
 
+function isPublicComplaintPage() {
+  return Boolean(document.querySelector("[data-public-denuncia]"));
+}
+
 function loadLocalData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return defaultData;
@@ -150,6 +166,7 @@ function loadLocalData() {
       id: item.id || crypto.randomUUID(),
       autor: item.autor || "Equipe RH",
       mensagem: item.mensagem || item.titulo || "",
+      canal: item.canal || "geral",
       arquivo: item.arquivo || null,
       createdAt: item.createdAt || "Hoje",
     }));
@@ -189,6 +206,17 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
+function formatDateTime(value) {
+  if (!value) return "Hoje";
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 function todayLabel() {
   return formatDate(new Date().toISOString());
 }
@@ -213,6 +241,19 @@ function formatFileSize(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function encodeChatMessage(channel, message) {
+  return `[hub-channel:${channel || "geral"}] ${message || ""}`.trim();
+}
+
+function parseChatMessage(row) {
+  const text = row.mensagem || "";
+  const match = text.match(/^\[hub-channel:([^\]]+)\]\s*/);
+  return {
+    canal: row.canal || match?.[1] || "geral",
+    mensagem: match ? text.slice(match[0].length) : text,
+  };
+}
+
 function mapRows(collection, rows) {
   if (collection === "denuncias") {
     return rows.map((row) => ({
@@ -221,25 +262,29 @@ function mapRows(collection, rows) {
       categoria: row.categoria,
       descricao: row.descricao,
       status: row.status,
-      createdAt: formatDate(row.created_at),
+      createdAt: formatDateTime(row.created_at),
     }));
   }
 
   if (collection === "comunicados") {
-    return rows.map((row) => ({
-      id: row.id,
-      autor: row.autor,
-      mensagem: row.mensagem || "",
-      arquivo: row.arquivo_nome
-        ? {
-            name: row.arquivo_nome,
-            size: row.arquivo_tamanho,
-            type: row.arquivo_tipo,
-            url: row.arquivo_url,
-          }
-        : null,
-      createdAt: formatDate(row.created_at),
-    }));
+    return rows.map((row) => {
+      const parsed = parseChatMessage(row);
+      return {
+        id: row.id,
+        autor: row.autor,
+        mensagem: parsed.mensagem,
+        canal: parsed.canal,
+        arquivo: row.arquivo_nome
+          ? {
+              name: row.arquivo_nome,
+              size: row.arquivo_tamanho,
+              type: row.arquivo_tipo,
+              url: row.arquivo_url,
+            }
+          : null,
+        createdAt: formatDateTime(row.created_at),
+      };
+    });
   }
 
   if (collection === "malotes") {
@@ -261,11 +306,29 @@ function mapRows(collection, rows) {
   }));
 }
 
+function mergeRealtimeRow(collection, row, action = "INSERT") {
+  const mapped = mapRows(collection, [row])[0];
+  const current = data[collection] || [];
+
+  if (action === "DELETE") {
+    data[collection] = current.filter((item) => String(item.id) !== String(row.id));
+    return;
+  }
+
+  const index = current.findIndex((item) => String(item.id) === String(mapped.id));
+  if (index >= 0) {
+    data[collection] = current.map((item, itemIndex) => (itemIndex === index ? mapped : item));
+    return;
+  }
+
+  data[collection] = [mapped, ...current];
+}
+
 function toDbPayload(collection, values) {
   if (collection === "comunicados") {
     return {
       autor: values.autor,
-      mensagem: values.mensagem || null,
+      mensagem: encodeChatMessage(values.canal || "geral", values.mensagem || ""),
       arquivo_nome: values.arquivo?.name || null,
       arquivo_tamanho: values.arquivo?.size || null,
       arquivo_tipo: values.arquivo?.type || null,
@@ -276,7 +339,9 @@ function toDbPayload(collection, values) {
   return values;
 }
 
-async function loadFromSupabase() {
+async function loadFromSupabase(options = {}) {
+  const { setupLive = true } = options;
+
   if (!supabaseClient) {
     setSyncStatus("Modo local", false);
     renderAll();
@@ -294,10 +359,62 @@ async function loadFromSupabase() {
 
     data = Object.fromEntries(requests);
     saveLocalData();
+    if (setupLive) {
+      setupRealtime();
+      setupAutoRefresh();
+    }
     renderAll();
   } catch (error) {
 
   }
+}
+
+async function refreshFromSupabase() {
+  if (!supabaseClient || refreshInProgress || isPublicComplaintPage()) return;
+
+  refreshInProgress = true;
+  try {
+    await loadFromSupabase({ setupLive: false });
+  } finally {
+    refreshInProgress = false;
+  }
+}
+
+function setupAutoRefresh() {
+  if (refreshTimer || isPublicComplaintPage()) return;
+
+  refreshTimer = window.setInterval(() => {
+    if (document.visibilityState === "visible") {
+      refreshFromSupabase();
+    }
+  }, 2000);
+}
+
+function setupRealtime() {
+  if (!supabaseClient || realtimeChannel) return;
+
+  realtimeChannel = supabaseClient.channel("hub-realtime-updates");
+
+  Object.entries(TABLES).forEach(([collection, table]) => {
+    realtimeChannel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table },
+      (payload) => {
+        const row = payload.eventType === "DELETE" ? payload.old : payload.new;
+        if (!row) return;
+
+        mergeRealtimeRow(collection, row, payload.eventType);
+        saveLocalData();
+        renderAll();
+      }
+    );
+  });
+
+  realtimeChannel.subscribe((status) => {
+    if (status === "SUBSCRIBED") {
+      console.info("HUB realtime conectado");
+    }
+  });
 }
 
 async function uploadChatFile(file) {
@@ -462,12 +579,27 @@ function renderChat() {
   const target = document.getElementById("chat-feed");
   if (!target) return;
 
-  if (!data.comunicados.length) {
-    target.innerHTML = '<p class="empty-state">Nenhuma mensagem no chat ainda.</p>';
+  const title = document.getElementById("chat-title");
+  const subtitle = document.getElementById("chat-subtitle");
+  if (title) title.textContent = chatChannels[activeChatChannel] || "Chat geral";
+  if (subtitle) subtitle.textContent = activeChatChannel === "geral" ? "Mensagens e arquivos compartilhados pela equipe" : `Conversa com ${chatChannels[activeChatChannel]}`;
+
+  if (document.getElementById("chat-total")) {
+    document.getElementById("chat-total").textContent = data.comunicados.filter((item) => (item.canal || "geral") === "geral").length;
+  }
+  document.querySelectorAll("[data-channel-count]").forEach((counter) => {
+    const channel = counter.dataset.channelCount;
+    counter.textContent = data.comunicados.filter((item) => (item.canal || "geral") === channel).length;
+  });
+
+  const messages = data.comunicados.filter((item) => (item.canal || "geral") === activeChatChannel);
+
+  if (!messages.length) {
+    target.innerHTML = '<p class="empty-state">Nenhuma mensagem neste chat ainda.</p>';
     return;
   }
 
-  target.innerHTML = data.comunicados
+  target.innerHTML = messages
     .slice()
     .reverse()
     .map((item) => {
@@ -497,6 +629,14 @@ document.querySelectorAll(".nav-item").forEach((button) => {
     document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
     document.getElementById(button.dataset.view).classList.add("active");
+  });
+});
+document.querySelectorAll("[data-chat-channel]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll("[data-chat-channel]").forEach((item) => item.classList.remove("active"));
+    button.classList.add("active");
+    activeChatChannel = button.dataset.chatChannel || "geral";
+    renderChat();
   });
 });
 
@@ -580,6 +720,7 @@ if (chatForm) {
       const fileUrl = file && file.name ? await uploadChatFile(file) : null;
       await addItem("comunicados", {
         autor: "Voce",
+        canal: activeChatChannel,
         mensagem: message,
         arquivo: file && file.name ? { name: file.name, size: file.size, type: file.type, url: fileUrl } : null,
       });
@@ -623,9 +764,12 @@ if (vagaForm) {
 
 function initializeAppData() {
   supabaseClient = getSupabaseClient();
+  if (isPublicComplaintPage()) return;
+
   loadFromSupabase();
 }
 
 if (setupLogin()) {
   initializeAppData();
 }
+

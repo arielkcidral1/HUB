@@ -747,3 +747,6 @@ textarea:focus {
     max-width: 100%;
   }
 }
+
+.channel-item span { overflow-wrap: anywhere; }
+
