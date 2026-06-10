@@ -34,7 +34,7 @@
           </div>
           <div class="user-chip">
             <span class="status-dot"></span>
-            RH online
+            <span id="sync-status">Conectando Supabase</span>
           </div>
         </header>
 
@@ -52,7 +52,7 @@
               <strong id="metric-denuncias">0</strong>
             </article>
             <article class="metric-card">
-              <span>Comunicados ativos</span>
+              <span>Mensagens do RH</span>
               <strong id="metric-comunicados">0</strong>
             </article>
             <article class="metric-card">
@@ -83,6 +83,29 @@
 
         <section class="view" id="denuncias">
           <div class="workspace">
+            <form class="panel form-panel" id="denuncia-form">
+              <div class="panel-header">
+                <h2>Novo relato</h2>
+              </div>
+              <label>Identificacao
+                <select name="identificacao">
+                  <option>Anonimo</option>
+                  <option>Identificado</option>
+                </select>
+              </label>
+              <label>Categoria
+                <select name="categoria">
+                  <option>Assedio</option>
+                  <option>Conduta inadequada</option>
+                  <option>Seguranca</option>
+                  <option>Outro</option>
+                </select>
+              </label>
+              <label>Descricao
+                <textarea name="descricao" rows="5" placeholder="Registre os fatos principais" required></textarea>
+              </label>
+              <button class="primary-button" type="submit">Registrar denuncia</button>
+            </form>
             <div class="panel">
               <div class="panel-header">
                 <h2>Casos recebidos</h2>
@@ -93,31 +116,40 @@
         </section>
 
         <section class="view" id="comunicacao">
-          <div class="workspace">
-            <form class="panel form-panel" id="comunicado-form">
+          <div class="chat-workspace">
+            <aside class="panel chat-sidebar">
               <div class="panel-header">
-                <h2>Novo comunicado interno</h2>
+                <h2>Canais</h2>
               </div>
-              <label>Titulo
-                <input name="titulo" placeholder="Ex: Reuniao de alinhamento" required />
-              </label>
-              <label>Prioridade
-                <select name="prioridade">
-                  <option>Normal</option>
-                  <option>Alta</option>
-                  <option>Urgente</option>
-                </select>
-              </label>
-              <label>Mensagem
-                <textarea name="mensagem" rows="5" required></textarea>
-              </label>
-              <button class="primary-button" type="submit">Publicar comunicado</button>
-            </form>
-            <div class="panel">
+              <button class="channel-item active" type="button">
+                <span>Equipe RH</span>
+                <strong id="chat-total">0</strong>
+              </button>
+              <button class="channel-item" type="button">
+                <span>Beneficios</span>
+                <strong>2</strong>
+              </button>
+              <button class="channel-item" type="button">
+                <span>Recrutamento</span>
+                <strong>1</strong>
+              </button>
+            </aside>
+
+            <div class="panel chat-panel">
               <div class="panel-header">
-                <h2>Mural do RH</h2>
+                <div>
+                  <h2>Chat interno do RH</h2>
+                  <p class="item-meta">Mensagens e arquivos compartilhados pela equipe</p>
+                </div>
               </div>
-              <div class="card-list" id="comunicados-list"></div>
+              <div class="chat-feed" id="chat-feed" aria-live="polite"></div>
+              <form class="chat-composer" id="chat-form">
+                <label class="file-button" for="chat-file">Anexar arquivo</label>
+                <input id="chat-file" name="arquivo" type="file" />
+                <input name="mensagem" placeholder="Escreva uma mensagem para o RH" autocomplete="off" />
+                <button class="primary-button send-button" type="submit">Enviar</button>
+                <p class="selected-file" id="selected-file">Nenhum arquivo selecionado</p>
+              </form>
             </div>
           </div>
         </section>
@@ -185,6 +217,8 @@
       </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
