@@ -14,8 +14,8 @@ const defaultData = {
     {
       id: crypto.randomUUID(),
       identificacao: "Anonimo",
-      categoria: "Conduta inadequada",
-      descricao: "Relato recebido para avaliacao inicial do RH.",
+      categoria: "Denuncia anonima",
+      descricao: "Relato anonimo recebido para avaliacao inicial do RH.",
       status: "Aberta",
       createdAt: "Hoje",
     },
@@ -327,6 +327,8 @@ async function addItem(collection, values) {
 
 function renderCards(targetId, items, template) {
   const target = document.getElementById(targetId);
+  if (!target) return;
+
   if (!items.length) {
     target.innerHTML = '<p class="empty-state">Nenhum registro cadastrado ainda.</p>';
     return;
@@ -339,12 +341,18 @@ function renderDashboard() {
   if (!document.getElementById("metric-denuncias")) return;
 
   document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status !== "Fechada").length;
-  document.getElementById("metric-comunicados").textContent = data.comunicados.length;
+  if (document.getElementById("metric-comunicados")) {
+    document.getElementById("metric-comunicados").textContent = data.comunicados.length;
+  }
   if (document.getElementById("chat-total")) {
     document.getElementById("chat-total").textContent = data.comunicados.length;
   }
-  document.getElementById("metric-malotes").textContent = data.malotes.filter((item) => item.status === "Em transito").length;
-  document.getElementById("metric-vagas").textContent = data.vagas.filter((item) => item.status !== "Fechada").length;
+  if (document.getElementById("metric-malotes")) {
+    document.getElementById("metric-malotes").textContent = data.malotes.filter((item) => item.status === "Em transito").length;
+  }
+  if (document.getElementById("metric-vagas")) {
+    document.getElementById("metric-vagas").textContent = data.vagas.filter((item) => item.status !== "Fechada").length;
+  }
 
   const priorityItems = [
     ...data.denuncias.map((item) => ({
@@ -362,13 +370,17 @@ function renderDashboard() {
     ...data.vagas.map((item) => ({ title: item.cargo, text: item.projeto, tag: item.status })),
   ].slice(0, 4);
 
-  document.getElementById("priority-list").innerHTML = priorityItems
-    .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${badgeClass(item.tag)}">${escapeHtml(item.tag)}</span></div><p>${escapeHtml(item.text)}</p></li>`)
-    .join("");
+  if (document.getElementById("priority-list")) {
+    document.getElementById("priority-list").innerHTML = priorityItems
+      .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${badgeClass(item.tag)}">${escapeHtml(item.tag)}</span></div><p>${escapeHtml(item.text)}</p></li>`)
+      .join("");
+  }
 
-  document.getElementById("recent-list").innerHTML = recentItems
-    .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${badgeClass(item.tag)}">${escapeHtml(item.tag)}</span></div><p>${escapeHtml(item.text)}</p></li>`)
-    .join("");
+  if (document.getElementById("recent-list")) {
+    document.getElementById("recent-list").innerHTML = recentItems
+      .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${badgeClass(item.tag)}">${escapeHtml(item.tag)}</span></div><p>${escapeHtml(item.text)}</p></li>`)
+      .join("");
+  }
 }
 
 function renderAll() {
@@ -376,9 +388,9 @@ function renderAll() {
 
   renderCards("denuncias-list", data.denuncias, (item) => `
     <article class="item-card">
-      <div class="item-topline"><p class="item-title">${escapeHtml(item.categoria)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
+      <div class="item-topline"><p class="item-title">Denuncia anonima</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
       <p>${escapeHtml(item.descricao)}</p>
-      <p class="item-meta">${escapeHtml(item.identificacao)} | ${escapeHtml(item.createdAt)}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt)}</p>
     </article>
   `);
 
@@ -443,17 +455,28 @@ document.querySelectorAll(".nav-item").forEach((button) => {
   });
 });
 
-document.getElementById("denuncia-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  await addItem("denuncias", {
-    identificacao: form.get("identificacao"),
-    categoria: form.get("categoria"),
-    descricao: form.get("descricao"),
-    status: "Aberta",
+const denunciaForm = document.getElementById("denuncia-form");
+if (denunciaForm) {
+  denunciaForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const message = String(form.get("mensagem") || form.get("descricao") || "").trim();
+    if (!message) return;
+
+    await addItem("denuncias", {
+      identificacao: "Anonimo",
+      categoria: "Denuncia anonima",
+      descricao: message,
+      status: "Aberta",
+    });
+
+    event.currentTarget.reset();
+    const feedback = document.getElementById("denuncia-feedback");
+    if (feedback) {
+      feedback.textContent = "Denuncia enviada com sucesso. Obrigado pelo relato.";
+    }
   });
-  event.currentTarget.reset();
-});
+}
 
 const chatFile = document.getElementById("chat-file");
 if (chatFile) {

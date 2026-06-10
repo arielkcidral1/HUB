@@ -3,26 +3,27 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Fazer Denúncia | HUB RH</title>
+    <title>Denuncia Anonima | HUB RH</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div class="public-layout">
       <div class="public-container">
         <header class="public-header">
-          <p class="eyebrow">Canal Seguro e Confidencial</p>
-          <h1>Canal de Denúncias</h1>
+          <p class="eyebrow">Canal seguro e confidencial</p>
+          <h1>Denuncia anonima</h1>
         </header>
 
-        <form class="panel" id="denuncia-form">
+        <form class="panel" id="denuncia-form" data-public-denuncia="true">
           <div class="panel-header">
-            <h2>Registrar nova denúncia</h2>
+            <h2>Enviar mensagem</h2>
           </div>
-          <p class="public-description">Use este canal para relatar de forma segura qualquer conduta inadequada, assédio, ou violação de políticas da empresa. A denúncia é totalmente anônima.</p>
-          <label>Descrição do ocorrido
-            <textarea name="descricao" rows="6" placeholder="Nos conte detalhadamente o que aconteceu" required></textarea>
+          <p class="public-description">Este canal nao solicita nome, documento, telefone ou e-mail. Envie somente a mensagem da denuncia.</p>
+          <label>Mensagem da denuncia
+            <textarea name="mensagem" rows="7" placeholder="Descreva a situacao de forma objetiva" required></textarea>
           </label>
-          <button class="primary-button" type="submit">Enviar denúncia confidencial</button>
+          <p class="form-feedback" id="denuncia-feedback" role="status"></p>
+          <button class="primary-button" type="submit">Enviar denuncia anonima</button>
         </form>
       </div>
     </div>

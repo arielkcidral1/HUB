@@ -308,6 +308,11 @@ h2 {
   gap: 18px;
 }
 
+.single-workspace {
+  display: grid;
+  gap: 18px;
+}
+
 .chat-workspace {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
@@ -324,6 +329,29 @@ h2 {
   justify-content: space-between;
   min-height: 32px;
   margin-bottom: 16px;
+}
+
+.split-header {
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.secondary-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdfc;
+  color: var(--teal-dark);
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.secondary-link:hover {
+  background: #e4f3ef;
 }
 
 .form-panel {
@@ -581,6 +609,18 @@ textarea:focus {
 .empty-state {
   margin: 0;
   color: var(--muted);
+}
+
+.denuncia-list .item-card {
+  background: #fffaf0;
+}
+
+.form-feedback {
+  min-height: 20px;
+  margin: 0 0 12px;
+  color: var(--teal-dark);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 @media (max-width: 900px) {
