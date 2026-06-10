@@ -11,10 +11,17 @@ const TABLES = {
   candidaturas: "hub_candidaturas",
 };
 
+function generateUUID() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
 const defaultData = {
   denuncias: [
     {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       identificacao: "Anonimo",
       categoria: "Denuncia anonima",
       descricao: "Relato anonimo recebido para avaliacao inicial do RH.",
@@ -24,7 +31,7 @@ const defaultData = {
   ],
   comunicados: [
     {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       autor: "Marina Souza",
       mensagem: "Revisar pendencias de benefícios, vagas e entregas de EPI.",
       arquivo: null,
@@ -33,7 +40,7 @@ const defaultData = {
   ],
   malotes: [
     {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       destino: "Unidade Norte",
       epis: "Luvas nitrilicas, oculos de protecao, protetor auricular",
       status: "Em transito",
@@ -42,7 +49,7 @@ const defaultData = {
   ],
   vagas: [
     {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       cargo: "Auxiliar Administrativo",
       projeto: "Projeto Expansao",
       status: "Aberta",
@@ -161,7 +168,7 @@ function loadLocalData() {
   try {
     const parsed = JSON.parse(saved);
     parsed.comunicados = (parsed.comunicados || []).map((item) => ({
-      id: item.id || crypto.randomUUID(),
+      id: item.id || generateUUID(),
       autor: item.autor || "Equipe RH",
       mensagem: item.mensagem || item.titulo || "",
       canal: item.canal || "geral",
@@ -454,7 +461,7 @@ async function uploadChatFile(file) {
 
   const bucket = window.HUB_SUPABASE.chatFilesBucket || "hub-chat-files";
   const safeName = file.name.replace(/[^a-z0-9_.-]/gi, "-");
-  const path = `${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+  const path = `${Date.now()}-${generateUUID()}-${safeName}`;
   const { error } = await supabaseClient.storage.from(bucket).upload(path, file);
   if (error) throw error;
 
@@ -465,7 +472,7 @@ async function uploadChatFile(file) {
 async function addItem(collection, values) {
   if (!supabaseClient) {
     data[collection].unshift({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       createdAt: todayLabel(),
       ...values,
     });
@@ -841,7 +848,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
     } else {
       // Cria um novo documento
       documentRecords.unshift({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         type: event.currentTarget.dataset.docForm,
         summary: String(collaborator),
         details: details || "Registro salvo",
@@ -965,7 +972,7 @@ if (candidaturaForm) {
       let fileUrl = "Arquivo local (não enviado)";
       if (supabaseClient) {
         const safeName = curriculo.name.replace(/[^a-z0-9_.-]/gi, "-");
-        const path = `${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+        const path = `${Date.now()}-${generateUUID()}-${safeName}`;
         const { error: uploadError } = await supabaseClient.storage.from("hub-curriculos").upload(path, curriculo);
         if (uploadError) throw uploadError;
         

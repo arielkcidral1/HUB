@@ -95,8 +95,12 @@ on conflict (id) do update set public = excluded.public;
 
 drop policy if exists "hub_chat_files_public_read" on storage.objects;
 drop policy if exists "hub_chat_files_public_upload" on storage.objects;
+drop policy if exists "hub_chat_files_public_update" on storage.objects;
+drop policy if exists "hub_chat_files_public_delete" on storage.objects;
 drop policy if exists "hub_curriculos_public_read" on storage.objects;
 drop policy if exists "hub_curriculos_public_upload" on storage.objects;
+drop policy if exists "hub_curriculos_public_update" on storage.objects;
+drop policy if exists "hub_curriculos_public_delete" on storage.objects;
 
 create policy "hub_chat_files_public_read" on storage.objects
 for select to anon, authenticated
@@ -106,6 +110,14 @@ create policy "hub_chat_files_public_upload" on storage.objects
 for insert to anon, authenticated
 with check (bucket_id = 'hub-chat-files');
 
+create policy "hub_chat_files_public_update" on storage.objects
+for update to anon, authenticated
+using (bucket_id = 'hub-chat-files');
+
+create policy "hub_chat_files_public_delete" on storage.objects
+for delete to anon, authenticated
+using (bucket_id = 'hub-chat-files');
+
 create policy "hub_curriculos_public_read" on storage.objects
 for select to anon, authenticated
 using (bucket_id = 'hub-curriculos');
@@ -113,3 +125,11 @@ using (bucket_id = 'hub-curriculos');
 create policy "hub_curriculos_public_upload" on storage.objects
 for insert to anon, authenticated
 with check (bucket_id = 'hub-curriculos');
+
+create policy "hub_curriculos_public_update" on storage.objects
+for update to anon, authenticated
+using (bucket_id = 'hub-curriculos');
+
+create policy "hub_curriculos_public_delete" on storage.objects
+for delete to anon, authenticated
+using (bucket_id = 'hub-curriculos');
