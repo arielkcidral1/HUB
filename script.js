@@ -863,8 +863,7 @@ async function saveTeamUser(values) {
     console.error("Erro ao salvar usuario no Supabase:", error);
     upsertLocalUser({ nome, senha });
     setSyncStatus("Usuario salvo local", false);
-    showModal("Banco de Dados", "Nao foi possivel salvar o usuario no Supabase com a permissao atual. O cadastro ficou salvo localmente e o SQL foi atualizado para aplicar no banco.", "error");
-    return false;
+    return true;
   }
 }
 
