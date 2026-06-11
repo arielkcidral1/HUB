@@ -113,7 +113,22 @@ function normalizeLoginName(value) {
 
 function getLoginDisplayName(value) {
   const normalized = normalizeLoginName(value);
-  return LOGIN_DISPLAY_NAMES[normalized] || String(value || "").trim();
+  return LOGIN_DISPLAY_NAMES[normalized] || findLocalTeamUser(value)?.nome || String(value || "").trim();
+}
+
+function getAllLocalUsers() {
+  return mergeUsersByName(
+    Object.values(LOGIN_USERS).map((user) => ({
+      nome: user.nome,
+      senha: user.senha,
+    })),
+    data?.usuarios || []
+  );
+}
+
+function findLocalTeamUser(value) {
+  const normalized = normalizeLoginName(value);
+  return getAllLocalUsers().find((user) => normalizeLoginName(user.nome) === normalized);
 }
 
 function getDirectChannel(userA, userB) {
@@ -182,11 +197,11 @@ function canAccessChatChannel(canal) {
 }
 
 function isAllowedLoginName(value) {
-  return Boolean(LOGIN_USERS[normalizeLoginName(value)]);
+  return Boolean(findLocalTeamUser(value));
 }
 
 function validateLocalLogin(name, password) {
-  const user = LOGIN_USERS[normalizeLoginName(name)];
+  const user = findLocalTeamUser(name);
   return Boolean(user && isLoginMatch(password, user.senha));
 }
 
