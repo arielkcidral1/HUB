@@ -537,6 +537,28 @@ function mergeRealtimeRow(collection, row, action = "INSERT") {
   data[collection] = [mapped, ...current];
 }
 
+function renderRealtimeUpdate(collection) {
+  saveLocalData();
+
+  if (collection === "comunicados") {
+    renderDashboard();
+    renderChatChannels();
+    renderChat();
+    return;
+  }
+
+  if (collection === "usuarios") {
+    ensureRequiredTeamUsers();
+    renderDashboard();
+    renderTeamUsers();
+    renderChatChannels();
+    renderChat();
+    return;
+  }
+
+  renderAll();
+}
+
 function toDbPayload(collection, values) {
   if (collection === "comunicados") {
     return {
@@ -637,8 +659,7 @@ function setupRealtime() {
         if (!row) return;
 
         mergeRealtimeRow(collection, row, payload.eventType);
-        saveLocalData();
-        renderAll();
+        renderRealtimeUpdate(collection);
       }
     );
   });
@@ -646,6 +667,7 @@ function setupRealtime() {
   realtimeChannel.subscribe((status) => {
     if (status === "SUBSCRIBED") {
       console.info("HUB realtime conectado");
+      setSyncStatus("Tempo real online", true);
     }
   });
 }
@@ -928,15 +950,11 @@ function renderChatChannels() {
   }
 
   target.innerHTML = channels
-    .map((channel) => {
-      const count = data.comunicados.filter((item) => (item.canal || GENERAL_CHANNEL) === channel.id).length;
-      return `
+    .map((channel) => `
         <button class="channel-item ${channel.id === activeChatChannel ? "active" : ""}" data-chat-channel="${escapeHtml(channel.id)}" type="button">
           <span>${escapeHtml(channel.label)}</span>
-          <strong>${count}</strong>
         </button>
-      `;
-    })
+      `)
     .join("");
 }
 
