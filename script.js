@@ -3,8 +3,15 @@ const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const SESSION_KEY = "hub-rh-session";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const RH_CHANNEL = "rh";
-const LOGIN_NAME = "ariel";
-const LOGIN_PASSWORD = "arielc";
+const LOGIN_PASSWORD = "hub123";
+const LOGIN_USERS = ["andrei", "patricia", "dani", "vanessa"];
+const LOGIN_DISPLAY_NAMES = {
+  andrei: "Andrei",
+  patricia: "Patricia",
+  dani: "Dani",
+  vanessa: "Vanessa",
+};
+const USERS_TABLE = "hub_users";
 const TABLES = {
   denuncias: "hub_denuncias",
   comunicados: "hub_chat_messages",
@@ -36,6 +43,7 @@ const defaultData = {
       id: generateUUID(),
       autor: "Marina Souza",
       mensagem: "Revisar pendencias de benefícios, vagas e entregas de EPI.",
+      canal: RH_CHANNEL,
       arquivo: null,
       createdAt: "Hoje",
     },
@@ -89,8 +97,60 @@ function isLoginMatch(value, expected) {
   return String(value || "").trim().toLowerCase() === expected;
 }
 
+function normalizeLoginName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getLoginDisplayName(value) {
+  const normalized = normalizeLoginName(value);
+  return LOGIN_DISPLAY_NAMES[normalized] || String(value || "").trim();
+}
+
+function isAllowedLoginName(value) {
+  return LOGIN_USERS.includes(normalizeLoginName(value));
+}
+
 function isAuthenticated() {
   return sessionStorage.getItem(SESSION_KEY) === "active";
+}
+
+function getCurrentUserName() {
+  return sessionStorage.getItem(`${SESSION_KEY}-user`) || "Voce";
+}
+
+function setAuthenticatedUser(name) {
+  sessionStorage.setItem(SESSION_KEY, "active");
+  sessionStorage.setItem(`${SESSION_KEY}-user`, getLoginDisplayName(name));
+}
+
+function clearAuthenticatedUser() {
+  sessionStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(`${SESSION_KEY}-user`);
+}
+
+async function validateLogin(name, password) {
+  const normalizedName = normalizeLoginName(name);
+  const normalizedPassword = String(password || "").trim();
+
+  const localMatch = isAllowedLoginName(normalizedName) && isLoginMatch(normalizedPassword, LOGIN_PASSWORD);
+  const client = supabaseClient || getSupabaseClient();
+
+  if (!client) return localMatch;
+
+  try {
+    const { data: users, error } = await client
+      .from(USERS_TABLE)
+      .select("nome, senha")
+      .eq("senha", normalizedPassword);
+
+    if (error) throw error;
+
+    const databaseMatch = (users || []).some((user) => normalizeLoginName(user.nome) === normalizedName);
+    return databaseMatch || localMatch;
+  } catch (error) {
+    console.error("Erro ao validar usuario no Supabase:", error);
+    return localMatch;
+  }
 }
 
 function isPublicPage() {
@@ -119,24 +179,24 @@ function setupLogin() {
   }
 
   if (loginForm) {
-    loginForm.addEventListener("submit", (event) => {
+    loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
-      const nameOk = isLoginMatch(form.get("nome"), LOGIN_NAME);
-      const passwordOk = isLoginMatch(form.get("senha"), LOGIN_PASSWORD);
+      const name = form.get("nome");
+      const loginOk = await validateLogin(name, form.get("senha"));
   
-      if (!nameOk || !passwordOk) {
+      if (!loginOk) {
         document.getElementById("login-error").textContent = "Nome ou senha incorretos.";
         return;
       }
   
-      sessionStorage.setItem(SESSION_KEY, "active");
+      setAuthenticatedUser(name);
       window.location.href = "index.html";
     });
   }
 
   logoutButton?.addEventListener("click", () => {
-    sessionStorage.removeItem(SESSION_KEY);
+    clearAuthenticatedUser();
     window.location.href = "login.html";
   });
 
@@ -220,8 +280,9 @@ function saveReadRhMessageIds() {
 }
 
 function getUnreadRhMessages() {
+  const currentUser = getCurrentUserName();
   return data.comunicados.filter(
-    (item) => (item.canal || "geral") === RH_CHANNEL && item.autor !== "Voce" && !readRhMessageIds.has(String(item.id))
+    (item) => (item.canal || "geral") === RH_CHANNEL && item.autor !== currentUser && !readRhMessageIds.has(String(item.id))
   );
 }
 
@@ -237,6 +298,12 @@ function checkAndMarkChatAsRead() {
   if (!communicationView?.classList.contains("active") || activeChatChannel !== RH_CHANNEL) return;
   markRhMessagesRead();
   renderDashboard();
+}
+
+function renderCurrentUser() {
+  const target = document.getElementById("current-user");
+  if (!target) return;
+  target.textContent = getCurrentUserName();
 }
 
 function formatDate(value) {
@@ -694,6 +761,7 @@ function renderPublicVagas() {
 }
 
 function renderAll() {
+  renderCurrentUser();
   renderDashboard();
   renderPublicVagas();
 
@@ -781,6 +849,7 @@ function renderDocumentRecords() {
 function renderChat() {
   const target = document.getElementById("chat-feed");
   if (!target) return;
+  const currentUser = getCurrentUserName();
 
   const title = document.getElementById("chat-title");
   const subtitle = document.getElementById("chat-subtitle");
@@ -804,7 +873,7 @@ function renderChat() {
         : "";
 
       return `
-        <article class="chat-message ${item.autor === "Voce" ? "own" : ""}">
+        <article class="chat-message ${item.autor === currentUser ? "own" : ""}">
           <div class="chat-author">
             <span>${escapeHtml(item.autor)}</span>
             <time>${escapeHtml(item.createdAt)}</time>
@@ -964,7 +1033,7 @@ if (chatForm) {
     }
 
     const success = await addItem("comunicados", {
-      autor: "Voce",
+      autor: getCurrentUserName(),
       canal: activeChatChannel,
       mensagem: message,
       arquivo: file && file.name ? { name: file.name, size: file.size, type: file.type, url: fileUrl } : null,
