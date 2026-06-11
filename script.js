@@ -115,19 +115,28 @@ function getLoginDisplayName(value) {
   return LOGIN_DISPLAY_NAMES[normalized] || String(value || "").trim();
 }
 
-function getUserChannel(nome) {
-  return `usuario:${normalizeLoginName(nome)}`;
+function getDirectChannel(userA, userB) {
+  const users = [normalizeLoginName(userA), normalizeLoginName(userB)].sort();
+  return `dm:${users[0]}:${users[1]}`;
 }
 
-function getChannelUserName(channelId) {
-  if (!String(channelId || "").startsWith("usuario:")) return "";
-  const normalizedName = String(channelId).slice("usuario:".length);
-  const user = getTeamUsers().find((item) => normalizeLoginName(item.nome) === normalizedName);
-  return user?.nome || getLoginDisplayName(normalizedName);
+function isDirectChannel(channelId) {
+  return String(channelId || "").startsWith("dm:");
 }
 
-function isOwnUserChannel(channelId) {
-  return normalizeLoginName(getChannelUserName(channelId)) === normalizeLoginName(getCurrentUserName());
+function getDirectChannelUsers(channelId) {
+  if (!isDirectChannel(channelId)) return [];
+  return String(channelId).slice(3).split(":").filter(Boolean);
+}
+
+function isValidDirectChannel(channelId) {
+  const users = getDirectChannelUsers(channelId);
+  return users.length === 2 && users[0] !== users[1];
+}
+
+function isCurrentUserInChannel(channelId) {
+  if (channelId === GENERAL_CHANNEL) return true;
+  return isValidDirectChannel(channelId) && getDirectChannelUsers(channelId).includes(normalizeLoginName(getCurrentUserName()));
 }
 
 function getTeamUsers() {
@@ -137,12 +146,13 @@ function getTeamUsers() {
 }
 
 function getChatChannels() {
+  const currentUser = getCurrentUserName();
   return [
     { id: GENERAL_CHANNEL, label: "Chat geral", subtitle: "Mensagens e arquivos compartilhados pela equipe" },
-    ...getTeamUsers().map((user) => ({
-      id: getUserChannel(user.nome),
-      label: isOwnUserChannel(getUserChannel(user.nome)) ? `${user.nome} (meu canal)` : user.nome,
-      subtitle: isOwnUserChannel(getUserChannel(user.nome)) ? `Mensagens enviadas para ${user.nome}` : `Conversa individual com ${user.nome}`,
+    ...getTeamUsers().filter((user) => normalizeLoginName(user.nome) !== normalizeLoginName(currentUser)).map((user) => ({
+      id: getDirectChannel(currentUser, user.nome),
+      label: user.nome,
+      subtitle: `Conversa individual com ${user.nome}`,
     })),
   ];
 }
@@ -151,10 +161,23 @@ function getActiveChatChannel() {
   return getChatChannels().find((channel) => channel.id === activeChatChannel) || getChatChannels()[0];
 }
 
+function getAllowedChatChannelIds() {
+  return getChatChannels().map((channel) => channel.id);
+}
+
 function normalizeChatChannel(canal) {
   if (!canal || canal === GENERAL_CHANNEL) return GENERAL_CHANNEL;
-  if (canal === RH_CHANNEL) return getUserChannel("Ariel");
+  if (isDirectChannel(canal)) return canal;
+  if (canal === RH_CHANNEL) return getDirectChannel(getCurrentUserName(), "Ariel");
+  if (String(canal).startsWith("usuario:")) {
+    return getDirectChannel(getCurrentUserName(), String(canal).slice("usuario:".length));
+  }
   return canal;
+}
+
+function canAccessChatChannel(canal) {
+  const channel = normalizeChatChannel(canal);
+  return channel === GENERAL_CHANNEL || (isValidDirectChannel(channel) && isCurrentUserInChannel(channel));
 }
 
 function isAllowedLoginName(value) {
@@ -359,9 +382,8 @@ function saveReadRhMessageIds() {
 
 function getUnreadRhMessages() {
   const currentUser = getCurrentUserName();
-  const currentUserChannel = getUserChannel(currentUser);
   return data.comunicados.filter(
-    (item) => normalizeChatChannel(item.canal) === currentUserChannel && item.autor !== currentUser && !readRhMessageIds.has(String(item.id))
+    (item) => isDirectChannel(normalizeChatChannel(item.canal)) && isCurrentUserInChannel(normalizeChatChannel(item.canal)) && item.autor !== currentUser && !readRhMessageIds.has(String(item.id))
   );
 }
 
@@ -375,7 +397,7 @@ function markRhMessagesRead() {
 
 function checkAndMarkChatAsRead() {
   const communicationView = document.getElementById("comunicacao");
-  if (!communicationView?.classList.contains("active") || !isOwnUserChannel(activeChatChannel)) return;
+  if (!communicationView?.classList.contains("active") || !isDirectChannel(activeChatChannel) || !isCurrentUserInChannel(activeChatChannel)) return;
   markRhMessagesRead();
   renderDashboard();
 }
@@ -630,7 +652,12 @@ async function loadFromSupabase(options = {}) {
   try {
     const requests = await Promise.allSettled(
       Object.entries(TABLES).map(async ([collection, table]) => {
-        const { data: rows, error } = await supabaseClient.from(table).select("*").order("created_at", { ascending: false });
+        let query = supabaseClient.from(table).select("*").order("created_at", { ascending: false });
+        if (collection === "comunicados") {
+          query = query.in("canal", getAllowedChatChannelIds());
+        }
+
+        const { data: rows, error } = await query;
         if (error) throw error;
         return [collection, mapRows(collection, rows || [])];
       })
@@ -693,6 +720,7 @@ function setupRealtime() {
       (payload) => {
         const row = payload.eventType === "DELETE" ? payload.old : payload.new;
         if (!row) return;
+        if (collection === "comunicados" && !canAccessChatChannel(row.canal)) return;
 
         mergeRealtimeRow(collection, row, payload.eventType);
         renderRealtimeUpdate(collection);
@@ -1005,7 +1033,7 @@ function renderChatChannels() {
   if (!target) return;
 
   const channels = getChatChannels();
-  if (!channels.some((channel) => channel.id === activeChatChannel)) {
+  if (!channels.some((channel) => channel.id === activeChatChannel) || !isCurrentUserInChannel(activeChatChannel)) {
     activeChatChannel = GENERAL_CHANNEL;
   }
 
@@ -1119,19 +1147,22 @@ function renderChat() {
   const sendButton = document.querySelector("#chat-form .send-button");
   const fileButton = document.querySelector('#chat-form label[for="chat-file"]');
   const fileInput = document.getElementById("chat-file");
-  const ownChannel = isOwnUserChannel(activeChannel.id);
   if (title) title.textContent = activeChannel.label;
   if (subtitle) subtitle.textContent = activeChannel.subtitle;
   if (messageInput) {
-    messageInput.placeholder = ownChannel ? "Seu canal individual recebe mensagens da equipe" : activeChannel.id === GENERAL_CHANNEL ? "Escreva no chat geral" : `Mensagem para ${activeChannel.label}`;
-    messageInput.disabled = ownChannel;
+    messageInput.placeholder = activeChannel.id === GENERAL_CHANNEL ? "Escreva no chat geral" : `Mensagem para ${activeChannel.label}`;
+    messageInput.disabled = false;
   }
-  if (sendButton) sendButton.disabled = ownChannel;
-  if (fileInput) fileInput.disabled = ownChannel;
-  if (fileButton) fileButton.classList.toggle("disabled", ownChannel);
+  if (sendButton) sendButton.disabled = false;
+  if (fileInput) fileInput.disabled = false;
+  if (fileButton) fileButton.classList.remove("disabled");
 
 
-  const messages = data.comunicados.filter((item) => (item.canal || GENERAL_CHANNEL) === activeChatChannel);
+  const messages = data.comunicados.filter((item) => {
+    const channel = normalizeChatChannel(item.canal);
+    if (channel !== activeChatChannel) return false;
+    return channel === GENERAL_CHANNEL || isCurrentUserInChannel(channel);
+  });
 
   if (!messages.length) {
     target.innerHTML = '<p class="empty-state">Nenhuma mensagem neste chat ainda.</p>';
@@ -1289,8 +1320,8 @@ const chatForm = document.getElementById("chat-form");
 if (chatForm) {
   chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (isOwnUserChannel(activeChatChannel)) {
-      showModal("Acao nao permitida", "Voce nao pode enviar mensagens para o seu proprio canal.", "error");
+    if (isDirectChannel(activeChatChannel) && !isCurrentUserInChannel(activeChatChannel)) {
+      showModal("Acao nao permitida", "Voce nao participa deste chat individual.", "error");
       return;
     }
 
