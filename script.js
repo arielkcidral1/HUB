@@ -357,6 +357,7 @@ function ensureRequiredTeamUsers() {
       id: existingIndex >= 0 ? data.usuarios[existingIndex].id : generateUUID(),
       nome: requiredUser.nome,
       senha: requiredUser.senha,
+      syncStatus: existingIndex >= 0 ? data.usuarios[existingIndex].syncStatus : "local",
       createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
     };
 
@@ -366,6 +367,24 @@ function ensureRequiredTeamUsers() {
       data.usuarios.push(requiredRecord);
     }
   });
+}
+
+function mergeUsersByName(currentUsers = [], incomingUsers = []) {
+  const merged = new Map();
+
+  [...currentUsers, ...incomingUsers].forEach((user) => {
+    if (!user?.nome) return;
+    const key = normalizeLoginName(user.nome);
+    const existing = merged.get(key);
+    merged.set(key, {
+      ...(existing || {}),
+      ...user,
+      id: user.id || existing?.id || generateUUID(),
+      createdAt: user.createdAt || existing?.createdAt || todayLabel(),
+    });
+  });
+
+  return [...merged.values()];
 }
 
 function loadReadRhMessageIds() {
@@ -667,7 +686,7 @@ async function loadFromSupabase(options = {}) {
     requests.forEach((result) => {
       if (result.status === "fulfilled") {
         const [collection, rows] = result.value;
-        data[collection] = rows;
+        data[collection] = collection === "usuarios" ? mergeUsersByName(data.usuarios, rows) : rows;
       } else {
         console.error("Erro ao carregar colecao do Supabase:", result.reason);
       }
@@ -815,6 +834,7 @@ function upsertLocalUser(values) {
     nome: getLoginDisplayName(values.nome) || values.nome,
     senha: values.senha,
     createdBy: values.createdBy || getCurrentUserName(),
+    syncStatus: values.syncStatus || data.usuarios[existingIndex]?.syncStatus || "local",
     createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
   };
 
@@ -834,7 +854,7 @@ async function saveTeamUser(values) {
   if (!nome || !senha) return false;
 
   if (!supabaseClient) {
-    upsertLocalUser({ nome, senha });
+    upsertLocalUser({ nome, senha, syncStatus: "local" });
     return true;
   }
 
@@ -856,12 +876,12 @@ async function saveTeamUser(values) {
     if (error) throw error;
 
     const saved = mapRows("usuarios", savedRows || [])[0] || { nome, senha, createdAt: todayLabel() };
-    upsertLocalUser(saved);
+    upsertLocalUser({ ...saved, syncStatus: "online" });
     setSyncStatus("Supabase EIXO online", true);
     return true;
   } catch (error) {
     console.error("Erro ao salvar usuario no Supabase:", error);
-    upsertLocalUser({ nome, senha });
+    upsertLocalUser({ nome, senha, syncStatus: "local" });
     setSyncStatus("Usuario salvo local", false);
     return true;
   }
@@ -1063,7 +1083,7 @@ function renderTeamUsers() {
       <div class="item-topline">
         <p class="item-title">${escapeHtml(item.nome)}</p>
         <div>
-          <span class="tag">Ativo</span>
+          <span class="tag">${item.syncStatus === "local" ? "Local" : "Ativo"}</span>
           <button type="button" class="tag alert" style="cursor: pointer; border: none; margin-left: 6px;" onclick="excluirUsuario('${item.id}')">Deletar</button>
         </div>
       </div>
