@@ -1,6 +1,8 @@
 ﻿const STORAGE_KEY = "hub-rh-data";
 const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const SESSION_KEY = "hub-rh-session";
+const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
+const RH_CHANNEL = "rh";
 const LOGIN_NAME = "ariel";
 const LOGIN_PASSWORD = "arielc";
 const TABLES = {
@@ -66,6 +68,7 @@ let activeChatChannel = 'geral';
 let refreshTimer = null;
 let refreshInProgress = false;
 let documentRecords = loadDocumentRecords();
+let readRhMessageIds = loadReadRhMessageIds();
 window.editingDocId = null;
 
 const chatChannels = {
@@ -203,6 +206,39 @@ function saveLocalData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+function loadReadRhMessageIds() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(READ_RH_MESSAGES_KEY) || "[]");
+    return new Set(saved.map(String));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveReadRhMessageIds() {
+  localStorage.setItem(READ_RH_MESSAGES_KEY, JSON.stringify([...readRhMessageIds]));
+}
+
+function getUnreadRhMessages() {
+  return data.comunicados.filter(
+    (item) => (item.canal || "geral") === RH_CHANNEL && item.autor !== "Voce" && !readRhMessageIds.has(String(item.id))
+  );
+}
+
+function markRhMessagesRead() {
+  const unread = getUnreadRhMessages();
+  if (!unread.length) return;
+  unread.forEach((item) => readRhMessageIds.add(String(item.id)));
+  saveReadRhMessageIds();
+}
+
+function checkAndMarkChatAsRead() {
+  const communicationView = document.getElementById("comunicacao");
+  if (!communicationView?.classList.contains("active") || activeChatChannel !== RH_CHANNEL) return;
+  markRhMessagesRead();
+  renderDashboard();
+}
+
 function formatDate(value) {
   if (!value) return "Hoje";
   return new Intl.DateTimeFormat("pt-BR", {
@@ -273,7 +309,7 @@ function parseChatMessage(row) {
   const text = row.mensagem || "";
   const match = text.match(/^\[hub-channel:([^\]]+)\]\s*/);
   return {
-    canal: match ? match[1] : (row.canal || "geral"),
+      canal: match ? match[1] : (row.canal || "geral"),
     mensagem: match ? text.slice(match[0].length) : text,
   };
 }
@@ -385,7 +421,7 @@ async function loadFromSupabase(options = {}) {
   }
 
   try {
-    const requests = await Promise.all(
+    const requests = await Promise.allSettled(
       Object.entries(TABLES).map(async ([collection, table]) => {
         const { data: rows, error } = await supabaseClient.from(table).select("*").order("created_at", { ascending: false });
         if (error) throw error;
@@ -393,15 +429,26 @@ async function loadFromSupabase(options = {}) {
       })
     );
 
-    data = Object.fromEntries(requests);
+    requests.forEach((result) => {
+      if (result.status === "fulfilled") {
+        const [collection, rows] = result.value;
+        data[collection] = rows;
+      } else {
+        console.error("Erro ao carregar colecao do Supabase:", result.reason);
+      }
+    });
     saveLocalData();
     if (setupLive) {
       setupRealtime();
       setupAutoRefresh();
     }
+    const hasFailures = requests.some((result) => result.status === "rejected");
+    setSyncStatus(hasFailures ? "Supabase parcial" : "Supabase EIXO online", !hasFailures);
     renderAll();
   } catch (error) {
-
+    console.error("Erro ao carregar Supabase:", error);
+    setSyncStatus("Supabase pendente", false);
+    renderAll();
   }
 }
 
@@ -516,8 +563,9 @@ function renderDashboard() {
   if (!document.getElementById("metric-denuncias")) return;
 
   document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status !== "Lida" && item.status !== "Fechada").length;
+  const unreadRhMessages = getUnreadRhMessages();
   if (document.getElementById("metric-comunicados")) {
-    document.getElementById("metric-comunicados").textContent = data.comunicados.length;
+    document.getElementById("metric-comunicados").textContent = unreadRhMessages.length;
   }
   if (document.getElementById("metric-malotes")) {
     document.getElementById("metric-malotes").textContent = data.malotes.filter((item) => item.status === "Em transito").length;
@@ -539,7 +587,7 @@ function renderDashboard() {
         tag: item.status,
         date: item.createdAt,
       })),
-    ...unreadComunicados
+    ...unreadRhMessages
       .map((item) => ({ 
         title: `Mensagem de ${item.autor}`, 
         text: item.mensagem || (item.arquivo ? `Arquivo: ${item.arquivo.name}` : "Nova mensagem no chat"), 
