@@ -98,6 +98,7 @@ drop policy if exists "hub_denuncias_public_update" on public.hub_denuncias;
 drop policy if exists "hub_users_public_read" on public.hub_users;
 drop policy if exists "hub_users_public_insert" on public.hub_users;
 drop policy if exists "hub_users_public_update" on public.hub_users;
+drop policy if exists "hub_users_public_delete" on public.hub_users;
 drop policy if exists "hub_chat_public_read" on public.hub_chat_messages;
 drop policy if exists "hub_chat_public_insert" on public.hub_chat_messages;
 drop policy if exists "hub_malotes_public_read" on public.hub_malotes;
@@ -113,6 +114,7 @@ create policy "hub_denuncias_public_update" on public.hub_denuncias for update t
 create policy "hub_users_public_read" on public.hub_users for select to anon, authenticated using (true);
 create policy "hub_users_public_insert" on public.hub_users for insert to anon, authenticated with check (true);
 create policy "hub_users_public_update" on public.hub_users for update to anon, authenticated using (true);
+create policy "hub_users_public_delete" on public.hub_users for delete to anon, authenticated using (true);
 create policy "hub_chat_public_read" on public.hub_chat_messages for select to anon, authenticated using (true);
 create policy "hub_chat_public_insert" on public.hub_chat_messages for insert to anon, authenticated with check (true);
 create policy "hub_malotes_public_read" on public.hub_malotes for select to anon, authenticated using (true);
@@ -124,7 +126,7 @@ create policy "hub_candidaturas_public_insert" on public.hub_candidaturas for in
 
 grant usage on schema public to anon, authenticated;
 grant select, insert, update on public.hub_denuncias to anon, authenticated;
-grant select, insert, update on public.hub_users to anon, authenticated;
+grant select, insert, update, delete on public.hub_users to anon, authenticated;
 grant select, insert on public.hub_chat_messages to anon, authenticated;
 grant select, insert on public.hub_malotes to anon, authenticated;
 grant select, insert on public.hub_vagas to anon, authenticated;

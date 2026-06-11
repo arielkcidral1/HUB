@@ -3,6 +3,7 @@ const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const SESSION_KEY = "hub-rh-session";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const RH_CHANNEL = "rh";
+const TEAM_DELETE_PASSWORD = "160712";
 const LOGIN_USERS = {
   ariel: { nome: "Ariel", senha: "arielc" },
   andrei: { nome: "Andrei", senha: "hub123" },
@@ -867,6 +868,48 @@ async function saveTeamUser(values) {
   }
 }
 
+function removeLocalUser(id) {
+  const removedUser = data.usuarios.find((user) => String(user.id) === String(id));
+  data.usuarios = data.usuarios.filter((user) => String(user.id) !== String(id));
+
+  if (removedUser && normalizeLoginName(removedUser.nome) === normalizeLoginName(getCurrentUserName())) {
+    clearAuthenticatedUser();
+    window.location.href = "login.html";
+    return;
+  }
+
+  saveLocalData();
+  renderAll();
+}
+
+async function deleteTeamUser(id) {
+  if (!id) return false;
+
+  if (!supabaseClient) {
+    removeLocalUser(id);
+    return true;
+  }
+
+  try {
+    const { error } = await supabaseClient
+      .from(USERS_TABLE)
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+
+    removeLocalUser(id);
+    setSyncStatus("Supabase EIXO online", true);
+    return true;
+  } catch (error) {
+    console.error("Erro ao excluir usuario no Supabase:", error);
+    removeLocalUser(id);
+    setSyncStatus("Usuario removido local", false);
+    showModal("Banco de Dados", "Nao foi possivel excluir o usuario no Supabase com a permissao atual. A remocao foi feita localmente e o SQL precisa permitir DELETE para sincronizar.", "error");
+    return false;
+  }
+}
+
 function renderCards(targetId, items, template) {
   const target = document.getElementById(targetId);
   if (!target) return;
@@ -1020,7 +1063,10 @@ function renderTeamUsers() {
     <article class="item-card">
       <div class="item-topline">
         <p class="item-title">${escapeHtml(item.nome)}</p>
-        <span class="tag">Ativo</span>
+        <div>
+          <span class="tag">Ativo</span>
+          <button type="button" class="tag alert" style="cursor: pointer; border: none; margin-left: 6px;" onclick="excluirUsuario('${item.id}')">Deletar</button>
+        </div>
       </div>
       <p class="item-meta">Senha: ${escapeHtml(item.senha)}</p>
       <p class="item-meta">Cadastro: ${escapeHtml(item.createdAt || "Hoje")}</p>
@@ -1505,4 +1551,21 @@ window.excluirDocumento = function(id) {
     saveDocumentRecords();
     renderDocumentRecords();
   }
+};
+
+window.excluirUsuario = async function(id) {
+  const user = (data.usuarios || []).find((item) => String(item.id) === String(id));
+  if (!user) return;
+
+  const password = prompt(`Digite a senha de exclusao para deletar ${user.nome}:`);
+  if (password === null) return;
+
+  if (String(password).trim() !== TEAM_DELETE_PASSWORD) {
+    showModal("Senha incorreta", "A senha informada nao autoriza a exclusao de funcionarios.", "error");
+    return;
+  }
+
+  if (!confirm(`Tem certeza que deseja deletar ${user.nome} da equipe?`)) return;
+
+  await deleteTeamUser(id);
 };
