@@ -3,9 +3,15 @@ const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const SESSION_KEY = "hub-rh-session";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const RH_CHANNEL = "rh";
-const LOGIN_PASSWORD = "hub123";
-const LOGIN_USERS = ["andrei", "patricia", "dani", "vanessa"];
+const LOGIN_USERS = {
+  ariel: { nome: "Ariel", senha: "arielc" },
+  andrei: { nome: "Andrei", senha: "hub123" },
+  patricia: { nome: "Patricia", senha: "hub123" },
+  dani: { nome: "Dani", senha: "hub123" },
+  vanessa: { nome: "Vanessa", senha: "hub123" },
+};
 const LOGIN_DISPLAY_NAMES = {
+  ariel: "Ariel",
   andrei: "Andrei",
   patricia: "Patricia",
   dani: "Dani",
@@ -18,6 +24,7 @@ const TABLES = {
   malotes: "hub_malotes",
   vagas: "hub_vagas",
   candidaturas: "hub_candidaturas",
+  usuarios: USERS_TABLE,
 };
 
 function generateUUID() {
@@ -67,6 +74,12 @@ const defaultData = {
     },
   ],
   candidaturas: [],
+  usuarios: Object.values(LOGIN_USERS).map((user) => ({
+    id: generateUUID(),
+    nome: user.nome,
+    senha: user.senha,
+    createdAt: "Hoje",
+  })),
 };
 
 let data = loadLocalData();
@@ -107,7 +120,12 @@ function getLoginDisplayName(value) {
 }
 
 function isAllowedLoginName(value) {
-  return LOGIN_USERS.includes(normalizeLoginName(value));
+  return Boolean(LOGIN_USERS[normalizeLoginName(value)]);
+}
+
+function validateLocalLogin(name, password) {
+  const user = LOGIN_USERS[normalizeLoginName(name)];
+  return Boolean(user && isLoginMatch(password, user.senha));
 }
 
 function isAuthenticated() {
@@ -132,7 +150,7 @@ async function validateLogin(name, password) {
   const normalizedName = normalizeLoginName(name);
   const normalizedPassword = String(password || "").trim();
 
-  const localMatch = isAllowedLoginName(normalizedName) && isLoginMatch(normalizedPassword, LOGIN_PASSWORD);
+  const localMatch = validateLocalLogin(normalizedName, normalizedPassword);
   const client = supabaseClient || getSupabaseClient();
 
   if (!client) return localMatch;
@@ -244,6 +262,7 @@ function loadLocalData() {
       malotes: parsed.malotes || [],
       vagas: parsed.vagas || [],
       candidaturas: parsed.candidaturas || [],
+      usuarios: parsed.usuarios || defaultData.usuarios,
     };
   } catch {
     return defaultData;
@@ -264,6 +283,26 @@ function saveDocumentRecords() {
 
 function saveLocalData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function ensureRequiredTeamUsers() {
+  if (!data.usuarios) data.usuarios = [];
+
+  Object.values(LOGIN_USERS).forEach((requiredUser) => {
+    const existingIndex = data.usuarios.findIndex((user) => normalizeLoginName(user.nome) === normalizeLoginName(requiredUser.nome));
+    const requiredRecord = {
+      id: existingIndex >= 0 ? data.usuarios[existingIndex].id : generateUUID(),
+      nome: requiredUser.nome,
+      senha: requiredUser.senha,
+      createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
+    };
+
+    if (existingIndex >= 0) {
+      data.usuarios[existingIndex] = requiredRecord;
+    } else {
+      data.usuarios.push(requiredRecord);
+    }
+  });
 }
 
 function loadReadRhMessageIds() {
@@ -435,6 +474,15 @@ function mapRows(collection, rows) {
     }));
   }
 
+  if (collection === "usuarios") {
+    return rows.map((row) => ({
+      id: row.id,
+      nome: row.nome,
+      senha: row.senha,
+      createdAt: formatDate(row.created_at),
+    }));
+  }
+
   return rows.map((row) => ({
     id: row.id,
     cargo: row.cargo,
@@ -475,6 +523,13 @@ function toDbPayload(collection, values) {
     };
   }
 
+  if (collection === "usuarios") {
+    return {
+      nome: values.nome,
+      senha: values.senha,
+    };
+  }
+
   return values;
 }
 
@@ -504,6 +559,7 @@ async function loadFromSupabase(options = {}) {
         console.error("Erro ao carregar colecao do Supabase:", result.reason);
       }
     });
+    ensureRequiredTeamUsers();
     saveLocalData();
     if (setupLive) {
       setupRealtime();
@@ -610,6 +666,66 @@ async function addItem(collection, values) {
     console.error("Erro ao salvar no Supabase:", error);
     setSyncStatus("Erro no Supabase", false);
     showModal("Erro ao Salvar", "Nao foi possivel salvar no Supabase. Confira se as tabelas hub_* existem no projeto EIXO.", "error");
+    return false;
+  }
+}
+
+function upsertLocalUser(values) {
+  const normalizedName = normalizeLoginName(values.nome);
+  const existingIndex = data.usuarios.findIndex((user) => normalizeLoginName(user.nome) === normalizedName);
+  const user = {
+    id: existingIndex >= 0 ? data.usuarios[existingIndex].id : generateUUID(),
+    nome: getLoginDisplayName(values.nome) || values.nome,
+    senha: values.senha,
+    createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
+  };
+
+  if (existingIndex >= 0) {
+    data.usuarios[existingIndex] = user;
+  } else {
+    data.usuarios.unshift(user);
+  }
+
+  saveLocalData();
+  renderAll();
+}
+
+async function saveTeamUser(values) {
+  const nome = String(values.nome || "").trim();
+  const senha = String(values.senha || "").trim();
+  if (!nome || !senha) return false;
+
+  if (!supabaseClient) {
+    upsertLocalUser({ nome, senha });
+    return true;
+  }
+
+  try {
+    const { data: existingRows, error: findError } = await supabaseClient
+      .from(USERS_TABLE)
+      .select("id, nome")
+      .eq("nome", nome)
+      .limit(1);
+
+    if (findError) throw findError;
+
+    const existing = existingRows?.[0];
+    const query = existing
+      ? supabaseClient.from(USERS_TABLE).update({ nome, senha }).eq("id", existing.id)
+      : supabaseClient.from(USERS_TABLE).insert({ nome, senha });
+
+    const { data: savedRows, error } = await query.select("*");
+    if (error) throw error;
+
+    const saved = mapRows("usuarios", savedRows || [])[0] || { nome, senha, createdAt: todayLabel() };
+    upsertLocalUser(saved);
+    setSyncStatus("Supabase EIXO online", true);
+    return true;
+  } catch (error) {
+    console.error("Erro ao salvar usuario no Supabase:", error);
+    upsertLocalUser({ nome, senha });
+    setSyncStatus("Usuario salvo local", false);
+    showModal("Banco de Dados", "Nao foi possivel salvar o usuario no Supabase com a permissao atual. O cadastro ficou salvo localmente e o SQL foi atualizado para aplicar no banco.", "error");
     return false;
   }
 }
@@ -760,6 +876,21 @@ function renderPublicVagas() {
   select.innerHTML = '<option value="">Selecione uma vaga...</option>' + openVagas.map(v => `<option value="${v.id}">${escapeHtml(v.cargo)} - ${escapeHtml(v.projeto)}</option>`).join("");
 }
 
+function renderTeamUsers() {
+  const users = (data.usuarios || []).slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+
+  renderCards("usuarios-list", users, (item) => `
+    <article class="item-card">
+      <div class="item-topline">
+        <p class="item-title">${escapeHtml(item.nome)}</p>
+        <span class="tag">Ativo</span>
+      </div>
+      <p class="item-meta">Senha: ${escapeHtml(item.senha)}</p>
+      <p class="item-meta">Cadastro: ${escapeHtml(item.createdAt || "Hoje")}</p>
+    </article>
+  `);
+}
+
 function renderAll() {
   renderCurrentUser();
   renderDashboard();
@@ -817,6 +948,7 @@ function renderAll() {
   });
 
   renderDocumentRecords();
+  renderTeamUsers();
 }
 
 function renderDocumentRecords() {
@@ -1074,6 +1206,23 @@ if (vagaForm) {
       projeto: form.get("projeto"),
       status: form.get("status"),
     });
+    if (success) {
+      formElement.reset();
+    }
+  });
+}
+
+const usuarioForm = document.getElementById("usuario-form");
+if (usuarioForm) {
+  usuarioForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const success = await saveTeamUser({
+      nome: form.get("nome"),
+      senha: form.get("senha"),
+    });
+
     if (success) {
       formElement.reset();
     }

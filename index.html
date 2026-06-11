@@ -24,6 +24,7 @@
           <button class="nav-item" data-view="malotes" type="button">Malotes de EPI</button>
           <button class="nav-item" data-view="vagas" type="button">Vagas e Projetos</button>
           <button class="nav-item" data-view="documentos" type="button">Documentos RH</button>
+          <button class="nav-item" data-view="equipe" type="button">Equipe</button>
         </nav>
       </aside>
 
@@ -395,6 +396,33 @@
                 </div>
                 <div class="card-list" id="document-records"></div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="equipe">
+          <div class="workspace">
+            <form class="panel form-panel" id="usuario-form">
+              <div class="panel-header">
+                <h2>Adicionar usuario</h2>
+              </div>
+              <label>Nome
+                <input name="nome" placeholder="Nome de acesso" required />
+              </label>
+              <label>Senha
+                <input name="senha" type="password" placeholder="Senha do usuario" required />
+              </label>
+              <button class="primary-button" type="submit">Salvar usuario</button>
+            </form>
+
+            <div class="panel">
+              <div class="panel-header split-header">
+                <div>
+                  <h2>Equipe cadastrada</h2>
+                  <p class="item-meta">Usuarios com acesso ao HUB</p>
+                </div>
+              </div>
+              <div class="card-list" id="usuarios-list"></div>
             </div>
           </div>
         </section>
