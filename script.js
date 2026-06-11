@@ -529,7 +529,7 @@ function renderDashboard() {
     document.getElementById("metric-documentos").textContent = documentRecords.length;
   }
 
-  // Filtra itens prioritários (apenas denúncias abertas/urgentes e anexos recentes)
+  // Filtra itens prioritários (apenas denúncias abertas/urgentes e mensagens não lidas do RH)
   const priorityItems = [
     ...data.denuncias
       .filter(item => item.status === "Aberta" || item.status === "Urgente")
@@ -539,11 +539,10 @@ function renderDashboard() {
         tag: item.status,
         date: item.createdAt,
       })),
-    ...data.comunicados
-      .filter((item) => item.arquivo)
+    ...unreadComunicados
       .map((item) => ({ 
-        title: `Arquivo: ${item.arquivo.name}`, 
-        text: item.mensagem || "Anexo compartilhado no chat", 
+        title: `Mensagem de ${item.autor}`, 
+        text: item.mensagem || (item.arquivo ? `Arquivo: ${item.arquivo.name}` : "Nova mensagem no chat"), 
         tag: "RH", 
         date: item.createdAt 
       })),
@@ -770,6 +769,8 @@ function renderChat() {
     .join("");
 
   target.scrollTop = target.scrollHeight;
+
+  checkAndMarkChatAsRead();
 }
 
 document.querySelectorAll(".nav-item").forEach((button) => {
@@ -778,6 +779,7 @@ document.querySelectorAll(".nav-item").forEach((button) => {
     document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
     document.getElementById(button.dataset.view).classList.add("active");
+    checkAndMarkChatAsRead();
   });
 });
 document.querySelectorAll("[data-chat-channel]").forEach((button) => {
