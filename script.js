@@ -18,6 +18,7 @@ const LOGIN_DISPLAY_NAMES = {
   vanessa: "Vanessa",
 };
 const USERS_TABLE = "hub_users";
+const GENERAL_CHANNEL = "geral";
 const TABLES = {
   denuncias: "hub_denuncias",
   comunicados: "hub_chat_messages",
@@ -50,7 +51,7 @@ const defaultData = {
       id: generateUUID(),
       autor: "Marina Souza",
       mensagem: "Revisar pendencias de benefícios, vagas e entregas de EPI.",
-      canal: RH_CHANNEL,
+      canal: GENERAL_CHANNEL,
       arquivo: null,
       createdAt: "Hoje",
     },
@@ -85,17 +86,12 @@ const defaultData = {
 let data = loadLocalData();
 let supabaseClient = null;
 let realtimeChannel = null;
-let activeChatChannel = 'geral';
+let activeChatChannel = GENERAL_CHANNEL;
 let refreshTimer = null;
 let refreshInProgress = false;
 let documentRecords = loadDocumentRecords();
 let readRhMessageIds = loadReadRhMessageIds();
 window.editingDocId = null;
-
-const chatChannels = {
-  geral: "Chat geral",
-  rh: "Equipe RH",
-};
 
 const documentLabels = {
   admissao: "Checklist de Admissao",
@@ -117,6 +113,37 @@ function normalizeLoginName(value) {
 function getLoginDisplayName(value) {
   const normalized = normalizeLoginName(value);
   return LOGIN_DISPLAY_NAMES[normalized] || String(value || "").trim();
+}
+
+function getUserChannel(nome) {
+  return `usuario:${normalizeLoginName(nome)}`;
+}
+
+function getTeamUsers() {
+  return (data.usuarios || [])
+    .slice()
+    .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+}
+
+function getChatChannels() {
+  return [
+    { id: GENERAL_CHANNEL, label: "Chat geral", subtitle: "Mensagens e arquivos compartilhados pela equipe" },
+    ...getTeamUsers().map((user) => ({
+      id: getUserChannel(user.nome),
+      label: user.nome,
+      subtitle: `Conversa individual com ${user.nome}`,
+    })),
+  ];
+}
+
+function getActiveChatChannel() {
+  return getChatChannels().find((channel) => channel.id === activeChatChannel) || getChatChannels()[0];
+}
+
+function normalizeChatChannel(canal) {
+  if (!canal || canal === GENERAL_CHANNEL) return GENERAL_CHANNEL;
+  if (canal === RH_CHANNEL) return getUserChannel("Ariel");
+  return canal;
 }
 
 function isAllowedLoginName(value) {
@@ -252,7 +279,7 @@ function loadLocalData() {
       id: item.id || generateUUID(),
       autor: item.autor || "Equipe RH",
       mensagem: item.mensagem || item.titulo || "",
-      canal: item.canal || "geral",
+      canal: normalizeChatChannel(item.canal),
       arquivo: item.arquivo || null,
       createdAt: item.createdAt || "Hoje",
     }));
@@ -321,7 +348,7 @@ function saveReadRhMessageIds() {
 function getUnreadRhMessages() {
   const currentUser = getCurrentUserName();
   return data.comunicados.filter(
-    (item) => (item.canal || "geral") === RH_CHANNEL && item.autor !== currentUser && !readRhMessageIds.has(String(item.id))
+    (item) => String(item.canal || GENERAL_CHANNEL).startsWith("usuario:") && item.autor !== currentUser && !readRhMessageIds.has(String(item.id))
   );
 }
 
@@ -334,7 +361,7 @@ function markRhMessagesRead() {
 
 function checkAndMarkChatAsRead() {
   const communicationView = document.getElementById("comunicacao");
-  if (!communicationView?.classList.contains("active") || activeChatChannel !== RH_CHANNEL) return;
+  if (!communicationView?.classList.contains("active") || !String(activeChatChannel).startsWith("usuario:")) return;
   markRhMessagesRead();
   renderDashboard();
 }
@@ -415,7 +442,7 @@ function parseChatMessage(row) {
   const text = row.mensagem || "";
   const match = text.match(/^\[hub-channel:([^\]]+)\]\s*/);
   return {
-      canal: match ? match[1] : (row.canal || "geral"),
+      canal: normalizeChatChannel(match ? match[1] : row.canal),
     mensagem: match ? text.slice(match[0].length) : text,
   };
 }
@@ -514,7 +541,7 @@ function toDbPayload(collection, values) {
   if (collection === "comunicados") {
     return {
       autor: values.autor,
-      canal: values.canal || "geral",
+      canal: normalizeChatChannel(values.canal),
       mensagem: values.mensagem || "",
       arquivo_nome: values.arquivo?.name || null,
       arquivo_tamanho: values.arquivo?.size || null,
@@ -877,7 +904,7 @@ function renderPublicVagas() {
 }
 
 function renderTeamUsers() {
-  const users = (data.usuarios || []).slice().sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+  const users = getTeamUsers();
 
   renderCards("usuarios-list", users, (item) => `
     <article class="item-card">
@@ -889,6 +916,28 @@ function renderTeamUsers() {
       <p class="item-meta">Cadastro: ${escapeHtml(item.createdAt || "Hoje")}</p>
     </article>
   `);
+}
+
+function renderChatChannels() {
+  const target = document.getElementById("chat-channel-list");
+  if (!target) return;
+
+  const channels = getChatChannels();
+  if (!channels.some((channel) => channel.id === activeChatChannel)) {
+    activeChatChannel = GENERAL_CHANNEL;
+  }
+
+  target.innerHTML = channels
+    .map((channel) => {
+      const count = data.comunicados.filter((item) => (item.canal || GENERAL_CHANNEL) === channel.id).length;
+      return `
+        <button class="channel-item ${channel.id === activeChatChannel ? "active" : ""}" data-chat-channel="${escapeHtml(channel.id)}" type="button">
+          <span>${escapeHtml(channel.label)}</span>
+          <strong>${count}</strong>
+        </button>
+      `;
+    })
+    .join("");
 }
 
 function renderAll() {
@@ -914,6 +963,7 @@ function renderAll() {
   renderCards("denuncias-nao-lidas", naoLidas, cardTemplate);
   renderCards("denuncias-lidas", lidas, cardTemplate);
 
+  renderChatChannels();
   renderChat();
 
   renderCards("malotes-list", data.malotes, (item) => `
@@ -982,14 +1032,17 @@ function renderChat() {
   const target = document.getElementById("chat-feed");
   if (!target) return;
   const currentUser = getCurrentUserName();
+  const activeChannel = getActiveChatChannel();
 
   const title = document.getElementById("chat-title");
   const subtitle = document.getElementById("chat-subtitle");
-  if (title) title.textContent = chatChannels[activeChatChannel] || "Chat geral";
-  if (subtitle) subtitle.textContent = activeChatChannel === "geral" ? "Mensagens e arquivos compartilhados pela equipe" : `Conversa com ${chatChannels[activeChatChannel]}`;
+  const messageInput = document.querySelector('#chat-form input[name="mensagem"]');
+  if (title) title.textContent = activeChannel.label;
+  if (subtitle) subtitle.textContent = activeChannel.subtitle;
+  if (messageInput) messageInput.placeholder = activeChannel.id === GENERAL_CHANNEL ? "Escreva no chat geral" : `Mensagem para ${activeChannel.label}`;
 
 
-  const messages = data.comunicados.filter((item) => (item.canal || "geral") === activeChatChannel);
+  const messages = data.comunicados.filter((item) => (item.canal || GENERAL_CHANNEL) === activeChatChannel);
 
   if (!messages.length) {
     target.innerHTML = '<p class="empty-state">Nenhuma mensagem neste chat ainda.</p>';
@@ -1031,13 +1084,13 @@ document.querySelectorAll(".nav-item").forEach((button) => {
     checkAndMarkChatAsRead();
   });
 });
-document.querySelectorAll("[data-chat-channel]").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll("[data-chat-channel]").forEach((item) => item.classList.remove("active"));
-    button.classList.add("active");
-    activeChatChannel = button.dataset.chatChannel || "geral";
-    renderChat();
-  });
+document.getElementById("chat-channel-list")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-chat-channel]");
+  if (!button) return;
+
+  activeChatChannel = button.dataset.chatChannel || GENERAL_CHANNEL;
+  renderChatChannels();
+  renderChat();
 });
 
 document.querySelectorAll(".doc-tab").forEach((button) => {
