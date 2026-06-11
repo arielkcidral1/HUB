@@ -119,6 +119,17 @@ function getUserChannel(nome) {
   return `usuario:${normalizeLoginName(nome)}`;
 }
 
+function getChannelUserName(channelId) {
+  if (!String(channelId || "").startsWith("usuario:")) return "";
+  const normalizedName = String(channelId).slice("usuario:".length);
+  const user = getTeamUsers().find((item) => normalizeLoginName(item.nome) === normalizedName);
+  return user?.nome || getLoginDisplayName(normalizedName);
+}
+
+function isOwnUserChannel(channelId) {
+  return normalizeLoginName(getChannelUserName(channelId)) === normalizeLoginName(getCurrentUserName());
+}
+
 function getTeamUsers() {
   return (data.usuarios || [])
     .slice()
@@ -130,8 +141,8 @@ function getChatChannels() {
     { id: GENERAL_CHANNEL, label: "Chat geral", subtitle: "Mensagens e arquivos compartilhados pela equipe" },
     ...getTeamUsers().map((user) => ({
       id: getUserChannel(user.nome),
-      label: user.nome,
-      subtitle: `Conversa individual com ${user.nome}`,
+      label: isOwnUserChannel(getUserChannel(user.nome)) ? `${user.nome} (meu canal)` : user.nome,
+      subtitle: isOwnUserChannel(getUserChannel(user.nome)) ? `Mensagens enviadas para ${user.nome}` : `Conversa individual com ${user.nome}`,
     })),
   ];
 }
@@ -160,6 +171,7 @@ function isAuthenticated() {
 }
 
 function getCurrentUserName() {
+  if (!isAuthenticated() && isPublicPage()) return "Publico";
   return sessionStorage.getItem(`${SESSION_KEY}-user`) || "Voce";
 }
 
@@ -347,13 +359,15 @@ function saveReadRhMessageIds() {
 
 function getUnreadRhMessages() {
   const currentUser = getCurrentUserName();
+  const currentUserChannel = getUserChannel(currentUser);
   return data.comunicados.filter(
-    (item) => String(item.canal || GENERAL_CHANNEL).startsWith("usuario:") && item.autor !== currentUser && !readRhMessageIds.has(String(item.id))
+    (item) => normalizeChatChannel(item.canal) === currentUserChannel && item.autor !== currentUser && !readRhMessageIds.has(String(item.id))
   );
 }
 
 function markRhMessagesRead() {
-  const unread = getUnreadRhMessages();
+  const currentChannel = activeChatChannel;
+  const unread = getUnreadRhMessages().filter((item) => normalizeChatChannel(item.canal) === currentChannel);
   if (!unread.length) return;
   unread.forEach((item) => readRhMessageIds.add(String(item.id)));
   saveReadRhMessageIds();
@@ -361,7 +375,7 @@ function markRhMessagesRead() {
 
 function checkAndMarkChatAsRead() {
   const communicationView = document.getElementById("comunicacao");
-  if (!communicationView?.classList.contains("active") || !String(activeChatChannel).startsWith("usuario:")) return;
+  if (!communicationView?.classList.contains("active") || !isOwnUserChannel(activeChatChannel)) return;
   markRhMessagesRead();
   renderDashboard();
 }
@@ -455,6 +469,7 @@ function mapRows(collection, rows) {
       categoria: row.categoria,
       descricao: row.descricao,
       status: row.status || "Aberta", // Garante o mapeamento do status
+      createdBy: row.created_by || "Sistema",
       createdAt: formatDateTime(row.created_at),
     }));
   }
@@ -467,6 +482,7 @@ function mapRows(collection, rows) {
         autor: row.autor,
         mensagem: parsed.mensagem,
         canal: parsed.canal,
+        createdBy: row.created_by || row.autor,
         arquivo: row.arquivo_nome
           ? {
               name: row.arquivo_nome,
@@ -486,6 +502,7 @@ function mapRows(collection, rows) {
       destino: row.destino,
       epis: row.epis,
       status: row.status,
+      createdBy: row.created_by || "Sistema",
       createdAt: formatDate(row.created_at),
     }));
   }
@@ -497,6 +514,7 @@ function mapRows(collection, rows) {
       nome: row.nome,
       cpf: row.cpf,
       curriculo_url: row.curriculo_url,
+      createdBy: row.created_by || row.nome,
       createdAt: formatDate(row.created_at),
     }));
   }
@@ -506,6 +524,7 @@ function mapRows(collection, rows) {
       id: row.id,
       nome: row.nome,
       senha: row.senha,
+      createdBy: row.created_by || "Sistema",
       createdAt: formatDate(row.created_at),
     }));
   }
@@ -515,6 +534,7 @@ function mapRows(collection, rows) {
     cargo: row.cargo,
     projeto: row.projeto,
     status: row.status,
+    createdBy: row.created_by || "Sistema",
     createdAt: formatDate(row.created_at),
   }));
 }
@@ -565,6 +585,7 @@ function toDbPayload(collection, values) {
       autor: values.autor,
       canal: normalizeChatChannel(values.canal),
       mensagem: values.mensagem || "",
+      created_by: values.createdBy || values.autor || getCurrentUserName(),
       arquivo_nome: values.arquivo?.name || null,
       arquivo_tamanho: values.arquivo?.size || null,
       arquivo_tipo: values.arquivo?.type || null,
@@ -576,10 +597,25 @@ function toDbPayload(collection, values) {
     return {
       nome: values.nome,
       senha: values.senha,
+      created_by: values.createdBy || getCurrentUserName(),
     };
   }
 
-  return values;
+  const { createdBy, ...payload } = values;
+  return {
+    ...payload,
+    created_by: createdBy || getCurrentUserName(),
+  };
+}
+
+function withoutCreatedBy(payload) {
+  const { created_by, ...rest } = payload;
+  return rest;
+}
+
+function isMissingCreatedByColumn(error) {
+  const message = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`;
+  return message.includes("created_by");
 }
 
 async function loadFromSupabase(options = {}) {
@@ -690,6 +726,7 @@ async function addItem(collection, values) {
     data[collection].unshift({
       id: generateUUID(),
       createdAt: todayLabel(),
+      createdBy: values.createdBy || getCurrentUserName(),
       ...values,
     });
     saveLocalData();
@@ -698,13 +735,35 @@ async function addItem(collection, values) {
   }
 
   try {
+    const payload = toDbPayload(collection, values);
     const { data: inserted, error } = await supabaseClient
       .from(TABLES[collection])
-      .insert(toDbPayload(collection, values))
+      .insert(payload)
       .select("*")
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingCreatedByColumn(error)) {
+        const { data: insertedWithoutAuthor, error: retryError } = await supabaseClient
+          .from(TABLES[collection])
+          .insert(withoutCreatedBy(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedWithoutAuthor])[0],
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("Supabase sem autoria", false);
+        renderAll();
+        return true;
+      }
+
+      throw error;
+    }
 
     data[collection].unshift(mapRows(collection, [inserted])[0]);
     saveLocalData();
@@ -726,6 +785,7 @@ function upsertLocalUser(values) {
     id: existingIndex >= 0 ? data.usuarios[existingIndex].id : generateUUID(),
     nome: getLoginDisplayName(values.nome) || values.nome,
     senha: values.senha,
+    createdBy: values.createdBy || getCurrentUserName(),
     createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
   };
 
@@ -760,8 +820,8 @@ async function saveTeamUser(values) {
 
     const existing = existingRows?.[0];
     const query = existing
-      ? supabaseClient.from(USERS_TABLE).update({ nome, senha }).eq("id", existing.id)
-      : supabaseClient.from(USERS_TABLE).insert({ nome, senha });
+      ? supabaseClient.from(USERS_TABLE).update({ nome, senha, created_by: getCurrentUserName() }).eq("id", existing.id)
+      : supabaseClient.from(USERS_TABLE).insert({ nome, senha, created_by: getCurrentUserName() });
 
     const { data: savedRows, error } = await query.select("*");
     if (error) throw error;
@@ -974,7 +1034,7 @@ function renderAll() {
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
       </div>
       <p>${escapeHtml(item.descricao.substring(0, 80))}${item.descricao.length > 80 ? '...' : ''}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt)}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
     </article>
   `;
 
@@ -988,7 +1048,7 @@ function renderAll() {
     <article class="item-card">
       <div class="item-topline"><p class="item-title">${escapeHtml(item.destino)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
       <p>${escapeHtml(item.epis)}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt)}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
     </article>
   `);
 
@@ -1009,7 +1069,7 @@ function renderAll() {
       <article class="item-card">
         <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
         <p>${escapeHtml(item.projeto)}</p>
-        <p class="item-meta">${escapeHtml(item.createdAt)}</p>
+        <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
         <div style="margin-top: 16px; background: var(--surface-soft); padding: 16px; border-radius: var(--radius-md);"><p style="margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--teal);">Currículos Recebidos (${candidaturas.length})</p>${candidaturasHtml}</div>
       </article>
     `;
@@ -1041,6 +1101,7 @@ function renderDocumentRecords() {
         </div>
         <p>${escapeHtml(item.summary)}</p>
         <p class="item-meta">${escapeHtml(item.details)}</p>
+        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || item.updatedBy || "Sistema")}</p>
       </article>
     `)
     .join("");
@@ -1055,9 +1116,19 @@ function renderChat() {
   const title = document.getElementById("chat-title");
   const subtitle = document.getElementById("chat-subtitle");
   const messageInput = document.querySelector('#chat-form input[name="mensagem"]');
+  const sendButton = document.querySelector("#chat-form .send-button");
+  const fileButton = document.querySelector('#chat-form label[for="chat-file"]');
+  const fileInput = document.getElementById("chat-file");
+  const ownChannel = isOwnUserChannel(activeChannel.id);
   if (title) title.textContent = activeChannel.label;
   if (subtitle) subtitle.textContent = activeChannel.subtitle;
-  if (messageInput) messageInput.placeholder = activeChannel.id === GENERAL_CHANNEL ? "Escreva no chat geral" : `Mensagem para ${activeChannel.label}`;
+  if (messageInput) {
+    messageInput.placeholder = ownChannel ? "Seu canal individual recebe mensagens da equipe" : activeChannel.id === GENERAL_CHANNEL ? "Escreva no chat geral" : `Mensagem para ${activeChannel.label}`;
+    messageInput.disabled = ownChannel;
+  }
+  if (sendButton) sendButton.disabled = ownChannel;
+  if (fileInput) fileInput.disabled = ownChannel;
+  if (fileButton) fileButton.classList.toggle("disabled", ownChannel);
 
 
   const messages = data.comunicados.filter((item) => (item.canal || GENERAL_CHANNEL) === activeChatChannel);
@@ -1151,6 +1222,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
           summary: String(collaborator),
           details: details || "Registro salvo",
           formData: Object.fromEntries(entries),
+          updatedBy: getCurrentUserName(),
         };
       }
       window.editingDocId = null;
@@ -1164,6 +1236,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
         summary: String(collaborator),
         details: details || "Registro salvo",
         formData: Object.fromEntries(entries),
+        createdBy: getCurrentUserName(),
         createdAt: todayLabel(),
       });
     }
@@ -1216,6 +1289,11 @@ const chatForm = document.getElementById("chat-form");
 if (chatForm) {
   chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (isOwnUserChannel(activeChatChannel)) {
+      showModal("Acao nao permitida", "Voce nao pode enviar mensagens para o seu proprio canal.", "error");
+      return;
+    }
+
     const formElement = event.target;
     const form = new FormData(formElement);
     const file = form.get("arquivo");

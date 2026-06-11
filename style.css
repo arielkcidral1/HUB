@@ -544,6 +544,11 @@ h2 {
   color: var(--ink);
 }
 
+.file-button.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .selected-file {
   grid-column: 1 / -1;
   margin: -2px 0 0;
@@ -553,6 +558,12 @@ h2 {
 
 .send-button {
   min-width: 120px;
+}
+
+.send-button:disabled,
+.chat-composer input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* --- FORMS & INPUTS --- */
