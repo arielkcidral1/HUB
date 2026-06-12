@@ -3,6 +3,7 @@ alter table public.hub_vagas enable row level security;
 alter table public.hub_candidaturas enable row level security;
 
 alter table public.hub_malotes add column if not exists origem text not null default '';
+alter table public.hub_malotes add column if not exists updated_by text;
 alter table public.hub_vagas add column if not exists descricao text not null default '';
 alter table public.hub_vagas add column if not exists requisitos text not null default '';
 alter table public.hub_candidaturas add column if not exists telefone text not null default '';

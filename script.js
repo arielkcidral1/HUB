@@ -717,6 +717,7 @@ function mapRows(collection, rows) {
       epis: row.epis,
       status: row.status,
       createdBy: row.created_by || "Sistema",
+      updatedBy: row.updated_by || "",
       createdAt: formatDate(row.created_at),
     }));
   }
@@ -846,6 +847,7 @@ function toDbPayload(collection, values) {
       epis: values.epis,
       status: values.status || "Separação",
       created_by: values.createdBy || getCurrentUserName(),
+      updated_by: values.updatedBy || null,
     };
   }
 
@@ -858,6 +860,11 @@ function toDbPayload(collection, values) {
 
 function withoutCreatedBy(payload) {
   const { created_by, ...rest } = payload;
+  return rest;
+}
+
+function withoutUpdatedBy(payload) {
+  const { updated_by, ...rest } = payload;
   return rest;
 }
 
@@ -1067,6 +1074,22 @@ async function addItem(collection, values) {
         return true;
       }
 
+      if (collection === "malotes" && isMissingColumn(error, "updated_by")) {
+        const { data: insertedWithoutEditor, error: retryError } = await supabaseClient
+          .from(TABLES[collection])
+          .insert(withoutUpdatedBy(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift(mapRows(collection, [insertedWithoutEditor])[0]);
+        saveLocalData();
+        setSyncStatus("Supabase precisa migracao", false);
+        renderAll();
+        return true;
+      }
+
       if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos"))) {
         const { data: insertedLegacy, error: retryError } = await supabaseClient
           .from(TABLES[collection])
@@ -1140,6 +1163,10 @@ async function updateItem(collection, id, values) {
 
   try {
     const payload = toDbPayload(collection, values);
+    if (collection === "malotes") {
+      delete payload.created_by;
+      payload.updated_by = values.updatedBy || getCurrentUserName();
+    }
     const { data: updated, error } = await supabaseClient
       .from(TABLES[collection])
       .update(payload)
@@ -1160,6 +1187,25 @@ async function updateItem(collection, id, values) {
         mergeRealtimeRow(collection, updatedWithoutAuthor, "UPDATE");
         renderRealtimeUpdate(collection);
         setSyncStatus("Supabase sem autoria", false);
+        return true;
+      }
+
+      if (collection === "malotes" && isMissingColumn(error, "updated_by")) {
+        const { data: updatedWithoutEditor, error: retryError } = await supabaseClient
+          .from(TABLES[collection])
+          .update(withoutUpdatedBy(payload))
+          .eq("id", id)
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+        mergeRealtimeRow(collection, {
+          ...updatedWithoutEditor,
+          updated_by: values.updatedBy || getCurrentUserName(),
+        }, "UPDATE");
+        renderRealtimeUpdate(collection);
+        setSyncStatus("Supabase precisa migracao", false);
+        showModal("Banco precisa atualizar", "O malote foi alterado, mas rode o update-site-supabase.sql atualizado para gravar quem editou no banco.", "info");
         return true;
       }
 
@@ -1608,7 +1654,7 @@ function renderAll() {
       <div class="item-topline"><p class="item-title">${escapeHtml(item.destino)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
       <p><strong>Origem:</strong> ${escapeHtml(item.origem || "Nao informada")}</p>
       <p>${escapeHtml(item.epis)}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}</p>
       <div class="job-actions">
         <button class="secondary-link" type="button" onclick="editarMalote('${escapeHtml(item.id)}')">Editar</button>
         <button class="secondary-link" type="button" onclick="baixarDocumentoMalote('${escapeHtml(item.id)}')">Baixar documento</button>
@@ -1674,7 +1720,7 @@ function renderDocumentRecords() {
         </div>
         <p>${escapeHtml(item.summary)}</p>
         <p class="item-meta">${escapeHtml(item.details)}</p>
-        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || item.updatedBy || "Sistema")}</p>
+        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || "Sistema")}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}${item.updatedAt ? ` em ${escapeHtml(item.updatedAt)}` : ""}</p>
       </article>
     `)
     .join("");
@@ -1799,6 +1845,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
           details: details || "Registro salvo",
           formData: Object.fromEntries(entries),
           updatedBy: getCurrentUserName(),
+          updatedAt: todayLabel(),
         };
       }
       window.editingDocId = null;
@@ -1936,7 +1983,7 @@ if (maloteForm) {
       epis: formatEpiItems(epiItems),
       status: form.get("status"),
     };
-    const success = id ? await updateItem("malotes", id, payload) : await addItem("malotes", payload);
+    const success = id ? await updateItem("malotes", id, { ...payload, updatedBy: getCurrentUserName() }) : await addItem("malotes", payload);
     if (success) {
       formElement.reset();
       formElement.elements.id.value = "";
@@ -2180,6 +2227,7 @@ window.baixarDocumentoMalote = function(id) {
     `Status: ${malote.status || ""}`,
     `Data: ${malote.createdAt || ""}`,
     `Registrado por: ${malote.createdBy || "Sistema"}`,
+    malote.updatedBy ? `Alterado por: ${malote.updatedBy}` : "",
     "",
     "EPIs:",
     ...(parseEpiItems(malote.epis).length
