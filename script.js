@@ -673,16 +673,19 @@ function mapRows(collection, rows) {
     }));
   }
 
-  return rows.map((row) => ({
-    id: row.id,
-    cargo: row.cargo,
-    projeto: row.projeto,
-    descricao: row.descricao || "",
-    requisitos: row.requisitos || "",
-    status: row.status,
-    createdBy: row.created_by || "Sistema",
-    createdAt: formatDate(row.created_at),
-  }));
+  return rows.map((row) => {
+    const legacyDetails = parseLegacyJobDetails(row.projeto);
+    return {
+      id: row.id,
+      cargo: row.cargo,
+      projeto: "",
+      descricao: row.descricao || legacyDetails.descricao,
+      requisitos: row.requisitos || legacyDetails.requisitos,
+      status: row.status,
+      createdBy: row.created_by || "Sistema",
+      createdAt: formatDate(row.created_at),
+    };
+  });
 }
 
 function mergeRealtimeRow(collection, row, action = "INSERT") {
@@ -751,6 +754,20 @@ function toDbPayload(collection, values) {
     };
   }
 
+  if (collection === "vagas") {
+    return {
+      cargo: values.cargo,
+      projeto: JSON.stringify({
+        descricao: values.descricao || "",
+        requisitos: values.requisitos || "",
+      }),
+      descricao: values.descricao || "",
+      requisitos: values.requisitos || "",
+      status: values.status || "Aberta",
+      created_by: values.createdBy || getCurrentUserName(),
+    };
+  }
+
   const { createdBy, ...payload } = values;
   return {
     ...payload,
@@ -766,6 +783,36 @@ function withoutCreatedBy(payload) {
 function isMissingCreatedByColumn(error) {
   const message = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`;
   return message.includes("created_by");
+}
+
+function isMissingColumn(error, columnName) {
+  const message = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`;
+  return message.includes(columnName);
+}
+
+function parseLegacyJobDetails(projeto) {
+  try {
+    const parsed = JSON.parse(projeto || "{}");
+    return {
+      descricao: parsed.descricao || "",
+      requisitos: parsed.requisitos || "",
+    };
+  } catch {
+    return {
+      descricao: "",
+      requisitos: "",
+    };
+  }
+}
+
+function withoutOptionalJobColumns(payload) {
+  const { descricao, requisitos, created_by, ...rest } = payload;
+  return rest;
+}
+
+function withoutOptionalApplicationColumns(payload) {
+  const { telefone, created_by, ...rest } = payload;
+  return rest;
 }
 
 async function loadFromSupabase(options = {}) {
@@ -939,6 +986,49 @@ async function addItem(collection, values) {
         return true;
       }
 
+      if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos"))) {
+        const { data: insertedLegacy, error: retryError } = await supabaseClient
+          .from(TABLES[collection])
+          .insert(withoutOptionalJobColumns(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedLegacy])[0],
+          descricao: values.descricao || "",
+          requisitos: values.requisitos || "",
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("Supabase precisa migracao", false);
+        renderAll();
+        showModal("Banco precisa atualizar", "A vaga foi salva em modo compatibilidade. Rode o supabase-schema.sql atualizado para gravar descricao e requisitos em colunas proprias.", "info");
+        return true;
+      }
+
+      if (collection === "candidaturas" && isMissingColumn(error, "telefone")) {
+        const { data: insertedLegacy, error: retryError } = await supabaseClient
+          .from(TABLES[collection])
+          .insert(withoutOptionalApplicationColumns(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedLegacy])[0],
+          telefone: values.telefone || "",
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("Supabase precisa migracao", false);
+        renderAll();
+        showModal("Banco precisa atualizar", "A candidatura foi salva, mas rode o supabase-schema.sql atualizado para gravar telefone no banco.", "info");
+        return true;
+      }
+
       throw error;
     }
 
@@ -992,6 +1082,26 @@ async function updateItem(collection, id, values) {
         return true;
       }
 
+      if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos"))) {
+        const { data: updatedLegacy, error: retryError } = await supabaseClient
+          .from(TABLES[collection])
+          .update(withoutOptionalJobColumns(payload))
+          .eq("id", id)
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+        mergeRealtimeRow(collection, {
+          ...updatedLegacy,
+          descricao: values.descricao || "",
+          requisitos: values.requisitos || "",
+        }, "UPDATE");
+        renderRealtimeUpdate(collection);
+        setSyncStatus("Supabase precisa migracao", false);
+        showModal("Banco precisa atualizar", "A vaga foi atualizada em modo compatibilidade. Rode o supabase-schema.sql atualizado para gravar descricao e requisitos em colunas proprias.", "info");
+        return true;
+      }
+
       throw error;
     }
 
@@ -1021,8 +1131,20 @@ async function deleteItem(collection, id) {
   }
 
   try {
-    const { error } = await supabaseClient.from(TABLES[collection]).delete().eq("id", id);
+    if (collection === "vagas") {
+      const { error: candidaturaError } = await supabaseClient.from(TABLES.candidaturas).delete().eq("vaga_id", id);
+      if (candidaturaError) throw candidaturaError;
+    }
+
+    const { data: deletedRows, error } = await supabaseClient.from(TABLES[collection]).delete().eq("id", id).select("id");
     if (error) throw error;
+
+    if (!deletedRows?.length) {
+      setSyncStatus("Delete pendente no Supabase", false);
+      showModal("Permissao de Delete", "O Supabase nao confirmou a exclusao da vaga. Rode o supabase-schema.sql atualizado para liberar DELETE em hub_vagas.", "error");
+      await refreshFromSupabase();
+      return false;
+    }
 
     data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
     if (collection === "vagas") {
