@@ -243,6 +243,11 @@ function findLocalTeamUser(value) {
   return getAllLocalUsers().find((user) => normalizeLoginName(user.nome) === normalized);
 }
 
+function getUserRoleLabel(value) {
+  const role = findLocalTeamUser(value)?.cargo || "";
+  return role ? ` (${role})` : "";
+}
+
 function repairTeamCredentialsStore() {
   syncTeamCredentials(mergeUsersByName(loadTeamUsersStore(), data?.usuarios || []));
 }
@@ -2288,7 +2293,7 @@ function renderChat() {
       return `
         <article class="chat-message ${item.autor === currentUser ? "own" : ""}">
           <div class="chat-author">
-            <span>${escapeHtml(item.autor)}</span>
+            <span>${escapeHtml(item.autor)}${escapeHtml(getUserRoleLabel(item.autor))}</span>
             <time>${escapeHtml(item.createdAt)}</time>
           </div>
           ${item.mensagem ? `<p>${escapeHtml(item.mensagem)}</p>` : ""}
