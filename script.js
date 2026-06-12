@@ -2236,9 +2236,9 @@ function renderAll() {
       renderCards("denuncias-nao-lidas", arquivadas, (item) => cardTemplate(item, true));
     }
   } else {
-    renderCards("denuncias-nao-lidas", naoLidas, cardTemplate);
+    renderCards("denuncias-nao-lidas", naoLidas, (item) => cardTemplate(item, false));
   }
-  renderCards("denuncias-lidas", lidas, cardTemplate);
+  renderCards("denuncias-lidas", lidas, (item) => cardTemplate(item, false));
 
   renderChatChannels();
   renderChat();
