@@ -2125,12 +2125,23 @@ function renderAccountSettings() {
   const nameInput = document.getElementById("conta-nome");
   const newNameInput = document.getElementById("novo-nome");
   const roleInput = document.getElementById("conta-cargo");
+  const avatarPreview = document.getElementById("conta-avatar-preview");
   if (!nameInput && !roleInput && !newNameInput) return;
 
   const user = getCurrentUserRecord();
   if (nameInput) nameInput.value = getCurrentUserName();
   if (newNameInput) newNameInput.value = getCurrentUserName();
   if (roleInput) roleInput.value = user?.cargo || getCurrentUserRole() || "Sem cargo definido";
+
+  if (avatarPreview) {
+    if (user?.foto_perfil) {
+      avatarPreview.src = user.foto_perfil;
+      avatarPreview.style.display = "block";
+    } else {
+      avatarPreview.src = "";
+      avatarPreview.style.display = "none";
+    }
+  }
 }
 
 function renderChatChannels() {
@@ -2778,6 +2789,22 @@ if (usuarioForm) {
 
     if (success) {
       formElement.reset();
+    }
+  });
+}
+
+const fotoPerfilInput = document.getElementById("foto-perfil-input");
+if (fotoPerfilInput) {
+  fotoPerfilInput.addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    const preview = document.getElementById("conta-avatar-preview");
+    if (file && preview) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        preview.src = e.target.result;
+        preview.style.display = "block";
+      };
+      reader.readAsDataURL(file);
     }
   });
 }

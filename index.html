@@ -651,7 +651,7 @@
         </section>
 
         <section class="view" id="conta">
-          <div class="single-workspace" style="max-width: 800px; margin: 0 auto;">
+          <div class="single-workspace">
             <form class="panel form-panel" id="conta-form">
               <div class="panel-header">
                 <h2>Configuração de conta</h2>
@@ -660,7 +660,10 @@
                 <input type="text" name="novo_nome" id="novo-nome" placeholder="Seu nome" />
               </label>
               <label>Foto de Perfil
-                <input type="file" name="foto_perfil" accept="image/png, image/jpeg" />
+                <div style="display: flex; align-items: center; gap: 16px;">
+                  <img id="conta-avatar-preview" src="" alt="Avatar" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: var(--teal-surface); border: 1px solid var(--line); display: none;">
+                  <input type="file" name="foto_perfil" id="foto-perfil-input" accept="image/png, image/jpeg" />
+                </div>
               </label>
               <label>Cargo
                 <input id="conta-cargo" type="text" disabled style="background: var(--surface-soft);" />
