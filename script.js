@@ -299,6 +299,8 @@ async function validateLogin(name, password) {
 
   if (!client) {
     console.warn("Não foi possível conectar ao banco. Verifique se o login.html possui os scripts do Supabase.");
+    const errorMsg = document.getElementById("login-error");
+    if (errorMsg) errorMsg.textContent = "Erro de conexão. Verifique os scripts do banco.";
     return false;
   }
 
@@ -315,6 +317,8 @@ async function validateLogin(name, password) {
     return users && users.length > 0;
   } catch (error) {
     console.error("Erro ao validar usuario no Supabase:", error);
+    const errorMsg = document.getElementById("login-error");
+    if (errorMsg) errorMsg.textContent = "Erro de banco de dados. A tabela hub_users existe?";
     return false;
   }
 }
@@ -354,7 +358,10 @@ function setupLogin() {
   
       if (!loginOk) {
         console.warn("Login local disponivel para:", debugLocalLoginNames());
-        document.getElementById("login-error").textContent = "Nome ou senha incorretos.";
+        const errorEl = document.getElementById("login-error");
+        if (errorEl && !errorEl.textContent.includes("banco") && !errorEl.textContent.includes("conexão")) {
+          errorEl.textContent = "Nome ou senha incorretos.";
+        }
         return;
       }
   
@@ -964,12 +971,21 @@ async function saveTeamUser(values) {
     if (findError) throw findError;
 
     const existing = existingRows?.[0];
-    const query = existing
+    let query = existing
       ? supabaseClient.from(USERS_TABLE).update({ nome, senha, created_by: getCurrentUserName() }).eq("id", existing.id)
       : supabaseClient.from(USERS_TABLE).insert({ nome, senha, created_by: getCurrentUserName() });
 
-    const { data: savedRows, error } = await query.select("*");
-    if (error) throw error;
+    let result = await query.select("*");
+
+    if (result.error && isMissingCreatedByColumn(result.error)) {
+      query = existing
+        ? supabaseClient.from(USERS_TABLE).update({ nome, senha }).eq("id", existing.id)
+        : supabaseClient.from(USERS_TABLE).insert({ nome, senha });
+      result = await query.select("*");
+    }
+
+    if (result.error) throw result.error;
+    const savedRows = result.data;
 
     const saved = mapRows("usuarios", savedRows || [])[0] || { nome, senha, createdAt: todayLabel() };
     upsertLocalUser({ ...saved, syncStatus: "active" });
@@ -979,6 +995,7 @@ async function saveTeamUser(values) {
     console.error("Erro ao salvar usuario no Supabase:", error);
     upsertLocalUser({ nome, senha, syncStatus: "active" });
     setSyncStatus("Usuario salvo local", false);
+    showModal("Aviso de Banco de Dados", "O usuário foi salvo apenas localmente. Para que o login funcione em outros computadores, execute o código SQL de criação da tabela 'hub_users' no painel do Supabase.", "error");
     return true;
   }
 }
