@@ -73,6 +73,8 @@ const defaultData = {
       id: generateUUID(),
       cargo: "Auxiliar Administrativo",
       projeto: "Projeto Expansao",
+      descricao: "Apoio as rotinas administrativas, organizacao de documentos e atendimento interno.",
+      requisitos: "Ensino medio completo, organizacao e conhecimento basico em pacote Office.",
       status: "Aberta",
       createdAt: "Hoje",
     },
@@ -653,6 +655,7 @@ function mapRows(collection, rows) {
       id: row.id,
       vaga_id: row.vaga_id,
       nome: row.nome,
+      telefone: row.telefone || "",
       cpf: row.cpf,
       curriculo_url: row.curriculo_url,
       createdBy: row.created_by || row.nome,
@@ -674,6 +677,8 @@ function mapRows(collection, rows) {
     id: row.id,
     cargo: row.cargo,
     projeto: row.projeto,
+    descricao: row.descricao || "",
+    requisitos: row.requisitos || "",
     status: row.status,
     createdBy: row.created_by || "Sistema",
     createdAt: formatDate(row.created_at),
@@ -950,6 +955,91 @@ async function addItem(collection, values) {
   }
 }
 
+async function updateItem(collection, id, values) {
+  if (!id) return false;
+
+  if (!supabaseClient) {
+    data[collection] = (data[collection] || []).map((item) =>
+      String(item.id) === String(id) ? { ...item, ...values } : item
+    );
+    saveLocalData();
+    renderAll();
+    return true;
+  }
+
+  try {
+    const payload = toDbPayload(collection, values);
+    const { data: updated, error } = await supabaseClient
+      .from(TABLES[collection])
+      .update(payload)
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (error) {
+      if (isMissingCreatedByColumn(error)) {
+        const { data: updatedWithoutAuthor, error: retryError } = await supabaseClient
+          .from(TABLES[collection])
+          .update(withoutCreatedBy(payload))
+          .eq("id", id)
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+        mergeRealtimeRow(collection, updatedWithoutAuthor, "UPDATE");
+        renderRealtimeUpdate(collection);
+        setSyncStatus("Supabase sem autoria", false);
+        return true;
+      }
+
+      throw error;
+    }
+
+    mergeRealtimeRow(collection, updated, "UPDATE");
+    renderRealtimeUpdate(collection);
+    setSyncStatus("Supabase EIXO online", true);
+    return true;
+  } catch (error) {
+    console.error("Erro ao atualizar no Supabase:", error);
+    setSyncStatus("Erro no Supabase", false);
+    showModal("Erro ao Atualizar", "Nao foi possivel atualizar o registro no Supabase.", "error");
+    return false;
+  }
+}
+
+async function deleteItem(collection, id) {
+  if (!id) return false;
+
+  if (!supabaseClient) {
+    data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
+    if (collection === "vagas") {
+      data.candidaturas = (data.candidaturas || []).filter((item) => String(item.vaga_id) !== String(id));
+    }
+    saveLocalData();
+    renderAll();
+    return true;
+  }
+
+  try {
+    const { error } = await supabaseClient.from(TABLES[collection]).delete().eq("id", id);
+    if (error) throw error;
+
+    data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
+    if (collection === "vagas") {
+      data.candidaturas = (data.candidaturas || []).filter((item) => String(item.vaga_id) !== String(id));
+    }
+    saveLocalData();
+    renderAll();
+    setSyncStatus("Supabase EIXO online", true);
+    return true;
+  } catch (error) {
+    console.error("Erro ao deletar no Supabase:", error);
+    setSyncStatus("Erro no Supabase", false);
+    showModal("Erro ao Deletar", "Nao foi possivel deletar a vaga no Supabase.", "error");
+    return false;
+  }
+}
+
 function upsertLocalUser(values) {
   const normalizedName = normalizeLoginName(values.nome);
   const existingIndex = data.usuarios.findIndex((user) => normalizeLoginName(user.nome) === normalizedName);
@@ -1193,17 +1283,19 @@ async function lerDenuncia(id) {
 }
 
 function renderPublicVagas() {
-  const select = document.getElementById("vaga-select");
+  const selectedInput = document.getElementById("vaga-id");
+  const selectedPanel = document.getElementById("selected-public-job");
   const list = document.getElementById("public-vagas-list");
-  if (!select && !list) return;
+  if (!selectedInput && !selectedPanel && !list) return;
 
   const openVagas = data.vagas.filter(v => v.status === "Aberta");
+  const selectedVaga = new URLSearchParams(window.location.search).get("vaga");
 
   if (!openVagas.length) {
     if (list) list.innerHTML = '<p class="empty-state">Nenhuma vaga aberta no momento.</p>';
-    if (select) {
-      select.innerHTML = '<option value="">Nenhuma vaga disponivel</option>';
-      select.disabled = true;
+    if (selectedInput) selectedInput.value = "";
+    if (selectedPanel) {
+      selectedPanel.innerHTML = '<p class="empty-state">Nenhuma vaga aberta no momento.</p>';
     }
     return;
   }
@@ -1215,17 +1307,36 @@ function renderPublicVagas() {
           <p class="item-title">${escapeHtml(v.cargo)}</p>
           <span class="tag">${escapeHtml(v.projeto)}</span>
         </div>
+        <p>${escapeHtml(v.descricao || "Descricao nao informada.")}</p>
+        <p><strong>Requisitos:</strong> ${escapeHtml(v.requisitos || "Nao informado.")}</p>
         <p class="item-meta">Status: ${escapeHtml(v.status)}</p>
         <a class="primary-button button-link" href="candidatura.html?vaga=${encodeURIComponent(v.id)}">Candidatar-se</a>
       </article>
     `).join("");
   }
 
-  if (select) {
-    const selectedVaga = new URLSearchParams(window.location.search).get("vaga");
-    select.disabled = false;
-    select.innerHTML = '<option value="">Selecione uma vaga...</option>' + openVagas.map(v => `<option value="${v.id}">${escapeHtml(v.cargo)} - ${escapeHtml(v.projeto)}</option>`).join("");
-    if (selectedVaga) select.value = selectedVaga;
+  if (selectedInput || selectedPanel) {
+    const job = openVagas.find((item) => String(item.id) === String(selectedVaga));
+    if (!job) {
+      if (selectedInput) selectedInput.value = "";
+      if (selectedPanel) {
+        selectedPanel.innerHTML = '<p class="empty-state">Vaga nao encontrada ou fechada. Volte para a lista e escolha uma vaga aberta.</p>';
+      }
+      return;
+    }
+
+    if (selectedInput) selectedInput.value = job.id;
+    if (selectedPanel) {
+      selectedPanel.innerHTML = `
+        <div class="item-topline">
+          <p class="item-title">${escapeHtml(job.cargo)}</p>
+          <span class="tag">${escapeHtml(job.status)}</span>
+        </div>
+        <p>${escapeHtml(job.projeto)}</p>
+        <p>${escapeHtml(job.descricao || "Descricao nao informada.")}</p>
+        <p><strong>Requisitos:</strong> ${escapeHtml(job.requisitos || "Nao informado.")}</p>
+      `;
+    }
   }
 }
 
@@ -1306,7 +1417,7 @@ function renderAll() {
     if (candidaturas.length > 0) {
       candidaturasHtml = candidaturas.map(c => `
         <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
-          <p style="margin: 0; font-size: 13px; font-weight: 600;">${escapeHtml(c.nome)} <span style="font-weight: normal; color: var(--muted);">(CPF: ${escapeHtml(c.cpf)})</span></p>
+          <p style="margin: 0; font-size: 13px; font-weight: 600;">${escapeHtml(c.nome)} <span style="font-weight: normal; color: var(--muted);">(CPF: ${escapeHtml(c.cpf)} | Tel: ${escapeHtml(c.telefone || "Nao informado")})</span></p>
           <a href="${escapeHtml(c.curriculo_url)}" target="_blank" class="secondary-link" style="min-height: 28px; padding: 0 10px; font-size: 12px;">Ver Currículo</a>
         </div>
       `).join("");
@@ -1316,7 +1427,13 @@ function renderAll() {
       <article class="item-card">
         <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
         <p>${escapeHtml(item.projeto)}</p>
+        <p>${escapeHtml(item.descricao || "Descricao nao informada.")}</p>
+        <p><strong>Requisitos:</strong> ${escapeHtml(item.requisitos || "Nao informado.")}</p>
         <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+        <div class="job-actions">
+          <button class="secondary-link" type="button" onclick="editarVaga('${escapeHtml(item.id)}')">Editar</button>
+          <button class="danger-button" type="button" onclick="excluirVaga('${escapeHtml(item.id)}')">Deletar</button>
+        </div>
         <div style="margin-top: 16px; background: var(--surface-soft); padding: 16px; border-radius: var(--radius-md);"><p style="margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--teal);">Currículos Recebidos (${candidaturas.length})</p>${candidaturasHtml}</div>
       </article>
     `;
@@ -1600,16 +1717,30 @@ if (vagaForm) {
     event.preventDefault();
     const formElement = event.target;
     const form = new FormData(formElement);
-    const success = await addItem("vagas", {
+    const id = form.get("id");
+    const payload = {
       cargo: form.get("cargo"),
       projeto: form.get("projeto"),
+      descricao: form.get("descricao"),
+      requisitos: form.get("requisitos"),
       status: form.get("status"),
-    });
+    };
+    const success = id ? await updateItem("vagas", id, payload) : await addItem("vagas", payload);
     if (success) {
       formElement.reset();
+      formElement.elements.id.value = "";
+      document.getElementById("cancelar-edicao-vaga")?.setAttribute("hidden", "");
+      formElement.querySelector('button[type="submit"]').textContent = "Salvar vaga";
     }
   });
 }
+
+document.getElementById("cancelar-edicao-vaga")?.addEventListener("click", () => {
+  vagaForm.reset();
+  vagaForm.elements.id.value = "";
+  document.getElementById("cancelar-edicao-vaga").setAttribute("hidden", "");
+  vagaForm.querySelector('button[type="submit"]').textContent = "Salvar vaga";
+});
 
 const usuarioForm = document.getElementById("usuario-form");
 if (usuarioForm) {
@@ -1636,10 +1767,14 @@ if (candidaturaForm) {
     const form = new FormData(formElement);
     const vaga_id = form.get("vaga_id");
     const nome = form.get("nome");
+    const telefone = form.get("telefone");
     const cpf = form.get("cpf");
     const curriculo = form.get("curriculo");
 
-    if (!vaga_id || !nome || !cpf || !curriculo || !curriculo.name) return;
+    if (!vaga_id || !nome || !telefone || !cpf || !curriculo || !curriculo.name) {
+      showModal("Vaga obrigatoria", "Abra a candidatura pelo botao Candidatar-se de uma vaga aberta.", "error");
+      return;
+    }
 
     const existing = (data.candidaturas || []).find(c => String(c.vaga_id) === String(vaga_id) && c.cpf === cpf);
     if (existing) {
@@ -1659,9 +1794,10 @@ if (candidaturaForm) {
         fileUrl = publicData.publicUrl;
       }
 
-      const success = await addItem("candidaturas", { vaga_id, nome, cpf, curriculo_url: fileUrl });
+      const success = await addItem("candidaturas", { vaga_id, nome, telefone, cpf, curriculo_url: fileUrl });
       if (success) {
         formElement.reset();
+        document.getElementById("vaga-id").value = vaga_id;
         showModal("Sucesso", "Seu currículo foi enviado com sucesso!", "info");
       }
     } catch (error) {
@@ -1741,4 +1877,27 @@ window.excluirUsuario = async function(id) {
   if (!confirm(`Tem certeza que deseja deletar ${user.nome} da equipe?`)) return;
 
   await deleteTeamUser(id);
+};
+
+window.editarVaga = function(id) {
+  const vaga = (data.vagas || []).find((item) => String(item.id) === String(id));
+  const form = document.getElementById("vaga-form");
+  if (!vaga || !form) return;
+
+  form.elements.id.value = vaga.id;
+  form.elements.cargo.value = vaga.cargo || "";
+  form.elements.projeto.value = vaga.projeto || "";
+  form.elements.descricao.value = vaga.descricao || "";
+  form.elements.requisitos.value = vaga.requisitos || "";
+  form.elements.status.value = vaga.status || "Aberta";
+  document.getElementById("cancelar-edicao-vaga")?.removeAttribute("hidden");
+  form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+window.excluirVaga = async function(id) {
+  const vaga = (data.vagas || []).find((item) => String(item.id) === String(id));
+  if (!vaga) return;
+  if (!confirm(`Tem certeza que deseja deletar a vaga "${vaga.cargo}"?`)) return;
+  await deleteItem("vagas", id);
 };

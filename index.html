@@ -183,21 +183,27 @@
                 </div>
                 <a class="secondary-link" href="vagas.html" target="_blank" rel="noreferrer">Ver portal publico</a>
               </div>
+              <input name="id" type="hidden" />
               <label>Cargo
                 <input name="cargo" placeholder="Ex: Tecnico de Seguranca" required />
               </label>
               <label>Projeto
                 <input name="projeto" placeholder="Nome do projeto" required />
               </label>
+              <label>Descricao
+                <textarea name="descricao" rows="4" placeholder="Resumo das atividades da vaga" required></textarea>
+              </label>
+              <label>Requisitos
+                <textarea name="requisitos" rows="4" placeholder="Experiencia, cursos, disponibilidade..." required></textarea>
+              </label>
               <label>Status
                 <select name="status">
                   <option>Aberta</option>
-                  <option>Triagem</option>
-                  <option>Entrevistas</option>
                   <option>Fechada</option>
                 </select>
               </label>
               <button class="primary-button" type="submit">Salvar vaga</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-vaga" type="button" hidden>Cancelar edicao</button>
             </form>
             <div class="panel">
               <div class="panel-header">

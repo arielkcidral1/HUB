@@ -21,11 +21,15 @@
           </div>
           <p class="public-description">E permitido o envio de apenas um curriculo por CPF para cada vaga.</p>
 
-          <label>Selecione a vaga
-            <select name="vaga_id" id="vaga-select" required><option value="">Carregando...</option></select>
-          </label>
+          <input name="vaga_id" id="vaga-id" type="hidden" required />
+          <div class="selected-public-job" id="selected-public-job">
+            <p class="empty-state">Carregando vaga selecionada...</p>
+          </div>
           <label>Nome completo
             <input name="nome" required placeholder="Ex: Joao da Silva" />
+          </label>
+          <label>Telefone
+            <input name="telefone" required placeholder="(00) 00000-0000" />
           </label>
           <label>CPF
             <input name="cpf" required placeholder="000.000.000-00" pattern="\d{3}\.?\d{3}\.?\d{3}-?\d{2}" title="Digite o CPF corretamente" />
