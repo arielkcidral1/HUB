@@ -1195,28 +1195,38 @@ async function lerDenuncia(id) {
 function renderPublicVagas() {
   const select = document.getElementById("vaga-select");
   const list = document.getElementById("public-vagas-list");
-  if (!select || !list) return;
+  if (!select && !list) return;
 
   const openVagas = data.vagas.filter(v => v.status === "Aberta");
 
   if (!openVagas.length) {
-    list.innerHTML = '<p class="empty-state">Nenhuma vaga aberta no momento.</p>';
-    select.innerHTML = '<option value="">Nenhuma vaga disponível</option>';
-    select.disabled = true;
+    if (list) list.innerHTML = '<p class="empty-state">Nenhuma vaga aberta no momento.</p>';
+    if (select) {
+      select.innerHTML = '<option value="">Nenhuma vaga disponivel</option>';
+      select.disabled = true;
+    }
     return;
   }
 
-  list.innerHTML = openVagas.map(v => `
-    <article class="item-card">
-      <div class="item-topline">
-        <p class="item-title">${escapeHtml(v.cargo)}</p>
-        <span class="tag">${escapeHtml(v.projeto)}</span>
-      </div>
-    </article>
-  `).join("");
+  if (list) {
+    list.innerHTML = openVagas.map(v => `
+      <article class="item-card public-job-card">
+        <div class="item-topline">
+          <p class="item-title">${escapeHtml(v.cargo)}</p>
+          <span class="tag">${escapeHtml(v.projeto)}</span>
+        </div>
+        <p class="item-meta">Status: ${escapeHtml(v.status)}</p>
+        <a class="primary-button button-link" href="candidatura.html?vaga=${encodeURIComponent(v.id)}">Candidatar-se</a>
+      </article>
+    `).join("");
+  }
 
-  select.disabled = false;
-  select.innerHTML = '<option value="">Selecione uma vaga...</option>' + openVagas.map(v => `<option value="${v.id}">${escapeHtml(v.cargo)} - ${escapeHtml(v.projeto)}</option>`).join("");
+  if (select) {
+    const selectedVaga = new URLSearchParams(window.location.search).get("vaga");
+    select.disabled = false;
+    select.innerHTML = '<option value="">Selecione uma vaga...</option>' + openVagas.map(v => `<option value="${v.id}">${escapeHtml(v.cargo)} - ${escapeHtml(v.projeto)}</option>`).join("");
+    if (selectedVaga) select.value = selectedVaga;
+  }
 }
 
 function renderTeamUsers() {

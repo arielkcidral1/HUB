@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Enviar Curriculo | HUB RH</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="public-layout">
+      <div class="public-container">
+        <header class="public-header">
+          <p class="eyebrow">Candidatura</p>
+          <h1>Envie seu Curriculo</h1>
+          <p class="public-header-text">Preencha seus dados e anexe o curriculo para a vaga selecionada.</p>
+        </header>
+
+        <form class="panel" id="candidatura-form" data-public-vagas="true">
+          <div class="panel-header">
+            <h2>Informacoes do candidato</h2>
+          </div>
+          <p class="public-description">E permitido o envio de apenas um curriculo por CPF para cada vaga.</p>
+
+          <label>Selecione a vaga
+            <select name="vaga_id" id="vaga-select" required><option value="">Carregando...</option></select>
+          </label>
+          <label>Nome completo
+            <input name="nome" required placeholder="Ex: Joao da Silva" />
+          </label>
+          <label>CPF
+            <input name="cpf" required placeholder="000.000.000-00" pattern="\d{3}\.?\d{3}\.?\d{3}-?\d{2}" title="Digite o CPF corretamente" />
+          </label>
+          <label>Curriculo (PDF ou Word)
+            <input name="curriculo" type="file" accept=".pdf,.doc,.docx" required />
+          </label>
+          <button class="primary-button" type="submit">Enviar curriculo</button>
+          <a class="secondary-link public-back-link" href="vagas.html">Voltar para vagas</a>
+        </form>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
