@@ -63,8 +63,9 @@ const defaultData = {
     {
       id: generateUUID(),
       destino: "Unidade Norte",
-      epis: "Luvas nitrilicas, oculos de protecao, protetor auricular",
-      status: "Em transito",
+      origem: "Almoxarifado Central",
+      epis: "Luvas nitrilicas (10), oculos de protecao (5), protetor auricular (20)",
+      status: "Entrega",
       createdAt: "Hoje",
     },
   ],
@@ -564,6 +565,26 @@ function formatCpf(value) {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
+function isTodayLabel(value) {
+  return value === todayLabel() || value === "Hoje";
+}
+
+function formatEpiItems(items) {
+  return items
+    .filter((item) => item.nome && item.quantidade)
+    .map((item) => `${item.nome} (${item.quantidade})`)
+    .join(", ");
+}
+
+function readEpiItems(formElement) {
+  return [...formElement.querySelectorAll(".epi-row")]
+    .map((row) => ({
+      nome: row.querySelector('[name="epi_nome[]"]')?.value.trim() || "",
+      quantidade: row.querySelector('[name="epi_quantidade[]"]')?.value.trim() || "",
+    }))
+    .filter((item) => item.nome && item.quantidade);
+}
+
 function todayLabel() {
   return formatDate(new Date().toISOString());
 }
@@ -658,6 +679,7 @@ function mapRows(collection, rows) {
     return rows.map((row) => ({
       id: row.id,
       destino: row.destino,
+      origem: row.origem || "",
       epis: row.epis,
       status: row.status,
       createdBy: row.created_by || "Sistema",
@@ -779,6 +801,16 @@ function toDbPayload(collection, values) {
       descricao: values.descricao || "",
       requisitos: values.requisitos || "",
       status: values.status || "Aberta",
+      created_by: values.createdBy || getCurrentUserName(),
+    };
+  }
+
+  if (collection === "malotes") {
+    return {
+      destino: values.destino,
+      origem: values.origem || "",
+      epis: values.epis,
+      status: values.status || "Separação",
       created_by: values.createdBy || getCurrentUserName(),
     };
   }
@@ -1321,7 +1353,7 @@ function renderDashboard() {
     document.getElementById("metric-comunicados").textContent = unreadRhMessages.length;
   }
   if (document.getElementById("metric-malotes")) {
-    document.getElementById("metric-malotes").textContent = data.malotes.filter((item) => item.status === "Em transito").length;
+    document.getElementById("metric-malotes").textContent = data.malotes.filter((item) => isTodayLabel(item.createdAt)).length;
   }
   if (document.getElementById("metric-vagas")) {
     document.getElementById("metric-vagas").textContent = data.vagas.filter((item) => item.status !== "Fechada").length;
@@ -1351,7 +1383,7 @@ function renderDashboard() {
 
   // Compila atividades de todos os outros módulos na lista de recentes
   const recentItems = [
-    ...data.malotes.map((item) => ({ title: `Malote: ${item.destino}`, text: item.epis, tag: item.status, date: item.createdAt })),
+    ...data.malotes.map((item) => ({ title: `Malote: ${item.destino}`, text: `Origem: ${item.origem || "Nao informada"} | ${item.epis}`, tag: item.status, date: item.createdAt })),
     ...data.vagas.map((item) => ({ title: `Vaga: ${item.cargo}`, text: item.descricao, tag: item.status, date: item.createdAt })),
     ...documentRecords.map((item) => ({ title: `Doc: ${documentLabels[item.type] || item.type}`, text: item.summary, tag: "Registro", date: item.createdAt }))
   ].slice(0, 6);
@@ -1540,6 +1572,7 @@ function renderAll() {
   renderCards("malotes-list", data.malotes, (item) => `
     <article class="item-card">
       <div class="item-topline"><p class="item-title">${escapeHtml(item.destino)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
+      <p><strong>Origem:</strong> ${escapeHtml(item.origem || "Nao informada")}</p>
       <p>${escapeHtml(item.epis)}</p>
       <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
     </article>
@@ -1834,17 +1867,60 @@ if (chatForm) {
 
 const maloteForm = document.getElementById("malote-form");
 if (maloteForm) {
+  document.getElementById("adicionar-epi")?.addEventListener("click", () => {
+    const list = document.getElementById("epi-list");
+    if (!list) return;
+    const row = document.createElement("div");
+    row.className = "epi-row";
+    row.innerHTML = `
+      <label>Nome
+        <input name="epi_nome[]" placeholder="Capacete, luvas, oculos..." required />
+      </label>
+      <label>Quantidade
+        <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
+      </label>
+      <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+    `;
+    list.appendChild(row);
+  });
+
+  document.getElementById("epi-list")?.addEventListener("click", (event) => {
+    const button = event.target.closest(".remove-epi");
+    if (!button) return;
+    const rows = document.querySelectorAll("#epi-list .epi-row");
+    if (rows.length <= 1) return;
+    button.closest(".epi-row")?.remove();
+  });
+
   maloteForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formElement = event.target;
     const form = new FormData(formElement);
+    const epiItems = readEpiItems(formElement);
+    if (!epiItems.length) {
+      showModal("EPIs obrigatorios", "Adicione pelo menos um EPI com nome e quantidade.", "error");
+      return;
+    }
+
     const success = await addItem("malotes", {
       destino: form.get("destino"),
-      epis: form.get("epis"),
+      origem: form.get("origem"),
+      epis: formatEpiItems(epiItems),
       status: form.get("status"),
     });
     if (success) {
       formElement.reset();
+      document.getElementById("epi-list").innerHTML = `
+        <div class="epi-row">
+          <label>Nome
+            <input name="epi_nome[]" placeholder="Capacete, luvas, oculos..." required />
+          </label>
+          <label>Quantidade
+            <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
+          </label>
+          <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+        </div>
+      `;
     }
   });
 }

@@ -63,7 +63,7 @@
               <strong id="metric-comunicados">0</strong>
             </article>
             <article class="metric-card">
-              <span>Malotes em transito</span>
+              <span>Malotes feitos hoje</span>
               <strong id="metric-malotes">0</strong>
             </article>
             <article class="metric-card">
@@ -153,14 +153,30 @@
               <label>Destino
                 <input name="destino" placeholder="Unidade, setor ou colaborador" required />
               </label>
-              <label>EPIs
-                <textarea name="epis" rows="4" placeholder="Capacete, luvas, oculos..." required></textarea>
+              <label>Origem
+                <input name="origem" placeholder="Unidade, almoxarifado ou setor de origem" required />
               </label>
+              <div class="dynamic-fieldset">
+                <div class="item-topline">
+                  <span>EPIs</span>
+                  <button class="secondary-link" id="adicionar-epi" type="button">Adicionar EPI</button>
+                </div>
+                <div class="epi-list" id="epi-list">
+                  <div class="epi-row">
+                    <label>Nome
+                      <input name="epi_nome[]" placeholder="Capacete, luvas, oculos..." required />
+                    </label>
+                    <label>Quantidade
+                      <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
+                    </label>
+                    <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+                  </div>
+                </div>
+              </div>
               <label>Status
                 <select name="status">
-                  <option>Separacao</option>
-                  <option>Em transito</option>
-                  <option>Entregue</option>
+                  <option>Separação</option>
+                  <option>Entrega</option>
                 </select>
               </label>
               <button class="primary-button" type="submit">Salvar malote</button>
