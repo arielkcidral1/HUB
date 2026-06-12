@@ -1516,7 +1516,11 @@ async function updateItem(collection, id, values) {
   } catch (error) {
     console.error("Erro ao atualizar no Supabase:", error);
     setSyncStatus("Erro no Supabase", false);
-    showModal("Erro ao Atualizar", "Nao foi possivel atualizar o registro no Supabase.", "error");
+    const message =
+      collection === "chamados"
+        ? "O Supabase bloqueou o arquivamento do chamado. Rode o arquivo fix-arquivar-chamados-supabase.sql no Supabase para liberar UPDATE em hub_chamados."
+        : "Nao foi possivel atualizar o registro no Supabase.";
+    showModal("Erro ao Atualizar", message, "error");
     return false;
   }
 }
