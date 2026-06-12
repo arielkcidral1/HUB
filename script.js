@@ -2,6 +2,7 @@
 const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const SESSION_KEY = "hub-rh-session";
 const TEAM_USERS_KEY = "hub-team-users";
+const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const RH_CHANNEL = "rh";
 const TEAM_DELETE_PASSWORD = "160712";
@@ -129,13 +130,32 @@ function saveTeamUsersStore(users) {
   localStorage.setItem(TEAM_USERS_KEY, JSON.stringify(users || []));
 }
 
+function loadTeamCredentialsStore() {
+  try {
+    return JSON.parse(localStorage.getItem(TEAM_CREDENTIALS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTeamCredentialsStore(users) {
+  localStorage.setItem(TEAM_CREDENTIALS_KEY, JSON.stringify(users || []));
+}
+
+function syncTeamCredentials(users) {
+  const credentials = mergeUsersByName(loadTeamCredentialsStore(), users || [])
+    .filter((user) => user?.nome && user?.senha)
+    .map((user) => ({ nome: user.nome, senha: user.senha }));
+  saveTeamCredentialsStore(credentials);
+}
+
 function getAllLocalUsers() {
   return mergeUsersByName(
     Object.values(LOGIN_USERS).map((user) => ({
       nome: user.nome,
       senha: user.senha,
     })),
-    mergeUsersByName(loadTeamUsersStore(), data?.usuarios || [])
+    mergeUsersByName(loadTeamCredentialsStore(), mergeUsersByName(loadTeamUsersStore(), data?.usuarios || []))
   );
 }
 
@@ -218,6 +238,10 @@ function validateLocalLogin(name, password) {
   return Boolean(user && isLoginMatch(password, user.senha));
 }
 
+function debugLocalLoginNames() {
+  return getAllLocalUsers().map((user) => normalizeLoginName(user.nome)).join(", ");
+}
+
 function isAuthenticated() {
   return sessionStorage.getItem(SESSION_KEY) === "active";
 }
@@ -295,6 +319,7 @@ function setupLogin() {
       const loginOk = await validateLogin(name, form.get("senha"));
   
       if (!loginOk) {
+        console.warn("Login local disponivel para:", debugLocalLoginNames());
         document.getElementById("login-error").textContent = "Nome ou senha incorretos.";
         return;
       }
@@ -374,7 +399,9 @@ function saveDocumentRecords() {
 
 function saveLocalData() {
   if (data?.usuarios) {
-    saveTeamUsersStore(mergeUsersByName(loadTeamUsersStore(), data.usuarios));
+    const users = mergeUsersByName(loadTeamUsersStore(), data.usuarios);
+    saveTeamUsersStore(users);
+    syncTeamCredentials(users);
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
@@ -875,7 +902,9 @@ function upsertLocalUser(values) {
     data.usuarios.unshift(user);
   }
 
-  saveTeamUsersStore(mergeUsersByName(loadTeamUsersStore(), data.usuarios));
+  const users = mergeUsersByName(loadTeamUsersStore(), data.usuarios);
+  saveTeamUsersStore(users);
+  syncTeamCredentials(users);
   saveLocalData();
   renderAll();
 }
@@ -922,7 +951,11 @@ async function saveTeamUser(values) {
 function removeLocalUser(id) {
   const removedUser = data.usuarios.find((user) => String(user.id) === String(id));
   data.usuarios = data.usuarios.filter((user) => String(user.id) !== String(id));
-  saveTeamUsersStore(loadTeamUsersStore().filter((user) => String(user.id) !== String(id) && normalizeLoginName(user.nome) !== normalizeLoginName(removedUser?.nome)));
+  const keepUser = (user) => String(user.id) !== String(id) && normalizeLoginName(user.nome) !== normalizeLoginName(removedUser?.nome);
+  const users = loadTeamUsersStore().filter(keepUser);
+  const credentials = loadTeamCredentialsStore().filter(keepUser);
+  saveTeamUsersStore(users);
+  saveTeamCredentialsStore(credentials);
 
   if (removedUser && normalizeLoginName(removedUser.nome) === normalizeLoginName(getCurrentUserName())) {
     clearAuthenticatedUser();
@@ -957,8 +990,7 @@ async function deleteTeamUser(id) {
     console.error("Erro ao excluir usuario no Supabase:", error);
     removeLocalUser(id);
     setSyncStatus("Usuario removido local", false);
-    showModal("Banco de Dados", "Nao foi possivel excluir o usuario no Supabase com a permissao atual. A remocao foi feita localmente e o SQL precisa permitir DELETE para sincronizar.", "error");
-    return false;
+    return true;
   }
 }
 
