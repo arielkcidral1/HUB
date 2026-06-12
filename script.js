@@ -700,7 +700,7 @@ function isTodayLabel(value) {
 function formatEpiItems(items) {
   return items
     .filter((item) => item.nome && item.quantidade)
-    .map((item) => `${item.nome} (${item.quantidade})`)
+    .map((item) => `${item.nome} (${item.quantidade}${item.tamanho ? `, ${item.tamanho}` : ""})`)
     .join(", ");
 }
 
@@ -709,6 +709,7 @@ function readEpiItems(formElement) {
     .map((row) => ({
       nome: row.querySelector('[name="epi_nome[]"]')?.value.trim() || "",
       quantidade: row.querySelector('[name="epi_quantidade[]"]')?.value.trim() || "",
+      tamanho: row.querySelector('[name="epi_tamanho[]"]')?.value.trim() || "",
     }))
     .filter((item) => item.nome && item.quantidade);
 }
@@ -727,9 +728,12 @@ function createEpiRow(nome = "", quantidade = "") {
   `;
 }
 
-function createChamadoEpiRow(nome = "", quantidade = "") {
+function createChamadoEpiRow(nome = "", quantidade = "", tamanho = "Nao se aplica") {
   const options = '<option value="">Selecione</option>' + EPI_OPTIONS
     .map((item) => `<option value="${escapeHtml(item)}" ${item === nome ? "selected" : ""}>${escapeHtml(item)}</option>`)
+    .join("");
+  const sizeOptions = ["Nao se aplica", "PP", "P", "M", "G", "GG", "EG"]
+    .map((item) => `<option value="${escapeHtml(item)}" ${item === tamanho ? "selected" : ""}>${escapeHtml(item)}</option>`)
     .join("");
 
   return `
@@ -739,6 +743,9 @@ function createChamadoEpiRow(nome = "", quantidade = "") {
       </label>
       <label>Quantidade
         <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" value="${escapeHtml(quantidade)}" required />
+      </label>
+      <label>Tamanho
+        <select name="epi_tamanho[]" required>${sizeOptions}</select>
       </label>
       <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
     </div>
@@ -961,7 +968,6 @@ function mapRows(collection, rows) {
       id: row.id,
       solicitante: row.solicitante,
       unidade: row.unidade,
-      tamanhoLuva: row.tamanho_luva || "",
       setor: row.setor || "",
       epis: row.epis,
       observacoes: row.observacoes || "",
@@ -1103,7 +1109,6 @@ function toDbPayload(collection, values) {
     return {
       solicitante: values.solicitante,
       unidade: values.unidade,
-      tamanho_luva: values.tamanhoLuva || "",
       setor: values.setor || "",
       epis: values.epis,
       observacoes: values.observacoes || "",
@@ -1921,7 +1926,6 @@ function renderAll() {
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
       </div>
       <p><strong>Solicitante:</strong> ${escapeHtml(item.solicitante)}</p>
-      <p><strong>Tamanho de luva:</strong> ${escapeHtml(item.tamanhoLuva || "Nao informado")}</p>
       ${item.setor ? `<p><strong>Setor:</strong> ${escapeHtml(item.setor)}</p>` : ""}
       <p><strong>EPIs:</strong> ${escapeHtml(item.epis)}</p>
       ${item.observacoes ? `<p><strong>Observacoes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
@@ -2419,7 +2423,6 @@ if (chamadoForm) {
     const success = await addItem("chamados", {
       solicitante: form.get("solicitante"),
       unidade: form.get("unidade"),
-      tamanhoLuva: form.get("tamanho_luva"),
       epis: formatEpiItems(epiItems),
       observacoes: form.get("observacoes"),
       status: "Aberto",
