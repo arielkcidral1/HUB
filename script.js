@@ -244,7 +244,8 @@ function findLocalTeamUser(value) {
 }
 
 function getUserRoleLabel(value) {
-  const role = findLocalTeamUser(value)?.cargo || "";
+  const normalized = normalizeLoginName(value);
+  const role = (data.usuarios || []).find((user) => normalizeLoginName(user.nome) === normalized)?.cargo || findLocalTeamUser(value)?.cargo || "";
   return role ? ` (${role})` : "";
 }
 
@@ -286,7 +287,7 @@ function getChatChannels() {
   const currentUser = getCurrentUserName();
   const directChannels = getTeamUsers().filter((user) => normalizeLoginName(user.nome) !== normalizeLoginName(currentUser)).map((user) => ({
       id: getDirectChannel(currentUser, user.nome),
-      label: user.nome,
+      label: `${user.nome}${getUserRoleLabel(user.nome)}`,
       subtitle: `Conversa individual com ${user.nome}`,
     }));
 
@@ -2293,7 +2294,7 @@ function renderChat() {
       return `
         <article class="chat-message ${item.autor === currentUser ? "own" : ""}">
           <div class="chat-author">
-            <span>${escapeHtml(item.autor)}${escapeHtml(getUserRoleLabel(item.autor))}</span>
+            <span>${escapeHtml(item.autor)}</span>
             <time>${escapeHtml(item.createdAt)}</time>
           </div>
           ${item.mensagem ? `<p>${escapeHtml(item.mensagem)}</p>` : ""}
