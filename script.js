@@ -2141,12 +2141,11 @@ function renderAccountSettings() {
   if (roleInput) roleInput.value = user?.cargo || getCurrentUserRole() || "Sem cargo definido";
 
   if (avatarPreview) {
+    avatarPreview.style.display = "block";
     if (user?.foto_perfil) {
       avatarPreview.src = user.foto_perfil;
-      avatarPreview.style.display = "block";
     } else {
-      avatarPreview.src = "";
-      avatarPreview.style.display = "none";
+      avatarPreview.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392a7a2'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
     }
   }
 }
@@ -2805,13 +2804,18 @@ if (fotoPerfilInput) {
   fotoPerfilInput.addEventListener("change", (event) => {
     const file = event.target.files[0];
     const preview = document.getElementById("conta-avatar-preview");
-    if (file && preview) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        preview.src = e.target.result;
-        preview.style.display = "block";
-      };
-      reader.readAsDataURL(file);
+    const filenameLabel = document.getElementById("foto-perfil-filename");
+    if (file) {
+      if (filenameLabel) filenameLabel.textContent = file.name;
+      if (preview) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          preview.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    } else {
+      if (filenameLabel) filenameLabel.textContent = "Nenhuma foto selecionada";
     }
   });
 }
@@ -2939,6 +2943,8 @@ if (contaForm) {
     const success = await updateCurrentAccount("", newName, "", fotoUrl);
     if (success) {
       formElement.reset();
+      const filenameLabel = document.getElementById("foto-perfil-filename");
+      if (filenameLabel) filenameLabel.textContent = "Nenhuma foto selecionada";
       renderAccountSettings();
       renderCurrentUser();
       showModal("Conta atualizada", "Seus dados foram atualizados com sucesso.", "info");

@@ -1,4 +1,4 @@
-﻿<!doctype html>
+﻿﻿<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
@@ -659,12 +659,17 @@
               <label>Nome do Usuário
                 <input type="text" name="novo_nome" id="novo-nome" placeholder="Seu nome" />
               </label>
-              <label>Foto de Perfil
-                <div style="display: flex; align-items: center; gap: 16px;">
-                  <img id="conta-avatar-preview" src="" alt="Avatar" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: var(--teal-surface); border: 1px solid var(--line); display: none;">
-                  <input type="file" name="foto_perfil" id="foto-perfil-input" accept="image/png, image/jpeg" />
+              <div style="margin-bottom: 16px;">
+                <label style="margin-bottom: 8px;">Foto de Perfil</label>
+                <div class="avatar-upload-wrapper">
+                  <img id="conta-avatar-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392a7a2'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar">
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label class="secondary-link" for="foto-perfil-input" style="cursor: pointer; width: fit-content; margin: 0;">Escolher nova foto</label>
+                    <input type="file" name="foto_perfil" id="foto-perfil-input" accept="image/png, image/jpeg" style="display: none;" />
+                    <span id="foto-perfil-filename" style="font-size: 12px; color: var(--muted);">Nenhuma foto selecionada</span>
+                  </div>
                 </div>
-              </label>
+              </div>
               <label>Cargo
                 <input id="conta-cargo" type="text" disabled style="background: var(--surface-soft);" />
               </label>
