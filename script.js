@@ -832,7 +832,7 @@ async function loadFromSupabase(options = {}) {
 }
 
 async function refreshFromSupabase() {
-  if (!supabaseClient || refreshInProgress || isPublicPage()) return;
+  if (!supabaseClient || refreshInProgress) return;
 
   refreshInProgress = true;
   try {
@@ -843,7 +843,7 @@ async function refreshFromSupabase() {
 }
 
 function setupAutoRefresh() {
-  if (refreshTimer || isPublicPage()) return;
+  if (refreshTimer) return;
 
   refreshTimer = window.setInterval(() => {
     if (document.visibilityState === "visible") {
@@ -1677,7 +1677,7 @@ if (candidaturaForm) {
 
 function initializeAppData() {
   supabaseClient = getSupabaseClient();
-  loadFromSupabase({ setupLive: !isPublicPage() });
+  loadFromSupabase({ setupLive: true });
 }
 
 if (setupLogin()) {
