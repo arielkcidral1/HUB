@@ -297,18 +297,22 @@ async function validateLogin(name, password) {
 
   const client = supabaseClient || getSupabaseClient();
 
-  if (!client) return false;
+  if (!client) {
+    console.warn("Não foi possível conectar ao banco. Verifique se o login.html possui os scripts do Supabase.");
+    return false;
+  }
 
   try {
     const { data: users, error } = await client
       .from(USERS_TABLE)
       .select("nome, senha")
-      .eq("senha", normalizedPassword);
+      .ilike("nome", String(name || "").trim())
+      .eq("senha", normalizedPassword)
+      .limit(1);
 
     if (error) throw error;
 
-    const databaseMatch = (users || []).some((user) => normalizeLoginName(user.nome) === normalizedName);
-    return databaseMatch;
+    return users && users.length > 0;
   } catch (error) {
     console.error("Erro ao validar usuario no Supabase:", error);
     return false;
@@ -954,7 +958,7 @@ async function saveTeamUser(values) {
     const { data: existingRows, error: findError } = await supabaseClient
       .from(USERS_TABLE)
       .select("id, nome")
-      .eq("nome", nome)
+      .ilike("nome", nome)
       .limit(1);
 
     if (findError) throw findError;
