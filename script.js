@@ -2368,6 +2368,7 @@ function renderDocumentRecords() {
           <p class="item-title">${escapeHtml(documentLabels[item.type] || item.type)}</p>
           <div>
             <span class="tag">${escapeHtml(item.createdAt)}</span>
+            <button type="button" class="tag" style="cursor: pointer; border: none; margin-left: 6px; background: var(--teal-surface); color: var(--teal-dark);" onclick="baixarDocumentoRH('${item.id}')">Baixar</button>
             <button type="button" class="tag" style="cursor: pointer; border: none; margin-left: 6px; background: var(--teal-surface); color: var(--teal-dark);" onclick="editarDocumento('${item.id}')">Editar</button>
             <button type="button" class="tag alert" style="cursor: pointer; border: none; margin-left: 6px;" onclick="excluirDocumento('${item.id}')">Excluir</button>
           </div>
@@ -2605,7 +2606,10 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
       .map(([key, value]) => `${key}: ${value}`)
       .join(" | ");
 
+    let savedDocId;
+
     if (window.editingDocId) {
+      savedDocId = window.editingDocId;
       // Atualiza o documento existente
       const index = documentRecords.findIndex(d => d.id === window.editingDocId);
       if (index > -1) {
@@ -2622,9 +2626,10 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
       const btn = event.currentTarget.querySelector("button[type='submit']");
       if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
     } else {
+      savedDocId = generateUUID();
       // Cria um novo documento
       documentRecords.unshift({
-        id: generateUUID(),
+        id: savedDocId,
         type: event.currentTarget.dataset.docForm,
         summary: String(collaborator),
         details: details || "Registro salvo",
@@ -2636,6 +2641,9 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
 
     saveDocumentRecords();
     renderDocumentRecords();
+    
+    window.baixarDocumentoRH(savedDocId);
+
     event.currentTarget.reset();
   });
 });
@@ -3394,4 +3402,95 @@ window.excluirMalote = async function(id) {
       await deleteItem("malotes", id);
     },
   });
+};
+
+window.baixarDocumentoRH = function(id) {
+  const doc = documentRecords.find((item) => String(item.id) === String(id));
+  if (!doc) return;
+
+  const title = documentLabels[doc.type] || doc.type;
+  
+  const rows = Object.entries(doc.formData || {})
+    .filter(([key, value]) => value && String(value).trim())
+    .map(([key, value]) => {
+      const formattedKey = key
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, l => l.toUpperCase());
+      return `
+        <tr>
+          <td style="width: 30%; background: #f3f4f6; font-weight: bold; text-transform: uppercase; font-size: 9px;">${escapeHtml(formattedKey)}</td>
+          <td>${escapeHtml(value).replace(/\n/g, "<br>")}</td>
+        </tr>
+      `;
+    }).join("");
+
+  const conteudo = `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          @page { size: A4; margin: 16mm; }
+          body { font-family: Arial, Helvetica, sans-serif; color: #111827; font-size: 11px; }
+          .doc { border: 1px solid #111827; padding: 10px; }
+          .header { display: table; width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+          .header > div { display: table-cell; border: 1px solid #111827; padding: 8px; vertical-align: middle; }
+          .brand { width: 50%; }
+          .brand h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+          .brand p { margin: 4px 0 0; font-size: 10px; }
+          .title { width: 50%; text-align: center; font-size: 14px; font-weight: bold; text-transform: uppercase; }
+          .section-title { background: #e5e7eb; border: 1px solid #111827; padding: 5px; font-weight: bold; text-transform: uppercase; margin-top: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+          th, td { border: 1px solid #111827; padding: 6px; vertical-align: top; }
+          .muted { color: #6b7280; font-weight: normal; }
+          .signature-box { display: table; width: 100%; margin-top: 40px; }
+          .signature-col { display: table-cell; width: 50%; text-align: center; padding: 0 20px; }
+          .signature-line { border-top: 1px solid #111827; margin-bottom: 5px; margin-top: 40px; }
+        </style>
+      </head>
+      <body>
+        <div class="doc">
+          <div class="header">
+            <div class="brand">
+              <h1>HUB RH</h1>
+              <p>Departamento de Recursos Humanos</p>
+              <p class="muted">Documento gerado automaticamente pelo sistema</p>
+            </div>
+            <div class="title">
+              ${escapeHtml(title)}
+            </div>
+          </div>
+
+          <div class="section-title">Dados do Registro</div>
+          <table>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+
+          <div class="signature-box">
+            <div class="signature-col">
+              <div class="signature-line"></div>
+              Assinatura do Colaborador
+            </div>
+            <div class="signature-col">
+              <div class="signature-line"></div>
+              Assinatura do RH / Gestor
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const blob = new Blob(["\ufeff", conteudo], { type: "application/msword;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const safeTitle = title.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "");
+  link.href = url;
+  link.download = `${safeTitle.toLowerCase()}-${Date.now()}.doc`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 };
