@@ -682,21 +682,25 @@ function mapRows(collection, rows) {
 }
 
 function mergeRealtimeRow(collection, row, action = "INSERT") {
-  const mapped = mapRows(collection, [row])[0];
-  const current = data[collection] || [];
-
   if (action === "DELETE") {
+    if (collection === "usuarios") {
+      removeLocalUser(row.id);
+      return;
+    }
+    const current = data[collection] || [];
     data[collection] = current.filter((item) => String(item.id) !== String(row.id));
     return;
   }
 
-  const index = current.findIndex((item) => String(item.id) === String(mapped.id));
-  if (index >= 0) {
-    data[collection] = current.map((item, itemIndex) => (itemIndex === index ? mapped : item));
-    return;
-  }
+  const mapped = mapRows(collection, [row])[0];
+  const current = data[collection] || [];
 
-  data[collection] = [mapped, ...current];
+  const index = current.findIndex((item) => String(item.id) === String(mapped.id) || (collection === "usuarios" && normalizeLoginName(item.nome) === normalizeLoginName(mapped.nome)));
+  if (index >= 0) {
+    data[collection] = current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...mapped } : item));
+  } else {
+    data[collection] = [mapped, ...current];
+  }
 }
 
 function renderRealtimeUpdate(collection) {
@@ -1018,8 +1022,8 @@ async function saveTeamUser(values) {
 
 function removeLocalUser(id) {
   const removedUser = data.usuarios.find((user) => String(user.id) === String(id));
-  data.usuarios = data.usuarios.filter((user) => String(user.id) !== String(id));
   const keepUser = (user) => String(user.id) !== String(id) && normalizeLoginName(user.nome) !== normalizeLoginName(removedUser?.nome);
+  data.usuarios = data.usuarios.filter(keepUser);
   const users = loadTeamUsersStore().filter(keepUser);
   const credentials = loadTeamCredentialsStore().filter(keepUser);
   saveTeamUsersStore(users);
