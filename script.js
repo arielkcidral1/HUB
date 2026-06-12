@@ -3442,133 +3442,71 @@ window.excluirMalote = async function(id) {
   });
 };
 
-const documentTemplateConfigs = {
-  admissao: {
-    file: "docs/Checklist Admissão.xlsx",
-    ext: "xlsx",
-    cells: {
-      colaborador: "D8",
-      cargo: "D9",
-      salario: "D10",
-      data: "D11",
-      horario_trabalho: "D12",
-      centro_custo: "D13",
-      vale_transporte: "D14",
-      observacoes: "C33",
-    },
-  },
-  "movimentacao-pessoal": {
-    file: "docs/MP - Movimentação Pessoal.xlsx",
-    ext: "xlsx",
-    cells: {
-      colaborador: "B5",
-      matricula: "D5",
-      cargo_atual: "B6",
-      admissao: "D6",
-      filial: "B7",
-      turno_atual: "D7",
-      salario_atual: "B8",
-      gestor: "D8",
-      movimentacao: "B9",
-      cargo_proposto: "A20",
-      area_proposta: "B20",
-      turno_proposto: "C20",
-      data_movimentacao: "D20",
-      salario_proposto: "A22",
-      reajuste: "B22",
-      justificativa_movimentacao: "B23",
-      observacoes: "B32",
-    },
-  },
-  "requisicao-pessoal": {
-    file: "docs/RP - Requiseção Pessoal.xlsx",
-    ext: "xlsx",
-    cells: {
-      colaborador: "E4",
-      filial: "Q4",
-      cargo_requisitante: "E5",
-      data_abertura: "Q5",
-      motivo: "E8",
-      regime: "E10",
-      justificativa: "E11",
-      orcamento: "Q12",
-      descritivo_cargo: "Q13",
-      estacao_disponivel: "Q14",
-      cargo: "E16",
-      numero_vagas: "Q16",
-      faixa_salarial: "Q17",
-      descricao: "E18",
-      requisitos: "E19",
-      pontos_atencao: "E20",
-      tipo_recrutamento: "E29",
-      observacoes: "E32",
-    },
-  },
-  ausencia: {
-    file: "docs/Entrevista de Ausensia.docx",
-    ext: "docx",
-    replacements: {
-      "Colaborador:": "Colaborador: {colaborador}",
-      "Função:": "Função: {funcao}",
-      "Superior:": "Superior: {superior}",
-      "Período das Faltas:": "Período das Faltas: {data_ausencia}",
-      "Descreva o motivo da falta:": "Descreva o motivo da falta: {motivo}",
-      "Você sabe do impacto da sua ausência para a empresa? Qual?": "Você sabe do impacto da sua ausência para a empresa? Qual? {impacto}",
-    },
-  },
-  beneficios: {
-    file: "docs/Plano de Saúde e Odonto.docx",
-    ext: "docx",
-    replacements: {
-      "Nome do Funcionário: ______________________________________________________________": "Nome do Funcionário: {colaborador}",
-      "Peso: ______________________________________________________________": "Peso: {peso}",
-      "Altura: ______________________________________________________________": "Altura: {altura}",
-      "E-mail Pessoal: ______________________________________________________________": "E-mail Pessoal: {email}",
-      "Nome do Dependente: ______________________________________________________________": "Nome do Dependente: {dependente}",
-      "Grau de Parentesco: ______________________________________________________________": "Grau de Parentesco: {parentesco}",
-      "Local e Data: ______________________________________________________________": "Local e Data: {local_data}",
-    },
-  },
-  "feedback-fredy": {
-    file: "docs/Feedback fredy pneus.docx",
-    ext: "docx",
-    replacements: {
-      "Data do Feedback": "Data do Feedback\n{data_registro}",
-      "Unidade": "Unidade\n{setor}",
-      "Gestor Responsável": "Gestor Responsável\n{gestor_aplicador}",
-      "Colaborador": "Colaborador\n{colaborador}",
-      "Cargo": "Cargo\n{cargo}",
-      "Tempo de Empresa": "Tempo de Empresa\n{tempo_empresa}",
-      "3. CONTEXTO DO ALINHAMENTO": "3. CONTEXTO DO ALINHAMENTO\n{situacao}",
-      "4. PONTOS POSITIVOS (FORTALEZAS)\n•\n•\n•": "4. PONTOS POSITIVOS (FORTALEZAS)\n{positivos}",
-      "5. PONTOS DE MELHORIA (DESENVOLVIMENTO)\n•\n•\n•": "5. PONTOS DE MELHORIA (DESENVOLVIMENTO)\n{melhorias}",
-      "7. EXPECTATIVA DO COLABORADOR": "7. EXPECTATIVA DO COLABORADOR\n{expectativa_colaborador}",
-      "9. ACOMPANHAMENTO": "9. ACOMPANHAMENTO\n{acompanhamento}",
-    },
-  },
-  "feedback-operacional": {
-    file: "docs/Feedback Operacional.docx",
-    ext: "docx",
-    replacements: {
-      "Data:": "Data: {data_feedback}",
-      "RESPONSÁVEL PELO FEEDBACK:": "RESPONSÁVEL PELO FEEDBACK: {lider}",
-      "COLABORADOR QUE RECEBEU O FEEDBACK:": "COLABORADOR QUE RECEBEU O FEEDBACK: {colaborador}",
-      "Declaro para os mais diversos fins da empresa, que recebi da forma adequada o feedback, onde foram abordados os pontos positivos e os pontos que precisam melhorar dos meus comportamentos dentro da empresa.": "Declaro para os mais diversos fins da empresa, que recebi da forma adequada o feedback, onde foram abordados os pontos positivos e os pontos que precisam melhorar dos meus comportamentos dentro da empresa.\n\nPontos positivos: {positivos}\n\nPontos a desenvolver: {melhorias}\n\nPlano de ação: {acao}",
-    },
-  },
-  "solicitacao-desligamento": {
-    file: "docs/SD - Solicitação de Desligamento.pdf",
-    ext: "pdf",
-  },
-  ferias: {
-    file: "docs/Solicitação de Ferias.xls",
-    ext: "xls",
-  },
-  desligamento: {
-    file: "docs/Entrevista de Desligamento.doc",
-    ext: "doc",
-  },
+const documentFieldLabels = {
+  colaborador: "Colaborador",
+  cpf: "CPF",
+  rg: "RG",
+  cargo: "Cargo",
+  funcao: "Função",
+  filial: "Filial / Unidade",
+  setor: "Setor",
+  data: "Data de admissão",
+  data_admissao: "Data de admissão",
+  data_desligamento: "Data de desligamento",
+  data_solicitacao: "Data da solicitação",
+  data_entrevista: "Data da entrevista",
+  data_ausencia: "Data(s) da ausência",
+  data_feedback: "Data do feedback",
+  data_registro: "Data do registro",
+  data_abertura: "Data de abertura",
+  data_inicio: "Data de início",
+  data_movimentacao: "Data da movimentação",
+  salario: "Salário",
+  salario_atual: "Salário atual",
+  salario_proposto: "Salário proposto",
+  faixa_salarial: "Faixa salarial",
+  horario_trabalho: "Horário de trabalho",
+  horario_atraso: "Horário / período",
+  centro_custo: "Centro de custo",
+  requisitante: "Requisitante",
+  lider: "Gestor / líder avaliador",
+  gestor: "Gestor imediato",
+  gestor_aplicador: "Gestor aplicador",
+  gestor_solicitante: "Gestor solicitante",
+  entrevistador: "Entrevistador",
+  motivo: "Motivo",
+  observacoes: "Observações",
+  feedback: "Feedback final",
+  positivos: "Pontos positivos",
+  melhorias: "Pontos a desenvolver",
+  acao: "Plano de ação",
+  plano_acao: "Plano de ação",
+  justificativa: "Justificativa",
+  justificativa_movimentacao: "Justificativa da movimentação",
+  descricao: "Descrição",
+  requisitos: "Requisitos",
+  pontos_atencao: "Pontos de atenção",
 };
+
+const documentLongFieldKeys = new Set([
+  "observacoes",
+  "feedback",
+  "positivos",
+  "melhorias",
+  "acao",
+  "plano_acao",
+  "justificativa",
+  "justificativa_movimentacao",
+  "descricao",
+  "requisitos",
+  "pontos_atencao",
+  "motivo",
+  "impacto",
+  "situacao",
+  "expectativa_colaborador",
+  "acompanhamento",
+  "dependentes",
+]);
 
 function normalizeDownloadText(value) {
   return String(value || "").trim();
@@ -3601,103 +3539,110 @@ function safeDownloadName(title, ext) {
   return `${safeTitle.toLowerCase()}-${Date.now()}.${ext}`;
 }
 
-async function loadTemplateBytes(path) {
-  const response = await fetch(encodeURI(path));
-  if (!response.ok) throw new Error(`Nao foi possivel carregar o modelo: ${path}`);
-  return response.arrayBuffer();
+function getDocumentFieldLabel(key) {
+  return documentFieldLabels[key] || String(key || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-async function downloadFilledXlsx(config, formData, title) {
-  if (!window.ExcelJS) throw new Error("Biblioteca ExcelJS nao carregada.");
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(await loadTemplateBytes(config.file));
-  const sheet = workbook.worksheets[0];
-  Object.entries(config.cells || {}).forEach(([key, address]) => {
-    const value = getDocValue(formData, key);
-    if (value) sheet.getCell(address).value = value;
-  });
-  const buffer = await workbook.xlsx.writeBuffer();
-  downloadBlob(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), safeDownloadName(title, "xlsx"));
+function buildStyledDocumentRows(formData = {}) {
+  const entries = Object.entries(formData).filter(([, value]) => String(value || "").trim());
+  const compactRows = entries.filter(([key]) => !documentLongFieldKeys.has(key));
+  const longRows = entries.filter(([key]) => documentLongFieldKeys.has(key));
+
+  const compactHtml = compactRows.map(([key, value]) => `
+    <div class="field-card">
+      <span>${escapeHtml(getDocumentFieldLabel(key))}</span>
+      <strong>${escapeHtml(getDocValue(formData, key)).replace(/\n/g, "<br>")}</strong>
+    </div>
+  `).join("");
+
+  const longHtml = longRows.map(([key]) => `
+    <section class="note-section">
+      <h3>${escapeHtml(getDocumentFieldLabel(key))}</h3>
+      <p>${escapeHtml(getDocValue(formData, key)).replace(/\n/g, "<br>")}</p>
+    </section>
+  `).join("");
+
+  return { compactHtml, longHtml };
 }
 
-function fillPlaceholders(text, formData) {
-  return String(text).replace(/\{([^}]+)\}/g, (_, key) => escapeXml(getDocValue(formData, key)));
+function downloadStyledRhDocument(doc, title) {
+  const { compactHtml, longHtml } = buildStyledDocumentRows(doc.formData || {});
+  const emittedAt = formatDateTime(new Date().toISOString());
+  const owner = doc.updatedBy || doc.createdBy || getCurrentUserName();
+  const html = `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          @page { size: A4; margin: 15mm; }
+          * { box-sizing: border-box; }
+          body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #17202a; background: #ffffff; font-size: 11px; }
+          .document { border: 1px solid #c8d2dc; border-radius: 12px; overflow: hidden; }
+          .hero { background: #0f766e; color: #ffffff; padding: 18px 20px; }
+          .hero-top { display: table; width: 100%; }
+          .brand, .meta { display: table-cell; vertical-align: top; }
+          .brand h1 { margin: 0; font-size: 22px; letter-spacing: 1px; }
+          .brand p { margin: 5px 0 0; color: #d9f3ef; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; }
+          .meta { text-align: right; font-size: 10px; line-height: 1.55; color: #e8fffb; }
+          .title-band { padding: 16px 20px 10px; border-bottom: 1px solid #dde6ee; background: #f8fbfc; }
+          .title-band h2 { margin: 0; font-size: 18px; color: #12343b; text-transform: uppercase; }
+          .title-band p { margin: 6px 0 0; color: #637381; }
+          .content { padding: 18px 20px 20px; }
+          .field-grid { font-size: 0; margin-right: -8px; }
+          .field-card { display: inline-block; width: 48%; margin: 0 8px 10px 0; vertical-align: top; border: 1px solid #d8e2ea; border-left: 4px solid #0f766e; border-radius: 8px; padding: 9px 10px; min-height: 48px; background: #ffffff; font-size: 11px; }
+          .field-card span { display: block; margin-bottom: 4px; color: #64748b; font-size: 9px; text-transform: uppercase; letter-spacing: .5px; }
+          .field-card strong { display: block; color: #17202a; font-size: 12px; line-height: 1.35; }
+          .note-section { margin-top: 12px; border: 1px solid #d8e2ea; border-radius: 8px; overflow: hidden; }
+          .note-section h3 { margin: 0; padding: 8px 10px; background: #edf7f5; color: #0f5f59; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; }
+          .note-section p { margin: 0; padding: 10px; min-height: 42px; line-height: 1.55; white-space: normal; }
+          .signature-box { display: table; width: 100%; margin-top: 34px; table-layout: fixed; }
+          .signature-col { display: table-cell; width: 50%; padding: 0 18px; text-align: center; color: #334155; }
+          .signature-line { border-top: 1px solid #17202a; margin: 42px 0 6px; }
+          .footer { margin-top: 18px; padding-top: 10px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 9px; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <main class="document">
+          <header class="hero">
+            <div class="hero-top">
+              <div class="brand">
+                <h1>HUB RH</h1>
+                <p>Documento digital gerado pelo sistema</p>
+              </div>
+              <div class="meta">
+                Emitido em ${escapeHtml(emittedAt)}<br />
+                Responsável: ${escapeHtml(owner)}
+              </div>
+            </div>
+          </header>
+          <section class="title-band">
+            <h2>${escapeHtml(title)}</h2>
+            <p>${escapeHtml(doc.summary || "Registro de rotina RH")}</p>
+          </section>
+          <section class="content">
+            <div class="field-grid">${compactHtml || '<div class="field-card"><span>Registro</span><strong>Sem dados cadastrados.</strong></div>'}</div>
+            ${longHtml}
+            <div class="signature-box">
+              <div class="signature-col"><div class="signature-line"></div>Assinatura do colaborador</div>
+              <div class="signature-col"><div class="signature-line"></div>Assinatura do RH / gestor</div>
+            </div>
+            <div class="footer">Documento interno HUB RH. Conferir dados antes de assinar ou arquivar.</div>
+          </section>
+        </main>
+      </body>
+    </html>
+  `;
+
+  downloadBlob(new Blob(["\ufeff", html], { type: "application/msword;charset=utf-8" }), safeDownloadName(title, "doc"));
 }
 
-function escapeXml(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-async function downloadFilledDocx(config, formData, title) {
-  if (!window.PizZip) throw new Error("Biblioteca PizZip nao carregada.");
-  const zip = new PizZip(await loadTemplateBytes(config.file));
-  const documentFile = zip.file("word/document.xml");
-  let xml = documentFile.asText();
-  Object.entries(config.replacements || {}).forEach(([source, target]) => {
-    const value = fillPlaceholders(target, formData).replace(/\n/g, "<w:br/>");
-    xml = xml.split(escapeXml(source)).join(value);
-  });
-  zip.file("word/document.xml", xml);
-  downloadBlob(zip.generate({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), safeDownloadName(title, "docx"));
-}
-
-async function downloadFilledPdf(config, formData, title) {
-  if (!window.PDFLib) throw new Error("Biblioteca PDFLib nao carregada.");
-  const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
-  const pdfDoc = await PDFDocument.load(await loadTemplateBytes(config.file));
-  const page = pdfDoc.getPages()[0];
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const draw = (key, x, y, size = 8) => {
-    const value = getDocValue(formData, key);
-    if (value) page.drawText(value.slice(0, 70), { x, y, size, font, color: rgb(0, 0, 0) });
-  };
-  draw("colaborador", 60, 705);
-  draw("cargo", 250, 705);
-  draw("filial", 60, 680);
-  draw("data_solicitacao", 430, 705);
-  draw("data_desligamento", 390, 560);
-  draw("tipo_desligamento", 160, 635);
-  draw("aviso_previo", 160, 610);
-  draw("motivo", 60, 455, 7);
-  draw("gestor_solicitante", 95, 260);
-  const bytes = await pdfDoc.save();
-  downloadBlob(new Blob([bytes], { type: "application/pdf" }), safeDownloadName(title, "pdf"));
-}
-
-function downloadLegacyOfficeDocument(doc, config, title) {
-  const rows = Object.entries(doc.formData || {})
-    .filter(([, value]) => value && String(value).trim())
-    .map(([key, value]) => {
-      const label = key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-      return `<tr><td class="label">${escapeHtml(label)}</td><td>${escapeHtml(value).replace(/\n/g, "<br>")}</td></tr>`;
-    }).join("");
-  const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-    body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111}
-    table{border-collapse:collapse;width:100%}td{border:1px solid #111;padding:6px;vertical-align:top}.label{font-weight:bold;background:#eee;width:32%}
-    .title{text-align:center;font-weight:bold;text-transform:uppercase;border:1px solid #111;padding:8px;margin-bottom:10px}
-  </style></head><body><div class="title">${escapeHtml(title)}</div><table>${rows}</table></body></html>`;
-  const type = config.ext === "xls" ? "application/vnd.ms-excel;charset=utf-8" : "application/msword;charset=utf-8";
-  downloadBlob(new Blob(["\ufeff", html], { type }), safeDownloadName(title, config.ext));
-}
-
-window.baixarDocumentoRH = async function(id) {
+window.baixarDocumentoRH = function(id) {
   const doc = documentRecords.find((item) => String(item.id) === String(id));
   if (!doc) return;
-
   const title = documentLabels[doc.type] || doc.type;
-  const config = documentTemplateConfigs[doc.type];
-  if (!config) return downloadLegacyOfficeDocument(doc, { ext: "doc" }, title);
-
-  try {
-    if (config.ext === "xlsx") return await downloadFilledXlsx(config, doc.formData || {}, title);
-    if (config.ext === "docx") return await downloadFilledDocx(config, doc.formData || {}, title);
-    if (config.ext === "pdf") return await downloadFilledPdf(config, doc.formData || {}, title);
-    return downloadLegacyOfficeDocument(doc, config, title);
-  } catch (error) {
-    console.error(error);
-    showModal("Erro ao baixar", "Nao foi possivel preencher o modelo original. Verifique sua conexao e tente novamente.", "error");
-  }
+  downloadStyledRhDocument(doc, title);
 };
+
