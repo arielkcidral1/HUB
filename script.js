@@ -106,7 +106,7 @@ const documentLabels = {
 };
 
 function isLoginMatch(value, expected) {
-  return String(value || "").trim().toLowerCase() === expected;
+  return String(value || "").trim() === String(expected || "").trim();
 }
 
 function normalizeLoginName(value) {
@@ -149,6 +149,28 @@ function syncTeamCredentials(users) {
   saveTeamCredentialsStore(credentials);
 }
 
+function readStoredUsersFromHubData() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    return parsed.usuarios || [];
+  } catch {
+    return [];
+  }
+}
+
+function getStoredLoginUsers() {
+  return mergeUsersByName(
+    loadTeamCredentialsStore(),
+    mergeUsersByName(loadTeamUsersStore(), readStoredUsersFromHubData())
+  );
+}
+
+function persistTeamCredential(nome, senha) {
+  if (!String(nome || "").trim() || !String(senha || "").trim()) return;
+  const credentials = mergeUsersByName(loadTeamCredentialsStore(), [{ nome: String(nome).trim(), senha: String(senha).trim() }]);
+  saveTeamCredentialsStore(credentials);
+}
+
 function getAllLocalUsers() {
   return mergeUsersByName(
     Object.values(LOGIN_USERS).map((user) => ({
@@ -156,7 +178,7 @@ function getAllLocalUsers() {
       senha: user.senha,
       syncStatus: "online",
     })),
-    mergeUsersByName(loadTeamCredentialsStore(), mergeUsersByName(loadTeamUsersStore(), data?.usuarios || []))
+    mergeUsersByName(getStoredLoginUsers(), data?.usuarios || [])
   );
 }
 
@@ -921,6 +943,7 @@ async function saveTeamUser(values) {
   const nome = String(values.nome || "").trim();
   const senha = String(values.senha || "").trim();
   if (!nome || !senha) return false;
+  persistTeamCredential(nome, senha);
 
   if (!supabaseClient) {
     upsertLocalUser({ nome, senha, syncStatus: "active" });
