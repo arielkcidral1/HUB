@@ -345,6 +345,21 @@ h2 {
   color: var(--muted);
   font-size: 14px;
   font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.user-chip:hover {
+  background: var(--surface-soft);
+  border-color: rgba(15, 118, 110, 0.2);
+}
+
+.user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--teal-surface);
 }
 
 .metric-card strong {
@@ -665,34 +680,6 @@ textarea:focus {
   font-weight: 700;
   font-size: 16px;
   letter-spacing: -0.2px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.chamado-select,
-.denuncia-select {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--teal);
-  flex: 0 0 auto;
-}
-
-.selectable-card {
-  border-color: rgba(15, 118, 110, 0.28);
-  background: var(--teal-surface);
-}
-
-.malote-epi-detail {
-  display: grid;
-  gap: 4px;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
-}
-
-.malote-epi-detail:first-of-type {
-  border-top: 0;
-  padding-top: 0;
 }
 
 .item-meta,
@@ -760,6 +747,12 @@ textarea:focus {
   cursor: pointer;
   font-weight: 500;
   transition: var(--transition);
+}
+
+.doc-download-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 .doc-tab:hover,

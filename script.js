@@ -626,8 +626,20 @@ function checkAndMarkChatAsRead() {
 
 function renderCurrentUser() {
   const target = document.getElementById("current-user");
-  if (!target) return;
-  target.textContent = getCurrentUserName();
+  const avatar = document.getElementById("current-user-avatar");
+  if (!target && !avatar) return;
+
+  const user = getCurrentUserRecord();
+  if (target) target.textContent = getCurrentUserName();
+  if (avatar) {
+    if (user?.foto_perfil) {
+      avatar.src = user.foto_perfil;
+      avatar.style.display = "block";
+    } else {
+      avatar.src = "";
+      avatar.style.display = "none";
+    }
+  }
 }
 
 function populateUnitSelects() {
@@ -1082,6 +1094,7 @@ function mapRows(collection, rows) {
       nome: row.nome,
       senha: row.senha,
       cargo: row.cargo || "",
+      foto_perfil: row.foto_perfil || "",
       createdBy: row.created_by || "Sistema",
       createdAt: formatDate(row.created_at),
     }));
@@ -1656,12 +1669,13 @@ async function deleteItem(collection, id) {
 
 function upsertLocalUser(values) {
   const normalizedName = normalizeLoginName(values.nome);
-  const existingIndex = data.usuarios.findIndex((user) => normalizeLoginName(user.nome) === normalizedName);
+  const existingIndex = values.id ? data.usuarios.findIndex((user) => String(user.id) === String(values.id)) : data.usuarios.findIndex((user) => normalizeLoginName(user.nome) === normalizedName);
   const user = {
     id: values.id || (existingIndex >= 0 ? data.usuarios[existingIndex].id : generateUUID()),
     nome: getLoginDisplayName(values.nome) || values.nome,
     senha: values.senha,
     cargo: values.cargo || data.usuarios[existingIndex]?.cargo || "",
+    foto_perfil: values.foto_perfil || data.usuarios[existingIndex]?.foto_perfil || "",
     createdBy: values.createdBy || getCurrentUserName(),
     syncStatus: values.syncStatus || data.usuarios[existingIndex]?.syncStatus || "active",
     createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
@@ -1738,7 +1752,7 @@ async function saveTeamUser(values) {
   }
 }
 
-async function updateCurrentAccountPassword(currentPassword, newPassword) {
+async function updateCurrentAccount(currentPassword, newName, newPassword, newFotoUrl) {
   const user = getCurrentUserRecord();
   if (!user) {
     showModal("Conta nao encontrada", "Nao foi possivel localizar sua conta nesta sessao.", "error");
@@ -1752,22 +1766,26 @@ async function updateCurrentAccountPassword(currentPassword, newPassword) {
 
   const updatedUser = {
     ...user,
-    senha: newPassword,
+    nome: newName || user.nome,
+    senha: newPassword || user.senha,
+    foto_perfil: newFotoUrl || user.foto_perfil,
     cargo: user.cargo || getCurrentUserRole(),
     syncStatus: user.syncStatus || "active",
   };
 
   if (!supabaseClient) {
     upsertLocalUser(updatedUser);
-    persistTeamCredential(updatedUser.nome, newPassword);
+    persistTeamCredential(updatedUser.nome, updatedUser.senha);
+    if (newName) sessionStorage.setItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
     return true;
   }
 
   try {
     let payload = {
       nome: updatedUser.nome,
-      senha: newPassword,
+      senha: updatedUser.senha,
       cargo: updatedUser.cargo || "",
+      foto_perfil: updatedUser.foto_perfil || null,
       created_by: getCurrentUserName(),
     };
     let query = supabaseClient.from(USERS_TABLE).update(payload);
@@ -1780,28 +1798,31 @@ async function updateCurrentAccountPassword(currentPassword, newPassword) {
 
     let result = await query.select("*");
 
-    if (result.error && isMissingColumn(result.error, "cargo")) {
-      const { cargo, ...legacyPayload } = payload;
+    if (result.error && (isMissingColumn(result.error, "cargo") || isMissingColumn(result.error, "foto_perfil"))) {
+      const { cargo, foto_perfil, ...legacyPayload } = payload;
       query = supabaseClient.from(USERS_TABLE).update(legacyPayload);
       query = updatedUser.id && !String(updatedUser.id).startsWith("local-")
         ? query.eq("id", updatedUser.id)
         : query.ilike("nome", updatedUser.nome);
       result = await query.select("*");
+      showModal("Atualização parcial", "A senha e o nome foram alterados. Atualize o banco de dados para salvar cargo e foto de perfil.", "info");
+    } else if (result.error) {
+      throw result.error;
     }
 
-    if (result.error) throw result.error;
-
     const saved = mapRows("usuarios", result.data || [])[0] || updatedUser;
-    upsertLocalUser({ ...updatedUser, ...saved, senha: newPassword });
-    persistTeamCredential(updatedUser.nome, newPassword);
+    upsertLocalUser({ ...updatedUser, ...saved, senha: updatedUser.senha });
+    persistTeamCredential(updatedUser.nome, updatedUser.senha);
+    if (newName) sessionStorage.setItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
     setSyncStatus("Supabase EIXO online", true);
     return true;
   } catch (error) {
     console.error("Erro ao atualizar conta:", error);
     upsertLocalUser({ ...updatedUser, syncStatus: "local" });
-    persistTeamCredential(updatedUser.nome, newPassword);
+    persistTeamCredential(updatedUser.nome, updatedUser.senha);
+    if (newName) sessionStorage.setItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
     setSyncStatus("Conta atualizada local", false);
-    showModal("Atualizacao local", "A senha foi alterada localmente. Rode os SQLs atualizados no Supabase se o banco bloquear a coluna cargo.", "info");
+    showModal("Atualizacao local", "Os dados foram alterados localmente. Rode os SQLs atualizados no Supabase se o banco bloquear as colunas.", "info");
     return true;
   }
 }
@@ -2101,11 +2122,13 @@ function renderTeamUsers() {
 
 function renderAccountSettings() {
   const nameInput = document.getElementById("conta-nome");
+  const newNameInput = document.getElementById("novo-nome");
   const roleInput = document.getElementById("conta-cargo");
-  if (!nameInput && !roleInput) return;
+  if (!nameInput && !roleInput && !newNameInput) return;
 
   const user = getCurrentUserRecord();
   if (nameInput) nameInput.value = getCurrentUserName();
+  if (newNameInput) newNameInput.value = getCurrentUserName();
   if (roleInput) roleInput.value = user?.cargo || getCurrentUserRole() || "Sem cargo definido";
 }
 
@@ -2392,7 +2415,7 @@ function renderChat() {
   checkAndMarkChatAsRead();
 }
 
-document.querySelectorAll(".nav-item").forEach((button) => {
+document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
   button.addEventListener("click", () => {
     if (button.dataset.externalUrl) {
       window.location.href = button.dataset.externalUrl;
@@ -2765,23 +2788,48 @@ if (contaForm) {
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     const currentPassword = String(form.get("senha_atual") || "").trim();
+    const newName = String(form.get("novo_nome") || "").trim();
     const newPassword = String(form.get("nova_senha") || "").trim();
     const confirmPassword = String(form.get("confirmar_senha") || "").trim();
+    const fotoFile = form.get("foto_perfil");
 
-    if (newPassword.length < 3) {
+    if (!currentPassword) {
+      showModal("Senha atual", "A senha atual é obrigatória para alterar seus dados.", "error");
+      return;
+    }
+
+    if (newPassword && newPassword.length < 3) {
       showModal("Senha curta", "Use uma senha com pelo menos 3 caracteres.", "error");
       return;
     }
 
-    if (newPassword !== confirmPassword) {
+    if (newPassword && newPassword !== confirmPassword) {
       showModal("Senhas diferentes", "A confirmacao da nova senha nao confere.", "error");
       return;
     }
 
-    const success = await updateCurrentAccountPassword(currentPassword, newPassword);
+    let fotoUrl = null;
+    if (fotoFile && fotoFile.name && supabaseClient) {
+      try {
+        const safeName = fotoFile.name.replace(/[^a-z0-9_.-]/gi, "-");
+        const path = `avatars/${Date.now()}-${generateUUID()}-${safeName}`;
+        const { error: uploadError } = await supabaseClient.storage.from("hub-chat-files").upload(path, fotoFile);
+        if (uploadError) throw uploadError;
+        
+        const { data: publicData } = supabaseClient.storage.from("hub-chat-files").getPublicUrl(path);
+        fotoUrl = publicData.publicUrl;
+      } catch (e) {
+        console.error("Erro ao enviar foto", e);
+        showModal("Erro", "Não foi possível enviar a foto de perfil.", "error");
+        return;
+      }
+    }
+
+    const success = await updateCurrentAccount(currentPassword, newName, newPassword, fotoUrl);
     if (success) {
       formElement.reset();
       renderAccountSettings();
+      renderCurrentUser();
       showModal("Conta atualizada", "Sua senha foi atualizada com sucesso.", "info");
     }
   });
