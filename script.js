@@ -108,6 +108,31 @@ const documentLabels = {
   "feedback-fredy": "Feedback Fredy Pneus",
 };
 
+const UNIT_OPTIONS = [
+  "1- MTZ",
+  "2- SBS",
+  "3- TJA 1",
+  "4- PLÇ",
+  "5- GUA",
+  "7- DPA JC",
+  "9- DPA IRI",
+  "10- JPL",
+  "11- BC",
+  "12- GCS GPO",
+  "12- GCS JLLE",
+  "13- JRG 1",
+  "14- BRQ",
+  "15- FLN",
+  "17- FAC",
+  "19- RNG 1",
+  "20- BNU 1",
+  "21- JRG 2",
+  "22- TRINCA",
+  "23- ITJ 2",
+  "26- BNU 2",
+  "28- ARA",
+];
+
 function isLoginMatch(value, expected) {
   return String(value || "").trim() === String(expected || "").trim();
 }
@@ -528,6 +553,31 @@ function renderCurrentUser() {
   const target = document.getElementById("current-user");
   if (!target) return;
   target.textContent = getCurrentUserName();
+}
+
+function populateUnitSelects() {
+  document.querySelectorAll("[data-unit-select]").forEach((select) => {
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">Selecione uma unidade</option>' + UNIT_OPTIONS
+      .map((unit) => `<option value="${escapeHtml(unit)}">${escapeHtml(unit)}</option>`)
+      .join("");
+
+    if (currentValue) {
+      const hasCurrent = [...select.options].some((option) => option.value === currentValue);
+      if (!hasCurrent) {
+        select.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(currentValue)}">${escapeHtml(currentValue)}</option>`);
+      }
+      select.value = currentValue;
+    }
+  });
+}
+
+function setFieldValue(field, value) {
+  if (!field) return;
+  if (field.tagName === "SELECT" && value && ![...field.options].some((option) => option.value === value)) {
+    field.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`);
+  }
+  field.value = value || "";
 }
 
 function formatDate(value) {
@@ -2128,6 +2178,7 @@ if (candidaturaForm) {
 }
 
 function initializeAppData() {
+  populateUnitSelects();
   supabaseClient = getSupabaseClient();
   loadFromSupabase({ setupLive: true });
 }
@@ -2158,7 +2209,7 @@ window.editarDocumento = function(id) {
   const form = document.querySelector(`form[data-doc-form="${doc.type}"]`);
   if (form && doc.formData) {
     Object.entries(doc.formData).forEach(([key, value]) => {
-      if (form.elements[key]) form.elements[key].value = value;
+      if (form.elements[key]) setFieldValue(form.elements[key], value);
     });
     const btn = form.querySelector("button[type='submit']");
     if (btn) {
@@ -2222,10 +2273,10 @@ window.editarMalote = function(id) {
   const form = document.getElementById("malote-form");
   if (!malote || !form) return;
 
-  form.elements.id.value = malote.id;
-  form.elements.destino.value = malote.destino || "";
-  form.elements.origem.value = malote.origem || "";
-  form.elements.status.value = malote.status || "Separação";
+  setFieldValue(form.elements.id, malote.id);
+  setFieldValue(form.elements.destino, malote.destino || "");
+  setFieldValue(form.elements.origem, malote.origem || "");
+  setFieldValue(form.elements.status, malote.status || "Separação");
   resetEpiRows(parseEpiItems(malote.epis));
   document.getElementById("cancelar-edicao-malote")?.removeAttribute("hidden");
   form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";

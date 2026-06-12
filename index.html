@@ -152,10 +152,10 @@
               </div>
               <input name="id" type="hidden" />
               <label>Destino
-                <input name="destino" placeholder="Unidade, setor ou colaborador" required />
+                <select name="destino" data-unit-select required></select>
               </label>
               <label>Origem
-                <input name="origem" placeholder="Unidade, almoxarifado ou setor de origem" required />
+                <select name="origem" data-unit-select required></select>
               </label>
               <div class="dynamic-fieldset">
                 <div class="item-topline">
@@ -262,7 +262,7 @@
                     <label>Cargo<input name="cargo" required /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
-                    <label>Filial / Unidade<input name="filial" required /></label>
+                    <label>Filial / Unidade<select name="filial" data-unit-select required></select></label>
                     <label>Data de admissao<input name="data" type="date" required /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
@@ -289,7 +289,7 @@
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
-                    <label>Filial / Setor<input name="filial" required /></label>
+                    <label>Filial / Setor<select name="filial" data-unit-select required></select></label>
                     <label>Data(s) da ausencia<input name="data_ausencia" required placeholder="Ex: 12/04 a 14/04" /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
@@ -315,7 +315,7 @@
                   <label>Colaborador<input name="colaborador" required /></label>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Cargo<input name="cargo" required /></label>
-                    <label>Filial / Setor<input name="filial" required /></label>
+                    <label>Filial / Setor<select name="filial" data-unit-select required></select></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Data de Admissao<input name="data_admissao" type="date" required /></label>
@@ -401,7 +401,7 @@
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
-                    <label>Setor<input name="setor" required /></label>
+                    <label>Setor<select name="setor" data-unit-select required></select></label>
                     <label>Data do Registro<input name="data_registro" type="date" required /></label>
                   </div>
                   <label>Tipo de Feedback<select name="tipo_feedback"><option>Orientacao / Alinhamento de rotina</option><option>Elogio / Reconhecimento</option><option>Correcao Disciplinar</option></select></label>
