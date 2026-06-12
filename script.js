@@ -769,6 +769,14 @@ function formatAbsencePeriod(value) {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)} a ${digits.slice(4, 6)}/${digits.slice(6)}`;
 }
 
+function formatTimeRange(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  if (digits.length <= 6) return `${digits.slice(0, 2)}:${digits.slice(2, 4)} às ${digits.slice(4)}`;
+  return `${digits.slice(0, 2)}:${digits.slice(2, 4)} às ${digits.slice(4, 6)}:${digits.slice(6)}`;
+}
+
 function formatCpf(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 3) return digits;
@@ -2619,6 +2627,9 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
     }
     if (event.target.name === "data_ausencia") {
       event.target.value = formatAbsencePeriod(event.target.value);
+    }
+    if (["horario_trabalho", "horario_atraso"].includes(event.target.name)) {
+      event.target.value = formatTimeRange(event.target.value);
     }
   });
 

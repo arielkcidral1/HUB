@@ -315,7 +315,7 @@
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Salário<input name="salario" placeholder="R$ 0,00" inputmode="numeric" /></label>
-                    <label>Horário de Trabalho<input name="horario_trabalho" /></label>
+                    <label>Horário de Trabalho<input name="horario_trabalho" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
                     <label>Centro de Custo<input name="centro_custo" /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
@@ -364,7 +364,7 @@
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Data da Entrevista<input name="data_entrevista" type="date" required /></label>
-                    <label>Horário/Período do Atraso<input name="horario_atraso" placeholder="Ex: 08:00 às 09:30 (se aplicável)" /></label>
+                    <label>Horário/Período do Atraso<input name="horario_atraso" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Tipo de ocorrencia<select name="tipo_ocorrencia"><option>Falta justificada (Atestado)</option><option>Falta injustificada</option><option>Atraso</option><option>Saida antecipada</option></select></label>
@@ -632,7 +632,7 @@
                     <label>Estacao disponivel?<select name="estacao_disponivel"><option>Sim</option><option>Nao</option></select></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
-                    <label>Horário de Trabalho / Turno<input name="horario_trabalho" required placeholder="Ex: Segunda a Sexta, 08h às 18h" /></label>
+                    <label>Horário de Trabalho / Turno<input name="horario_trabalho" required placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
                     <label>Equipamentos (Notebook, Celular, Frota)<input name="equipamentos" placeholder="Ex: Notebook, Acesso Sistema X" /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
