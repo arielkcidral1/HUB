@@ -565,6 +565,14 @@ function formatCpf(value) {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
+function formatRg(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 9);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}-${digits.slice(8)}`;
+}
+
 function isTodayLabel(value) {
   return value === todayLabel() || value === "Hoje";
 }
@@ -1824,6 +1832,15 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
 });
 
 document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
+  formElement.addEventListener("input", (event) => {
+    if (event.target.name === "cpf") {
+      event.target.value = formatCpf(event.target.value);
+    }
+    if (event.target.name === "rg") {
+      event.target.value = formatRg(event.target.value);
+    }
+  });
+
   formElement.addEventListener("submit", (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
