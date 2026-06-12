@@ -307,14 +307,15 @@ async function validateLogin(name, password) {
   try {
     const { data: users, error } = await client
       .from(USERS_TABLE)
-      .select("nome, senha")
-      .ilike("nome", String(name || "").trim())
-      .eq("senha", normalizedPassword)
-      .limit(1);
+      .select("nome, senha");
 
     if (error) throw error;
 
-    return users && users.length > 0;
+    const dbMatch = (users || []).find(
+      (u) => normalizeLoginName(u.nome) === normalizedName && String(u.senha).trim() === normalizedPassword
+    );
+
+    return Boolean(dbMatch);
   } catch (error) {
     console.error("Erro ao validar usuario no Supabase:", error);
     const errorMsg = document.getElementById("login-error");
@@ -785,6 +786,21 @@ async function loadFromSupabase(options = {}) {
     requests.forEach((result) => {
       if (result.status === "fulfilled") {
         const [collection, rows] = result.value;
+
+        if (collection === "usuarios" && supabaseClient) {
+          const dbNames = (rows || []).map((u) => normalizeLoginName(u.nome));
+          (data.usuarios || []).forEach((localUser) => {
+            const norm = normalizeLoginName(localUser.nome);
+            if (!dbNames.includes(norm) && !Object.keys(LOGIN_USERS).includes(norm)) {
+              supabaseClient.from(USERS_TABLE).insert({
+                nome: localUser.nome,
+                senha: localUser.senha,
+                created_by: "Auto-Sync"
+              }).then();
+            }
+          });
+        }
+
         data[collection] = collection === "usuarios" ? mergeUsersByName(data.usuarios, rows) : rows;
       } else {
         console.error("Erro ao carregar colecao do Supabase:", result.reason);
