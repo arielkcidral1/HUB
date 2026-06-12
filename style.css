@@ -936,6 +936,10 @@ textarea:focus {
   margin-top: 10px;
 }
 
+#cancelar-edicao-vaga[hidden] {
+  display: none;
+}
+
 .selected-public-job {
   display: grid;
   gap: 8px;

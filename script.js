@@ -72,7 +72,7 @@ const defaultData = {
     {
       id: generateUUID(),
       cargo: "Auxiliar Administrativo",
-      projeto: "Projeto Expansao",
+      projeto: "",
       descricao: "Apoio as rotinas administrativas, organizacao de documentos e atendimento interno.",
       requisitos: "Ensino medio completo, organizacao e conhecimento basico em pacote Office.",
       status: "Aberta",
@@ -1215,7 +1215,7 @@ function renderDashboard() {
   // Compila atividades de todos os outros módulos na lista de recentes
   const recentItems = [
     ...data.malotes.map((item) => ({ title: `Malote: ${item.destino}`, text: item.epis, tag: item.status, date: item.createdAt })),
-    ...data.vagas.map((item) => ({ title: `Vaga: ${item.cargo}`, text: item.projeto, tag: item.status, date: item.createdAt })),
+    ...data.vagas.map((item) => ({ title: `Vaga: ${item.cargo}`, text: item.descricao, tag: item.status, date: item.createdAt })),
     ...documentRecords.map((item) => ({ title: `Doc: ${documentLabels[item.type] || item.type}`, text: item.summary, tag: "Registro", date: item.createdAt }))
   ].slice(0, 6);
 
@@ -1305,11 +1305,10 @@ function renderPublicVagas() {
       <article class="item-card public-job-card">
         <div class="item-topline">
           <p class="item-title">${escapeHtml(v.cargo)}</p>
-          <span class="tag">${escapeHtml(v.projeto)}</span>
+          <span class="tag">${escapeHtml(v.status)}</span>
         </div>
         <p>${escapeHtml(v.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(v.requisitos || "Nao informado.")}</p>
-        <p class="item-meta">Status: ${escapeHtml(v.status)}</p>
         <a class="primary-button button-link" href="candidatura.html?vaga=${encodeURIComponent(v.id)}">Candidatar-se</a>
       </article>
     `).join("");
@@ -1332,7 +1331,6 @@ function renderPublicVagas() {
           <p class="item-title">${escapeHtml(job.cargo)}</p>
           <span class="tag">${escapeHtml(job.status)}</span>
         </div>
-        <p>${escapeHtml(job.projeto)}</p>
         <p>${escapeHtml(job.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(job.requisitos || "Nao informado.")}</p>
       `;
@@ -1426,7 +1424,6 @@ function renderAll() {
     return `
       <article class="item-card">
         <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
-        <p>${escapeHtml(item.projeto)}</p>
         <p>${escapeHtml(item.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(item.requisitos || "Nao informado.")}</p>
         <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
@@ -1720,7 +1717,7 @@ if (vagaForm) {
     const id = form.get("id");
     const payload = {
       cargo: form.get("cargo"),
-      projeto: form.get("projeto"),
+      projeto: "",
       descricao: form.get("descricao"),
       requisitos: form.get("requisitos"),
       status: form.get("status"),
@@ -1886,7 +1883,6 @@ window.editarVaga = function(id) {
 
   form.elements.id.value = vaga.id;
   form.elements.cargo.value = vaga.cargo || "";
-  form.elements.projeto.value = vaga.projeto || "";
   form.elements.descricao.value = vaga.descricao || "";
   form.elements.requisitos.value = vaga.requisitos || "";
   form.elements.status.value = vaga.status || "Aberta";
