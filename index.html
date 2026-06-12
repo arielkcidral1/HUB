@@ -4,6 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>HUB | RH</title>
+    <script>
+      if (sessionStorage.getItem("hub-rh-session") !== "active") {
+        window.location.replace("login.html");
+      }
+    </script>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
