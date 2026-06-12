@@ -1,4 +1,4 @@
-﻿alter table public.hub_chat_messages add column if not exists canal text not null default 'geral';
+﻿﻿alter table public.hub_chat_messages add column if not exists canal text not null default 'geral';
 
 do $$
 begin
@@ -34,4 +34,3 @@ begin
 exception
   when duplicate_object then null;
 end $$;
-
