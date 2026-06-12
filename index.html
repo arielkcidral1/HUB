@@ -158,10 +158,23 @@
                 <div class="epi-list" id="epi-list">
                   <div class="epi-row">
                     <label>Nome
-                      <input name="epi_nome[]" placeholder="Capacete, luvas, oculos..." required />
+                      <select name="epi_nome[]" data-epi-select required>
+                        <option value="">Selecione</option>
+                      </select>
                     </label>
                     <label>Quantidade
                       <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
+                    </label>
+                    <label>Tamanho
+                      <select name="epi_tamanho[]" required>
+                        <option>Nao se aplica</option>
+                        <option>PP</option>
+                        <option>P</option>
+                        <option>M</option>
+                        <option>G</option>
+                        <option>GG</option>
+                        <option>EG</option>
+                      </select>
                     </label>
                     <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
                   </div>

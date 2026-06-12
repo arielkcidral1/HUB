@@ -768,10 +768,12 @@ function populateEpiSelects() {
   });
 }
 
-function resetEpiRows(items = [{ nome: "", quantidade: "" }]) {
+function resetEpiRows(items = [{ nome: "", quantidade: "", tamanho: "Nao se aplica" }]) {
   const list = document.getElementById("epi-list");
   if (!list) return;
-  list.innerHTML = items.length ? items.map((item) => createEpiRow(item.nome, item.quantidade)).join("") : createEpiRow();
+  list.innerHTML = items.length
+    ? items.map((item) => createChamadoEpiRow(item.nome, item.quantidade, item.tamanho || "Nao se aplica")).join("")
+    : createChamadoEpiRow();
 }
 
 function parseEpiItems(value) {
@@ -780,9 +782,11 @@ function parseEpiItems(value) {
     .map((part) => {
       const text = part.trim();
       const match = text.match(/^(.*?)\s*\(([^)]+)\)$/);
+      const details = (match ? match[2] : "1").split(",").map((item) => item.trim());
       return {
         nome: (match ? match[1] : text).trim(),
-        quantidade: (match ? match[2] : "1").trim(),
+        quantidade: details[0] || "1",
+        tamanho: details[1] || "Nao se aplica",
       };
     })
     .filter((item) => item.nome);
@@ -2673,7 +2677,7 @@ window.baixarDocumentoMalote = function(id) {
     "",
     "EPIs:",
     ...(parseEpiItems(malote.epis).length
-      ? parseEpiItems(malote.epis).map((item) => `- ${item.nome}: ${item.quantidade}`)
+      ? parseEpiItems(malote.epis).map((item) => `- ${item.nome}: ${item.quantidade}${item.tamanho ? ` | Tamanho: ${item.tamanho}` : ""}`)
       : [`- ${malote.epis || "Nao informado"}`]),
   ].join("\n");
 
