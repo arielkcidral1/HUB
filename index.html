@@ -44,7 +44,10 @@
             <h1>HUB</h1>
           </div>
           <div class="topbar-actions">
-            <span class="user-chip" id="current-user">Usuario</span>
+            <button type="button" class="user-chip" data-view="conta">
+              <img id="current-user-avatar" class="user-avatar" src="" style="display: none;" alt="Avatar">
+              <span id="current-user">Usuario</span>
+            </button>
             <button class="logout-button" id="logout-button" type="button">Sair</button>
           </div>
         </header>
@@ -654,8 +657,11 @@
               <div class="panel-header">
                 <h2>Configuração de conta</h2>
               </div>
-              <label>Usuário
-                <input id="conta-nome" type="text" disabled />
+              <label>Nome do Usuário
+                <input type="text" name="novo_nome" id="novo-nome" placeholder="Seu nome" />
+              </label>
+              <label>Foto de Perfil
+                <input type="file" name="foto_perfil" accept="image/png, image/jpeg" />
               </label>
               <label>Cargo
                 <input id="conta-cargo" type="text" disabled />
@@ -664,12 +670,12 @@
                 <input name="senha_atual" type="password" placeholder="Digite sua senha atual" required />
               </label>
               <label>Nova senha
-                <input name="nova_senha" type="password" placeholder="Digite a nova senha" required />
+                <input name="nova_senha" type="password" placeholder="Digite a nova senha" />
               </label>
               <label>Confirmar nova senha
-                <input name="confirmar_senha" type="password" placeholder="Confirme a nova senha" required />
+                <input name="confirmar_senha" type="password" placeholder="Confirme a nova senha" />
               </label>
-              <button class="primary-button" type="submit">Atualizar senha</button>
+              <button class="primary-button" type="submit">Atualizar conta</button>
             </form>
           </div>
         </section>
