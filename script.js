@@ -1951,7 +1951,7 @@ function renderAll() {
   if (archivedDenunciasPanel) archivedDenunciasPanel.style.display = showArchivedDenuncias ? "" : "none";
   if (toggleArchivedDenunciasButton) {
     toggleArchivedDenunciasButton.textContent = showArchivedDenuncias ? "Ocultar arquivadas" : "Mostrar arquivadas";
-    toggleArchivedDenunciasButton.disabled = !arquivadas.length;
+    toggleArchivedDenunciasButton.disabled = false;
     toggleArchivedDenunciasButton.hidden = denunciasSelectionMode;
   }
   if (exitSelectionButton) {
@@ -1983,6 +1983,10 @@ function renderAll() {
   renderCards("denuncias-lidas", lidas, cardTemplate);
   if (showArchivedDenuncias) {
     renderCards("denuncias-arquivadas", arquivadas, (item) => cardTemplate(item, true));
+    if (!arquivadas.length) {
+      const emptyArchived = document.getElementById("denuncias-arquivadas");
+      if (emptyArchived) emptyArchived.innerHTML = '<p class="empty-state">Sem denúncias arquivadas.</p>';
+    }
   }
 
   renderChatChannels();
