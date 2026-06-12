@@ -1360,7 +1360,11 @@ async function addItem(collection, values) {
   } catch (error) {
     console.error("Erro ao salvar no Supabase:", error);
     setSyncStatus("Erro no Supabase", false);
-    showModal("Erro ao Salvar", "Nao foi possivel salvar no Supabase. Confira se as tabelas hub_* existem no projeto EIXO.", "error");
+    const message =
+      collection === "chamados"
+        ? "Nao foi possivel abrir o chamado. Rode o arquivo fix-chamados-supabase.sql no Supabase para criar a tabela hub_chamados."
+        : "Nao foi possivel salvar no Supabase. Confira se as tabelas hub_* existem no projeto EIXO.";
+    showModal("Erro ao Salvar", message, "error");
     return false;
   }
 }
