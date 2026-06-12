@@ -10,6 +10,9 @@
       }
     </script>
     <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   </head>
   <body>
     <div class="app-shell" id="app-shell">
@@ -311,6 +314,11 @@
                     <label>Cargo<input name="cargo" required /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Salário<input name="salario" placeholder="R$ 0,00" /></label>
+                    <label>Horário de Trabalho<input name="horario_trabalho" /></label>
+                    <label>Centro de Custo<input name="centro_custo" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Filial / Unidade<select name="filial" data-unit-select required></select></label>
                     <label>Data de admissao<input name="data" type="date" required /></label>
                   </div>
@@ -346,6 +354,11 @@
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Função<input name="funcao" /></label>
+                    <label>Admissão<input name="admissao" type="date" /></label>
+                    <label>Superior<input name="superior" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Filial / Setor<select name="filial" data-unit-select required></select></label>
                     <label>Data(s) da ausencia<input name="data_ausencia" required placeholder="Ex: 12/04 a 14/04" /></label>
                   </div>
@@ -358,6 +371,7 @@
                     <label>Apresentou Comprovante?<select name="apresentou_comprovante"><option>Sim</option><option>Nao</option><option>Nao se aplica</option></select></label>
                   </div>
                   <label>Motivo detalhado (Justificativa)<textarea name="motivo" rows="3" required></textarea></label>
+                  <label>Impacto da ausência para a empresa<textarea name="impacto" rows="3"></textarea></label>
                   <label>Medida Adotada<select name="medida_adotada"><option>Orientacao verbal</option><option>Advertencia verbal</option><option>Advertencia escrita</option><option>Suspensao</option><option>Apenas registro (Abonado)</option></select></label>
                   <label>Observacoes do Gestor / RH<textarea name="acao" rows="2"></textarea></label>
                   <label>Colaborador Ciente/Assinou?<select name="colaborador_ciente"><option>Sim</option><option>Não quis assinar</option></select></label>
@@ -423,12 +437,22 @@
                     <label>Nome da Mãe<input name="nome_mae" required /></label>
                     <label>Celular / Telefone<input name="celular" required placeholder="(00) 00000-0000" /></label>
                   </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 16px;">
+                    <label>Peso<input name="peso" /></label>
+                    <label>Altura<input name="altura" /></label>
+                    <label>E-mail Pessoal<input name="email" type="email" /></label>
+                  </div>
                   <label>CEP / Endereço Completo<input name="endereco" required placeholder="Rua, Número, Bairro, Cidade - UF, CEP" /></label>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Tipo de Solicitacao<select name="tipo_solicitacao"><option>Inclusao Novo Titular</option><option>Inclusao de Dependente</option><option>Cancelamento/Exclusao</option></select></label>
                     <label>Plano Solicitado<select name="plano"><option>Plano de Saude</option><option>Plano Odontologico</option><option>Saude + Odonto</option></select></label>
                   </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Nome do Dependente<input name="dependente" /></label>
+                    <label>Grau de Parentesco<input name="parentesco" /></label>
+                  </div>
                   <label>Dados dos Dependentes (Nome completo, CPF, Parentesco e Data de Nasc.)<textarea name="dependentes" rows="4" placeholder="Ex: Maria da Silva, CPF 000.000.000-00, Conjuge, 10/05/1990"></textarea></label>
+                  <label>Local e Data<input name="local_data" placeholder="Cidade, dd/mm/aaaa" /></label>
                   <label>Autorizacao de Desconto<select name="autoriza_desconto"><option>Ciente e autorizo o desconto em folha</option><option>Nao se aplica (cancelamento)</option></select></label>
                   <button class="primary-button" type="submit">Salvar adesao</button>
                 </form>
@@ -484,10 +508,17 @@
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Gestor Aplicador<input name="gestor_aplicador" required /></label>
+                    <label>Cargo<input name="cargo" /></label>
+                    <label>Tempo de Empresa<input name="tempo_empresa" /></label>
                     <label>Acompanhamento do RH?<select name="acompanhamento_rh"><option>Não</option><option>Sim</option></select></label>
                   </div>
                   <label>Tipo de Feedback<select name="tipo_feedback"><option>Orientacao / Alinhamento de rotina</option><option>Elogio / Reconhecimento</option><option>Correcao Disciplinar</option></select></label>
                   <label>Situacao / Comportamento Observado (Descreva o fato)<textarea name="situacao" rows="4" required></textarea></label>
+                  <label>Pontos positivos / fortalezas<textarea name="positivos" rows="3"></textarea></label>
+                  <label>Pontos de melhoria / desenvolvimento<textarea name="melhorias" rows="3"></textarea></label>
+                  <label>Expectativa do colaborador<textarea name="expectativa_colaborador" rows="3"></textarea></label>
+                  <label>Plano de ação<textarea name="plano_acao" rows="3"></textarea></label>
+                  <label>Acompanhamento<textarea name="acompanhamento" rows="3"></textarea></label>
                   <label>Reacao do Colaborador e Compromisso Assumido<textarea name="observacoes" rows="4" required></textarea></label>
                   <button class="primary-button" type="submit">Salvar feedback</button>
                 </form>

@@ -3404,93 +3404,262 @@ window.excluirMalote = async function(id) {
   });
 };
 
-window.baixarDocumentoRH = function(id) {
-  const doc = documentRecords.find((item) => String(item.id) === String(id));
-  if (!doc) return;
+const documentTemplateConfigs = {
+  admissao: {
+    file: "docs/Checklist Admissão.xlsx",
+    ext: "xlsx",
+    cells: {
+      colaborador: "D8",
+      cargo: "D9",
+      salario: "D10",
+      data: "D11",
+      horario_trabalho: "D12",
+      centro_custo: "D13",
+      vale_transporte: "D14",
+      observacoes: "C33",
+    },
+  },
+  "movimentacao-pessoal": {
+    file: "docs/MP - Movimentação Pessoal.xlsx",
+    ext: "xlsx",
+    cells: {
+      colaborador: "B5",
+      matricula: "D5",
+      cargo_atual: "B6",
+      admissao: "D6",
+      filial: "B7",
+      turno_atual: "D7",
+      salario_atual: "B8",
+      gestor: "D8",
+      movimentacao: "B9",
+      cargo_proposto: "A20",
+      area_proposta: "B20",
+      turno_proposto: "C20",
+      data_movimentacao: "D20",
+      salario_proposto: "A22",
+      reajuste: "B22",
+      justificativa_movimentacao: "B23",
+      observacoes: "B32",
+    },
+  },
+  "requisicao-pessoal": {
+    file: "docs/RP - Requiseção Pessoal.xlsx",
+    ext: "xlsx",
+    cells: {
+      colaborador: "E4",
+      filial: "Q4",
+      cargo_requisitante: "E5",
+      data_abertura: "Q5",
+      motivo: "E8",
+      regime: "E10",
+      justificativa: "E11",
+      orcamento: "Q12",
+      descritivo_cargo: "Q13",
+      estacao_disponivel: "Q14",
+      cargo: "E16",
+      numero_vagas: "Q16",
+      faixa_salarial: "Q17",
+      descricao: "E18",
+      requisitos: "E19",
+      pontos_atencao: "E20",
+      tipo_recrutamento: "E29",
+      observacoes: "E32",
+    },
+  },
+  ausencia: {
+    file: "docs/Entrevista de Ausensia.docx",
+    ext: "docx",
+    replacements: {
+      "Colaborador:": "Colaborador: {colaborador}",
+      "Função:": "Função: {funcao}",
+      "Superior:": "Superior: {superior}",
+      "Período das Faltas:": "Período das Faltas: {data_ausencia}",
+      "Descreva o motivo da falta:": "Descreva o motivo da falta: {motivo}",
+      "Você sabe do impacto da sua ausência para a empresa? Qual?": "Você sabe do impacto da sua ausência para a empresa? Qual? {impacto}",
+    },
+  },
+  beneficios: {
+    file: "docs/Plano de Saúde e Odonto.docx",
+    ext: "docx",
+    replacements: {
+      "Nome do Funcionário: ______________________________________________________________": "Nome do Funcionário: {colaborador}",
+      "Peso: ______________________________________________________________": "Peso: {peso}",
+      "Altura: ______________________________________________________________": "Altura: {altura}",
+      "E-mail Pessoal: ______________________________________________________________": "E-mail Pessoal: {email}",
+      "Nome do Dependente: ______________________________________________________________": "Nome do Dependente: {dependente}",
+      "Grau de Parentesco: ______________________________________________________________": "Grau de Parentesco: {parentesco}",
+      "Local e Data: ______________________________________________________________": "Local e Data: {local_data}",
+    },
+  },
+  "feedback-fredy": {
+    file: "docs/Feedback fredy pneus.docx",
+    ext: "docx",
+    replacements: {
+      "Data do Feedback": "Data do Feedback\n{data_registro}",
+      "Unidade": "Unidade\n{setor}",
+      "Gestor Responsável": "Gestor Responsável\n{gestor_aplicador}",
+      "Colaborador": "Colaborador\n{colaborador}",
+      "Cargo": "Cargo\n{cargo}",
+      "Tempo de Empresa": "Tempo de Empresa\n{tempo_empresa}",
+      "3. CONTEXTO DO ALINHAMENTO": "3. CONTEXTO DO ALINHAMENTO\n{situacao}",
+      "4. PONTOS POSITIVOS (FORTALEZAS)\n•\n•\n•": "4. PONTOS POSITIVOS (FORTALEZAS)\n{positivos}",
+      "5. PONTOS DE MELHORIA (DESENVOLVIMENTO)\n•\n•\n•": "5. PONTOS DE MELHORIA (DESENVOLVIMENTO)\n{melhorias}",
+      "7. EXPECTATIVA DO COLABORADOR": "7. EXPECTATIVA DO COLABORADOR\n{expectativa_colaborador}",
+      "9. ACOMPANHAMENTO": "9. ACOMPANHAMENTO\n{acompanhamento}",
+    },
+  },
+  "feedback-operacional": {
+    file: "docs/Feedback Operacional.docx",
+    ext: "docx",
+    replacements: {
+      "Data:": "Data: {data_feedback}",
+      "RESPONSÁVEL PELO FEEDBACK:": "RESPONSÁVEL PELO FEEDBACK: {lider}",
+      "COLABORADOR QUE RECEBEU O FEEDBACK:": "COLABORADOR QUE RECEBEU O FEEDBACK: {colaborador}",
+      "Declaro para os mais diversos fins da empresa, que recebi da forma adequada o feedback, onde foram abordados os pontos positivos e os pontos que precisam melhorar dos meus comportamentos dentro da empresa.": "Declaro para os mais diversos fins da empresa, que recebi da forma adequada o feedback, onde foram abordados os pontos positivos e os pontos que precisam melhorar dos meus comportamentos dentro da empresa.\n\nPontos positivos: {positivos}\n\nPontos a desenvolver: {melhorias}\n\nPlano de ação: {acao}",
+    },
+  },
+  "solicitacao-desligamento": {
+    file: "docs/SD - Solicitação de Desligamento.pdf",
+    ext: "pdf",
+  },
+  ferias: {
+    file: "docs/Solicitação de Ferias.xls",
+    ext: "xls",
+  },
+  desligamento: {
+    file: "docs/Entrevista de Desligamento.doc",
+    ext: "doc",
+  },
+};
 
-  const title = documentLabels[doc.type] || doc.type;
-  
-  const rows = Object.entries(doc.formData || {})
-    .filter(([key, value]) => value && String(value).trim())
-    .map(([key, value]) => {
-      const formattedKey = key
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, l => l.toUpperCase());
-      return `
-        <tr>
-          <td style="width: 30%; background: #f3f4f6; font-weight: bold; text-transform: uppercase; font-size: 9px;">${escapeHtml(formattedKey)}</td>
-          <td>${escapeHtml(value).replace(/\n/g, "<br>")}</td>
-        </tr>
-      `;
-    }).join("");
+function normalizeDownloadText(value) {
+  return String(value || "").trim();
+}
 
-  const conteudo = `
-    <!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <style>
-          @page { size: A4; margin: 16mm; }
-          body { font-family: Arial, Helvetica, sans-serif; color: #111827; font-size: 11px; }
-          .doc { border: 1px solid #111827; padding: 10px; }
-          .header { display: table; width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-          .header > div { display: table-cell; border: 1px solid #111827; padding: 8px; vertical-align: middle; }
-          .brand { width: 50%; }
-          .brand h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
-          .brand p { margin: 4px 0 0; font-size: 10px; }
-          .title { width: 50%; text-align: center; font-size: 14px; font-weight: bold; text-transform: uppercase; }
-          .section-title { background: #e5e7eb; border: 1px solid #111827; padding: 5px; font-weight: bold; text-transform: uppercase; margin-top: 8px; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-          th, td { border: 1px solid #111827; padding: 6px; vertical-align: top; }
-          .muted { color: #6b7280; font-weight: normal; }
-          .signature-box { display: table; width: 100%; margin-top: 40px; }
-          .signature-col { display: table-cell; width: 50%; text-align: center; padding: 0 20px; }
-          .signature-line { border-top: 1px solid #111827; margin-bottom: 5px; margin-top: 40px; }
-        </style>
-      </head>
-      <body>
-        <div class="doc">
-          <div class="header">
-            <div class="brand">
-              <h1>HUB RH</h1>
-              <p>Departamento de Recursos Humanos</p>
-              <p class="muted">Documento gerado automaticamente pelo sistema</p>
-            </div>
-            <div class="title">
-              ${escapeHtml(title)}
-            </div>
-          </div>
+function formatFormDate(value) {
+  if (!value) return "";
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : String(value);
+}
 
-          <div class="section-title">Dados do Registro</div>
-          <table>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
+function getDocValue(formData, key) {
+  const value = formData?.[key] || "";
+  return key.includes("data") || key === "admissao" ? formatFormDate(value) : normalizeDownloadText(value);
+}
 
-          <div class="signature-box">
-            <div class="signature-col">
-              <div class="signature-line"></div>
-              Assinatura do Colaborador
-            </div>
-            <div class="signature-col">
-              <div class="signature-line"></div>
-              Assinatura do RH / Gestor
-            </div>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  const blob = new Blob(["\ufeff", conteudo], { type: "application/msword;charset=utf-8" });
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  const safeTitle = title.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "");
   link.href = url;
-  link.download = `${safeTitle.toLowerCase()}-${Date.now()}.doc`;
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function safeDownloadName(title, ext) {
+  const safeTitle = String(title || "documento").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "");
+  return `${safeTitle.toLowerCase()}-${Date.now()}.${ext}`;
+}
+
+async function loadTemplateBytes(path) {
+  const response = await fetch(encodeURI(path));
+  if (!response.ok) throw new Error(`Nao foi possivel carregar o modelo: ${path}`);
+  return response.arrayBuffer();
+}
+
+async function downloadFilledXlsx(config, formData, title) {
+  if (!window.ExcelJS) throw new Error("Biblioteca ExcelJS nao carregada.");
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(await loadTemplateBytes(config.file));
+  const sheet = workbook.worksheets[0];
+  Object.entries(config.cells || {}).forEach(([key, address]) => {
+    const value = getDocValue(formData, key);
+    if (value) sheet.getCell(address).value = value;
+  });
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBlob(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), safeDownloadName(title, "xlsx"));
+}
+
+function fillPlaceholders(text, formData) {
+  return String(text).replace(/\{([^}]+)\}/g, (_, key) => escapeXml(getDocValue(formData, key)));
+}
+
+function escapeXml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+async function downloadFilledDocx(config, formData, title) {
+  if (!window.PizZip) throw new Error("Biblioteca PizZip nao carregada.");
+  const zip = new PizZip(await loadTemplateBytes(config.file));
+  const documentFile = zip.file("word/document.xml");
+  let xml = documentFile.asText();
+  Object.entries(config.replacements || {}).forEach(([source, target]) => {
+    const value = fillPlaceholders(target, formData).replace(/\n/g, "<w:br/>");
+    xml = xml.split(escapeXml(source)).join(value);
+  });
+  zip.file("word/document.xml", xml);
+  downloadBlob(zip.generate({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), safeDownloadName(title, "docx"));
+}
+
+async function downloadFilledPdf(config, formData, title) {
+  if (!window.PDFLib) throw new Error("Biblioteca PDFLib nao carregada.");
+  const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
+  const pdfDoc = await PDFDocument.load(await loadTemplateBytes(config.file));
+  const page = pdfDoc.getPages()[0];
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const draw = (key, x, y, size = 8) => {
+    const value = getDocValue(formData, key);
+    if (value) page.drawText(value.slice(0, 70), { x, y, size, font, color: rgb(0, 0, 0) });
+  };
+  draw("colaborador", 60, 705);
+  draw("cargo", 250, 705);
+  draw("filial", 60, 680);
+  draw("data_solicitacao", 430, 705);
+  draw("data_desligamento", 390, 560);
+  draw("tipo_desligamento", 160, 635);
+  draw("aviso_previo", 160, 610);
+  draw("motivo", 60, 455, 7);
+  draw("gestor_solicitante", 95, 260);
+  const bytes = await pdfDoc.save();
+  downloadBlob(new Blob([bytes], { type: "application/pdf" }), safeDownloadName(title, "pdf"));
+}
+
+function downloadLegacyOfficeDocument(doc, config, title) {
+  const rows = Object.entries(doc.formData || {})
+    .filter(([, value]) => value && String(value).trim())
+    .map(([key, value]) => {
+      const label = key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+      return `<tr><td class="label">${escapeHtml(label)}</td><td>${escapeHtml(value).replace(/\n/g, "<br>")}</td></tr>`;
+    }).join("");
+  const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+    body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111}
+    table{border-collapse:collapse;width:100%}td{border:1px solid #111;padding:6px;vertical-align:top}.label{font-weight:bold;background:#eee;width:32%}
+    .title{text-align:center;font-weight:bold;text-transform:uppercase;border:1px solid #111;padding:8px;margin-bottom:10px}
+  </style></head><body><div class="title">${escapeHtml(title)}</div><table>${rows}</table></body></html>`;
+  const type = config.ext === "xls" ? "application/vnd.ms-excel;charset=utf-8" : "application/msword;charset=utf-8";
+  downloadBlob(new Blob(["\ufeff", html], { type }), safeDownloadName(title, config.ext));
+}
+
+window.baixarDocumentoRH = async function(id) {
+  const doc = documentRecords.find((item) => String(item.id) === String(id));
+  if (!doc) return;
+
+  const title = documentLabels[doc.type] || doc.type;
+  const config = documentTemplateConfigs[doc.type];
+  if (!config) return downloadLegacyOfficeDocument(doc, { ext: "doc" }, title);
+
+  try {
+    if (config.ext === "xlsx") return await downloadFilledXlsx(config, doc.formData || {}, title);
+    if (config.ext === "docx") return await downloadFilledDocx(config, doc.formData || {}, title);
+    if (config.ext === "pdf") return await downloadFilledPdf(config, doc.formData || {}, title);
+    return downloadLegacyOfficeDocument(doc, config, title);
+  } catch (error) {
+    console.error(error);
+    showModal("Erro ao baixar", "Nao foi possivel preencher o modelo original. Verifique sua conexao e tente novamente.", "error");
+  }
 };
