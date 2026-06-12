@@ -2126,8 +2126,6 @@ function renderAccountSettings() {
   const newNameInput = document.getElementById("novo-nome");
   const roleInput = document.getElementById("conta-cargo");
   const avatarPreview = document.getElementById("conta-avatar-preview");
-  const pwdFields = document.getElementById("password-fields");
-  const btnRedefinirSenha = document.getElementById("btn-redefinir-senha");
   if (!nameInput && !roleInput && !newNameInput) return;
 
   const user = getCurrentUserRecord();
@@ -2144,9 +2142,6 @@ function renderAccountSettings() {
       avatarPreview.style.display = "none";
     }
   }
-
-  if (pwdFields) pwdFields.style.display = "none";
-  if (btnRedefinirSenha) btnRedefinirSenha.style.display = "inline-flex";
 }
 
 function renderChatChannels() {
@@ -2814,14 +2809,91 @@ if (fotoPerfilInput) {
   });
 }
 
+function showResetPasswordModal() {
+  const existing = document.getElementById("custom-modal");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "custom-modal";
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header info">Redefinir senha</div>
+      <div class="modal-body">
+        <label class="modal-password-label" style="margin-top: 0;">Senha atual
+          <input id="modal-current-pwd" type="password" placeholder="Digite sua senha atual" autocomplete="current-password" />
+        </label>
+        <label class="modal-password-label">Nova senha
+          <input id="modal-new-pwd" type="password" placeholder="Digite a nova senha" autocomplete="new-password" />
+        </label>
+        <label class="modal-password-label">Confirmar nova senha
+          <input id="modal-confirm-pwd" type="password" placeholder="Confirme a nova senha" autocomplete="new-password" />
+        </label>
+        <p class="form-feedback error" id="modal-action-error" hidden style="margin-top: 16px; margin-bottom: 0;"></p>
+      </div>
+      <div class="modal-footer modal-footer-split">
+        <button class="secondary-link" type="button" data-modal-cancel>Cancelar</button>
+        <button class="primary-button" type="button" data-modal-confirm>Salvar senha</button>
+      </div>
+    </div>
+  `;
+
+  const close = () => overlay.remove();
+  overlay.querySelector("[data-modal-cancel]").addEventListener("click", close);
+  overlay.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+    const currentPwd = overlay.querySelector("#modal-current-pwd").value.trim();
+    const newPwd = overlay.querySelector("#modal-new-pwd").value.trim();
+    const confirmPwd = overlay.querySelector("#modal-confirm-pwd").value.trim();
+    const errorEl = overlay.querySelector("#modal-action-error");
+
+    if (!currentPwd) {
+      errorEl.textContent = "A senha atual é obrigatória.";
+      errorEl.hidden = false;
+      return;
+    }
+    if (!newPwd || newPwd.length < 3) {
+      errorEl.textContent = "Use uma nova senha com pelo menos 3 caracteres.";
+      errorEl.hidden = false;
+      return;
+    }
+    if (newPwd !== confirmPwd) {
+      errorEl.textContent = "A confirmação da nova senha não confere.";
+      errorEl.hidden = false;
+      return;
+    }
+
+    const user = getCurrentUserRecord();
+    if (!isLoginMatch(currentPwd, user.senha)) {
+      errorEl.textContent = "A senha atual informada não confere.";
+      errorEl.hidden = false;
+      return;
+    }
+
+    errorEl.hidden = true;
+    const success = await updateCurrentAccount(currentPwd, null, newPwd, null);
+    if (success) {
+      close();
+      showModal("Senha atualizada", "Sua senha foi redefinida com sucesso.", "info");
+    }
+  });
+
+  overlay.querySelectorAll("input").forEach(input => {
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        overlay.querySelector("[data-modal-confirm]").click();
+      }
+    });
+  });
+
+  document.body.appendChild(overlay);
+  overlay.querySelector("#modal-current-pwd").focus();
+}
+
 const btnRedefinirSenha = document.getElementById("btn-redefinir-senha");
 if (btnRedefinirSenha) {
   btnRedefinirSenha.addEventListener("click", () => {
-    const pwdFields = document.getElementById("password-fields");
-    if (pwdFields) {
-      pwdFields.style.display = "block";
-      btnRedefinirSenha.style.display = "none";
-    }
+    showResetPasswordModal();
   });
 }
 
@@ -2831,30 +2903,8 @@ if (contaForm) {
     event.preventDefault();
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
-    let currentPassword = String(form.get("senha_atual") || "").trim();
     const newName = String(form.get("novo_nome") || "").trim();
-    let newPassword = String(form.get("nova_senha") || "").trim();
-    const confirmPassword = String(form.get("confirmar_senha") || "").trim();
     const fotoFile = form.get("foto_perfil");
-
-    const pwdFields = document.getElementById("password-fields");
-    if (pwdFields && pwdFields.style.display !== "none") {
-      if (!currentPassword) {
-        showModal("Senha atual", "A senha atual é obrigatória para alterar sua senha.", "error");
-        return;
-      }
-      if (!newPassword || newPassword.length < 3) {
-        showModal("Nova senha", "Use uma nova senha com pelo menos 3 caracteres.", "error");
-        return;
-      }
-      if (newPassword !== confirmPassword) {
-        showModal("Senhas diferentes", "A confirmacao da nova senha nao confere.", "error");
-        return;
-      }
-    } else {
-      currentPassword = "";
-      newPassword = "";
-    }
 
     let fotoUrl = null;
     if (fotoFile && fotoFile.name && supabaseClient) {
@@ -2873,7 +2923,7 @@ if (contaForm) {
       }
     }
 
-    const success = await updateCurrentAccount(currentPassword, newName, newPassword, fotoUrl);
+    const success = await updateCurrentAccount("", newName, "", fotoUrl);
     if (success) {
       formElement.reset();
       renderAccountSettings();
