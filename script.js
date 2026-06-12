@@ -154,6 +154,7 @@ function getAllLocalUsers() {
     Object.values(LOGIN_USERS).map((user) => ({
       nome: user.nome,
       senha: user.senha,
+      syncStatus: "online",
     })),
     mergeUsersByName(loadTeamCredentialsStore(), mergeUsersByName(loadTeamUsersStore(), data?.usuarios || []))
   );
@@ -162,6 +163,10 @@ function getAllLocalUsers() {
 function findLocalTeamUser(value) {
   const normalized = normalizeLoginName(value);
   return getAllLocalUsers().find((user) => normalizeLoginName(user.nome) === normalized);
+}
+
+function repairTeamCredentialsStore() {
+  syncTeamCredentials(mergeUsersByName(loadTeamUsersStore(), data?.usuarios || []));
 }
 
 function getDirectChannel(userA, userB) {
@@ -266,9 +271,11 @@ async function validateLogin(name, password) {
   const normalizedPassword = String(password || "").trim();
 
   const localMatch = validateLocalLogin(normalizedName, normalizedPassword);
+  if (localMatch) return true;
+
   const client = supabaseClient || getSupabaseClient();
 
-  if (!client) return localMatch;
+  if (!client) return false;
 
   try {
     const { data: users, error } = await client
@@ -279,10 +286,10 @@ async function validateLogin(name, password) {
     if (error) throw error;
 
     const databaseMatch = (users || []).some((user) => normalizeLoginName(user.nome) === normalizedName);
-    return databaseMatch || localMatch;
+    return databaseMatch;
   } catch (error) {
     console.error("Erro ao validar usuario no Supabase:", error);
-    return localMatch;
+    return false;
   }
 }
 
@@ -297,6 +304,7 @@ function isLoginPage() {
 function setupLogin() {
   const loginForm = document.getElementById("login-form");
   const logoutButton = document.getElementById("logout-button");
+  repairTeamCredentialsStore();
 
   // Redirecionamentos Inteligentes
   if (isAuthenticated()) {
@@ -892,7 +900,7 @@ function upsertLocalUser(values) {
     nome: getLoginDisplayName(values.nome) || values.nome,
     senha: values.senha,
     createdBy: values.createdBy || getCurrentUserName(),
-    syncStatus: values.syncStatus || data.usuarios[existingIndex]?.syncStatus || "local",
+    syncStatus: values.syncStatus || data.usuarios[existingIndex]?.syncStatus || "active",
     createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
   };
 
@@ -915,7 +923,7 @@ async function saveTeamUser(values) {
   if (!nome || !senha) return false;
 
   if (!supabaseClient) {
-    upsertLocalUser({ nome, senha, syncStatus: "local" });
+    upsertLocalUser({ nome, senha, syncStatus: "active" });
     return true;
   }
 
@@ -937,12 +945,12 @@ async function saveTeamUser(values) {
     if (error) throw error;
 
     const saved = mapRows("usuarios", savedRows || [])[0] || { nome, senha, createdAt: todayLabel() };
-    upsertLocalUser({ ...saved, syncStatus: "online" });
+    upsertLocalUser({ ...saved, syncStatus: "active" });
     setSyncStatus("Supabase EIXO online", true);
     return true;
   } catch (error) {
     console.error("Erro ao salvar usuario no Supabase:", error);
-    upsertLocalUser({ nome, senha, syncStatus: "local" });
+    upsertLocalUser({ nome, senha, syncStatus: "active" });
     setSyncStatus("Usuario salvo local", false);
     return true;
   }
@@ -1148,7 +1156,7 @@ function renderTeamUsers() {
       <div class="item-topline">
         <p class="item-title">${escapeHtml(item.nome)}</p>
         <div>
-          <span class="tag">${item.syncStatus === "local" ? "Local" : "Ativo"}</span>
+          <span class="tag">Ativo</span>
           <button type="button" class="tag alert" style="cursor: pointer; border: none; margin-left: 6px;" onclick="excluirUsuario('${item.id}')">Deletar</button>
         </div>
       </div>
