@@ -99,6 +99,7 @@ let refreshTimer = null;
 let refreshInProgress = false;
 let documentRecords = loadDocumentRecords();
 let readRhMessageIds = loadReadRhMessageIds();
+let chamadosSelectionMode = false;
 window.editingDocId = null;
 
 const documentLabels = {
@@ -1929,12 +1930,15 @@ function renderAll() {
   const chamadosAbertos = (data.chamados || []).filter((item) => item.status !== "Arquivado");
   const chamadosArquivados = (data.chamados || []).filter((item) => item.status === "Arquivado");
   const archiveButton = document.getElementById("archive-selected-chamados");
-  if (archiveButton) archiveButton.disabled = !chamadosAbertos.length;
+  if (archiveButton) {
+    archiveButton.disabled = !chamadosAbertos.length;
+    archiveButton.textContent = chamadosSelectionMode ? "Arquivar selecionados" : "Selecionar Arquivos";
+  }
   const chamadoCard = (item, archived = false) => `
-    <article class="item-card">
+    <article class="item-card ${chamadosSelectionMode && !archived ? "selectable-card" : ""}">
       <div class="item-topline">
         <p class="item-title">
-          ${archived ? "" : `<input class="chamado-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar chamado de ${escapeHtml(item.solicitante)}" />`}
+          ${!archived && chamadosSelectionMode ? `<input class="chamado-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar chamado de ${escapeHtml(item.solicitante)}" />` : ""}
           ${escapeHtml(item.unidade)}
         </p>
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
@@ -2098,6 +2102,12 @@ document.getElementById("malote-destino-filter")?.addEventListener("change", () 
 });
 
 document.getElementById("archive-selected-chamados")?.addEventListener("click", () => {
+  if (!chamadosSelectionMode) {
+    chamadosSelectionMode = true;
+    renderAll();
+    return;
+  }
+
   const selectedIds = Array.from(document.querySelectorAll("#chamados-list .chamado-select:checked"))
     .map((input) => input.value)
     .filter(Boolean);
@@ -2114,6 +2124,8 @@ document.getElementById("archive-selected-chamados")?.addEventListener("click", 
     onConfirm: async () => {
       const results = await Promise.all(selectedIds.map((id) => updateItem("chamados", id, { status: "Arquivado" })));
       if (results.every(Boolean)) {
+        chamadosSelectionMode = false;
+        renderAll();
         showModal("Chamados arquivados", "Os chamados selecionados foram movidos para Arquivados.", "info");
       }
     },
