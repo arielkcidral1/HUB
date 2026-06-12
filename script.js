@@ -737,7 +737,8 @@ function createEpiRow(nome = "", quantidade = "") {
 }
 
 function createChamadoEpiRow(nome = "", quantidade = "", tamanho = "Nao se aplica") {
-  const options = '<option value="">Selecione</option>' + EPI_OPTIONS
+  const optionValues = nome && !EPI_OPTIONS.includes(nome) ? [nome, ...EPI_OPTIONS] : EPI_OPTIONS;
+  const options = '<option value="">Selecione</option>' + optionValues
     .map((item) => `<option value="${escapeHtml(item)}" ${item === nome ? "selected" : ""}>${escapeHtml(item)}</option>`)
     .join("");
   const sizeOptions = ["Nao se aplica", "PP", "P", "M", "G", "GG", "EG"]
@@ -779,19 +780,46 @@ function resetEpiRows(items = [{ nome: "", quantidade: "", tamanho: "Nao se apli
 }
 
 function parseEpiItems(value) {
-  return String(value || "")
-    .split(",")
-    .map((part) => {
-      const text = part.trim();
-      const match = text.match(/^(.*?)\s*\(([^)]+)\)$/);
-      const details = (match ? match[2] : "1").split(",").map((item) => item.trim());
-      return {
-        nome: (match ? match[1] : text).trim(),
-        quantidade: details[0] || "1",
-        tamanho: details[1] || "Nao se aplica",
-      };
-    })
+  const text = String(value || "").trim();
+  if (!text) return [];
+
+  const items = [];
+  const pattern = /([^,(]+?)\s*\(([^)]*)\)\s*,?/g;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    const details = String(match[2] || "").split(",").map((item) => item.trim());
+    items.push({
+      nome: String(match[1] || "").trim(),
+      quantidade: details[0] || "1",
+      tamanho: details[1] || "Nao se aplica",
+    });
+  }
+
+  if (items.length) return items.filter((item) => item.nome);
+
+  return text
+    .split(/\n|;/)
+    .map((part) => ({
+      nome: part.trim(),
+      quantidade: "1",
+      tamanho: "Nao se aplica",
+    }))
     .filter((item) => item.nome);
+}
+
+function renderMaloteEpisDetails(epis) {
+  const items = parseEpiItems(epis);
+  if (!items.length) return `<p><strong>EPI:</strong> ${escapeHtml(epis || "Nao informado")}</p>`;
+
+  return items
+    .map((item) => `
+      <div class="malote-epi-detail">
+        <p><strong>EPI:</strong> ${escapeHtml(item.nome || "Nao informado")}</p>
+        <p><strong>Tamanho do EPI:</strong> ${escapeHtml(item.tamanho || "Nao se aplica")}</p>
+        <p><strong>Quantidade:</strong> ${escapeHtml(item.quantidade || "1")}</p>
+      </div>
+    `)
+    .join("");
 }
 
 function todayLabel() {
@@ -1998,9 +2026,10 @@ function renderAll() {
   renderMaloteReport();
   renderCards("malotes-list", getFilteredMalotes(), (item) => `
     <article class="item-card">
-      <div class="item-topline"><p class="item-title">${escapeHtml(item.destino)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
+      <div class="item-topline"><p class="item-title">Malote de EPI</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
+      <p><strong>Destino:</strong> ${escapeHtml(item.destino || "Nao informado")}</p>
       <p><strong>Origem:</strong> ${escapeHtml(item.origem || "Nao informada")}</p>
-      <p>${escapeHtml(item.epis)}</p>
+      ${renderMaloteEpisDetails(item.epis)}
       <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}</p>
       <div class="job-actions">
         <button class="secondary-link" type="button" onclick="editarMalote('${escapeHtml(item.id)}')">Editar</button>
@@ -2788,28 +2817,142 @@ window.baixarDocumentoMalote = function(id) {
   const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
   if (!malote) return;
 
-  const conteudo = [
-    "DOCUMENTO DO MALOTE",
-    "",
-    `Destino: ${malote.destino || ""}`,
-    `Origem: ${malote.origem || ""}`,
-    `Status: ${malote.status || ""}`,
-    `Data: ${malote.createdAt || ""}`,
-    `Registrado por: ${malote.createdBy || "Sistema"}`,
-    malote.updatedBy ? `Alterado por: ${malote.updatedBy}` : "",
-    "",
-    "EPIs:",
-    ...(parseEpiItems(malote.epis).length
-      ? parseEpiItems(malote.epis).map((item) => `- ${item.nome}: ${item.quantidade}${item.tamanho ? ` | Tamanho: ${item.tamanho}` : ""}`)
-      : [`- ${malote.epis || "Nao informado"}`]),
-  ].join("\n");
+  const epiItems = parseEpiItems(malote.epis);
+  const epiRows = (epiItems.length ? epiItems : [{ nome: malote.epis || "Nao informado", tamanho: "Nao se aplica", quantidade: "1" }])
+    .map((item, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(item.nome || "Nao informado")}</td>
+        <td>${escapeHtml(item.tamanho || "Nao se aplica")}</td>
+        <td>${escapeHtml(item.quantidade || "1")}</td>
+      </tr>
+    `)
+    .join("");
 
-  const blob = new Blob([conteudo], { type: "text/plain;charset=utf-8" });
+  const conteudo = `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          @page { size: A4; margin: 16mm; }
+          body { font-family: Arial, Helvetica, sans-serif; color: #111827; font-size: 11px; }
+          .doc { border: 1px solid #111827; padding: 10px; }
+          .top-note { border: 1px solid #9ca3af; padding: 6px; font-size: 9px; text-transform: uppercase; margin-bottom: 8px; }
+          .header { display: table; width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+          .header > div { display: table-cell; border: 1px solid #111827; padding: 8px; vertical-align: middle; }
+          .brand { width: 58%; }
+          .brand h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+          .brand p { margin: 4px 0 0; font-size: 10px; }
+          .number { width: 22%; text-align: center; }
+          .number strong { display: block; font-size: 18px; margin-top: 4px; }
+          .status { width: 20%; text-align: center; }
+          .section-title { background: #e5e7eb; border: 1px solid #111827; padding: 5px; font-weight: bold; text-transform: uppercase; margin-top: 8px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #111827; padding: 6px; vertical-align: top; }
+          th { background: #f3f4f6; text-transform: uppercase; font-size: 9px; }
+          .field-label { display: block; font-size: 8px; color: #374151; text-transform: uppercase; margin-bottom: 4px; }
+          .field-value { font-size: 12px; font-weight: bold; min-height: 16px; }
+          .muted { color: #6b7280; font-weight: normal; }
+          .signature { height: 72px; }
+        </style>
+      </head>
+      <body>
+        <div class="doc">
+          <div class="top-note">Recebemos os materiais constantes neste documento de malote de EPI.</div>
+          <div class="header">
+            <div class="brand">
+              <h1>HUB RH</h1>
+              <p>Controle interno de malotes de EPI</p>
+              <p class="muted">Documento gerado automaticamente pelo sistema</p>
+            </div>
+            <div class="number">
+              <span class="field-label">Nº do malote</span>
+              <strong>${escapeHtml(String(malote.id || ""))}</strong>
+            </div>
+            <div class="status">
+              <span class="field-label">Status</span>
+              <div class="field-value">${escapeHtml(malote.status || "")}</div>
+            </div>
+          </div>
+
+          <div class="section-title">Dados do malote</div>
+          <table>
+            <tr>
+              <td>
+                <span class="field-label">Destino</span>
+                <div class="field-value">${escapeHtml(malote.destino || "Nao informado")}</div>
+              </td>
+              <td>
+                <span class="field-label">Origem</span>
+                <div class="field-value">${escapeHtml(malote.origem || "Nao informada")}</div>
+              </td>
+              <td>
+                <span class="field-label">Data</span>
+                <div class="field-value">${escapeHtml(malote.createdAt || "")}</div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <span class="field-label">Registrado por</span>
+                <div class="field-value">${escapeHtml(malote.createdBy || "Sistema")}</div>
+              </td>
+              <td>
+                <span class="field-label">Alterado por</span>
+                <div class="field-value">${escapeHtml(malote.updatedBy || "Sem alteracoes")}</div>
+              </td>
+              <td>
+                <span class="field-label">Emissao</span>
+                <div class="field-value">${escapeHtml(formatDateTime(new Date().toISOString()))}</div>
+              </td>
+            </tr>
+          </table>
+
+          <div class="section-title">Dados dos EPIs</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 8%;">Item</th>
+                <th>EPI</th>
+                <th style="width: 22%;">Tamanho do EPI</th>
+                <th style="width: 16%;">Quantidade</th>
+              </tr>
+            </thead>
+            <tbody>${epiRows}</tbody>
+          </table>
+
+          <div class="section-title">Conferencia e recebimento</div>
+          <table>
+            <tr>
+              <td class="signature">
+                <span class="field-label">Identificacao e assinatura do recebedor</span>
+              </td>
+              <td class="signature">
+                <span class="field-label">Data de recebimento</span>
+              </td>
+            </tr>
+          </table>
+
+          <div class="section-title">Dados adicionais</div>
+          <table>
+            <tr>
+              <td style="height: 80px;">
+                <span class="field-label">Informacoes complementares</span>
+                Malote de EPI gerado para controle interno do HUB RH.
+              </td>
+            </tr>
+          </table>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const blob = new Blob(["\ufeff", conteudo], { type: "application/msword;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   const safeDestino = String(malote.destino || "malote").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "");
   link.href = url;
-  link.download = `malote-${safeDestino || malote.id}.txt`;
+  link.download = `malote-${safeDestino || malote.id}.doc`;
   document.body.appendChild(link);
   link.click();
   link.remove();

@@ -683,6 +683,18 @@ textarea:focus {
   background: var(--teal-surface);
 }
 
+.malote-epi-detail {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.malote-epi-detail:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
 .item-meta,
 .item-card p,
 .activity-list p {
