@@ -1,4 +1,7 @@
 alter table public.hub_malotes
+add column if not exists created_by text default 'Sistema';
+
+alter table public.hub_malotes
 add column if not exists updated_by text;
 
 grant select, insert, update, delete on public.hub_malotes to anon, authenticated;

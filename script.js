@@ -2458,6 +2458,7 @@ if (maloteForm) {
       origem: form.get("origem"),
       epis: formatEpiItems(epiItems),
       status: form.get("status"),
+      createdBy: getCurrentUserName(),
     };
     const success = id ? await updateItem("malotes", id, { ...payload, updatedBy: getCurrentUserName() }) : await addItem("malotes", payload);
     if (success) {
