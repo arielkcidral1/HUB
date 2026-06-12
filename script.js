@@ -2928,9 +2928,9 @@ window.baixarDocumentoMalote = function(id) {
   const blob = new Blob(["\ufeff", conteudo], { type: "application/msword;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  const safeDestino = String(malote.destino || "malote").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "");
+  const safeNumero = String(malote.id || "malote").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "");
   link.href = url;
-  link.download = `malote-${safeDestino || malote.id}.doc`;
+  link.download = `malote-${safeNumero || "sem-numero"}.doc`;
   document.body.appendChild(link);
   link.click();
   link.remove();
