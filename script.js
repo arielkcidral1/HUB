@@ -441,9 +441,8 @@ function saveDocumentRecords() {
 
 function saveLocalData() {
   if (data?.usuarios) {
-    const users = mergeUsersByName(loadTeamUsersStore(), data.usuarios);
-    saveTeamUsersStore(users);
-    syncTeamCredentials(users);
+    saveTeamUsersStore(data.usuarios);
+    syncTeamCredentials(data.usuarios);
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
@@ -793,15 +792,21 @@ async function loadFromSupabase(options = {}) {
 
         if (collection === "usuarios" && supabaseClient) {
           const dbNames = (rows || []).map((u) => normalizeLoginName(u.nome));
-          (data.usuarios || []).forEach((localUser) => {
+          
+          data.usuarios = (data.usuarios || []).filter((localUser) => {
             const norm = normalizeLoginName(localUser.nome);
-            if (!dbNames.includes(norm) && !Object.keys(LOGIN_USERS).includes(norm)) {
+            if (dbNames.includes(norm) || Object.keys(LOGIN_USERS).includes(norm)) {
+              return true;
+            }
+            if (localUser.syncStatus === "local") {
               supabaseClient.from(USERS_TABLE).insert({
                 nome: localUser.nome,
                 senha: localUser.senha,
                 created_by: "Auto-Sync"
               }).then();
+              return true;
             }
+            return false; // Usuário foi deletado da nuvem, remove do cache local!
           });
         }
 
@@ -949,7 +954,7 @@ function upsertLocalUser(values) {
   const normalizedName = normalizeLoginName(values.nome);
   const existingIndex = data.usuarios.findIndex((user) => normalizeLoginName(user.nome) === normalizedName);
   const user = {
-    id: existingIndex >= 0 ? data.usuarios[existingIndex].id : generateUUID(),
+    id: values.id || (existingIndex >= 0 ? data.usuarios[existingIndex].id : generateUUID()),
     nome: getLoginDisplayName(values.nome) || values.nome,
     senha: values.senha,
     createdBy: values.createdBy || getCurrentUserName(),
@@ -1013,7 +1018,7 @@ async function saveTeamUser(values) {
     return true;
   } catch (error) {
     console.error("Erro ao salvar usuario no Supabase:", error);
-    upsertLocalUser({ nome, senha, syncStatus: "active" });
+    upsertLocalUser({ nome, senha, syncStatus: "local" });
     setSyncStatus("Usuario salvo local", false);
     showModal("Aviso de Banco de Dados", "O usuário foi salvo apenas localmente. Para que o login funcione em outros computadores, execute o código SQL de criação da tabela 'hub_users' no painel do Supabase.", "error");
     return true;
@@ -1042,7 +1047,9 @@ function removeLocalUser(id) {
 async function deleteTeamUser(id) {
   if (!id) return false;
 
-  if (!supabaseClient) {
+  const localUser = data.usuarios.find((u) => String(u.id) === String(id));
+
+  if (!supabaseClient || !localUser) {
     removeLocalUser(id);
     return true;
   }
@@ -1051,7 +1058,7 @@ async function deleteTeamUser(id) {
     const { error } = await supabaseClient
       .from(USERS_TABLE)
       .delete()
-      .eq("id", id);
+      .ilike("nome", localUser.nome);
 
     if (error) throw error;
 
