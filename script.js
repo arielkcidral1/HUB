@@ -381,48 +381,54 @@ async function validateLogin(name, password) {
   const normalizedName = normalizeLoginName(name);
   const normalizedPassword = String(password || "").trim();
 
+  const client = supabaseClient || getSupabaseClient();
+
+  if (client) {
+    try {
+      let { data: users, error } = await client
+        .from(USERS_TABLE)
+        .select("nome, senha, cargo");
+
+      if (error && isMissingColumn(error, "cargo")) {
+        const fallback = await client
+          .from(USERS_TABLE)
+          .select("nome, senha");
+        users = fallback.data;
+        error = fallback.error;
+      }
+
+      if (error) throw error;
+
+      const dbUser = (users || []).find(
+        (u) => normalizeLoginName(u.nome) === normalizedName
+      );
+
+      if (dbUser) {
+        // Se o usuário existe no banco, validar estritamente pela senha do banco
+        const isMatch = String(dbUser.senha).trim() === normalizedPassword;
+        if (isMatch) {
+          window.pendingLoginUser = dbUser;
+        }
+        return isMatch;
+      }
+    } catch (error) {
+      console.error("Erro ao validar usuario no Supabase (tentando offline):", error);
+    }
+  }
+
+  // Fallback para login local se o banco não responder ou se o usuário só existir localmente
   const localMatch = validateLocalLogin(normalizedName, normalizedPassword);
   if (localMatch) {
     window.pendingLoginUser = findLocalTeamUser(normalizedName);
     return true;
   }
 
-  const client = supabaseClient || getSupabaseClient();
-
-  if (!client) {
+  const errorMsg = document.getElementById("login-error");
+  if (errorMsg && !client) {
     console.warn("Não foi possível conectar ao banco. Verifique se o login.html possui os scripts do Supabase.");
-    const errorMsg = document.getElementById("login-error");
-    if (errorMsg) errorMsg.textContent = "Erro de conexão. Verifique os scripts do banco.";
-    return false;
+    errorMsg.textContent = "Erro de conexão. Verifique os scripts do banco.";
   }
-
-  try {
-    let { data: users, error } = await client
-      .from(USERS_TABLE)
-      .select("nome, senha, cargo");
-
-    if (error && isMissingColumn(error, "cargo")) {
-      const fallback = await client
-        .from(USERS_TABLE)
-        .select("nome, senha");
-      users = fallback.data;
-      error = fallback.error;
-    }
-
-    if (error) throw error;
-
-    const dbMatch = (users || []).find(
-      (u) => normalizeLoginName(u.nome) === normalizedName && String(u.senha).trim() === normalizedPassword
-    );
-
-    if (dbMatch) window.pendingLoginUser = dbMatch;
-    return Boolean(dbMatch);
-  } catch (error) {
-    console.error("Erro ao validar usuario no Supabase:", error);
-    const errorMsg = document.getElementById("login-error");
-    if (errorMsg) errorMsg.textContent = "Erro de banco de dados. A tabela hub_users existe?";
-    return false;
-  }
+  return false;
 }
 
 function isPublicPage() {
