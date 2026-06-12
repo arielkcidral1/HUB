@@ -349,7 +349,8 @@ h2 {
   transition: var(--transition);
 }
 
-.user-chip:hover {
+.user-chip:hover,
+.user-chip.active {
   background: var(--surface-soft);
   border-color: rgba(15, 118, 110, 0.2);
 }

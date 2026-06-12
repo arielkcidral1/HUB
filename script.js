@@ -1889,6 +1889,7 @@ function renderCards(targetId, items, template) {
 
 function activateView(viewId) {
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
+  document.querySelectorAll(".user-chip").forEach((chip) => chip.classList.toggle("active", viewId === "conta"));
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
 }
 
