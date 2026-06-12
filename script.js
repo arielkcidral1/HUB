@@ -3431,9 +3431,10 @@ window.baixarDocumentoMalote = function(id) {
 window.excluirMalote = async function(id) {
   const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
   if (!malote) return;
-  showConfirmActionModal({
+
+  showPasswordActionModal({
     title: "Deletar malote",
-    text: `Tem certeza que deseja deletar o malote para "${malote.destino}"?`,
+    text: `Confirme a senha de autorizacao para deletar o malote para "${malote.destino}".`,
     confirmText: "Deletar",
     danger: true,
     onConfirm: async () => {
