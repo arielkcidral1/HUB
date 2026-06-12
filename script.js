@@ -585,6 +585,40 @@ function readEpiItems(formElement) {
     .filter((item) => item.nome && item.quantidade);
 }
 
+function createEpiRow(nome = "", quantidade = "") {
+  return `
+    <div class="epi-row">
+      <label>Nome
+        <input name="epi_nome[]" placeholder="Capacete, luvas, oculos..." value="${escapeHtml(nome)}" required />
+      </label>
+      <label>Quantidade
+        <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" value="${escapeHtml(quantidade)}" required />
+      </label>
+      <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+    </div>
+  `;
+}
+
+function resetEpiRows(items = [{ nome: "", quantidade: "" }]) {
+  const list = document.getElementById("epi-list");
+  if (!list) return;
+  list.innerHTML = items.length ? items.map((item) => createEpiRow(item.nome, item.quantidade)).join("") : createEpiRow();
+}
+
+function parseEpiItems(value) {
+  return String(value || "")
+    .split(",")
+    .map((part) => {
+      const text = part.trim();
+      const match = text.match(/^(.*?)\s*\(([^)]+)\)$/);
+      return {
+        nome: (match ? match[1] : text).trim(),
+        quantidade: (match ? match[2] : "1").trim(),
+      };
+    })
+    .filter((item) => item.nome);
+}
+
 function todayLabel() {
   return formatDate(new Date().toISOString());
 }
@@ -1575,6 +1609,10 @@ function renderAll() {
       <p><strong>Origem:</strong> ${escapeHtml(item.origem || "Nao informada")}</p>
       <p>${escapeHtml(item.epis)}</p>
       <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+      <div class="job-actions">
+        <button class="secondary-link" type="button" onclick="editarMalote('${escapeHtml(item.id)}')">Editar</button>
+        <button class="secondary-link" type="button" onclick="baixarDocumentoMalote('${escapeHtml(item.id)}')">Baixar documento</button>
+      </div>
     </article>
   `);
 
@@ -1870,18 +1908,7 @@ if (maloteForm) {
   document.getElementById("adicionar-epi")?.addEventListener("click", () => {
     const list = document.getElementById("epi-list");
     if (!list) return;
-    const row = document.createElement("div");
-    row.className = "epi-row";
-    row.innerHTML = `
-      <label>Nome
-        <input name="epi_nome[]" placeholder="Capacete, luvas, oculos..." required />
-      </label>
-      <label>Quantidade
-        <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
-      </label>
-      <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
-    `;
-    list.appendChild(row);
+    list.insertAdjacentHTML("beforeend", createEpiRow());
   });
 
   document.getElementById("epi-list")?.addEventListener("click", (event) => {
@@ -1896,34 +1923,37 @@ if (maloteForm) {
     event.preventDefault();
     const formElement = event.target;
     const form = new FormData(formElement);
+    const id = form.get("id");
     const epiItems = readEpiItems(formElement);
     if (!epiItems.length) {
       showModal("EPIs obrigatorios", "Adicione pelo menos um EPI com nome e quantidade.", "error");
       return;
     }
 
-    const success = await addItem("malotes", {
+    const payload = {
       destino: form.get("destino"),
       origem: form.get("origem"),
       epis: formatEpiItems(epiItems),
       status: form.get("status"),
-    });
+    };
+    const success = id ? await updateItem("malotes", id, payload) : await addItem("malotes", payload);
     if (success) {
       formElement.reset();
-      document.getElementById("epi-list").innerHTML = `
-        <div class="epi-row">
-          <label>Nome
-            <input name="epi_nome[]" placeholder="Capacete, luvas, oculos..." required />
-          </label>
-          <label>Quantidade
-            <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
-          </label>
-          <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
-        </div>
-      `;
+      formElement.elements.id.value = "";
+      resetEpiRows();
+      document.getElementById("cancelar-edicao-malote")?.setAttribute("hidden", "");
+      formElement.querySelector('button[type="submit"]').textContent = "Salvar malote";
     }
   });
 }
+
+document.getElementById("cancelar-edicao-malote")?.addEventListener("click", () => {
+  maloteForm.reset();
+  maloteForm.elements.id.value = "";
+  resetEpiRows();
+  document.getElementById("cancelar-edicao-malote").setAttribute("hidden", "");
+  maloteForm.querySelector('button[type="submit"]').textContent = "Salvar malote";
+});
 
 const vagaForm = document.getElementById("vaga-form");
 if (vagaForm) {
@@ -2121,4 +2151,50 @@ window.excluirVaga = async function(id) {
   if (!vaga) return;
   if (!confirm(`Tem certeza que deseja deletar a vaga "${vaga.cargo}"?`)) return;
   await deleteItem("vagas", id);
+};
+
+window.editarMalote = function(id) {
+  const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
+  const form = document.getElementById("malote-form");
+  if (!malote || !form) return;
+
+  form.elements.id.value = malote.id;
+  form.elements.destino.value = malote.destino || "";
+  form.elements.origem.value = malote.origem || "";
+  form.elements.status.value = malote.status || "Separação";
+  resetEpiRows(parseEpiItems(malote.epis));
+  document.getElementById("cancelar-edicao-malote")?.removeAttribute("hidden");
+  form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+window.baixarDocumentoMalote = function(id) {
+  const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
+  if (!malote) return;
+
+  const conteudo = [
+    "DOCUMENTO DO MALOTE",
+    "",
+    `Destino: ${malote.destino || ""}`,
+    `Origem: ${malote.origem || ""}`,
+    `Status: ${malote.status || ""}`,
+    `Data: ${malote.createdAt || ""}`,
+    `Registrado por: ${malote.createdBy || "Sistema"}`,
+    "",
+    "EPIs:",
+    ...(parseEpiItems(malote.epis).length
+      ? parseEpiItems(malote.epis).map((item) => `- ${item.nome}: ${item.quantidade}`)
+      : [`- ${malote.epis || "Nao informado"}`]),
+  ].join("\n");
+
+  const blob = new Blob([conteudo], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const safeDestino = String(malote.destino || "malote").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "");
+  link.href = url;
+  link.download = `malote-${safeDestino || malote.id}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 };

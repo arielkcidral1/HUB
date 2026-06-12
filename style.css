@@ -936,7 +936,8 @@ textarea:focus {
   margin-top: 10px;
 }
 
-#cancelar-edicao-vaga[hidden] {
+#cancelar-edicao-vaga[hidden],
+#cancelar-edicao-malote[hidden] {
   display: none;
 }
 
