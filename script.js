@@ -26,6 +26,7 @@ const TABLES = {
   denuncias: "hub_denuncias",
   comunicados: "hub_chat_messages",
   malotes: "hub_malotes",
+  chamados: "hub_chamados",
   vagas: "hub_vagas",
   candidaturas: "hub_candidaturas",
   usuarios: USERS_TABLE,
@@ -69,6 +70,7 @@ const defaultData = {
       createdAt: "Hoje",
     },
   ],
+  chamados: [],
   vagas: [
     {
       id: generateUUID(),
@@ -353,7 +355,7 @@ async function validateLogin(name, password) {
 }
 
 function isPublicPage() {
-  return Boolean(document.querySelector("[data-public-denuncia]") || document.querySelector("[data-public-vagas]"));
+  return Boolean(document.querySelector("[data-public-denuncia]") || document.querySelector("[data-public-vagas]") || document.querySelector("[data-public-chamados]"));
 }
 
 function isLoginPage() {
@@ -446,6 +448,7 @@ function loadLocalData() {
       denuncias: parsed.denuncias || [],
       comunicados: parsed.comunicados || [],
       malotes: parsed.malotes || [],
+      chamados: parsed.chamados || [],
       vagas: parsed.vagas || [],
       candidaturas: parsed.candidaturas || [],
       usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()),
@@ -908,6 +911,20 @@ function mapRows(collection, rows) {
     }));
   }
 
+  if (collection === "chamados") {
+    return rows.map((row) => ({
+      id: row.id,
+      solicitante: row.solicitante,
+      telefone: row.telefone || "",
+      unidade: row.unidade,
+      setor: row.setor,
+      epis: row.epis,
+      observacoes: row.observacoes || "",
+      status: row.status || "Aberto",
+      createdAt: formatDateTime(row.created_at),
+    }));
+  }
+
   if (collection === "candidaturas") {
     return rows.map((row) => ({
       id: row.id,
@@ -1034,6 +1051,19 @@ function toDbPayload(collection, values) {
       status: values.status || "Separação",
       created_by: values.createdBy || getCurrentUserName(),
       updated_by: values.updatedBy || null,
+    };
+  }
+
+  if (collection === "chamados") {
+    return {
+      solicitante: values.solicitante,
+      telefone: values.telefone || "",
+      unidade: values.unidade,
+      setor: values.setor,
+      epis: values.epis,
+      observacoes: values.observacoes || "",
+      status: values.status || "Aberto",
+      created_by: values.createdBy || getCurrentUserName(),
     };
   }
 
@@ -1627,7 +1657,7 @@ function renderDashboard() {
     document.getElementById("metric-documentos").textContent = documentRecords.length;
   }
 
-  // Filtra itens prioritários (apenas denúncias abertas/urgentes e mensagens não lidas do RH)
+  // Filtra itens prioritários sem incluir atualizacoes do canal de comunicacao.
   const priorityItems = [
     ...data.denuncias
       .filter(item => item.status === "Aberta" || item.status === "Urgente")
@@ -1637,18 +1667,20 @@ function renderDashboard() {
         tag: item.status,
         date: item.createdAt,
       })),
-    ...unreadRhMessages
-      .map((item) => ({ 
-        title: `Mensagem de ${item.autor}`, 
-        text: item.mensagem || (item.arquivo ? `Arquivo: ${item.arquivo.name}` : "Nova mensagem no chat"), 
-        tag: "RH", 
-        date: item.createdAt 
+    ...data.chamados
+      .filter((item) => item.status === "Aberto")
+      .map((item) => ({
+        title: `Chamado: ${item.unidade}`,
+        text: item.epis,
+        tag: item.status,
+        date: item.createdAt,
       })),
   ].slice(0, 6);
 
   // Compila atividades de todos os outros módulos na lista de recentes
   const recentItems = [
     ...data.malotes.map((item) => ({ title: `Malote: ${item.destino}`, text: `Origem: ${item.origem || "Nao informada"} | ${item.epis}`, tag: item.status, date: item.createdAt })),
+    ...data.chamados.map((item) => ({ title: `Chamado: ${item.unidade}`, text: item.epis, tag: item.status, date: item.createdAt })),
     ...data.vagas.map((item) => ({ title: `Vaga: ${item.cargo}`, text: item.descricao, tag: item.status, date: item.createdAt })),
     ...documentRecords.map((item) => ({ title: `Doc: ${documentLabels[item.type] || item.type}`, text: item.summary, tag: "Registro", date: item.createdAt }))
   ].slice(0, 6);
@@ -1847,6 +1879,21 @@ function renderAll() {
         <button class="secondary-link" type="button" onclick="baixarDocumentoMalote('${escapeHtml(item.id)}')">Baixar documento</button>
         <button class="danger-button" type="button" onclick="excluirMalote('${escapeHtml(item.id)}')">Deletar</button>
       </div>
+    </article>
+  `);
+
+  renderCards("chamados-list", data.chamados, (item) => `
+    <article class="item-card">
+      <div class="item-topline">
+        <p class="item-title">${escapeHtml(item.unidade)}</p>
+        <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
+      </div>
+      <p><strong>Solicitante:</strong> ${escapeHtml(item.solicitante)}</p>
+      <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone) || "Nao informado")}</p>
+      <p><strong>Setor:</strong> ${escapeHtml(item.setor)}</p>
+      <p><strong>EPIs:</strong> ${escapeHtml(item.epis)}</p>
+      ${item.observacoes ? `<p><strong>Observacoes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
+      <p class="item-meta">${escapeHtml(item.createdAt)}</p>
     </article>
   `);
 
@@ -2307,6 +2354,35 @@ if (candidaturaForm) {
       } else {
         showModal("Erro", "Não foi possível enviar o currículo. Verifique sua conexão e tente novamente.", "error");
       }
+    }
+  });
+}
+
+const chamadoForm = document.getElementById("chamado-form");
+if (chamadoForm) {
+  document.getElementById("telefone-input")?.addEventListener("input", (event) => {
+    event.currentTarget.value = formatPhone(event.currentTarget.value);
+  });
+
+  chamadoForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const success = await addItem("chamados", {
+      solicitante: form.get("solicitante"),
+      telefone: form.get("telefone"),
+      unidade: form.get("unidade"),
+      setor: form.get("setor"),
+      epis: form.get("epis"),
+      observacoes: form.get("observacoes"),
+      status: "Aberto",
+      createdBy: "Publico",
+    });
+
+    if (success) {
+      formElement.reset();
+      populateUnitSelects();
+      showModal("Chamado aberto", "Sua solicitacao de EPI foi registrada com sucesso.", "info");
     }
   });
 }
