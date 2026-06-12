@@ -334,14 +334,32 @@ function getCurrentUserName() {
   return sessionStorage.getItem(`${SESSION_KEY}-user`) || "Voce";
 }
 
+function getCurrentUserRole() {
+  return sessionStorage.getItem(`${SESSION_KEY}-role`) || "";
+}
+
+function isManagerUser() {
+  return normalizeLoginName(getCurrentUserRole()) === "gerente";
+}
+
+function refreshCurrentUserRoleFromData() {
+  if (!isAuthenticated()) return;
+  const user = findLocalTeamUser(getCurrentUserName());
+  if (user?.cargo) sessionStorage.setItem(`${SESSION_KEY}-role`, user.cargo);
+}
+
 function setAuthenticatedUser(name) {
+  const user = window.pendingLoginUser || findLocalTeamUser(name);
   sessionStorage.setItem(SESSION_KEY, "active");
-  sessionStorage.setItem(`${SESSION_KEY}-user`, getLoginDisplayName(name));
+  sessionStorage.setItem(`${SESSION_KEY}-user`, getLoginDisplayName(user?.nome || name));
+  sessionStorage.setItem(`${SESSION_KEY}-role`, user?.cargo || "");
+  window.pendingLoginUser = null;
 }
 
 function clearAuthenticatedUser() {
   sessionStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(`${SESSION_KEY}-user`);
+  sessionStorage.removeItem(`${SESSION_KEY}-role`);
 }
 
 async function validateLogin(name, password) {
@@ -349,7 +367,10 @@ async function validateLogin(name, password) {
   const normalizedPassword = String(password || "").trim();
 
   const localMatch = validateLocalLogin(normalizedName, normalizedPassword);
-  if (localMatch) return true;
+  if (localMatch) {
+    window.pendingLoginUser = findLocalTeamUser(normalizedName);
+    return true;
+  }
 
   const client = supabaseClient || getSupabaseClient();
 
@@ -361,9 +382,17 @@ async function validateLogin(name, password) {
   }
 
   try {
-    const { data: users, error } = await client
+    let { data: users, error } = await client
       .from(USERS_TABLE)
-      .select("nome, senha");
+      .select("nome, senha, cargo");
+
+    if (error && isMissingColumn(error, "cargo")) {
+      const fallback = await client
+        .from(USERS_TABLE)
+        .select("nome, senha");
+      users = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) throw error;
 
@@ -371,6 +400,7 @@ async function validateLogin(name, password) {
       (u) => normalizeLoginName(u.nome) === normalizedName && String(u.senha).trim() === normalizedPassword
     );
 
+    if (dbMatch) window.pendingLoginUser = dbMatch;
     return Boolean(dbMatch);
   } catch (error) {
     console.error("Erro ao validar usuario no Supabase:", error);
@@ -1753,6 +1783,35 @@ function renderCards(targetId, items, template) {
   target.innerHTML = items.map(template).join("");
 }
 
+function activateView(viewId) {
+  document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
+  document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
+}
+
+function applyRoleAccess() {
+  if (!isAuthenticated() || isPublicPage() || !document.querySelector(".nav-list")) return;
+  refreshCurrentUserRoleFromData();
+
+  const allowedViews = isManagerUser()
+    ? new Set(["documentos"])
+    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "documentos", "equipe"]);
+
+  document.querySelectorAll(".nav-item").forEach((button) => {
+    const allowed = allowedViews.has(button.dataset.view);
+    button.hidden = !allowed;
+    button.disabled = !allowed;
+  });
+
+  document.querySelectorAll(".view").forEach((view) => {
+    if (!allowedViews.has(view.id)) view.classList.remove("active");
+  });
+
+  const activeView = document.querySelector(".view.active");
+  if (!activeView || !allowedViews.has(activeView.id)) {
+    activateView(isManagerUser() ? "documentos" : "dashboard");
+  }
+}
+
 function renderDashboard() {
   if (!document.getElementById("metric-denuncias")) return;
 
@@ -1972,6 +2031,7 @@ function renderChatChannels() {
 
 function renderAll() {
   renderCurrentUser();
+  applyRoleAccess();
   renderDashboard();
   renderPublicVagas();
 
@@ -2216,10 +2276,11 @@ function renderChat() {
 
 document.querySelectorAll(".nav-item").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("active"));
-    document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
-    button.classList.add("active");
-    document.getElementById(button.dataset.view).classList.add("active");
+    if (isManagerUser() && button.dataset.view !== "documentos") {
+      activateView("documentos");
+      return;
+    }
+    activateView(button.dataset.view);
     checkAndMarkChatAsRead();
   });
 });
@@ -2680,6 +2741,7 @@ if (chamadoForm) {
 function initializeAppData() {
   populateUnitSelects();
   populateEpiSelects();
+  applyRoleAccess();
   supabaseClient = getSupabaseClient();
   loadFromSupabase({ setupLive: true });
 }
