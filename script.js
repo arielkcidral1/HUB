@@ -1213,7 +1213,6 @@ async function updateItem(collection, id, values) {
         }, "UPDATE");
         renderRealtimeUpdate(collection);
         setSyncStatus("Supabase precisa migracao", false);
-        showModal("Banco precisa atualizar", "O malote foi alterado, mas rode o update-site-supabase.sql atualizado para gravar quem editou no banco.", "info");
         return true;
       }
 
