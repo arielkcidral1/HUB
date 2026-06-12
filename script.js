@@ -1760,6 +1760,7 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
   }
 
   if (!isLoginMatch(currentPassword, user.senha)) {
+  if (currentPassword && !isLoginMatch(currentPassword, user.senha)) {
     showModal("Senha incorreta", "A senha atual informada nao confere.", "error");
     return false;
   }
@@ -2126,6 +2127,8 @@ function renderAccountSettings() {
   const newNameInput = document.getElementById("novo-nome");
   const roleInput = document.getElementById("conta-cargo");
   const avatarPreview = document.getElementById("conta-avatar-preview");
+  const pwdFields = document.getElementById("password-fields");
+  const btnRedefinirSenha = document.getElementById("btn-redefinir-senha");
   if (!nameInput && !roleInput && !newNameInput) return;
 
   const user = getCurrentUserRecord();
@@ -2142,6 +2145,9 @@ function renderAccountSettings() {
       avatarPreview.style.display = "none";
     }
   }
+
+  if (pwdFields) pwdFields.style.display = "none";
+  if (btnRedefinirSenha) btnRedefinirSenha.style.display = "inline-flex";
 }
 
 function renderChatChannels() {
@@ -2809,6 +2815,17 @@ if (fotoPerfilInput) {
   });
 }
 
+const btnRedefinirSenha = document.getElementById("btn-redefinir-senha");
+if (btnRedefinirSenha) {
+  btnRedefinirSenha.addEventListener("click", () => {
+    const pwdFields = document.getElementById("password-fields");
+    if (pwdFields) {
+      pwdFields.style.display = "block";
+      btnRedefinirSenha.style.display = "none";
+    }
+  });
+}
+
 const contaForm = document.getElementById("conta-form");
 if (contaForm) {
   contaForm.addEventListener("submit", async (event) => {
@@ -2816,14 +2833,33 @@ if (contaForm) {
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     const currentPassword = String(form.get("senha_atual") || "").trim();
+    let currentPassword = String(form.get("senha_atual") || "").trim();
     const newName = String(form.get("novo_nome") || "").trim();
     const newPassword = String(form.get("nova_senha") || "").trim();
+    let newPassword = String(form.get("nova_senha") || "").trim();
     const confirmPassword = String(form.get("confirmar_senha") || "").trim();
     const fotoFile = form.get("foto_perfil");
 
     if (!currentPassword) {
       showModal("Senha atual", "A senha atual é obrigatória para alterar seus dados.", "error");
       return;
+    const pwdFields = document.getElementById("password-fields");
+    if (pwdFields && pwdFields.style.display !== "none") {
+      if (!currentPassword) {
+        showModal("Senha atual", "A senha atual é obrigatória para alterar sua senha.", "error");
+        return;
+      }
+      if (!newPassword || newPassword.length < 3) {
+        showModal("Nova senha", "Use uma nova senha com pelo menos 3 caracteres.", "error");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        showModal("Senhas diferentes", "A confirmacao da nova senha nao confere.", "error");
+        return;
+      }
+    } else {
+      currentPassword = "";
+      newPassword = "";
     }
 
     if (newPassword && newPassword.length < 3) {
@@ -2859,6 +2895,7 @@ if (contaForm) {
       renderAccountSettings();
       renderCurrentUser();
       showModal("Conta atualizada", "Sua senha foi atualizada com sucesso.", "info");
+      showModal("Conta atualizada", "Seus dados foram atualizados com sucesso.", "info");
     }
   });
 }
