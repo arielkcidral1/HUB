@@ -31,14 +31,14 @@ const TABLES = {
   candidaturas: "hub_candidaturas",
   usuarios: USERS_TABLE,
 };
- 
+
 function generateUUID() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
- 
+
 const defaultData = {
   denuncias: [
     {
@@ -91,7 +91,7 @@ const defaultData = {
     createdAt: "Hoje",
   })),
 };
- 
+
 let data = loadLocalData();
 let supabaseClient = null;
 let realtimeChannel = null;
@@ -105,7 +105,7 @@ let showArchivedChamados = false;
 let denunciasSelectionMode = false;
 let showArchivedDenuncias = false;
 window.editingDocId = null;
- 
+
 const documentLabels = {
   admissao: "Checklist de Admissao",
   ausencia: "Entrevista ausencia",
@@ -118,7 +118,7 @@ const documentLabels = {
   "requisicao-pessoal": "RP - Requisicao Pessoal",
   "solicitacao-desligamento": "SD - Solicitacao de Desligamento",
 };
- 
+
 const UNIT_OPTIONS = [
   "1- MTZ",
   "2- SBS",
@@ -143,7 +143,7 @@ const UNIT_OPTIONS = [
   "26- BNU 2",
   "28- ARA",
 ];
- 
+
 const EPI_OPTIONS = [
   "Luva PU",
   "Luva Pigmentada",
@@ -160,20 +160,20 @@ const EPI_OPTIONS = [
   "Luva de Vaqueta",
   "Creme de Proteção",
 ];
- 
+
 function isLoginMatch(value, expected) {
   return String(value || "").trim() === String(expected || "").trim();
 }
- 
+
 function normalizeLoginName(value) {
   return String(value || "").trim().toLowerCase();
 }
- 
+
 function getLoginDisplayName(value) {
   const normalized = normalizeLoginName(value);
   return LOGIN_DISPLAY_NAMES[normalized] || findLocalTeamUser(value)?.nome || String(value || "").trim();
 }
- 
+
 function loadTeamUsersStore() {
   try {
     return JSON.parse(localStorage.getItem(TEAM_USERS_KEY)) || [];
@@ -181,11 +181,11 @@ function loadTeamUsersStore() {
     return [];
   }
 }
- 
+
 function saveTeamUsersStore(users) {
   localStorage.setItem(TEAM_USERS_KEY, JSON.stringify(users || []));
 }
- 
+
 function loadTeamCredentialsStore() {
   try {
     return JSON.parse(localStorage.getItem(TEAM_CREDENTIALS_KEY)) || [];
@@ -193,18 +193,18 @@ function loadTeamCredentialsStore() {
     return [];
   }
 }
- 
+
 function saveTeamCredentialsStore(users) {
   localStorage.setItem(TEAM_CREDENTIALS_KEY, JSON.stringify(users || []));
 }
- 
+
 function syncTeamCredentials(users) {
   const credentials = mergeUsersByName(loadTeamCredentialsStore(), users || [])
     .filter((user) => user?.nome && user?.senha)
     .map((user) => ({ nome: user.nome, senha: user.senha }));
   saveTeamCredentialsStore(credentials);
 }
- 
+
 function readStoredUsersFromHubData() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
@@ -213,20 +213,20 @@ function readStoredUsersFromHubData() {
     return [];
   }
 }
- 
+
 function getStoredLoginUsers() {
   return mergeUsersByName(
     loadTeamCredentialsStore(),
     mergeUsersByName(loadTeamUsersStore(), readStoredUsersFromHubData())
   );
 }
- 
+
 function persistTeamCredential(nome, senha) {
   if (!String(nome || "").trim() || !String(senha || "").trim()) return;
   const credentials = mergeUsersByName(loadTeamCredentialsStore(), [{ nome: String(nome).trim(), senha: String(senha).trim() }]);
   saveTeamCredentialsStore(credentials);
 }
- 
+
 function getAllLocalUsers() {
   return mergeUsersByName(
     Object.values(LOGIN_USERS).map((user) => ({
@@ -237,56 +237,56 @@ function getAllLocalUsers() {
     mergeUsersByName(getStoredLoginUsers(), data?.usuarios || [])
   );
 }
- 
+
 function findLocalTeamUser(value) {
   const normalized = normalizeLoginName(value);
   return getAllLocalUsers().find((user) => normalizeLoginName(user.nome) === normalized);
 }
- 
+
 function getCurrentUserRecord() {
   return findLocalTeamUser(getCurrentUserName());
 }
- 
+
 function getUserRoleLabel(value) {
   const normalized = normalizeLoginName(value);
   const role = (data.usuarios || []).find((user) => normalizeLoginName(user.nome) === normalized)?.cargo || findLocalTeamUser(value)?.cargo || "";
   return role ? ` (${role})` : "";
 }
- 
+
 function repairTeamCredentialsStore() {
   syncTeamCredentials(mergeUsersByName(loadTeamUsersStore(), data?.usuarios || []));
 }
- 
+
 function getDirectChannel(userA, userB) {
   const users = [normalizeLoginName(userA), normalizeLoginName(userB)].sort();
   return `dm:${users[0]}:${users[1]}`;
 }
- 
+
 function isDirectChannel(channelId) {
   return String(channelId || "").startsWith("dm:");
 }
- 
+
 function getDirectChannelUsers(channelId) {
   if (!isDirectChannel(channelId)) return [];
   return String(channelId).slice(3).split(":").filter(Boolean);
 }
- 
+
 function isValidDirectChannel(channelId) {
   const users = getDirectChannelUsers(channelId);
   return users.length === 2 && users[0] !== users[1];
 }
- 
+
 function isCurrentUserInChannel(channelId) {
   if (channelId === GENERAL_CHANNEL) return !isManagerUser();
   return isValidDirectChannel(channelId) && getDirectChannelUsers(channelId).includes(normalizeLoginName(getCurrentUserName()));
 }
- 
+
 function getTeamUsers() {
   return (data.usuarios || [])
     .slice()
     .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
 }
- 
+
 function getChatChannels() {
   const currentUser = getCurrentUserName();
   const directChannels = getTeamUsers().filter((user) => normalizeLoginName(user.nome) !== normalizeLoginName(currentUser)).map((user) => ({
@@ -294,7 +294,7 @@ function getChatChannels() {
       label: `${user.nome}${getUserRoleLabel(user.nome)}`,
       subtitle: `Conversa individual com ${user.nome}`,
     }));
- 
+
   return isManagerUser()
     ? directChannels
     : [
@@ -302,16 +302,16 @@ function getChatChannels() {
         ...directChannels,
       ];
 }
- 
+
 function getActiveChatChannel() {
   const channels = getChatChannels();
   return channels.find((channel) => channel.id === activeChatChannel) || channels[0];
 }
- 
+
 function getAllowedChatChannelIds() {
   return getChatChannels().map((channel) => channel.id);
 }
- 
+
 function normalizeChatChannel(canal) {
   if (!canal || canal === GENERAL_CHANNEL) return GENERAL_CHANNEL;
   if (isDirectChannel(canal)) return canal;
@@ -321,48 +321,48 @@ function normalizeChatChannel(canal) {
   }
   return canal;
 }
- 
+
 function canAccessChatChannel(canal) {
   const channel = normalizeChatChannel(canal);
   return (channel === GENERAL_CHANNEL && !isManagerUser()) || (isValidDirectChannel(channel) && isCurrentUserInChannel(channel));
 }
- 
+
 function isAllowedLoginName(value) {
   return Boolean(findLocalTeamUser(value));
 }
- 
+
 function validateLocalLogin(name, password) {
   const user = findLocalTeamUser(name);
   return Boolean(user && isLoginMatch(password, user.senha));
 }
- 
+
 function debugLocalLoginNames() {
   return getAllLocalUsers().map((user) => normalizeLoginName(user.nome)).join(", ");
 }
- 
+
 function isAuthenticated() {
   return sessionStorage.getItem(SESSION_KEY) === "active";
 }
- 
+
 function getCurrentUserName() {
   if (!isAuthenticated() && isPublicPage()) return "Publico";
   return sessionStorage.getItem(`${SESSION_KEY}-user`) || "Voce";
 }
- 
+
 function getCurrentUserRole() {
   return sessionStorage.getItem(`${SESSION_KEY}-role`) || "";
 }
- 
+
 function isManagerUser() {
   return normalizeLoginName(getCurrentUserRole()) === "gerente";
 }
- 
+
 function refreshCurrentUserRoleFromData() {
   if (!isAuthenticated()) return;
   const user = findLocalTeamUser(getCurrentUserName());
   if (user?.cargo) sessionStorage.setItem(`${SESSION_KEY}-role`, user.cargo);
 }
- 
+
 function setAuthenticatedUser(name) {
   const user = window.pendingLoginUser || findLocalTeamUser(name);
   sessionStorage.setItem(SESSION_KEY, "active");
@@ -370,25 +370,25 @@ function setAuthenticatedUser(name) {
   sessionStorage.setItem(`${SESSION_KEY}-role`, user?.cargo || "");
   window.pendingLoginUser = null;
 }
- 
+
 function clearAuthenticatedUser() {
   sessionStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(`${SESSION_KEY}-user`);
   sessionStorage.removeItem(`${SESSION_KEY}-role`);
 }
- 
+
 async function validateLogin(name, password) {
   const normalizedName = normalizeLoginName(name);
   const normalizedPassword = String(password || "").trim();
- 
+
   const client = supabaseClient || getSupabaseClient();
- 
+
   if (client) {
     try {
       let { data: users, error } = await client
         .from(USERS_TABLE)
         .select("nome, senha, cargo");
- 
+
       if (error && isMissingColumn(error, "cargo")) {
         const fallback = await client
           .from(USERS_TABLE)
@@ -396,13 +396,13 @@ async function validateLogin(name, password) {
         users = fallback.data;
         error = fallback.error;
       }
- 
+
       if (error) throw error;
- 
+
       const dbUser = (users || []).find(
         (u) => normalizeLoginName(u.nome) === normalizedName
       );
- 
+
       if (dbUser) {
         // Se o usuário existe no banco, validar estritamente pela senha do banco
         const isMatch = String(dbUser.senha).trim() === normalizedPassword;
@@ -415,14 +415,14 @@ async function validateLogin(name, password) {
       console.error("Erro ao validar usuario no Supabase (tentando offline):", error);
     }
   }
- 
+
   // Fallback para login local se o banco não responder ou se o usuário só existir localmente
   const localMatch = validateLocalLogin(normalizedName, normalizedPassword);
   if (localMatch) {
     window.pendingLoginUser = findLocalTeamUser(normalizedName);
     return true;
   }
- 
+
   const errorMsg = document.getElementById("login-error");
   if (errorMsg && !client) {
     console.warn("Não foi possível conectar ao banco. Verifique se o login.html possui os scripts do Supabase.");
@@ -430,20 +430,20 @@ async function validateLogin(name, password) {
   }
   return false;
 }
- 
+
 function isPublicPage() {
   return Boolean(document.querySelector("[data-public-denuncia]") || document.querySelector("[data-public-vagas]") || document.querySelector("[data-public-chamados]"));
 }
- 
+
 function isLoginPage() {
   return window.location.pathname.endsWith('login.html');
 }
- 
+
 function setupLogin() {
   const loginForm = document.getElementById("login-form");
   const logoutButton = document.getElementById("logout-button");
   repairTeamCredentialsStore();
- 
+
   // Redirecionamentos Inteligentes
   if (isAuthenticated()) {
     if (isLoginPage()) {
@@ -456,7 +456,7 @@ function setupLogin() {
       return false;
     }
   }
- 
+
   if (loginForm) {
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -477,15 +477,15 @@ function setupLogin() {
       window.location.href = "index.html";
     });
   }
- 
+
   logoutButton?.addEventListener("click", () => {
     clearAuthenticatedUser();
     window.location.href = "login.html";
   });
- 
+
   return isAuthenticated() || isPublicPage();
 }
- 
+
 function getSupabaseClient() {
   const config = window.HUB_SUPABASE;
   const hasConfig =
@@ -495,22 +495,22 @@ function getSupabaseClient() {
     !config.url.includes("COLE_AQUI") &&
     !config.anonKey.includes("COLE_AQUI") &&
     window.supabase;
- 
+
   if (!hasConfig) return null;
   return window.supabase.createClient(config.url, config.anonKey);
 }
- 
+
 function setSyncStatus(text, isOnline = false) {
   const target = document.getElementById("sync-status");
   if (!target) return;
   target.textContent = text;
   document.querySelector(".status-dot")?.classList.toggle("offline", !isOnline);
 }
- 
+
 function loadLocalData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return defaultData;
- 
+
   try {
     const parsed = JSON.parse(saved);
     parsed.comunicados = (parsed.comunicados || []).map((item) => ({
@@ -534,7 +534,7 @@ function loadLocalData() {
     return defaultData;
   }
 }
- 
+
 function loadDocumentRecords() {
   try {
     return JSON.parse(localStorage.getItem(DOCUMENT_RECORDS_KEY)) || [];
@@ -542,11 +542,11 @@ function loadDocumentRecords() {
     return [];
   }
 }
- 
+
 function saveDocumentRecords() {
   localStorage.setItem(DOCUMENT_RECORDS_KEY, JSON.stringify(documentRecords));
 }
- 
+
 function saveLocalData() {
   if (data?.usuarios) {
     saveTeamUsersStore(data.usuarios);
@@ -554,13 +554,13 @@ function saveLocalData() {
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
- 
+
 function ensureRequiredTeamUsers() {
   if (!data.usuarios) data.usuarios = [];
- 
+
   Object.values(LOGIN_USERS).forEach((requiredUser) => {
     const existingIndex = data.usuarios.findIndex((user) => normalizeLoginName(user.nome) === normalizeLoginName(requiredUser.nome));
- 
+
     if (existingIndex >= 0) {
       if (!data.usuarios[existingIndex].cargo) {
         data.usuarios[existingIndex].cargo = "RH";
@@ -577,10 +577,10 @@ function ensureRequiredTeamUsers() {
     }
   });
 }
- 
+
 function mergeUsersByName(currentUsers = [], incomingUsers = []) {
   const merged = new Map();
- 
+
   [...currentUsers, ...incomingUsers].forEach((user) => {
     if (!user?.nome) return;
     const key = normalizeLoginName(user.nome);
@@ -592,10 +592,10 @@ function mergeUsersByName(currentUsers = [], incomingUsers = []) {
       createdAt: user.createdAt || existing?.createdAt || todayLabel(),
     });
   });
- 
+
   return [...merged.values()];
 }
- 
+
 function loadReadRhMessageIds() {
   try {
     const saved = JSON.parse(localStorage.getItem(READ_RH_MESSAGES_KEY) || "[]");
@@ -604,18 +604,18 @@ function loadReadRhMessageIds() {
     return new Set();
   }
 }
- 
+
 function saveReadRhMessageIds() {
   localStorage.setItem(READ_RH_MESSAGES_KEY, JSON.stringify([...readRhMessageIds]));
 }
- 
+
 function getUnreadRhMessages() {
   const currentUser = getCurrentUserName();
   return data.comunicados.filter(
     (item) => isDirectChannel(normalizeChatChannel(item.canal)) && isCurrentUserInChannel(normalizeChatChannel(item.canal)) && item.autor !== currentUser && !readRhMessageIds.has(String(item.id))
   );
 }
- 
+
 function markRhMessagesRead() {
   const currentChannel = activeChatChannel;
   const unread = getUnreadRhMessages().filter((item) => normalizeChatChannel(item.canal) === currentChannel);
@@ -623,19 +623,19 @@ function markRhMessagesRead() {
   unread.forEach((item) => readRhMessageIds.add(String(item.id)));
   saveReadRhMessageIds();
 }
- 
+
 function checkAndMarkChatAsRead() {
   const communicationView = document.getElementById("comunicacao");
   if (!communicationView?.classList.contains("active") || !isDirectChannel(activeChatChannel) || !isCurrentUserInChannel(activeChatChannel)) return;
   markRhMessagesRead();
   renderDashboard();
 }
- 
+
 function renderCurrentUser() {
   const target = document.getElementById("current-user");
   const avatar = document.getElementById("current-user-avatar");
   if (!target && !avatar) return;
- 
+
   const user = getCurrentUserRecord();
   if (target) target.textContent = getCurrentUserName();
   if (avatar) {
@@ -648,7 +648,7 @@ function renderCurrentUser() {
     }
   }
 }
- 
+
 function populateUnitSelects() {
   document.querySelectorAll("[data-unit-select]").forEach((select) => {
     const currentValue = select.value;
@@ -656,7 +656,7 @@ function populateUnitSelects() {
     select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>` + UNIT_OPTIONS
       .map((unit) => `<option value="${escapeHtml(unit)}">${escapeHtml(unit)}</option>`)
       .join("");
- 
+
     if (currentValue) {
       const hasCurrent = [...select.options].some((option) => option.value === currentValue);
       if (!hasCurrent) {
@@ -666,7 +666,7 @@ function populateUnitSelects() {
     }
   });
 }
- 
+
 function setFieldValue(field, value) {
   if (!field) return;
   if (field.tagName === "SELECT" && value && ![...field.options].some((option) => option.value === value)) {
@@ -674,21 +674,21 @@ function setFieldValue(field, value) {
   }
   field.value = value || "";
 }
- 
+
 function getSelectedMaloteDestino() {
   return document.getElementById("malote-destino-filter")?.value || "";
 }
- 
+
 function getFilteredMalotes() {
   const selectedDestino = getSelectedMaloteDestino();
   if (!selectedDestino) return data.malotes;
   return data.malotes.filter((item) => item.destino === selectedDestino);
 }
- 
+
 function renderMaloteReport() {
   const target = document.getElementById("malote-report");
   if (!target) return;
- 
+
   const selectedDestino = getSelectedMaloteDestino();
   const source = getFilteredMalotes();
   const byDestino = data.malotes.reduce((acc, item) => {
@@ -699,7 +699,7 @@ function renderMaloteReport() {
   const topDestino = Object.entries(byDestino).sort((a, b) => b[1] - a[1])[0];
   const separacao = source.filter((item) => item.status === "Separação").length;
   const entrega = source.filter((item) => item.status === "Entrega").length;
- 
+
   target.innerHTML = `
     <article class="report-chip">
       <span>${selectedDestino ? "Destino filtrado" : "Total geral"}</span>
@@ -723,7 +723,7 @@ function renderMaloteReport() {
     </article>
   `;
 }
- 
+
 function formatDate(value) {
   if (!value) return "Hoje";
   return new Intl.DateTimeFormat("pt-BR", {
@@ -732,7 +732,7 @@ function formatDate(value) {
     year: "numeric",
   }).format(new Date(value));
 }
- 
+
 function formatDateTime(value) {
   if (!value) return "Hoje";
   return new Intl.DateTimeFormat("pt-BR", {
@@ -743,14 +743,14 @@ function formatDateTime(value) {
     minute: "2-digit",
   }).format(new Date(value));
 }
- 
+
 function formatPhone(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 2) return digits ? `(${digits}` : "";
   if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
- 
+
 function formatCurrencyBR(value) {
   const digits = String(value || "").replace(/\D/g, "");
   if (!digits) return "";
@@ -760,7 +760,7 @@ function formatCurrencyBR(value) {
     currency: "BRL",
   });
 }
- 
+
 function formatAbsencePeriod(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
   if (digits.length <= 2) return digits;
@@ -768,7 +768,7 @@ function formatAbsencePeriod(value) {
   if (digits.length <= 6) return `${digits.slice(0, 2)}/${digits.slice(2, 4)} a ${digits.slice(4)}`;
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)} a ${digits.slice(4, 6)}/${digits.slice(6)}`;
 }
- 
+
 function formatTimeRange(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
   if (digits.length <= 2) return digits;
@@ -776,7 +776,7 @@ function formatTimeRange(value) {
   if (digits.length <= 6) return `${digits.slice(0, 2)}:${digits.slice(2, 4)} às ${digits.slice(4)}`;
   return `${digits.slice(0, 2)}:${digits.slice(2, 4)} às ${digits.slice(4, 6)}:${digits.slice(6)}`;
 }
- 
+
 function formatCpf(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 3) return digits;
@@ -784,7 +784,7 @@ function formatCpf(value) {
   if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
- 
+
 function formatRg(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 9);
   if (digits.length <= 2) return digits;
@@ -792,18 +792,18 @@ function formatRg(value) {
   if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
   return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}-${digits.slice(8)}`;
 }
- 
+
 function isTodayLabel(value) {
   return value === todayLabel() || value === "Hoje";
 }
- 
+
 function formatEpiItems(items) {
   return items
     .filter((item) => item.nome && item.quantidade)
     .map((item) => `${item.nome} (${item.quantidade}${item.tamanho ? `, ${item.tamanho}` : ""})`)
     .join(", ");
 }
- 
+
 function readEpiItems(formElement) {
   return [...formElement.querySelectorAll(".epi-row")]
     .map((row) => ({
@@ -813,7 +813,7 @@ function readEpiItems(formElement) {
     }))
     .filter((item) => item.nome && item.quantidade);
 }
- 
+
 function createEpiRow(nome = "", quantidade = "") {
   return `
     <div class="epi-row">
@@ -827,7 +827,7 @@ function createEpiRow(nome = "", quantidade = "") {
     </div>
   `;
 }
- 
+
 function createChamadoEpiRow(nome = "", quantidade = "", tamanho = "Nao se aplica") {
   const optionValues = nome && !EPI_OPTIONS.includes(nome) ? [nome, ...EPI_OPTIONS] : EPI_OPTIONS;
   const options = '<option value="">Selecione</option>' + optionValues
@@ -836,7 +836,7 @@ function createChamadoEpiRow(nome = "", quantidade = "", tamanho = "Nao se aplic
   const sizeOptions = ["Nao se aplica", "PP", "P", "M", "G", "GG", "EG"]
     .map((item) => `<option value="${escapeHtml(item)}" ${item === tamanho ? "selected" : ""}>${escapeHtml(item)}</option>`)
     .join("");
- 
+
   return `
     <div class="epi-row">
       <label>Nome
@@ -852,7 +852,7 @@ function createChamadoEpiRow(nome = "", quantidade = "", tamanho = "Nao se aplic
     </div>
   `;
 }
- 
+
 function populateEpiSelects() {
   document.querySelectorAll("[data-epi-select]").forEach((select) => {
     const currentValue = select.value;
@@ -862,7 +862,7 @@ function populateEpiSelects() {
     if (currentValue) select.value = currentValue;
   });
 }
- 
+
 function resetEpiRows(items = [{ nome: "", quantidade: "", tamanho: "Nao se aplica" }]) {
   const list = document.getElementById("epi-list");
   if (!list) return;
@@ -870,11 +870,11 @@ function resetEpiRows(items = [{ nome: "", quantidade: "", tamanho: "Nao se apli
     ? items.map((item) => createChamadoEpiRow(item.nome, item.quantidade, item.tamanho || "Nao se aplica")).join("")
     : createChamadoEpiRow();
 }
- 
+
 function parseEpiItems(value) {
   const text = String(value || "").trim();
   if (!text) return [];
- 
+
   const items = [];
   const pattern = /([^,(]+?)\s*\(([^)]*)\)\s*,?/g;
   let match;
@@ -886,9 +886,9 @@ function parseEpiItems(value) {
       tamanho: details[1] || "Nao se aplica",
     });
   }
- 
+
   if (items.length) return items.filter((item) => item.nome);
- 
+
   return text
     .split(/\n|;/)
     .map((part) => ({
@@ -898,11 +898,11 @@ function parseEpiItems(value) {
     }))
     .filter((item) => item.nome);
 }
- 
+
 function renderMaloteEpisDetails(epis) {
   const items = parseEpiItems(epis);
   if (!items.length) return `<p><strong>EPI:</strong> ${escapeHtml(epis || "Nao informado")}</p>`;
- 
+
   return items
     .map((item) => `
       <div class="malote-epi-detail">
@@ -913,11 +913,11 @@ function renderMaloteEpisDetails(epis) {
     `)
     .join("");
 }
- 
+
 function todayLabel() {
   return formatDate(new Date().toISOString());
 }
- 
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -926,19 +926,19 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
- 
+
 function badgeClass(value) {
   return ["Urgente", "Alta", "Aberta"].includes(value) ? "tag alert" : "tag";
 }
- 
+
 function showModal(title, text, type = "info") {
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
- 
+
   const overlay = document.createElement("div");
   overlay.id = "custom-modal";
   overlay.className = "modal-overlay";
- 
+
   overlay.innerHTML = `
     <div class="modal-card">
       <div class="modal-header ${type}">
@@ -952,11 +952,11 @@ function showModal(title, text, type = "info") {
   `;
   document.body.appendChild(overlay);
 }
- 
+
 function showPasswordActionModal({ title, text, confirmText = "Confirmar", danger = false, onConfirm }) {
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
- 
+
   const overlay = document.createElement("div");
   overlay.id = "custom-modal";
   overlay.className = "modal-overlay";
@@ -976,7 +976,7 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
       </div>
     </div>
   `;
- 
+
   const close = () => overlay.remove();
   overlay.querySelector("[data-modal-cancel]").addEventListener("click", close);
   overlay.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
@@ -986,26 +986,26 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
       error.hidden = false;
       return;
     }
- 
+
     await onConfirm();
     close();
   });
- 
+
   overlay.querySelector("#modal-action-password").addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
       overlay.querySelector("[data-modal-confirm]").click();
     }
   });
- 
+
   document.body.appendChild(overlay);
   overlay.querySelector("#modal-action-password").focus();
 }
- 
+
 function showConfirmActionModal({ title, text, confirmText = "Confirmar", danger = false, onConfirm }) {
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
- 
+
   const overlay = document.createElement("div");
   overlay.id = "custom-modal";
   overlay.className = "modal-overlay";
@@ -1019,25 +1019,25 @@ function showConfirmActionModal({ title, text, confirmText = "Confirmar", danger
       </div>
     </div>
   `;
- 
+
   const close = () => overlay.remove();
   overlay.querySelector("[data-modal-cancel]").addEventListener("click", close);
   overlay.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
     await onConfirm();
     close();
   });
- 
+
   document.body.appendChild(overlay);
   overlay.querySelector("[data-modal-confirm]").focus();
 }
- 
+
 function formatFileSize(bytes) {
   if (!bytes) return "";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
- 
+
 function parseChatMessage(row) {
   const text = row.mensagem || "";
   const match = text.match(/^\[hub-channel:([^\]]+)\]\s*/);
@@ -1046,7 +1046,7 @@ function parseChatMessage(row) {
     mensagem: match ? text.slice(match[0].length) : text,
   };
 }
- 
+
 function mapRows(collection, rows) {
   if (collection === "denuncias") {
     return rows.map((row) => ({
@@ -1059,7 +1059,7 @@ function mapRows(collection, rows) {
       createdAt: formatDateTime(row.created_at),
     }));
   }
- 
+
   if (collection === "comunicados") {
     return rows.map((row) => {
       const parsed = parseChatMessage(row);
@@ -1081,7 +1081,7 @@ function mapRows(collection, rows) {
       };
     });
   }
- 
+
   if (collection === "malotes") {
     return rows.map((row) => ({
       id: row.id,
@@ -1094,7 +1094,7 @@ function mapRows(collection, rows) {
       createdAt: formatDate(row.created_at),
     }));
   }
- 
+
   if (collection === "chamados") {
     return rows.map((row) => ({
       id: row.id,
@@ -1107,7 +1107,7 @@ function mapRows(collection, rows) {
       createdAt: formatDateTime(row.created_at),
     }));
   }
- 
+
   if (collection === "candidaturas") {
     return rows.map((row) => ({
       id: row.id,
@@ -1120,7 +1120,7 @@ function mapRows(collection, rows) {
       createdAt: formatDate(row.created_at),
     }));
   }
- 
+
   if (collection === "usuarios") {
     return rows.map((row) => ({
       id: row.id,
@@ -1132,7 +1132,7 @@ function mapRows(collection, rows) {
       createdAt: formatDate(row.created_at),
     }));
   }
- 
+
   return rows.map((row) => {
     const legacyDetails = parseLegacyJobDetails(row.projeto);
     return {
@@ -1147,7 +1147,7 @@ function mapRows(collection, rows) {
     };
   });
 }
- 
+
 function mergeRealtimeRow(collection, row, action = "INSERT") {
   if (action === "DELETE") {
     if (collection === "usuarios") {
@@ -1158,10 +1158,10 @@ function mergeRealtimeRow(collection, row, action = "INSERT") {
     data[collection] = current.filter((item) => String(item.id) !== String(row.id));
     return;
   }
- 
+
   const mapped = mapRows(collection, [row])[0];
   const current = data[collection] || [];
- 
+
   const index = current.findIndex((item) => String(item.id) === String(mapped.id) || (collection === "usuarios" && normalizeLoginName(item.nome) === normalizeLoginName(mapped.nome)));
   if (index >= 0) {
     data[collection] = current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...mapped } : item));
@@ -1169,17 +1169,17 @@ function mergeRealtimeRow(collection, row, action = "INSERT") {
     data[collection] = [mapped, ...current];
   }
 }
- 
+
 function renderRealtimeUpdate(collection) {
   saveLocalData();
- 
+
   if (collection === "comunicados") {
     renderDashboard();
     renderChatChannels();
     renderChat();
     return;
   }
- 
+
   if (collection === "usuarios") {
     ensureRequiredTeamUsers();
     renderDashboard();
@@ -1188,10 +1188,10 @@ function renderRealtimeUpdate(collection) {
     renderChat();
     return;
   }
- 
+
   renderAll();
 }
- 
+
 function toDbPayload(collection, values) {
   if (collection === "comunicados") {
     return {
@@ -1205,7 +1205,7 @@ function toDbPayload(collection, values) {
       arquivo_url: values.arquivo?.url || null,
     };
   }
- 
+
   if (collection === "usuarios") {
     return {
       nome: values.nome,
@@ -1214,7 +1214,7 @@ function toDbPayload(collection, values) {
       created_by: values.createdBy || getCurrentUserName(),
     };
   }
- 
+
   if (collection === "vagas") {
     return {
       cargo: values.cargo,
@@ -1228,7 +1228,7 @@ function toDbPayload(collection, values) {
       created_by: values.createdBy || getCurrentUserName(),
     };
   }
- 
+
   if (collection === "malotes") {
     return {
       destino: values.destino,
@@ -1239,7 +1239,7 @@ function toDbPayload(collection, values) {
       updated_by: values.updatedBy || null,
     };
   }
- 
+
   if (collection === "chamados") {
     const payload = {};
     if ("solicitante" in values) payload.solicitante = values.solicitante;
@@ -1251,34 +1251,34 @@ function toDbPayload(collection, values) {
     payload.created_by = values.createdBy || getCurrentUserName();
     return payload;
   }
- 
+
   const { createdBy, ...payload } = values;
   return {
     ...payload,
     created_by: createdBy || getCurrentUserName(),
   };
 }
- 
+
 function withoutCreatedBy(payload) {
   const { created_by, ...rest } = payload;
   return rest;
 }
- 
+
 function withoutUpdatedBy(payload) {
   const { updated_by, ...rest } = payload;
   return rest;
 }
- 
+
 function isMissingCreatedByColumn(error) {
   const message = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`;
   return message.includes("created_by");
 }
- 
+
 function isMissingColumn(error, columnName) {
   const message = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`;
   return message.includes(columnName);
 }
- 
+
 function parseLegacyJobDetails(projeto) {
   try {
     const parsed = JSON.parse(projeto || "{}");
@@ -1293,26 +1293,26 @@ function parseLegacyJobDetails(projeto) {
     };
   }
 }
- 
+
 function withoutOptionalJobColumns(payload) {
   const { descricao, requisitos, created_by, ...rest } = payload;
   return rest;
 }
- 
+
 function withoutOptionalApplicationColumns(payload) {
   const { telefone, created_by, ...rest } = payload;
   return rest;
 }
- 
+
 async function loadFromSupabase(options = {}) {
   const { setupLive = true } = options;
- 
+
   if (!supabaseClient) {
     setSyncStatus("Modo local", false);
     renderAll();
     return;
   }
- 
+
   try {
     const requests = await Promise.allSettled(
       Object.entries(TABLES).map(async ([collection, table]) => {
@@ -1320,17 +1320,17 @@ async function loadFromSupabase(options = {}) {
         if (collection === "comunicados") {
           query = query.in("canal", getAllowedChatChannelIds());
         }
- 
+
         const { data: rows, error } = await query;
         if (error) throw error;
         return [collection, mapRows(collection, rows || [])];
       })
     );
- 
+
     requests.forEach((result) => {
       if (result.status === "fulfilled") {
         const [collection, rows] = result.value;
- 
+
         if (collection === "usuarios" && supabaseClient) {
           const dbNames = (rows || []).map((u) => normalizeLoginName(u.nome));
           
@@ -1350,7 +1350,7 @@ async function loadFromSupabase(options = {}) {
             return false; // Usuário foi deletado da nuvem, remove do cache local!
           });
         }
- 
+
         data[collection] = collection === "usuarios" ? mergeUsersByName(data.usuarios, rows) : rows;
       } else {
         console.error("Erro ao carregar colecao do Supabase:", result.reason);
@@ -1371,10 +1371,10 @@ async function loadFromSupabase(options = {}) {
     renderAll();
   }
 }
- 
+
 async function refreshFromSupabase() {
   if (!supabaseClient || refreshInProgress) return;
- 
+
   refreshInProgress = true;
   try {
     await loadFromSupabase({ setupLive: false });
@@ -1382,22 +1382,22 @@ async function refreshFromSupabase() {
     refreshInProgress = false;
   }
 }
- 
+
 function setupAutoRefresh() {
   if (refreshTimer) return;
- 
+
   refreshTimer = window.setInterval(() => {
     if (document.visibilityState === "visible") {
       refreshFromSupabase();
     }
   }, 15000);
 }
- 
+
 function setupRealtime() {
   if (!supabaseClient || realtimeChannel) return;
- 
+
   realtimeChannel = supabaseClient.channel("hub-realtime-updates");
- 
+
   Object.entries(TABLES).forEach(([collection, table]) => {
     realtimeChannel.on(
       "postgres_changes",
@@ -1406,13 +1406,13 @@ function setupRealtime() {
         const row = payload.eventType === "DELETE" ? payload.old : payload.new;
         if (!row) return;
         if (collection === "comunicados" && !canAccessChatChannel(row.canal)) return;
- 
+
         mergeRealtimeRow(collection, row, payload.eventType);
         renderRealtimeUpdate(collection);
       }
     );
   });
- 
+
   realtimeChannel.subscribe((status) => {
     if (status === "SUBSCRIBED") {
       console.info("HUB realtime conectado");
@@ -1420,20 +1420,20 @@ function setupRealtime() {
     }
   });
 }
- 
+
 async function uploadChatFile(file) {
   if (!supabaseClient || !file || !file.name) return null;
- 
+
   const bucket = window.HUB_SUPABASE.chatFilesBucket || "hub-chat-files";
   const safeName = file.name.replace(/[^a-z0-9_.-]/gi, "-");
   const path = `${Date.now()}-${generateUUID()}-${safeName}`;
   const { error } = await supabaseClient.storage.from(bucket).upload(path, file);
   if (error) throw error;
- 
+
   const { data: publicUrl } = supabaseClient.storage.from(bucket).getPublicUrl(path);
   return publicUrl.publicUrl;
 }
- 
+
 async function addItem(collection, values) {
   if (!supabaseClient) {
     data[collection].unshift({
@@ -1446,7 +1446,7 @@ async function addItem(collection, values) {
     renderAll();
     return true;
   }
- 
+
   try {
     const payload = toDbPayload(collection, values);
     const { data: inserted, error } = await supabaseClient
@@ -1454,7 +1454,7 @@ async function addItem(collection, values) {
       .insert(payload)
       .select("*")
       .single();
- 
+
     if (error) {
       if (isMissingCreatedByColumn(error)) {
         const { data: insertedWithoutAuthor, error: retryError } = await supabaseClient
@@ -1462,9 +1462,9 @@ async function addItem(collection, values) {
           .insert(withoutCreatedBy(payload))
           .select("*")
           .single();
- 
+
         if (retryError) throw retryError;
- 
+
         data[collection].unshift({
           ...mapRows(collection, [insertedWithoutAuthor])[0],
           createdBy: values.createdBy || getCurrentUserName(),
@@ -1474,32 +1474,32 @@ async function addItem(collection, values) {
         renderAll();
         return true;
       }
- 
+
       if (collection === "malotes" && isMissingColumn(error, "updated_by")) {
         const { data: insertedWithoutEditor, error: retryError } = await supabaseClient
           .from(TABLES[collection])
           .insert(withoutUpdatedBy(payload))
           .select("*")
           .single();
- 
+
         if (retryError) throw retryError;
- 
+
         data[collection].unshift(mapRows(collection, [insertedWithoutEditor])[0]);
         saveLocalData();
         setSyncStatus("Supabase precisa migracao", false);
         renderAll();
         return true;
       }
- 
+
       if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos"))) {
         const { data: insertedLegacy, error: retryError } = await supabaseClient
           .from(TABLES[collection])
           .insert(withoutOptionalJobColumns(payload))
           .select("*")
           .single();
- 
+
         if (retryError) throw retryError;
- 
+
         data[collection].unshift({
           ...mapRows(collection, [insertedLegacy])[0],
           descricao: values.descricao || "",
@@ -1512,16 +1512,16 @@ async function addItem(collection, values) {
         showModal("Banco precisa atualizar", "A vaga foi salva em modo compatibilidade. Rode o supabase-schema.sql atualizado para gravar descricao e requisitos em colunas proprias.", "info");
         return true;
       }
- 
+
       if (collection === "candidaturas" && isMissingColumn(error, "telefone")) {
         const { data: insertedLegacy, error: retryError } = await supabaseClient
           .from(TABLES[collection])
           .insert(withoutOptionalApplicationColumns(payload))
           .select("*")
           .single();
- 
+
         if (retryError) throw retryError;
- 
+
         data[collection].unshift({
           ...mapRows(collection, [insertedLegacy])[0],
           telefone: values.telefone || "",
@@ -1533,10 +1533,10 @@ async function addItem(collection, values) {
         showModal("Banco precisa atualizar", "A candidatura foi salva, mas rode o supabase-schema.sql atualizado para gravar telefone no banco.", "info");
         return true;
       }
- 
+
       throw error;
     }
- 
+
     data[collection].unshift(mapRows(collection, [inserted])[0]);
     saveLocalData();
     setSyncStatus("Supabase EIXO online", true);
@@ -1553,10 +1553,10 @@ async function addItem(collection, values) {
     return false;
   }
 }
- 
+
 async function updateItem(collection, id, values) {
   if (!id) return false;
- 
+
   if (!supabaseClient) {
     data[collection] = (data[collection] || []).map((item) =>
       String(item.id) === String(id) ? { ...item, ...values } : item
@@ -1565,7 +1565,7 @@ async function updateItem(collection, id, values) {
     renderAll();
     return true;
   }
- 
+
   try {
     const payload = toDbPayload(collection, values);
     if (collection === "malotes") {
@@ -1581,7 +1581,7 @@ async function updateItem(collection, id, values) {
       .eq("id", id)
       .select("*")
       .single();
- 
+
     if (error) {
       if (isMissingCreatedByColumn(error)) {
         const { data: updatedWithoutAuthor, error: retryError } = await supabaseClient
@@ -1590,14 +1590,14 @@ async function updateItem(collection, id, values) {
           .eq("id", id)
           .select("*")
           .single();
- 
+
         if (retryError) throw retryError;
         mergeRealtimeRow(collection, updatedWithoutAuthor, "UPDATE");
         renderRealtimeUpdate(collection);
         setSyncStatus("Supabase sem autoria", false);
         return true;
       }
- 
+
       if (collection === "malotes" && isMissingColumn(error, "updated_by")) {
         const { data: updatedWithoutEditor, error: retryError } = await supabaseClient
           .from(TABLES[collection])
@@ -1605,7 +1605,7 @@ async function updateItem(collection, id, values) {
           .eq("id", id)
           .select("*")
           .single();
- 
+
         if (retryError) throw retryError;
         mergeRealtimeRow(collection, {
           ...updatedWithoutEditor,
@@ -1615,7 +1615,7 @@ async function updateItem(collection, id, values) {
         setSyncStatus("Supabase precisa migracao", false);
         return true;
       }
- 
+
       if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos"))) {
         const { data: updatedLegacy, error: retryError } = await supabaseClient
           .from(TABLES[collection])
@@ -1623,7 +1623,7 @@ async function updateItem(collection, id, values) {
           .eq("id", id)
           .select("*")
           .single();
- 
+
         if (retryError) throw retryError;
         mergeRealtimeRow(collection, {
           ...updatedLegacy,
@@ -1635,10 +1635,10 @@ async function updateItem(collection, id, values) {
         showModal("Banco precisa atualizar", "A vaga foi atualizada em modo compatibilidade. Rode o supabase-schema.sql atualizado para gravar descricao e requisitos em colunas proprias.", "info");
         return true;
       }
- 
+
       throw error;
     }
- 
+
     mergeRealtimeRow(collection, updated, "UPDATE");
     renderRealtimeUpdate(collection);
     setSyncStatus("Supabase EIXO online", true);
@@ -1654,10 +1654,10 @@ async function updateItem(collection, id, values) {
     return false;
   }
 }
- 
+
 async function deleteItem(collection, id) {
   if (!id) return false;
- 
+
   if (!supabaseClient) {
     data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
     if (collection === "vagas") {
@@ -1667,23 +1667,23 @@ async function deleteItem(collection, id) {
     renderAll();
     return true;
   }
- 
+
   try {
     if (collection === "vagas") {
       const { error: candidaturaError } = await supabaseClient.from(TABLES.candidaturas).delete().eq("vaga_id", id);
       if (candidaturaError) throw candidaturaError;
     }
- 
+
     const { data: deletedRows, error } = await supabaseClient.from(TABLES[collection]).delete().eq("id", id).select("id");
     if (error) throw error;
- 
+
     if (!deletedRows?.length) {
       setSyncStatus("Delete pendente no Supabase", false);
       showModal("Permissao de Delete", "O Supabase nao confirmou a exclusao da vaga. Rode o supabase-schema.sql atualizado para liberar DELETE em hub_vagas.", "error");
       await refreshFromSupabase();
       return false;
     }
- 
+
     data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
     if (collection === "vagas") {
       data.candidaturas = (data.candidaturas || []).filter((item) => String(item.vaga_id) !== String(id));
@@ -1699,7 +1699,7 @@ async function deleteItem(collection, id) {
     return false;
   }
 }
- 
+
 function upsertLocalUser(values) {
   const normalizedName = normalizeLoginName(values.nome);
   const existingIndex = values.id ? data.usuarios.findIndex((user) => String(user.id) === String(values.id)) : data.usuarios.findIndex((user) => normalizeLoginName(user.nome) === normalizedName);
@@ -1713,65 +1713,65 @@ function upsertLocalUser(values) {
     syncStatus: values.syncStatus || data.usuarios[existingIndex]?.syncStatus || "active",
     createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
   };
- 
+
   if (existingIndex >= 0) {
     data.usuarios[existingIndex] = user;
   } else {
     data.usuarios.unshift(user);
   }
- 
+
   const users = mergeUsersByName(loadTeamUsersStore(), data.usuarios);
   saveTeamUsersStore(users);
   syncTeamCredentials(users);
   saveLocalData();
   renderAll();
 }
- 
+
 async function saveTeamUser(values) {
   const nome = String(values.nome || "").trim();
   const senha = String(values.senha || "").trim();
   const cargo = String(values.cargo || "").trim();
   if (!nome || !senha) return false;
   persistTeamCredential(nome, senha);
- 
+
   if (!supabaseClient) {
     upsertLocalUser({ nome, senha, cargo, syncStatus: "active" });
     return true;
   }
- 
+
   try {
     const { data: existingRows, error: findError } = await supabaseClient
       .from(USERS_TABLE)
       .select("id, nome")
       .ilike("nome", nome)
       .limit(1);
- 
+
     if (findError) throw findError;
- 
+
     const existing = existingRows?.[0];
     let query = existing
       ? supabaseClient.from(USERS_TABLE).update({ nome, senha, cargo, created_by: getCurrentUserName() }).eq("id", existing.id)
       : supabaseClient.from(USERS_TABLE).insert({ nome, senha, cargo, created_by: getCurrentUserName() });
- 
+
     let result = await query.select("*");
- 
+
     if (result.error && isMissingCreatedByColumn(result.error)) {
       query = existing
         ? supabaseClient.from(USERS_TABLE).update({ nome, senha, cargo }).eq("id", existing.id)
         : supabaseClient.from(USERS_TABLE).insert({ nome, senha, cargo });
       result = await query.select("*");
     }
- 
+
     if (result.error && isMissingColumn(result.error, "cargo")) {
       query = existing
         ? supabaseClient.from(USERS_TABLE).update({ nome, senha, created_by: getCurrentUserName() }).eq("id", existing.id)
         : supabaseClient.from(USERS_TABLE).insert({ nome, senha, created_by: getCurrentUserName() });
       result = await query.select("*");
     }
- 
+
     if (result.error) throw result.error;
     const savedRows = result.data;
- 
+
     const saved = mapRows("usuarios", savedRows || [])[0] || { nome, senha, cargo, createdAt: todayLabel() };
     upsertLocalUser({ ...saved, cargo: saved.cargo || cargo, syncStatus: "active" });
     setSyncStatus("Supabase EIXO online", true);
@@ -1784,19 +1784,19 @@ async function saveTeamUser(values) {
     return true;
   }
 }
- 
+
 async function updateCurrentAccount(currentPassword, newName, newPassword, newFotoUrl) {
   const user = getCurrentUserRecord();
   if (!user) {
     showModal("Conta nao encontrada", "Nao foi possivel localizar sua conta nesta sessao.", "error");
     return false;
   }
- 
+
   if (currentPassword && !isLoginMatch(currentPassword, user.senha)) {
     showModal("Senha incorreta", "A senha atual informada nao confere.", "error");
     return false;
   }
- 
+
   const updatedUser = {
     ...user,
     nome: newName || user.nome,
@@ -1805,14 +1805,14 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
     cargo: user.cargo || getCurrentUserRole(),
     syncStatus: user.syncStatus || "active",
   };
- 
+
   if (!supabaseClient) {
     upsertLocalUser(updatedUser);
     persistTeamCredential(updatedUser.nome, updatedUser.senha);
     if (newName) sessionStorage.setItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
     return true;
   }
- 
+
   try {
     let payload = {
       nome: updatedUser.nome,
@@ -1822,15 +1822,15 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
       created_by: getCurrentUserName(),
     };
     let query = supabaseClient.from(USERS_TABLE).update(payload);
- 
+
     if (updatedUser.id && !String(updatedUser.id).startsWith("local-")) {
       query = query.eq("id", updatedUser.id);
     } else {
       query = query.ilike("nome", updatedUser.nome);
     }
- 
+
     let result = await query.select("*");
- 
+
     if (result.error && (isMissingColumn(result.error, "cargo") || isMissingColumn(result.error, "foto_perfil"))) {
       const { cargo, foto_perfil, ...legacyPayload } = payload;
       query = supabaseClient.from(USERS_TABLE).update(legacyPayload);
@@ -1842,7 +1842,7 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
     } else if (result.error) {
       throw result.error;
     }
- 
+
     const saved = mapRows("usuarios", result.data || [])[0] || updatedUser;
     upsertLocalUser({ ...updatedUser, ...saved, senha: updatedUser.senha });
     persistTeamCredential(updatedUser.nome, updatedUser.senha);
@@ -1859,7 +1859,7 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
     return true;
   }
 }
- 
+
 function removeLocalUser(id) {
   const removedUser = data.usuarios.find((user) => String(user.id) === String(id));
   const keepUser = (user) => String(user.id) !== String(id) && normalizeLoginName(user.nome) !== normalizeLoginName(removedUser?.nome);
@@ -1868,35 +1868,35 @@ function removeLocalUser(id) {
   const credentials = loadTeamCredentialsStore().filter(keepUser);
   saveTeamUsersStore(users);
   saveTeamCredentialsStore(credentials);
- 
+
   if (removedUser && normalizeLoginName(removedUser.nome) === normalizeLoginName(getCurrentUserName())) {
     clearAuthenticatedUser();
     window.location.href = "login.html";
     return;
   }
- 
+
   saveLocalData();
   renderAll();
 }
- 
+
 async function deleteTeamUser(id) {
   if (!id) return false;
- 
+
   const localUser = data.usuarios.find((u) => String(u.id) === String(id));
- 
+
   if (!supabaseClient || !localUser) {
     removeLocalUser(id);
     return true;
   }
- 
+
   try {
     const { error } = await supabaseClient
       .from(USERS_TABLE)
       .delete()
       .ilike("nome", localUser.nome);
- 
+
     if (error) throw error;
- 
+
     removeLocalUser(id);
     setSyncStatus("Supabase EIXO online", true);
     return true;
@@ -1907,36 +1907,36 @@ async function deleteTeamUser(id) {
     return true;
   }
 }
- 
+
 function renderCards(targetId, items, template) {
   const target = document.getElementById(targetId);
   if (!target) return;
- 
+
   if (!items.length) {
     target.innerHTML = '<p class="empty-state">Nenhum registro cadastrado ainda.</p>';
     return;
   }
- 
+
   target.innerHTML = items.map(template).join("");
 }
- 
+
 function activateView(viewId) {
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
   document.querySelectorAll(".user-chip").forEach((chip) => chip.classList.toggle("active", viewId === "conta"));
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
 }
- 
+
 function applyRoleAccess() {
   if (!isAuthenticated() || isPublicPage() || !document.querySelector(".nav-list")) return;
   refreshCurrentUserRoleFromData();
- 
+
   const allowedViews = isManagerUser()
     ? new Set(["comunicacao", "documentos", "conta"])
     : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "documentos", "equipe", "conta"]);
   const allowedExternalUrls = isManagerUser()
     ? new Set(["https://hub-opal-nine.vercel.app/chamados.html", "https://hub-opal-nine.vercel.app/denuncia.html"])
     : new Set();
- 
+
   document.querySelectorAll(".nav-item").forEach((button) => {
     const allowed = button.dataset.externalUrl
       ? allowedExternalUrls.has(button.dataset.externalUrl)
@@ -1944,20 +1944,20 @@ function applyRoleAccess() {
     button.hidden = !allowed;
     button.disabled = !allowed;
   });
- 
+
   document.querySelectorAll(".view").forEach((view) => {
     if (!allowedViews.has(view.id)) view.classList.remove("active");
   });
- 
+
   const activeView = document.querySelector(".view.active");
   if (!activeView || !allowedViews.has(activeView.id)) {
     activateView(isManagerUser() ? "documentos" : "dashboard");
   }
 }
- 
+
 function renderDashboard() {
   if (!document.getElementById("metric-denuncias")) return;
- 
+
   document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status === "Aberta" || item.status === "Urgente").length;
   const unreadRhMessages = getUnreadRhMessages();
   if (document.getElementById("metric-comunicados")) {
@@ -1972,7 +1972,7 @@ function renderDashboard() {
   if (document.getElementById("metric-documentos")) {
     document.getElementById("metric-documentos").textContent = documentRecords.length;
   }
- 
+
   const dashboardItems = [
     ...data.denuncias
       .filter(item => item.status === "Aberta" || item.status === "Urgente")
@@ -1994,7 +1994,7 @@ function renderDashboard() {
     ...data.vagas.map((item) => ({ title: `Vaga: ${item.cargo}`, text: item.descricao, tag: item.status, date: item.createdAt })),
     ...documentRecords.map((item) => ({ title: `Doc: ${documentLabels[item.type] || item.type}`, text: item.summary, tag: "Registro", date: item.createdAt }))
   ].slice(0, 8);
- 
+
   const dashboardTarget = document.getElementById("dashboard-list");
   if (dashboardTarget) {
     if (dashboardItems.length === 0) {
@@ -2006,19 +2006,19 @@ function renderDashboard() {
     }
   }
 }
- 
+
 // Lógica de abertura de denúncia para leitura e transição de estado automática
 async function lerDenuncia(id) {
   const denuncia = data.denuncias.find(item => String(item.id) === String(id));
   if (!denuncia) return;
- 
+
   // Mostra o relato em formato de modal customizado
   showModal(
     "Visualização da Denúncia",
     `Categoria: ${denuncia.categoria}\nRecebida em: ${denuncia.createdAt}\nStatus Atual: ${denuncia.status}\n\nRelato:\n"${denuncia.descricao}"`,
     "info"
   );
- 
+
   // Se a denúncia ainda constar como Não lida ("Aberta"), movemos para "Lida"
   if (denuncia.status === "Aberta") {
     if (!supabaseClient) {
@@ -2046,18 +2046,18 @@ async function lerDenuncia(id) {
     }
   }
 }
- 
+
 async function atualizarStatusDenuncia(id, status) {
   const denuncia = data.denuncias.find((item) => String(item.id) === String(id));
   if (!denuncia) return false;
- 
+
   if (!supabaseClient) {
     denuncia.status = status;
     saveLocalData();
     renderAll();
     return true;
   }
- 
+
   try {
     const { data: updated, error } = await supabaseClient
       .from(TABLES.denuncias)
@@ -2065,9 +2065,9 @@ async function atualizarStatusDenuncia(id, status) {
       .eq("id", id)
       .select()
       .single();
- 
+
     if (error || !updated) throw error || new Error("Nenhuma linha alterada.");
- 
+
     mergeRealtimeRow("denuncias", updated, "UPDATE");
     renderRealtimeUpdate("denuncias");
     return true;
@@ -2077,16 +2077,16 @@ async function atualizarStatusDenuncia(id, status) {
     return false;
   }
 }
- 
+
 function renderPublicVagas() {
   const selectedInput = document.getElementById("vaga-id");
   const selectedPanel = document.getElementById("selected-public-job");
   const list = document.getElementById("public-vagas-list");
   if (!selectedInput && !selectedPanel && !list) return;
- 
+
   const openVagas = data.vagas.filter(v => v.status === "Aberta");
   const selectedVaga = new URLSearchParams(window.location.search).get("vaga");
- 
+
   if (!openVagas.length) {
     if (list) list.innerHTML = '<p class="empty-state">Nenhuma vaga aberta no momento.</p>';
     if (selectedInput) selectedInput.value = "";
@@ -2095,7 +2095,7 @@ function renderPublicVagas() {
     }
     return;
   }
- 
+
   if (list) {
     list.innerHTML = openVagas.map(v => `
       <article class="item-card public-job-card">
@@ -2109,7 +2109,7 @@ function renderPublicVagas() {
       </article>
     `).join("");
   }
- 
+
   if (selectedInput || selectedPanel) {
     const job = openVagas.find((item) => String(item.id) === String(selectedVaga));
     if (!job) {
@@ -2119,7 +2119,7 @@ function renderPublicVagas() {
       }
       return;
     }
- 
+
     if (selectedInput) selectedInput.value = job.id;
     if (selectedPanel) {
       selectedPanel.innerHTML = `
@@ -2133,10 +2133,10 @@ function renderPublicVagas() {
     }
   }
 }
- 
+
 function renderTeamUsers() {
   const users = getTeamUsers();
- 
+
   renderCards("usuarios-list", users, (item) => `
     <article class="item-card">
       <div class="item-topline">
@@ -2153,19 +2153,19 @@ function renderTeamUsers() {
     </article>
   `);
 }
- 
+
 function renderAccountSettings() {
   const nameInput = document.getElementById("conta-nome");
   const newNameInput = document.getElementById("novo-nome");
   const roleInput = document.getElementById("conta-cargo");
   const avatarPreview = document.getElementById("conta-avatar-preview");
   if (!nameInput && !roleInput && !newNameInput) return;
- 
+
   const user = getCurrentUserRecord();
   if (nameInput) nameInput.value = getCurrentUserName();
   if (newNameInput) newNameInput.value = getCurrentUserName();
   if (roleInput) roleInput.value = user?.cargo || getCurrentUserRole() || "Sem cargo definido";
- 
+
   if (avatarPreview) {
     avatarPreview.style.display = "block";
     if (user?.foto_perfil) {
@@ -2175,21 +2175,21 @@ function renderAccountSettings() {
     }
   }
 }
- 
+
 function renderChatChannels() {
   const target = document.getElementById("chat-channel-list");
   if (!target) return;
- 
+
   const channels = getChatChannels();
   if (!channels.some((channel) => channel.id === activeChatChannel) || !isCurrentUserInChannel(activeChatChannel)) {
     activeChatChannel = channels[0]?.id || "";
   }
- 
+
   if (!channels.length) {
     target.innerHTML = '<p class="empty-state">Nenhum canal interno disponivel.</p>';
     return;
   }
- 
+
   target.innerHTML = channels
     .map((channel) => `
         <button class="channel-item ${channel.id === activeChatChannel ? "active" : ""}" data-chat-channel="${escapeHtml(channel.id)}" type="button">
@@ -2198,14 +2198,14 @@ function renderChatChannels() {
       `)
     .join("");
 }
- 
+
 function renderAll() {
   renderCurrentUser();
   applyRoleAccess();
   renderAccountSettings();
   renderDashboard();
   renderPublicVagas();
- 
+
   // Filtra as denúncias entre as listas de Não Lidas, Lidas e Arquivadas
   const naoLidas = data.denuncias.filter(item => item.status === "Aberta" || item.status === "Urgente");
   const lidas = data.denuncias.filter(item => item.status === "Lida");
@@ -2216,7 +2216,7 @@ function renderAll() {
   const exitSelectionButton = document.getElementById("exit-denuncias-selection");
   const openDenunciaPublicLink = document.getElementById("open-denuncia-public");
   if (denunciasSelectionMode) showArchivedDenuncias = false;
- 
+
   if (selectDenunciasButton) {
     selectDenunciasButton.disabled = !naoLidas.length && !lidas.length;
     selectDenunciasButton.textContent = denunciasSelectionMode ? "Arquivar selecionadas" : "Selecionar denúncias";
@@ -2234,7 +2234,7 @@ function renderAll() {
     exitSelectionButton.style.display = denunciasSelectionMode ? "" : "none";
   }
   if (openDenunciaPublicLink) openDenunciaPublicLink.hidden = denunciasSelectionMode;
- 
+
   const cardAction = (item, archived) =>
     denunciasSelectionMode && !archived
       ? `toggleDenunciaSelection(event, '${escapeHtml(item.id)}')`
@@ -2253,7 +2253,7 @@ function renderAll() {
       ${archived ? `<div class="job-actions" style="margin-top: 8px;"><button class="secondary-link" type="button" onclick="event.stopPropagation(); reabrirDenuncia('${escapeHtml(item.id)}')">Reabrir</button></div>` : ""}
     </article>
   `;
- 
+
   if (showArchivedDenuncias) {
     const primaryTarget = document.getElementById("denuncias-nao-lidas");
     if (!arquivadas.length && primaryTarget) {
@@ -2265,10 +2265,10 @@ function renderAll() {
     renderCards("denuncias-nao-lidas", naoLidas, (item) => cardTemplate(item, false));
   }
   renderCards("denuncias-lidas", lidas, (item) => cardTemplate(item, false));
- 
+
   renderChatChannels();
   renderChat();
- 
+
   renderMaloteReport();
   renderCards("malotes-list", getFilteredMalotes(), (item) => `
     <article class="item-card">
@@ -2284,7 +2284,7 @@ function renderAll() {
       </div>
     </article>
   `);
- 
+
   const chamadosAbertos = (data.chamados || []).filter((item) => item.status !== "Arquivado");
   const chamadosArquivados = (data.chamados || []).filter((item) => item.status === "Arquivado");
   const selectChamadosButton = document.getElementById("select-chamados");
@@ -2292,9 +2292,9 @@ function renderAll() {
   const toggleArchivedChamadosButton = document.getElementById("toggle-archived-chamados");
   const exitChamadosSelectionButton = document.getElementById("exit-chamados-selection");
   const openChamadosPublicLink = document.getElementById("open-chamados-public");
- 
+
   if (chamadosSelectionMode) showArchivedChamados = false;
- 
+
   if (selectChamadosButton) {
     selectChamadosButton.disabled = !chamadosAbertos.length && !chamadosArquivados.length;
     selectChamadosButton.textContent = chamadosSelectionMode ? "Arquivar selecionados" : "Selecionar chamados";
@@ -2312,7 +2312,7 @@ function renderAll() {
     exitChamadosSelectionButton.style.display = chamadosSelectionMode ? "" : "none";
   }
   if (openChamadosPublicLink) openChamadosPublicLink.hidden = chamadosSelectionMode;
- 
+
   const chamadoCard = (item, archived = false) => `
     <article class="item-card ${chamadosSelectionMode && !archived ? "selectable-card" : ""}" ${chamadosSelectionMode && !archived ? `style="cursor: pointer;" onclick="toggleChamadoSelection(event, '${escapeHtml(item.id)}')"` : ""}>
       <div class="item-topline">
@@ -2330,7 +2330,7 @@ function renderAll() {
       ${archived ? `<div class="job-actions" style="margin-top: 8px;"><button class="secondary-link" type="button" onclick="event.stopPropagation(); reabrirChamado('${escapeHtml(item.id)}')">Reabrir</button></div>` : ""}
     </article>
   `;
- 
+
   if (showArchivedChamados) {
     const primaryTarget = document.getElementById("chamados-list");
     if (!chamadosArquivados.length && primaryTarget) {
@@ -2341,7 +2341,7 @@ function renderAll() {
   } else {
     renderCards("chamados-list", chamadosAbertos, (item) => chamadoCard(item, false));
   }
- 
+
   renderCards("vagas-list", data.vagas, (item) => {
     const candidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id) === String(item.id));
     let candidaturasHtml = `<p style="margin-top: 8px; font-size: 13px; color: var(--muted);">Nenhum currículo recebido.</p>`;
@@ -2358,7 +2358,7 @@ function renderAll() {
         </div>
       `).join("");
     }
- 
+
     return `
       <article class="item-card">
         <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
@@ -2373,20 +2373,20 @@ function renderAll() {
       </article>
     `;
   });
- 
+
   renderDocumentRecords();
   renderTeamUsers();
 }
- 
+
 function renderDocumentRecords() {
   const target = document.getElementById("document-records");
   if (!target) return;
- 
+
   if (!documentRecords.length) {
     target.innerHTML = '<p class="empty-state">Nenhum registro salvo ainda.</p>';
     return;
   }
- 
+
   target.innerHTML = documentRecords
     .map((item) => `
       <article class="item-card">
@@ -2406,13 +2406,13 @@ function renderDocumentRecords() {
     `)
     .join("");
 }
- 
+
 function renderChat() {
   const target = document.getElementById("chat-feed");
   if (!target) return;
   const currentUser = getCurrentUserName();
   const activeChannel = getActiveChatChannel();
- 
+
   const title = document.getElementById("chat-title");
   const subtitle = document.getElementById("chat-subtitle");
   const messageInput = document.querySelector('#chat-form input[name="mensagem"]');
@@ -2432,7 +2432,7 @@ function renderChat() {
     target.innerHTML = '<p class="empty-state">Nenhum canal interno disponivel.</p>';
     return;
   }
- 
+
   if (title) title.textContent = activeChannel.label;
   if (subtitle) subtitle.textContent = activeChannel.subtitle;
   if (messageInput) {
@@ -2442,19 +2442,19 @@ function renderChat() {
   if (sendButton) sendButton.disabled = false;
   if (fileInput) fileInput.disabled = false;
   if (fileButton) fileButton.classList.remove("disabled");
- 
- 
+
+
   const messages = data.comunicados.filter((item) => {
     const channel = normalizeChatChannel(item.canal);
     if (channel !== activeChatChannel) return false;
     return (channel === GENERAL_CHANNEL && !isManagerUser()) || isCurrentUserInChannel(channel);
   });
- 
+
   if (!messages.length) {
     target.innerHTML = '<p class="empty-state">Nenhuma mensagem neste chat ainda.</p>';
     return;
   }
- 
+
   target.innerHTML = messages
     .slice()
     .reverse()
@@ -2462,7 +2462,7 @@ function renderChat() {
       const attachment = item.arquivo
         ? `<a class="attachment-chip" href="${escapeHtml(item.arquivo.url || "#")}" target="_blank" rel="noreferrer">Arquivo: ${escapeHtml(item.arquivo.name)} ${escapeHtml(formatFileSize(item.arquivo.size))}</a>`
         : "";
- 
+
       return `
         <article class="chat-message ${item.autor === currentUser ? "own" : ""}">
           <div class="chat-author">
@@ -2475,12 +2475,12 @@ function renderChat() {
       `;
     })
     .join("");
- 
+
   target.scrollTop = target.scrollHeight;
- 
+
   checkAndMarkChatAsRead();
 }
- 
+
 document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
   button.addEventListener("click", () => {
     if (button.dataset.externalUrl) {
@@ -2498,16 +2498,16 @@ document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
 document.getElementById("chat-channel-list")?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-chat-channel]");
   if (!button) return;
- 
+
   activeChatChannel = button.dataset.chatChannel || GENERAL_CHANNEL;
   renderChatChannels();
   renderChat();
 });
- 
+
 document.getElementById("malote-destino-filter")?.addEventListener("change", () => {
   renderAll();
 });
- 
+
 document.getElementById("select-chamados")?.addEventListener("click", () => {
   if (!chamadosSelectionMode) {
     chamadosSelectionMode = true;
@@ -2515,16 +2515,16 @@ document.getElementById("select-chamados")?.addEventListener("click", () => {
     renderAll();
     return;
   }
- 
+
   const selectedIds = Array.from(document.querySelectorAll("#chamados-list .chamado-select:checked"))
     .map((input) => input.value)
     .filter(Boolean);
- 
+
   if (!selectedIds.length) {
     showModal("Nenhum chamado selecionado", "Selecione pelo menos um chamado para arquivar.", "error");
     return;
   }
- 
+
   showConfirmActionModal({
     title: "Arquivar chamados",
     text: `Deseja arquivar ${selectedIds.length} chamado(s) selecionado(s)?`,
@@ -2539,17 +2539,17 @@ document.getElementById("select-chamados")?.addEventListener("click", () => {
     },
   });
 });
- 
+
 document.getElementById("exit-chamados-selection")?.addEventListener("click", () => {
   chamadosSelectionMode = false;
   renderAll();
 });
- 
+
 document.getElementById("toggle-archived-chamados")?.addEventListener("click", () => {
   showArchivedChamados = !showArchivedChamados;
   renderAll();
 });
- 
+
 document.getElementById("select-denuncias")?.addEventListener("click", () => {
   if (!denunciasSelectionMode) {
     denunciasSelectionMode = true;
@@ -2557,16 +2557,16 @@ document.getElementById("select-denuncias")?.addEventListener("click", () => {
     renderAll();
     return;
   }
- 
+
   const selectedIds = Array.from(document.querySelectorAll(".denuncia-select:checked"))
     .map((input) => input.value)
     .filter(Boolean);
- 
+
   if (!selectedIds.length) {
     showModal("Nenhuma denúncia selecionada", "Selecione pelo menos uma denúncia para arquivar.", "error");
     return;
   }
- 
+
   showConfirmActionModal({
     title: "Arquivar denúncias",
     text: `Deseja arquivar ${selectedIds.length} denúncia(s) selecionada(s)?`,
@@ -2581,24 +2581,24 @@ document.getElementById("select-denuncias")?.addEventListener("click", () => {
     },
   });
 });
- 
+
 document.getElementById("exit-denuncias-selection")?.addEventListener("click", () => {
   denunciasSelectionMode = false;
   renderAll();
 });
- 
+
 document.getElementById("toggle-archived-denuncias")?.addEventListener("click", () => {
   showArchivedDenuncias = !showArchivedDenuncias;
   renderAll();
 });
- 
+
 document.querySelectorAll(".doc-tab").forEach((button) => {
   button.addEventListener("click", () => {
     document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
     document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
     document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
- 
+
     // Cancela a edição se o usuário trocar de aba de documento
     if (window.editingDocId) {
       window.editingDocId = null;
@@ -2610,7 +2610,7 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
     }
   });
 });
- 
+
 document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
   formElement.addEventListener("input", (event) => {
     if (event.target.name === "cpf") {
@@ -2632,7 +2632,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
       event.target.value = formatTimeRange(event.target.value);
     }
   });
- 
+
   formElement.addEventListener("submit", (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -2643,9 +2643,9 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
       .slice(0, 4)
       .map(([key, value]) => `${key}: ${value}`)
       .join(" | ");
- 
+
     let savedDocId;
- 
+
     if (window.editingDocId) {
       savedDocId = window.editingDocId;
       // Atualiza o documento existente
@@ -2676,16 +2676,16 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
         createdAt: todayLabel(),
       });
     }
- 
+
     saveDocumentRecords();
     renderDocumentRecords();
     
     window.baixarDocumentoRH(savedDocId);
- 
+
     event.currentTarget.reset();
   });
 });
- 
+
 const denunciaForm = document.getElementById("denuncia-form");
 if (denunciaForm) {
   denunciaForm.addEventListener("submit", async (event) => {
@@ -2694,14 +2694,14 @@ if (denunciaForm) {
     const form = new FormData(formElement);
     const message = String(form.get("mensagem") || form.get("descricao") || "").trim();
     if (!message) return;
- 
+
     const success = await addItem("denuncias", {
       identificacao: "Anonimo",
       categoria: "Denuncia anonima",
       descricao: message,
       status: "Aberta",
     });
- 
+
     if (success) {
       formElement.reset();
       const feedback = document.getElementById("denuncia-feedback");
@@ -2711,7 +2711,7 @@ if (denunciaForm) {
     }
   });
 }
- 
+
 const chatFile = document.getElementById("chat-file");
 if (chatFile) {
   chatFile.addEventListener("change", (event) => {
@@ -2723,7 +2723,7 @@ if (chatFile) {
     }
   });
 }
- 
+
 const chatForm = document.getElementById("chat-form");
 if (chatForm) {
   chatForm.addEventListener("submit", async (event) => {
@@ -2736,14 +2736,14 @@ if (chatForm) {
       showModal("Acao nao permitida", "Voce nao participa deste chat individual.", "error");
       return;
     }
- 
+
     const formElement = event.target;
     const form = new FormData(formElement);
     const file = form.get("arquivo");
     const message = String(form.get("mensagem") || "").trim();
- 
+
     if (!message && (!file || !file.name)) return;
- 
+
     let fileUrl = null;
     if (file && file.name) {
       try {
@@ -2755,21 +2755,21 @@ if (chatForm) {
         return; // Interrompe o envio se o arquivo falhar!
       }
     }
- 
+
     const success = await addItem("comunicados", {
       autor: getCurrentUserName(),
       canal: activeChatChannel,
       mensagem: message,
       arquivo: file && file.name ? { name: file.name, size: file.size, type: file.type, url: fileUrl } : null,
     });
- 
+
     if (success) {
       formElement.reset();
       document.getElementById("selected-file").textContent = "Nenhum arquivo selecionado";
     }
   });
 }
- 
+
 const maloteForm = document.getElementById("malote-form");
 if (maloteForm) {
   document.getElementById("adicionar-epi")?.addEventListener("click", () => {
@@ -2777,7 +2777,7 @@ if (maloteForm) {
     if (!list) return;
     list.insertAdjacentHTML("beforeend", createChamadoEpiRow());
   });
- 
+
   document.getElementById("epi-list")?.addEventListener("click", (event) => {
     const button = event.target.closest(".remove-epi");
     if (!button) return;
@@ -2785,7 +2785,7 @@ if (maloteForm) {
     if (rows.length <= 1) return;
     button.closest(".epi-row")?.remove();
   });
- 
+
   maloteForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formElement = event.target;
@@ -2796,7 +2796,7 @@ if (maloteForm) {
       showModal("EPIs obrigatorios", "Adicione pelo menos um EPI com nome e quantidade.", "error");
       return;
     }
- 
+
     const payload = {
       destino: form.get("destino"),
       origem: form.get("origem"),
@@ -2814,7 +2814,7 @@ if (maloteForm) {
     }
   });
 }
- 
+
 document.getElementById("cancelar-edicao-malote")?.addEventListener("click", () => {
   maloteForm.reset();
   maloteForm.elements.id.value = "";
@@ -2822,7 +2822,7 @@ document.getElementById("cancelar-edicao-malote")?.addEventListener("click", () 
   document.getElementById("cancelar-edicao-malote").setAttribute("hidden", "");
   maloteForm.querySelector('button[type="submit"]').textContent = "Salvar malote";
 });
- 
+
 const vagaForm = document.getElementById("vaga-form");
 if (vagaForm) {
   vagaForm.addEventListener("submit", async (event) => {
@@ -2846,14 +2846,14 @@ if (vagaForm) {
     }
   });
 }
- 
+
 document.getElementById("cancelar-edicao-vaga")?.addEventListener("click", () => {
   vagaForm.reset();
   vagaForm.elements.id.value = "";
   document.getElementById("cancelar-edicao-vaga").setAttribute("hidden", "");
   vagaForm.querySelector('button[type="submit"]').textContent = "Salvar vaga";
 });
- 
+
 const usuarioForm = document.getElementById("usuario-form");
 if (usuarioForm) {
   usuarioForm.addEventListener("submit", async (event) => {
@@ -2865,13 +2865,13 @@ if (usuarioForm) {
       senha: form.get("senha"),
       cargo: form.get("cargo"),
     });
- 
+
     if (success) {
       formElement.reset();
     }
   });
 }
- 
+
 const fotoPerfilInput = document.getElementById("foto-perfil-input");
 if (fotoPerfilInput) {
   fotoPerfilInput.addEventListener("change", (event) => {
@@ -2892,11 +2892,11 @@ if (fotoPerfilInput) {
     }
   });
 }
- 
+
 function showResetPasswordModal() {
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
- 
+
   const overlay = document.createElement("div");
   overlay.id = "custom-modal";
   overlay.className = "modal-overlay";
@@ -2921,7 +2921,7 @@ function showResetPasswordModal() {
       </div>
     </div>
   `;
- 
+
   const close = () => overlay.remove();
   overlay.querySelector("[data-modal-cancel]").addEventListener("click", close);
   overlay.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
@@ -2929,7 +2929,7 @@ function showResetPasswordModal() {
     const newPwd = overlay.querySelector("#modal-new-pwd").value.trim();
     const confirmPwd = overlay.querySelector("#modal-confirm-pwd").value.trim();
     const errorEl = overlay.querySelector("#modal-action-error");
- 
+
     if (!currentPwd) {
       errorEl.textContent = "A senha atual é obrigatória.";
       errorEl.hidden = false;
@@ -2945,20 +2945,20 @@ function showResetPasswordModal() {
       errorEl.hidden = false;
       return;
     }
- 
+
     if (newPwd === currentPwd) {
       errorEl.textContent = "A nova senha não pode ser igual à senha atual.";
       errorEl.hidden = false;
       return;
     }
- 
+
     const user = getCurrentUserRecord();
     if (!isLoginMatch(currentPwd, user.senha)) {
       errorEl.textContent = "A senha atual informada não confere.";
       errorEl.hidden = false;
       return;
     }
- 
+
     errorEl.hidden = true;
     const success = await updateCurrentAccount(currentPwd, null, newPwd, null);
     if (success) {
@@ -2966,7 +2966,7 @@ function showResetPasswordModal() {
       showModal("Senha atualizada", "Sua senha foi redefinida com sucesso.", "info");
     }
   });
- 
+
   overlay.querySelectorAll("input").forEach(input => {
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -2975,18 +2975,18 @@ function showResetPasswordModal() {
       }
     });
   });
- 
+
   document.body.appendChild(overlay);
   overlay.querySelector("#modal-current-pwd").focus();
 }
- 
+
 const btnRedefinirSenha = document.getElementById("btn-redefinir-senha");
 if (btnRedefinirSenha) {
   btnRedefinirSenha.addEventListener("click", () => {
     showResetPasswordModal();
   });
 }
- 
+
 const contaForm = document.getElementById("conta-form");
 if (contaForm) {
   contaForm.addEventListener("submit", async (event) => {
@@ -2995,7 +2995,7 @@ if (contaForm) {
     const form = new FormData(formElement);
     const newName = String(form.get("novo_nome") || "").trim();
     const fotoFile = form.get("foto_perfil");
- 
+
     let fotoUrl = null;
     if (fotoFile && fotoFile.name && supabaseClient) {
       try {
@@ -3012,7 +3012,7 @@ if (contaForm) {
         return;
       }
     }
- 
+
     const success = await updateCurrentAccount("", newName, "", fotoUrl);
     if (success) {
       formElement.reset();
@@ -3024,17 +3024,17 @@ if (contaForm) {
     }
   });
 }
- 
+
 const candidaturaForm = document.getElementById("candidatura-form");
 if (candidaturaForm) {
   document.getElementById("telefone-input")?.addEventListener("input", (event) => {
     event.currentTarget.value = formatPhone(event.currentTarget.value);
   });
- 
+
   document.getElementById("cpf-input")?.addEventListener("input", (event) => {
     event.currentTarget.value = formatCpf(event.currentTarget.value);
   });
- 
+
   candidaturaForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formElement = event.target;
@@ -3044,18 +3044,18 @@ if (candidaturaForm) {
     const telefone = form.get("telefone");
     const cpf = form.get("cpf");
     const curriculo = form.get("curriculo");
- 
+
     if (!vaga_id || !nome || !telefone || !cpf || !curriculo || !curriculo.name) {
       showModal("Vaga obrigatoria", "Abra a candidatura pelo botao Candidatar-se de uma vaga aberta.", "error");
       return;
     }
- 
+
     const existing = (data.candidaturas || []).find(c => String(c.vaga_id) === String(vaga_id) && c.cpf === cpf);
     if (existing) {
       showModal("Aviso", "Você já enviou um currículo para esta vaga com este CPF.", "error");
       return;
     }
- 
+
     try {
       let fileUrl = "Arquivo local (não enviado)";
       if (supabaseClient) {
@@ -3067,7 +3067,7 @@ if (candidaturaForm) {
         const { data: publicData } = supabaseClient.storage.from("hub-curriculos").getPublicUrl(path);
         fileUrl = publicData.publicUrl;
       }
- 
+
       const success = await addItem("candidaturas", { vaga_id, nome, telefone, cpf, curriculo_url: fileUrl });
       if (success) {
         formElement.reset();
@@ -3084,7 +3084,7 @@ if (candidaturaForm) {
     }
   });
 }
- 
+
 const chamadoForm = document.getElementById("chamado-form");
 if (chamadoForm) {
   document.getElementById("adicionar-epi")?.addEventListener("click", () => {
@@ -3092,7 +3092,7 @@ if (chamadoForm) {
     if (!list) return;
     list.insertAdjacentHTML("beforeend", createEpiRow());
   });
- 
+
   document.getElementById("epi-list")?.addEventListener("click", (event) => {
     const button = event.target.closest(".remove-epi");
     if (!button) return;
@@ -3100,7 +3100,7 @@ if (chamadoForm) {
     if (rows.length <= 1) return;
     button.closest(".epi-row")?.remove();
   });
- 
+
   chamadoForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formElement = event.currentTarget;
@@ -3110,7 +3110,7 @@ if (chamadoForm) {
       showModal("EPIs obrigatorios", "Adicione pelo menos um EPI com nome e quantidade.", "error");
       return;
     }
- 
+
     const success = await addItem("chamados", {
       solicitante: form.get("solicitante"),
       unidade: form.get("unidade"),
@@ -3119,7 +3119,7 @@ if (chamadoForm) {
       status: "Aberto",
       createdBy: "Publico",
     });
- 
+
     if (success) {
       formElement.reset();
       const list = document.getElementById("epi-list");
@@ -3130,7 +3130,7 @@ if (chamadoForm) {
     }
   });
 }
- 
+
 function initializeAppData() {
   populateUnitSelects();
   populateEpiSelects();
@@ -3139,26 +3139,26 @@ function initializeAppData() {
   supabaseClient = getSupabaseClient();
   loadFromSupabase({ setupLive: true });
 }
- 
+
 if (setupLogin()) {
   initializeAppData();
 }
- 
+
 // Vincula a função globalmente ao escopo de janela (window) para que o atributo onclick do HTML consiga disparar a leitura.
 window.lerDenuncia = lerDenuncia;
- 
+
 window.toggleDenunciaSelection = function(event, id) {
   event.stopPropagation();
   const checkbox = document.querySelector(`.denuncia-select[value="${CSS.escape(String(id))}"]`);
   if (checkbox) checkbox.checked = !checkbox.checked;
 };
- 
+
 window.toggleChamadoSelection = function(event, id) {
   event.stopPropagation();
   const checkbox = document.querySelector(`.chamado-select[value="${CSS.escape(String(id))}"]`);
   if (checkbox) checkbox.checked = !checkbox.checked;
 };
- 
+
 window.reabrirChamado = function(id) {
   showConfirmActionModal({
     title: "Reabrir chamado",
@@ -3170,7 +3170,7 @@ window.reabrirChamado = function(id) {
     },
   });
 };
- 
+
 window.reabrirDenuncia = function(id) {
   showConfirmActionModal({
     title: "Reabrir denúncia",
@@ -3184,14 +3184,14 @@ window.reabrirDenuncia = function(id) {
     },
   });
 };
- 
+
 // Lógica para preparar os formulários com os dados de um documento existente
 window.editarDocumento = function(id) {
   const doc = documentRecords.find(d => d.id === id);
   if (!doc) return;
- 
+
   window.editingDocId = id;
- 
+
   document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
   document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
   
@@ -3200,7 +3200,7 @@ window.editarDocumento = function(id) {
   
   const viewElement = document.getElementById(`doc-${doc.type}`);
   if (viewElement) viewElement.classList.add("active");
- 
+
   const form = document.querySelector(`form[data-doc-form="${doc.type}"]`);
   if (form && doc.formData) {
     Object.entries(doc.formData).forEach(([key, value]) => {
@@ -3214,7 +3214,7 @@ window.editarDocumento = function(id) {
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 };
- 
+
 // Lógica de exclusão rápida
 window.excluirDocumento = function(id) {
   showConfirmActionModal({
@@ -3229,11 +3229,11 @@ window.excluirDocumento = function(id) {
     },
   });
 };
- 
+
 window.excluirUsuario = async function(id) {
   const user = (data.usuarios || []).find((item) => String(item.id) === String(id));
   if (!user) return;
- 
+
   showPasswordActionModal({
     title: "Deletar conta",
     text: `Confirme a senha de autorizacao para deletar ${user.nome} da equipe.`,
@@ -3244,11 +3244,11 @@ window.excluirUsuario = async function(id) {
     },
   });
 };
- 
+
 window.mostrarSenhaUsuario = function(id) {
   const user = (data.usuarios || []).find((item) => String(item.id) === String(id));
   if (!user) return;
- 
+
   showPasswordActionModal({
     title: "Mostrar senha",
     text: `Confirme a senha de autorizacao para visualizar a senha de ${user.nome}.`,
@@ -3259,12 +3259,12 @@ window.mostrarSenhaUsuario = function(id) {
     },
   });
 };
- 
+
 window.editarVaga = function(id) {
   const vaga = (data.vagas || []).find((item) => String(item.id) === String(id));
   const form = document.getElementById("vaga-form");
   if (!vaga || !form) return;
- 
+
   form.elements.id.value = vaga.id;
   form.elements.cargo.value = vaga.cargo || "";
   form.elements.descricao.value = vaga.descricao || "";
@@ -3274,7 +3274,7 @@ window.editarVaga = function(id) {
   form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 };
- 
+
 window.excluirVaga = async function(id) {
   const vaga = (data.vagas || []).find((item) => String(item.id) === String(id));
   if (!vaga) return;
@@ -3288,12 +3288,12 @@ window.excluirVaga = async function(id) {
     },
   });
 };
- 
+
 window.editarMalote = function(id) {
   const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
   const form = document.getElementById("malote-form");
   if (!malote || !form) return;
- 
+
   setFieldValue(form.elements.id, malote.id);
   setFieldValue(form.elements.destino, malote.destino || "");
   setFieldValue(form.elements.origem, malote.origem || "");
@@ -3303,11 +3303,11 @@ window.editarMalote = function(id) {
   form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 };
- 
+
 window.baixarDocumentoMalote = function(id) {
   const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
   if (!malote) return;
- 
+
   const epiItems = parseEpiItems(malote.epis);
   const epiRows = (epiItems.length ? epiItems : [{ nome: malote.epis || "Nao informado", tamanho: "Nao se aplica", quantidade: "1" }])
     .map((item, index) => `
@@ -3319,7 +3319,7 @@ window.baixarDocumentoMalote = function(id) {
       </tr>
     `)
     .join("");
- 
+
   const conteudo = `
     <!doctype html>
     <html>
@@ -3366,7 +3366,7 @@ window.baixarDocumentoMalote = function(id) {
               <div class="field-value">${escapeHtml(malote.status || "")}</div>
             </div>
           </div>
- 
+
           <div class="section-title">Dados do malote</div>
           <table>
             <tr>
@@ -3398,7 +3398,7 @@ window.baixarDocumentoMalote = function(id) {
               </td>
             </tr>
           </table>
- 
+
           <div class="section-title">Dados dos EPIs</div>
           <table>
             <thead>
@@ -3415,7 +3415,7 @@ window.baixarDocumentoMalote = function(id) {
       </body>
     </html>
   `;
- 
+
   const blob = new Blob(["\ufeff", conteudo], { type: "application/msword;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -3427,7 +3427,7 @@ window.baixarDocumentoMalote = function(id) {
   link.remove();
   URL.revokeObjectURL(url);
 };
- 
+
 window.excluirMalote = async function(id) {
   const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
   if (!malote) return;
@@ -3441,7 +3441,7 @@ window.excluirMalote = async function(id) {
     },
   });
 };
- 
+
 const documentFieldLabels = {
   colaborador: "Colaborador",
   cpf: "CPF",
@@ -3487,7 +3487,7 @@ const documentFieldLabels = {
   requisitos: "Requisitos",
   pontos_atencao: "Pontos de atenção",
 };
- 
+
 const documentLongFieldKeys = new Set([
   "observacoes",
   "feedback",
@@ -3507,22 +3507,22 @@ const documentLongFieldKeys = new Set([
   "acompanhamento",
   "dependentes",
 ]);
- 
+
 function normalizeDownloadText(value) {
   return String(value || "").trim();
 }
- 
+
 function formatFormDate(value) {
   if (!value) return "";
   const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   return match ? `${match[3]}/${match[2]}/${match[1]}` : String(value);
 }
- 
+
 function getDocValue(formData, key) {
   const value = formData?.[key] || "";
   return key.includes("data") || key === "admissao" ? formatFormDate(value) : normalizeDownloadText(value);
 }
- 
+
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -3533,40 +3533,40 @@ function downloadBlob(blob, filename) {
   link.remove();
   URL.revokeObjectURL(url);
 }
- 
+
 function safeDownloadName(title, ext) {
   const safeTitle = String(title || "documento").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "");
   return `${safeTitle.toLowerCase()}-${Date.now()}.${ext}`;
 }
- 
+
 function getDocumentFieldLabel(key) {
   return documentFieldLabels[key] || String(key || "")
     .replace(/_/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
- 
+
 function buildStyledDocumentRows(formData = {}) {
   const entries = Object.entries(formData).filter(([, value]) => String(value || "").trim());
   const compactRows = entries.filter(([key]) => !documentLongFieldKeys.has(key));
   const longRows = entries.filter(([key]) => documentLongFieldKeys.has(key));
- 
+
   const compactHtml = compactRows.map(([key, value]) => `
-    <div class="field-card">
-      <span>${escapeHtml(getDocumentFieldLabel(key))}</span>
-      <strong>${escapeHtml(getDocValue(formData, key)).replace(/\n/g, "<br>")}</strong>
-    </div>
+    <tr>
+      <td class="label-cell">${escapeHtml(getDocumentFieldLabel(key))}</td>
+      <td class="value-cell">${escapeHtml(getDocValue(formData, key)).replace(/\n/g, "<br>")}</td>
+    </tr>
   `).join("");
- 
+
   const longHtml = longRows.map(([key]) => `
     <section class="note-section">
       <h3>${escapeHtml(getDocumentFieldLabel(key))}</h3>
       <p>${escapeHtml(getDocValue(formData, key)).replace(/\n/g, "<br>")}</p>
     </section>
   `).join("");
- 
+
   return { compactHtml, longHtml };
 }
- 
+
 function downloadStyledRhDocument(doc, title) {
   const { compactHtml, longHtml } = buildStyledDocumentRows(doc.formData || {});
   const emittedAt = formatDateTime(new Date().toISOString());
@@ -3577,84 +3577,92 @@ function downloadStyledRhDocument(doc, title) {
       <head>
         <meta charset="utf-8" />
         <style>
-          @page { size: A4; margin: 14mm; }
+          @page { size: A4; margin: 18mm 16mm; }
           * { box-sizing: border-box; }
-          body { margin: 0; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: #1e293b; background: #ffffff; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .document { border: 1px solid #d6e1ea; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06); }
- 
-          .hero { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%); color: #ffffff; padding: 22px 26px; }
-          .hero-top { display: table; width: 100%; }
-          .brand, .meta { display: table-cell; vertical-align: middle; }
-          .brand h1 { margin: 0; font-size: 24px; letter-spacing: 1.5px; font-weight: 700; }
-          .brand p { margin: 6px 0 0; color: #ccfbf1; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; }
-          .meta { text-align: right; font-size: 10px; line-height: 1.7; color: #f0fdfa; }
-          .meta .meta-label { color: #99f6e4; text-transform: uppercase; letter-spacing: .5px; font-size: 8.5px; margin-right: 4px; }
- 
-          .title-band { padding: 18px 26px 14px; border-bottom: 2px solid #0f766e; background: #f0fdfa; }
-          .title-band h2 { margin: 0; font-size: 19px; color: #0f3d3a; letter-spacing: .5px; font-weight: 700; }
-          .title-band p { margin: 6px 0 0; color: #5b7d78; font-size: 11px; }
- 
-          .content { padding: 20px 26px 24px; }
- 
-          .section-label { margin: 0 0 10px; font-size: 10px; font-weight: 700; color: #0f766e; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
- 
-          .field-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 4px; }
-          .field-card { flex: 1 1 47%; min-width: 180px; border: 1px solid #e2e8f0; border-left: 4px solid #14b8a6; border-radius: 8px; padding: 10px 12px; background: #fafdfd; font-size: 11px; }
-          .field-card span { display: block; margin-bottom: 5px; color: #64748b; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; }
-          .field-card strong { display: block; color: #0f172a; font-size: 12.5px; line-height: 1.4; font-weight: 600; word-break: break-word; }
- 
-          .note-section { margin-top: 14px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
-          .note-section h3 { margin: 0; padding: 9px 12px; background: #ecfdf5; color: #0f5f59; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; border-bottom: 1px solid #d1fae5; }
-          .note-section p { margin: 0; padding: 12px; min-height: 44px; line-height: 1.6; white-space: normal; color: #334155; }
- 
-          .signature-box { display: table; width: 100%; margin-top: 40px; table-layout: fixed; }
-          .signature-col { display: table-cell; width: 50%; padding: 0 22px; text-align: center; color: #334155; font-size: 10.5px; font-weight: 600; }
-          .signature-line { border-top: 1.5px solid #1e293b; margin: 46px 0 8px; }
- 
-          .footer { margin-top: 22px; padding-top: 12px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 9px; text-align: center; letter-spacing: .3px; }
+          body { margin: 0; font-family: 'Calibri', 'Segoe UI', Arial, Helvetica, sans-serif; color: #1f2933; background: #ffffff; font-size: 10.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+          .document { width: 100%; }
+
+          /* Letterhead */
+          .letterhead { display: table; width: 100%; padding-bottom: 12px; border-bottom: 3px solid #1f3a3a; }
+          .letterhead-brand, .letterhead-meta { display: table-cell; vertical-align: bottom; }
+          .letterhead-brand h1 { margin: 0; font-size: 20px; font-weight: 700; color: #1f3a3a; letter-spacing: 2px; }
+          .letterhead-brand p { margin: 3px 0 0; font-size: 9px; color: #6b7c7c; text-transform: uppercase; letter-spacing: 1.5px; }
+          .letterhead-meta { text-align: right; font-size: 9px; color: #4b5b5b; line-height: 1.6; }
+          .letterhead-meta strong { color: #1f3a3a; }
+
+          /* Title block */
+          .doc-title { margin-top: 18px; margin-bottom: 4px; }
+          .doc-title .doc-kicker { margin: 0; font-size: 9px; font-weight: 700; color: #1f7a6f; text-transform: uppercase; letter-spacing: 2px; }
+          .doc-title h2 { margin: 4px 0 0; font-size: 17px; font-weight: 700; color: #1f2933; }
+          .doc-title p { margin: 5px 0 0; font-size: 10.5px; color: #6b7c7c; font-style: italic; }
+          .doc-title-rule { height: 1px; background: #d8e0e0; margin: 12px 0 18px; }
+
+          /* Section heading */
+          .section-heading { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; margin: 0 0 10px; border-bottom: 1px solid #1f3a3a; }
+
+          /* Data table */
+          .data-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+          .data-table td { border: 1px solid #d8e0e0; padding: 7px 10px; vertical-align: top; }
+          .data-table td.label-cell { width: 32%; background: #f4f7f7; font-size: 9px; font-weight: 700; color: #4b5b5b; text-transform: uppercase; letter-spacing: .5px; }
+          .data-table td.value-cell { font-size: 11px; color: #1f2933; font-weight: 500; }
+
+          /* Long-form notes */
+          .note-section { margin-top: 16px; }
+          .note-section h3 { margin: 0 0 6px; font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; border-bottom: 1px solid #1f3a3a; }
+          .note-section p { margin: 0; padding: 10px 12px; border: 1px solid #d8e0e0; border-radius: 2px; min-height: 46px; line-height: 1.65; white-space: normal; color: #344048; background: #fafcfc; }
+
+          /* Signatures */
+          .signature-box { display: table; width: 100%; margin-top: 56px; table-layout: fixed; }
+          .signature-col { display: table-cell; width: 50%; padding: 0 24px; text-align: center; }
+          .signature-line { border-top: 1px solid #1f2933; margin: 0 0 6px; }
+          .signature-col span { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: .8px; }
+
+          /* Footer */
+          .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #d8e0e0; color: #9aa8a8; font-size: 8.5px; text-align: center; letter-spacing: .5px; text-transform: uppercase; }
         </style>
       </head>
       <body>
         <main class="document">
-          <header class="hero">
-            <div class="hero-top">
-              <div class="brand">
-                <h1>HUB RH</h1>
-                <p>Documento digital gerado pelo sistema</p>
-              </div>
-              <div class="meta">
-                <span class="meta-label">Emitido em</span>${escapeHtml(emittedAt)}<br />
-                <span class="meta-label">Responsável</span>${escapeHtml(owner)}
-              </div>
+          <header class="letterhead">
+            <div class="letterhead-brand">
+              <h1>HUB RH</h1>
+              <p>Departamento de Recursos Humanos</p>
+            </div>
+            <div class="letterhead-meta">
+              Emitido em <strong>${escapeHtml(emittedAt)}</strong><br />
+              Responsável: <strong>${escapeHtml(owner)}</strong>
             </div>
           </header>
-          <section class="title-band">
+
+          <section class="doc-title">
+            <p class="doc-kicker">Documento interno</p>
             <h2>${escapeHtml(title)}</h2>
             <p>${escapeHtml(doc.summary || "Registro de rotina RH")}</p>
           </section>
-          <section class="content">
-            <p class="section-label">Dados do registro</p>
-            <div class="field-grid">${compactHtml || '<div class="field-card"><span>Registro</span><strong>Sem dados cadastrados.</strong></div>'}</div>
-            ${longHtml}
-            <div class="signature-box">
-              <div class="signature-col"><div class="signature-line"></div>Assinatura do colaborador</div>
-              <div class="signature-col"><div class="signature-line"></div>Assinatura do RH / gestor</div>
-            </div>
-            <div class="footer">Documento interno HUB RH &middot; Conferir dados antes de assinar ou arquivar</div>
-          </section>
+          <div class="doc-title-rule"></div>
+
+          <p class="section-heading">Dados do registro</p>
+          <table class="data-table">${compactHtml || '<tr><td class="label-cell">Registro</td><td class="value-cell">Sem dados cadastrados.</td></tr>'}</table>
+
+          ${longHtml}
+
+          <div class="signature-box">
+            <div class="signature-col"><div class="signature-line"></div><span>Assinatura do colaborador</span></div>
+            <div class="signature-col"><div class="signature-line"></div><span>Assinatura do RH / gestor</span></div>
+          </div>
+          <div class="footer">Documento interno HUB RH &middot; Conferir dados antes de assinar ou arquivar</div>
         </main>
       </body>
     </html>
   `;
- 
+
   downloadBlob(new Blob(["\ufeff", html], { type: "application/msword;charset=utf-8" }), safeDownloadName(title, "doc"));
 }
- 
+
 window.baixarDocumentoRH = function(id) {
   const doc = documentRecords.find((item) => String(item.id) === String(id));
   if (!doc) return;
   const title = documentLabels[doc.type] || doc.type;
   downloadStyledRhDocument(doc, title);
 };
-
- 
