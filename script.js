@@ -1940,16 +1940,22 @@ function renderAll() {
   const selectDenunciasButton = document.getElementById("select-denuncias");
   const archivedDenunciasPanel = document.getElementById("denuncias-arquivadas-panel");
   const toggleArchivedDenunciasButton = document.getElementById("toggle-archived-denuncias");
+  const exitSelectionButton = document.getElementById("exit-denuncias-selection");
+  const openDenunciaPublicLink = document.getElementById("open-denuncia-public");
 
   if (selectDenunciasButton) {
     selectDenunciasButton.disabled = !naoLidas.length && !lidas.length;
     selectDenunciasButton.textContent = denunciasSelectionMode ? "Arquivar selecionadas" : "Selecionar denúncias";
+    selectDenunciasButton.className = denunciasSelectionMode ? "danger-button" : "secondary-link";
   }
   if (archivedDenunciasPanel) archivedDenunciasPanel.style.display = showArchivedDenuncias ? "" : "none";
   if (toggleArchivedDenunciasButton) {
     toggleArchivedDenunciasButton.textContent = showArchivedDenuncias ? "Ocultar arquivadas" : "Mostrar arquivadas";
     toggleArchivedDenunciasButton.disabled = !arquivadas.length;
+    toggleArchivedDenunciasButton.hidden = denunciasSelectionMode;
   }
+  if (exitSelectionButton) exitSelectionButton.hidden = !denunciasSelectionMode;
+  if (openDenunciaPublicLink) openDenunciaPublicLink.hidden = denunciasSelectionMode;
 
   const cardAction = (item, archived) =>
     denunciasSelectionMode && !archived
@@ -2216,6 +2222,7 @@ document.getElementById("toggle-archived-chamados")?.addEventListener("click", (
 document.getElementById("select-denuncias")?.addEventListener("click", () => {
   if (!denunciasSelectionMode) {
     denunciasSelectionMode = true;
+    showArchivedDenuncias = false;
     renderAll();
     return;
   }
@@ -2242,6 +2249,11 @@ document.getElementById("select-denuncias")?.addEventListener("click", () => {
       }
     },
   });
+});
+
+document.getElementById("exit-denuncias-selection")?.addEventListener("click", () => {
+  denunciasSelectionMode = false;
+  renderAll();
 });
 
 document.getElementById("toggle-archived-denuncias")?.addEventListener("click", () => {
