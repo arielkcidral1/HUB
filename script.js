@@ -243,6 +243,10 @@ function findLocalTeamUser(value) {
   return getAllLocalUsers().find((user) => normalizeLoginName(user.nome) === normalized);
 }
 
+function getCurrentUserRecord() {
+  return findLocalTeamUser(getCurrentUserName());
+}
+
 function getUserRoleLabel(value) {
   const normalized = normalizeLoginName(value);
   const role = (data.usuarios || []).find((user) => normalizeLoginName(user.nome) === normalized)?.cargo || findLocalTeamUser(value)?.cargo || "";
@@ -1734,6 +1738,74 @@ async function saveTeamUser(values) {
   }
 }
 
+async function updateCurrentAccountPassword(currentPassword, newPassword) {
+  const user = getCurrentUserRecord();
+  if (!user) {
+    showModal("Conta nao encontrada", "Nao foi possivel localizar sua conta nesta sessao.", "error");
+    return false;
+  }
+
+  if (!isLoginMatch(currentPassword, user.senha)) {
+    showModal("Senha incorreta", "A senha atual informada nao confere.", "error");
+    return false;
+  }
+
+  const updatedUser = {
+    ...user,
+    senha: newPassword,
+    cargo: user.cargo || getCurrentUserRole(),
+    syncStatus: user.syncStatus || "active",
+  };
+
+  if (!supabaseClient) {
+    upsertLocalUser(updatedUser);
+    persistTeamCredential(updatedUser.nome, newPassword);
+    return true;
+  }
+
+  try {
+    let payload = {
+      nome: updatedUser.nome,
+      senha: newPassword,
+      cargo: updatedUser.cargo || "",
+      created_by: getCurrentUserName(),
+    };
+    let query = supabaseClient.from(USERS_TABLE).update(payload);
+
+    if (updatedUser.id && !String(updatedUser.id).startsWith("local-")) {
+      query = query.eq("id", updatedUser.id);
+    } else {
+      query = query.ilike("nome", updatedUser.nome);
+    }
+
+    let result = await query.select("*");
+
+    if (result.error && isMissingColumn(result.error, "cargo")) {
+      const { cargo, ...legacyPayload } = payload;
+      query = supabaseClient.from(USERS_TABLE).update(legacyPayload);
+      query = updatedUser.id && !String(updatedUser.id).startsWith("local-")
+        ? query.eq("id", updatedUser.id)
+        : query.ilike("nome", updatedUser.nome);
+      result = await query.select("*");
+    }
+
+    if (result.error) throw result.error;
+
+    const saved = mapRows("usuarios", result.data || [])[0] || updatedUser;
+    upsertLocalUser({ ...updatedUser, ...saved, senha: newPassword });
+    persistTeamCredential(updatedUser.nome, newPassword);
+    setSyncStatus("Supabase EIXO online", true);
+    return true;
+  } catch (error) {
+    console.error("Erro ao atualizar conta:", error);
+    upsertLocalUser({ ...updatedUser, syncStatus: "local" });
+    persistTeamCredential(updatedUser.nome, newPassword);
+    setSyncStatus("Conta atualizada local", false);
+    showModal("Atualizacao local", "A senha foi alterada localmente. Rode os SQLs atualizados no Supabase se o banco bloquear a coluna cargo.", "info");
+    return true;
+  }
+}
+
 function removeLocalUser(id) {
   const removedUser = data.usuarios.find((user) => String(user.id) === String(id));
   const keepUser = (user) => String(user.id) !== String(id) && normalizeLoginName(user.nome) !== normalizeLoginName(removedUser?.nome);
@@ -1804,8 +1876,8 @@ function applyRoleAccess() {
   refreshCurrentUserRoleFromData();
 
   const allowedViews = isManagerUser()
-    ? new Set(["comunicacao", "documentos"])
-    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "documentos", "equipe"]);
+    ? new Set(["comunicacao", "documentos", "conta"])
+    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "documentos", "equipe", "conta"]);
   const allowedExternalUrls = isManagerUser()
     ? new Set(["https://hub-opal-nine.vercel.app/chamados.html", "https://hub-opal-nine.vercel.app/denuncia.html"])
     : new Set();
@@ -2027,6 +2099,16 @@ function renderTeamUsers() {
   `);
 }
 
+function renderAccountSettings() {
+  const nameInput = document.getElementById("conta-nome");
+  const roleInput = document.getElementById("conta-cargo");
+  if (!nameInput && !roleInput) return;
+
+  const user = getCurrentUserRecord();
+  if (nameInput) nameInput.value = getCurrentUserName();
+  if (roleInput) roleInput.value = user?.cargo || getCurrentUserRole() || "Sem cargo definido";
+}
+
 function renderChatChannels() {
   const target = document.getElementById("chat-channel-list");
   if (!target) return;
@@ -2053,6 +2135,7 @@ function renderChatChannels() {
 function renderAll() {
   renderCurrentUser();
   applyRoleAccess();
+  renderAccountSettings();
   renderDashboard();
   renderPublicVagas();
 
@@ -2315,7 +2398,7 @@ document.querySelectorAll(".nav-item").forEach((button) => {
       window.location.href = button.dataset.externalUrl;
       return;
     }
-    if (isManagerUser() && !["comunicacao", "documentos"].includes(button.dataset.view)) {
+    if (isManagerUser() && !["comunicacao", "documentos", "conta"].includes(button.dataset.view)) {
       activateView("documentos");
       return;
     }
@@ -2675,6 +2758,35 @@ if (usuarioForm) {
   });
 }
 
+const contaForm = document.getElementById("conta-form");
+if (contaForm) {
+  contaForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const currentPassword = String(form.get("senha_atual") || "").trim();
+    const newPassword = String(form.get("nova_senha") || "").trim();
+    const confirmPassword = String(form.get("confirmar_senha") || "").trim();
+
+    if (newPassword.length < 3) {
+      showModal("Senha curta", "Use uma senha com pelo menos 3 caracteres.", "error");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showModal("Senhas diferentes", "A confirmacao da nova senha nao confere.", "error");
+      return;
+    }
+
+    const success = await updateCurrentAccountPassword(currentPassword, newPassword);
+    if (success) {
+      formElement.reset();
+      renderAccountSettings();
+      showModal("Conta atualizada", "Sua senha foi atualizada com sucesso.", "info");
+    }
+  });
+}
+
 const candidaturaForm = document.getElementById("candidatura-form");
 if (candidaturaForm) {
   document.getElementById("telefone-input")?.addEventListener("input", (event) => {
@@ -2785,6 +2897,7 @@ function initializeAppData() {
   populateUnitSelects();
   populateEpiSelects();
   applyRoleAccess();
+  renderAccountSettings();
   supabaseClient = getSupabaseClient();
   loadFromSupabase({ setupLive: true });
 }

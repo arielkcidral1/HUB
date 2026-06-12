@@ -33,6 +33,7 @@
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/chamados.html" type="button">Solicitar EPIs</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/denuncia.html" type="button">Canal de Denúncia</button>
           <button class="nav-item" data-view="equipe" type="button">Equipe</button>
+          <button class="nav-item" data-view="conta" type="button">Minha Conta</button>
         </nav>
       </aside>
 
@@ -644,6 +645,32 @@
               </div>
               <div class="card-list" id="usuarios-list"></div>
             </div>
+          </div>
+        </section>
+
+        <section class="view" id="conta">
+          <div class="workspace">
+            <form class="panel form-panel" id="conta-form">
+              <div class="panel-header">
+                <h2>Configuração de conta</h2>
+              </div>
+              <label>Usuário
+                <input id="conta-nome" type="text" disabled />
+              </label>
+              <label>Cargo
+                <input id="conta-cargo" type="text" disabled />
+              </label>
+              <label>Senha atual
+                <input name="senha_atual" type="password" placeholder="Digite sua senha atual" required />
+              </label>
+              <label>Nova senha
+                <input name="nova_senha" type="password" placeholder="Digite a nova senha" required />
+              </label>
+              <label>Confirmar nova senha
+                <input name="confirmar_senha" type="password" placeholder="Confirme a nova senha" required />
+              </label>
+              <button class="primary-button" type="submit">Atualizar senha</button>
+            </form>
           </div>
         </section>
       </main>
