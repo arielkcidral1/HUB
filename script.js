@@ -917,7 +917,7 @@ function mapRows(collection, rows) {
       solicitante: row.solicitante,
       telefone: row.telefone || "",
       unidade: row.unidade,
-      setor: row.setor,
+      setor: row.setor || "",
       epis: row.epis,
       observacoes: row.observacoes || "",
       status: row.status || "Aberto",
@@ -1059,7 +1059,7 @@ function toDbPayload(collection, values) {
       solicitante: values.solicitante,
       telefone: values.telefone || "",
       unidade: values.unidade,
-      setor: values.setor,
+      setor: values.setor || "",
       epis: values.epis,
       observacoes: values.observacoes || "",
       status: values.status || "Aberto",
@@ -1890,7 +1890,7 @@ function renderAll() {
       </div>
       <p><strong>Solicitante:</strong> ${escapeHtml(item.solicitante)}</p>
       <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone) || "Nao informado")}</p>
-      <p><strong>Setor:</strong> ${escapeHtml(item.setor)}</p>
+      ${item.setor ? `<p><strong>Setor:</strong> ${escapeHtml(item.setor)}</p>` : ""}
       <p><strong>EPIs:</strong> ${escapeHtml(item.epis)}</p>
       ${item.observacoes ? `<p><strong>Observacoes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
       <p class="item-meta">${escapeHtml(item.createdAt)}</p>
@@ -2360,6 +2360,20 @@ if (candidaturaForm) {
 
 const chamadoForm = document.getElementById("chamado-form");
 if (chamadoForm) {
+  document.getElementById("adicionar-epi")?.addEventListener("click", () => {
+    const list = document.getElementById("epi-list");
+    if (!list) return;
+    list.insertAdjacentHTML("beforeend", createEpiRow());
+  });
+
+  document.getElementById("epi-list")?.addEventListener("click", (event) => {
+    const button = event.target.closest(".remove-epi");
+    if (!button) return;
+    const rows = document.querySelectorAll("#epi-list .epi-row");
+    if (rows.length <= 1) return;
+    button.closest(".epi-row")?.remove();
+  });
+
   document.getElementById("telefone-input")?.addEventListener("input", (event) => {
     event.currentTarget.value = formatPhone(event.currentTarget.value);
   });
@@ -2368,12 +2382,17 @@ if (chamadoForm) {
     event.preventDefault();
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
+    const epiItems = readEpiItems(formElement);
+    if (!epiItems.length) {
+      showModal("EPIs obrigatorios", "Adicione pelo menos um EPI com nome e quantidade.", "error");
+      return;
+    }
+
     const success = await addItem("chamados", {
       solicitante: form.get("solicitante"),
       telefone: form.get("telefone"),
       unidade: form.get("unidade"),
-      setor: form.get("setor"),
-      epis: form.get("epis"),
+      epis: formatEpiItems(epiItems),
       observacoes: form.get("observacoes"),
       status: "Aberto",
       createdBy: "Publico",
@@ -2381,6 +2400,7 @@ if (chamadoForm) {
 
     if (success) {
       formElement.reset();
+      resetEpiRows();
       populateUnitSelects();
       showModal("Chamado aberto", "Sua solicitacao de EPI foi registrada com sucesso.", "info");
     }

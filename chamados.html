@@ -28,12 +28,23 @@
           <label>Unidade / Loja
             <select name="unidade" data-unit-select required></select>
           </label>
-          <label>Setor
-            <input name="setor" placeholder="Ex: Producao, oficina, administrativo" required />
-          </label>
-          <label>EPIs solicitados
-            <textarea name="epis" rows="4" placeholder="Ex: Luvas nitrilicas - 10 unidades; Oculos de protecao - 2 unidades" required></textarea>
-          </label>
+          <div class="dynamic-fieldset">
+            <div class="item-topline">
+              <span>EPIs solicitados</span>
+              <button class="secondary-link" id="adicionar-epi" type="button">Adicionar EPI</button>
+            </div>
+            <div class="epi-list" id="epi-list">
+              <div class="epi-row">
+                <label>Nome
+                  <input name="epi_nome[]" placeholder="Capacete, luvas, oculos..." required />
+                </label>
+                <label>Quantidade
+                  <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
+                </label>
+                <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+              </div>
+            </div>
+          </div>
           <label>Observacoes
             <textarea name="observacoes" rows="3" placeholder="Urgencia, tamanho, CA, motivo da troca..."></textarea>
           </label>

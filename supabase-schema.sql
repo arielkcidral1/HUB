@@ -39,7 +39,7 @@ create table if not exists public.hub_chamados (
   solicitante text not null,
   telefone text not null default '',
   unidade text not null,
-  setor text not null,
+  setor text not null default '',
   epis text not null,
   observacoes text,
   status text not null default 'Aberto',
