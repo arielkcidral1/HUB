@@ -111,7 +111,7 @@ const documentLabels = {
 const UNIT_OPTIONS = [
   "1- MTZ",
   "2- SBS",
-  "3- TJA 1",
+  "3- ITJ 1",
   "4- PLÇ",
   "5- GUA",
   "7- DPA JC",
