@@ -1795,9 +1795,14 @@ function applyRoleAccess() {
   const allowedViews = isManagerUser()
     ? new Set(["documentos"])
     : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "documentos", "equipe"]);
+  const allowedExternalUrls = isManagerUser()
+    ? new Set(["https://hub-opal-nine.vercel.app/chamados.html"])
+    : new Set(["https://hub-opal-nine.vercel.app/chamados.html"]);
 
   document.querySelectorAll(".nav-item").forEach((button) => {
-    const allowed = allowedViews.has(button.dataset.view);
+    const allowed = button.dataset.externalUrl
+      ? allowedExternalUrls.has(button.dataset.externalUrl)
+      : allowedViews.has(button.dataset.view);
     button.hidden = !allowed;
     button.disabled = !allowed;
   });
@@ -2276,6 +2281,10 @@ function renderChat() {
 
 document.querySelectorAll(".nav-item").forEach((button) => {
   button.addEventListener("click", () => {
+    if (button.dataset.externalUrl) {
+      window.location.href = button.dataset.externalUrl;
+      return;
+    }
     if (isManagerUser() && button.dataset.view !== "documentos") {
       activateView("documentos");
       return;
