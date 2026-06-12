@@ -549,6 +549,21 @@ function formatDateTime(value) {
   }).format(new Date(value));
 }
 
+function formatPhone(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits ? `(${digits}` : "";
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function formatCpf(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
 function todayLabel() {
   return formatDate(new Date().toISOString());
 }
@@ -1537,7 +1552,11 @@ function renderAll() {
     if (candidaturas.length > 0) {
       candidaturasHtml = candidaturas.map(c => `
         <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
-          <p style="margin: 0; font-size: 13px; font-weight: 600;">${escapeHtml(c.nome)} <span style="font-weight: normal; color: var(--muted);">(CPF: ${escapeHtml(c.cpf)} | Tel: ${escapeHtml(c.telefone || "Nao informado")})</span></p>
+          <p style="margin: 0; font-size: 13px; font-weight: 600; line-height: 1.55;">
+            ${escapeHtml(c.nome)}<br />
+            <span style="font-weight: normal; color: var(--muted);">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
+            <span style="font-weight: normal; color: var(--muted);">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
+          </p>
           <a href="${escapeHtml(c.curriculo_url)}" target="_blank" class="secondary-link" style="min-height: 28px; padding: 0 10px; font-size: 12px;">Ver Currículo</a>
         </div>
       `).join("");
@@ -1880,6 +1899,14 @@ if (usuarioForm) {
 
 const candidaturaForm = document.getElementById("candidatura-form");
 if (candidaturaForm) {
+  document.getElementById("telefone-input")?.addEventListener("input", (event) => {
+    event.currentTarget.value = formatPhone(event.currentTarget.value);
+  });
+
+  document.getElementById("cpf-input")?.addEventListener("input", (event) => {
+    event.currentTarget.value = formatCpf(event.currentTarget.value);
+  });
+
   candidaturaForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formElement = event.target;
