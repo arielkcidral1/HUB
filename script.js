@@ -113,7 +113,7 @@ const documentLabels = {
 const UNIT_OPTIONS = [
   "1- MTZ",
   "2- SBS",
-  "3- ITJ 1",
+  "3- TJA 1",
   "4- PLÇ",
   "5- GUA",
   "7- DPA JC",
@@ -133,6 +133,23 @@ const UNIT_OPTIONS = [
   "23- ITJ 2",
   "26- BNU 2",
   "28- ARA",
+];
+
+const EPI_OPTIONS = [
+  "Luva PU",
+  "Luva Pigmentada",
+  "Luva de Raspa",
+  "Luva nitrilica",
+  "Oculos Transparente",
+  "Oculos Verde",
+  "Mascara com Filtro",
+  "Respirador PFF2",
+  "Protetor Auricular",
+  "Protetor Auricular tipo concha",
+  "Avental de Raspa",
+  "Sapatão",
+  "Luva de Vaqueta",
+  "Creme de Proteção",
 ];
 
 function isLoginMatch(value, expected) {
@@ -710,6 +727,34 @@ function createEpiRow(nome = "", quantidade = "") {
   `;
 }
 
+function createChamadoEpiRow(nome = "", quantidade = "") {
+  const options = '<option value="">Selecione</option>' + EPI_OPTIONS
+    .map((item) => `<option value="${escapeHtml(item)}" ${item === nome ? "selected" : ""}>${escapeHtml(item)}</option>`)
+    .join("");
+
+  return `
+    <div class="epi-row">
+      <label>Nome
+        <select name="epi_nome[]" data-epi-select required>${options}</select>
+      </label>
+      <label>Quantidade
+        <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" value="${escapeHtml(quantidade)}" required />
+      </label>
+      <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+    </div>
+  `;
+}
+
+function populateEpiSelects() {
+  document.querySelectorAll("[data-epi-select]").forEach((select) => {
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">Selecione</option>' + EPI_OPTIONS
+      .map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`)
+      .join("");
+    if (currentValue) select.value = currentValue;
+  });
+}
+
 function resetEpiRows(items = [{ nome: "", quantidade: "" }]) {
   const list = document.getElementById("epi-list");
   if (!list) return;
@@ -915,8 +960,8 @@ function mapRows(collection, rows) {
     return rows.map((row) => ({
       id: row.id,
       solicitante: row.solicitante,
-      telefone: row.telefone || "",
       unidade: row.unidade,
+      tamanhoLuva: row.tamanho_luva || "",
       setor: row.setor || "",
       epis: row.epis,
       observacoes: row.observacoes || "",
@@ -1057,8 +1102,8 @@ function toDbPayload(collection, values) {
   if (collection === "chamados") {
     return {
       solicitante: values.solicitante,
-      telefone: values.telefone || "",
       unidade: values.unidade,
+      tamanho_luva: values.tamanhoLuva || "",
       setor: values.setor || "",
       epis: values.epis,
       observacoes: values.observacoes || "",
@@ -1876,7 +1921,7 @@ function renderAll() {
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
       </div>
       <p><strong>Solicitante:</strong> ${escapeHtml(item.solicitante)}</p>
-      <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone) || "Nao informado")}</p>
+      <p><strong>Tamanho de luva:</strong> ${escapeHtml(item.tamanhoLuva || "Nao informado")}</p>
       ${item.setor ? `<p><strong>Setor:</strong> ${escapeHtml(item.setor)}</p>` : ""}
       <p><strong>EPIs:</strong> ${escapeHtml(item.epis)}</p>
       ${item.observacoes ? `<p><strong>Observacoes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
@@ -2190,7 +2235,7 @@ if (maloteForm) {
   document.getElementById("adicionar-epi")?.addEventListener("click", () => {
     const list = document.getElementById("epi-list");
     if (!list) return;
-    list.insertAdjacentHTML("beforeend", createEpiRow());
+    list.insertAdjacentHTML("beforeend", createChamadoEpiRow());
   });
 
   document.getElementById("epi-list")?.addEventListener("click", (event) => {
@@ -2361,10 +2406,6 @@ if (chamadoForm) {
     button.closest(".epi-row")?.remove();
   });
 
-  document.getElementById("telefone-input")?.addEventListener("input", (event) => {
-    event.currentTarget.value = formatPhone(event.currentTarget.value);
-  });
-
   chamadoForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formElement = event.currentTarget;
@@ -2377,8 +2418,8 @@ if (chamadoForm) {
 
     const success = await addItem("chamados", {
       solicitante: form.get("solicitante"),
-      telefone: form.get("telefone"),
       unidade: form.get("unidade"),
+      tamanhoLuva: form.get("tamanho_luva"),
       epis: formatEpiItems(epiItems),
       observacoes: form.get("observacoes"),
       status: "Aberto",
@@ -2387,8 +2428,10 @@ if (chamadoForm) {
 
     if (success) {
       formElement.reset();
-      resetEpiRows();
+      const list = document.getElementById("epi-list");
+      if (list) list.innerHTML = createChamadoEpiRow();
       populateUnitSelects();
+      populateEpiSelects();
       showModal("Chamado aberto", "Sua solicitacao de EPI foi registrada com sucesso.", "info");
     }
   });
@@ -2396,6 +2439,7 @@ if (chamadoForm) {
 
 function initializeAppData() {
   populateUnitSelects();
+  populateEpiSelects();
   supabaseClient = getSupabaseClient();
   loadFromSupabase({ setupLive: true });
 }

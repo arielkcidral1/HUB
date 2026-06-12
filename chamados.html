@@ -22,11 +22,20 @@
           <label>Solicitante
             <input name="solicitante" placeholder="Seu nome" required />
           </label>
-          <label>Telefone
-            <input name="telefone" id="telefone-input" placeholder="(00) 00000-0000" maxlength="15" inputmode="numeric" required />
-          </label>
           <label>Unidade / Loja
             <select name="unidade" data-unit-select required></select>
+          </label>
+          <label>Tamanho de luva
+            <select name="tamanho_luva" required>
+              <option value="">Selecione</option>
+              <option>PP</option>
+              <option>P</option>
+              <option>M</option>
+              <option>G</option>
+              <option>GG</option>
+              <option>EG</option>
+              <option>Nao se aplica</option>
+            </select>
           </label>
           <div class="dynamic-fieldset">
             <div class="item-topline">
@@ -36,7 +45,7 @@
             <div class="epi-list" id="epi-list">
               <div class="epi-row">
                 <label>Nome
-                  <input name="epi_nome[]" placeholder="Capacete, luvas, oculos..." required />
+                  <select name="epi_nome[]" data-epi-select required></select>
                 </label>
                 <label>Quantidade
                   <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
