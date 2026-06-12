@@ -1661,8 +1661,7 @@ function renderDashboard() {
     document.getElementById("metric-documentos").textContent = documentRecords.length;
   }
 
-  // Filtra itens prioritários sem incluir atualizacoes do canal de comunicacao.
-  const priorityItems = [
+  const dashboardItems = [
     ...data.denuncias
       .filter(item => item.status === "Aberta" || item.status === "Urgente")
       .map((item) => ({
@@ -1679,33 +1678,17 @@ function renderDashboard() {
         tag: item.status,
         date: item.createdAt,
       })),
-  ].slice(0, 6);
-
-  // Compila atividades de todos os outros módulos na lista de recentes
-  const recentItems = [
     ...data.malotes.map((item) => ({ title: `Malote: ${item.destino}`, text: `Origem: ${item.origem || "Nao informada"} | ${item.epis}`, tag: item.status, date: item.createdAt })),
-    ...data.chamados.map((item) => ({ title: `Chamado: ${item.unidade}`, text: item.epis, tag: item.status, date: item.createdAt })),
     ...data.vagas.map((item) => ({ title: `Vaga: ${item.cargo}`, text: item.descricao, tag: item.status, date: item.createdAt })),
     ...documentRecords.map((item) => ({ title: `Doc: ${documentLabels[item.type] || item.type}`, text: item.summary, tag: "Registro", date: item.createdAt }))
-  ].slice(0, 6);
+  ].slice(0, 8);
 
-  const priorityTarget = document.getElementById("priority-list");
-  if (priorityTarget) {
-    if (priorityItems.length === 0) {
-      priorityTarget.innerHTML = '<p class="empty-state">Nenhuma pendência prioritária no momento.</p>';
+  const dashboardTarget = document.getElementById("dashboard-list");
+  if (dashboardTarget) {
+    if (dashboardItems.length === 0) {
+      dashboardTarget.innerHTML = '<p class="empty-state">Nenhum acompanhamento registrado no momento.</p>';
     } else {
-      priorityTarget.innerHTML = priorityItems
-        .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${badgeClass(item.tag)}">${escapeHtml(item.tag)}</span></div><p>${escapeHtml(item.text)}</p><p class="item-meta" style="margin-top: 6px; font-size: 12px;">${escapeHtml(item.date)}</p></li>`)
-        .join("");
-    }
-  }
-
-  const recentTarget = document.getElementById("recent-list");
-  if (recentTarget) {
-    if (recentItems.length === 0) {
-      recentTarget.innerHTML = '<p class="empty-state">Nenhuma atividade recente registrada.</p>';
-    } else {
-      recentTarget.innerHTML = recentItems
+      dashboardTarget.innerHTML = dashboardItems
         .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${badgeClass(item.tag)}">${escapeHtml(item.tag)}</span></div><p>${escapeHtml(item.text)}</p><p class="item-meta" style="margin-top: 6px; font-size: 12px;">${escapeHtml(item.date)}</p></li>`)
         .join("");
     }
