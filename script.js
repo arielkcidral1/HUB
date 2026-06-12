@@ -1759,7 +1759,6 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
     return false;
   }
 
-  if (!isLoginMatch(currentPassword, user.senha)) {
   if (currentPassword && !isLoginMatch(currentPassword, user.senha)) {
     showModal("Senha incorreta", "A senha atual informada nao confere.", "error");
     return false;
@@ -2832,17 +2831,12 @@ if (contaForm) {
     event.preventDefault();
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
-    const currentPassword = String(form.get("senha_atual") || "").trim();
     let currentPassword = String(form.get("senha_atual") || "").trim();
     const newName = String(form.get("novo_nome") || "").trim();
-    const newPassword = String(form.get("nova_senha") || "").trim();
     let newPassword = String(form.get("nova_senha") || "").trim();
     const confirmPassword = String(form.get("confirmar_senha") || "").trim();
     const fotoFile = form.get("foto_perfil");
 
-    if (!currentPassword) {
-      showModal("Senha atual", "A senha atual é obrigatória para alterar seus dados.", "error");
-      return;
     const pwdFields = document.getElementById("password-fields");
     if (pwdFields && pwdFields.style.display !== "none") {
       if (!currentPassword) {
@@ -2860,16 +2854,6 @@ if (contaForm) {
     } else {
       currentPassword = "";
       newPassword = "";
-    }
-
-    if (newPassword && newPassword.length < 3) {
-      showModal("Senha curta", "Use uma senha com pelo menos 3 caracteres.", "error");
-      return;
-    }
-
-    if (newPassword && newPassword !== confirmPassword) {
-      showModal("Senhas diferentes", "A confirmacao da nova senha nao confere.", "error");
-      return;
     }
 
     let fotoUrl = null;
@@ -2894,7 +2878,6 @@ if (contaForm) {
       formElement.reset();
       renderAccountSettings();
       renderCurrentUser();
-      showModal("Conta atualizada", "Sua senha foi atualizada com sucesso.", "info");
       showModal("Conta atualizada", "Seus dados foram atualizados com sucesso.", "info");
     }
   });
