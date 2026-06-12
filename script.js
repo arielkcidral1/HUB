@@ -2224,6 +2224,7 @@ function renderAll() {
       </div>
       <p>${escapeHtml(item.descricao.substring(0, 80))}${item.descricao.length > 80 ? '...' : ''}</p>
       <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+      ${archived ? `<div class="job-actions" style="margin-top: 8px;"><button class="secondary-link" type="button" onclick="event.stopPropagation(); reabrirDenuncia('${escapeHtml(item.id)}')">Reabrir</button></div>` : ""}
     </article>
   `;
 
@@ -3088,6 +3089,20 @@ window.reabrirChamado = function(id) {
     onConfirm: async () => {
       const success = await updateItem("chamados", id, { status: "Aberto" });
       if (success) showModal("Chamado reaberto", "O chamado voltou para a lista de abertos.", "info");
+    },
+  });
+};
+
+window.reabrirDenuncia = function(id) {
+  showConfirmActionModal({
+    title: "Reabrir denúncia",
+    text: "Deseja mover esta denúncia de volta para a lista de Não Lidas?",
+    confirmText: "Reabrir",
+    onConfirm: async () => {
+      const success = await atualizarStatusDenuncia(id, "Aberta");
+      if (success) {
+        showModal("Denúncia reaberta", "A denúncia voltou para a lista de Não Lidas.", "info");
+      }
     },
   });
 };
