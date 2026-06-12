@@ -734,12 +734,6 @@ textarea:focus {
   transition: var(--transition);
 }
 
-.doc-download-link {
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-}
-
 .doc-tab:hover,
 .doc-tab.active {
   border-color: rgba(15, 118, 110, 0.3);

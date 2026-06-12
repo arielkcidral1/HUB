@@ -108,6 +108,10 @@ const documentLabels = {
   beneficios: "Adesao plano saude e odonto",
   "feedback-operacional": "Feedback operacional",
   "feedback-fredy": "Feedback Fredy Pneus",
+  ferias: "Solicitacao de Ferias",
+  "movimentacao-pessoal": "MP - Movimentacao Pessoal",
+  "requisicao-pessoal": "RP - Requisicao Pessoal",
+  "solicitacao-desligamento": "SD - Solicitacao de Desligamento",
 };
 
 const UNIT_OPTIONS = [
