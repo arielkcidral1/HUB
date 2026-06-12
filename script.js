@@ -1656,7 +1656,8 @@ function renderTeamUsers() {
           <button type="button" class="tag alert" style="cursor: pointer; border: none; margin-left: 6px;" onclick="excluirUsuario('${item.id}')">Deletar</button>
         </div>
       </div>
-      <p class="item-meta">Senha: ${escapeHtml(item.senha)}</p>
+      <p class="item-meta">Senha: <span id="senha-usuario-${escapeHtml(item.id)}">••••••</span></p>
+      <button type="button" class="secondary-link" style="width: fit-content; min-height: 30px; padding: 0 10px; font-size: 12px;" onclick="mostrarSenhaUsuario('${escapeHtml(item.id)}')">Mostrar senha</button>
       <p class="item-meta">Cadastro: ${escapeHtml(item.createdAt || "Hoje")}</p>
     </article>
   `);
@@ -2244,6 +2245,22 @@ window.excluirUsuario = async function(id) {
   if (!confirm(`Tem certeza que deseja deletar ${user.nome} da equipe?`)) return;
 
   await deleteTeamUser(id);
+};
+
+window.mostrarSenhaUsuario = function(id) {
+  const user = (data.usuarios || []).find((item) => String(item.id) === String(id));
+  if (!user) return;
+
+  const password = prompt(`Digite a senha de exclusao para visualizar a senha de ${user.nome}:`);
+  if (password === null) return;
+
+  if (String(password).trim() !== TEAM_DELETE_PASSWORD) {
+    showModal("Senha incorreta", "A senha informada nao autoriza a visualizacao das senhas.", "error");
+    return;
+  }
+
+  const target = document.getElementById(`senha-usuario-${id}`);
+  if (target) target.textContent = user.senha || "";
 };
 
 window.editarVaga = function(id) {
