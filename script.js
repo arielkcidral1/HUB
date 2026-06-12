@@ -2920,28 +2920,6 @@ window.baixarDocumentoMalote = function(id) {
             </thead>
             <tbody>${epiRows}</tbody>
           </table>
-
-          <div class="section-title">Conferencia e recebimento</div>
-          <table>
-            <tr>
-              <td class="signature">
-                <span class="field-label">Identificacao e assinatura do recebedor</span>
-              </td>
-              <td class="signature">
-                <span class="field-label">Data de recebimento</span>
-              </td>
-            </tr>
-          </table>
-
-          <div class="section-title">Dados adicionais</div>
-          <table>
-            <tr>
-              <td style="height: 80px;">
-                <span class="field-label">Informacoes complementares</span>
-                Malote de EPI gerado para controle interno do HUB RH.
-              </td>
-            </tr>
-          </table>
         </div>
       </body>
     </html>
