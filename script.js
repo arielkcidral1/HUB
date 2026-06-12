@@ -100,6 +100,7 @@ let refreshInProgress = false;
 let documentRecords = loadDocumentRecords();
 let readRhMessageIds = loadReadRhMessageIds();
 let chamadosSelectionMode = false;
+let showArchivedChamados = false;
 window.editingDocId = null;
 
 const documentLabels = {
@@ -1938,6 +1939,13 @@ function renderAll() {
     archiveButton.disabled = !chamadosAbertos.length;
     archiveButton.textContent = chamadosSelectionMode ? "Arquivar selecionados" : "Selecionar Arquivos";
   }
+  const archivedPanel = document.getElementById("chamados-arquivados-panel");
+  const toggleArchivedButton = document.getElementById("toggle-archived-chamados");
+  if (archivedPanel) archivedPanel.style.display = showArchivedChamados ? "" : "none";
+  if (toggleArchivedButton) {
+    toggleArchivedButton.textContent = showArchivedChamados ? "Ocultar arquivados" : "Mostrar arquivados";
+    toggleArchivedButton.disabled = !chamadosArquivados.length;
+  }
   const chamadoCard = (item, archived = false) => `
     <article class="item-card ${chamadosSelectionMode && !archived ? "selectable-card" : ""}">
       <div class="item-topline">
@@ -1957,7 +1965,9 @@ function renderAll() {
   `;
 
   renderCards("chamados-list", chamadosAbertos, (item) => chamadoCard(item));
-  renderCards("chamados-arquivados-list", chamadosArquivados, (item) => chamadoCard(item, true));
+  if (showArchivedChamados) {
+    renderCards("chamados-arquivados-list", chamadosArquivados, (item) => chamadoCard(item, true));
+  }
 
   renderCards("vagas-list", data.vagas, (item) => {
     const candidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id) === String(item.id));
@@ -2134,6 +2144,11 @@ document.getElementById("archive-selected-chamados")?.addEventListener("click", 
       }
     },
   });
+});
+
+document.getElementById("toggle-archived-chamados")?.addEventListener("click", () => {
+  showArchivedChamados = !showArchivedChamados;
+  renderAll();
 });
 
 document.querySelectorAll(".doc-tab").forEach((button) => {

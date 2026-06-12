@@ -198,7 +198,10 @@
                 <h2>Chamados de EPI</h2>
                 <p class="item-meta">Solicitacoes abertas pelos colaboradores</p>
               </div>
-              <a class="secondary-link" href="chamados.html" target="_blank" rel="noreferrer">Abrir chamado publico</a>
+              <div class="job-actions" style="margin-top: 0;">
+                <button class="secondary-link" id="toggle-archived-chamados" type="button">Mostrar arquivados</button>
+                <a class="secondary-link" href="chamados.html" target="_blank" rel="noreferrer">Abrir chamado publico</a>
+              </div>
             </div>
           </div>
           <div class="panel">
@@ -211,7 +214,7 @@
             </div>
             <div class="card-list" id="chamados-list"></div>
           </div>
-          <div class="panel" style="margin-top: 24px;">
+          <div class="panel" id="chamados-arquivados-panel" style="margin-top: 24px; display: none;">
             <div class="panel-header">
               <h2>Chamados arquivados</h2>
             </div>
