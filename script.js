@@ -267,7 +267,7 @@ function isValidDirectChannel(channelId) {
 }
 
 function isCurrentUserInChannel(channelId) {
-  if (channelId === GENERAL_CHANNEL) return true;
+  if (channelId === GENERAL_CHANNEL) return !isManagerUser();
   return isValidDirectChannel(channelId) && getDirectChannelUsers(channelId).includes(normalizeLoginName(getCurrentUserName()));
 }
 
@@ -279,18 +279,23 @@ function getTeamUsers() {
 
 function getChatChannels() {
   const currentUser = getCurrentUserName();
-  return [
-    { id: GENERAL_CHANNEL, label: "Chat geral", subtitle: "Mensagens e arquivos compartilhados pela equipe" },
-    ...getTeamUsers().filter((user) => normalizeLoginName(user.nome) !== normalizeLoginName(currentUser)).map((user) => ({
+  const directChannels = getTeamUsers().filter((user) => normalizeLoginName(user.nome) !== normalizeLoginName(currentUser)).map((user) => ({
       id: getDirectChannel(currentUser, user.nome),
       label: user.nome,
       subtitle: `Conversa individual com ${user.nome}`,
-    })),
-  ];
+    }));
+
+  return isManagerUser()
+    ? directChannels
+    : [
+        { id: GENERAL_CHANNEL, label: "Chat geral", subtitle: "Mensagens e arquivos compartilhados pela equipe" },
+        ...directChannels,
+      ];
 }
 
 function getActiveChatChannel() {
-  return getChatChannels().find((channel) => channel.id === activeChatChannel) || getChatChannels()[0];
+  const channels = getChatChannels();
+  return channels.find((channel) => channel.id === activeChatChannel) || channels[0];
 }
 
 function getAllowedChatChannelIds() {
@@ -309,7 +314,7 @@ function normalizeChatChannel(canal) {
 
 function canAccessChatChannel(canal) {
   const channel = normalizeChatChannel(canal);
-  return channel === GENERAL_CHANNEL || (isValidDirectChannel(channel) && isCurrentUserInChannel(channel));
+  return (channel === GENERAL_CHANNEL && !isManagerUser()) || (isValidDirectChannel(channel) && isCurrentUserInChannel(channel));
 }
 
 function isAllowedLoginName(value) {
@@ -1793,11 +1798,11 @@ function applyRoleAccess() {
   refreshCurrentUserRoleFromData();
 
   const allowedViews = isManagerUser()
-    ? new Set(["documentos"])
+    ? new Set(["comunicacao", "documentos"])
     : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "documentos", "equipe"]);
   const allowedExternalUrls = isManagerUser()
     ? new Set(["https://hub-opal-nine.vercel.app/chamados.html", "https://hub-opal-nine.vercel.app/denuncia.html"])
-    : new Set(["https://hub-opal-nine.vercel.app/chamados.html"]);
+    : new Set();
 
   document.querySelectorAll(".nav-item").forEach((button) => {
     const allowed = button.dataset.externalUrl
@@ -2022,7 +2027,12 @@ function renderChatChannels() {
 
   const channels = getChatChannels();
   if (!channels.some((channel) => channel.id === activeChatChannel) || !isCurrentUserInChannel(activeChatChannel)) {
-    activeChatChannel = GENERAL_CHANNEL;
+    activeChatChannel = channels[0]?.id || "";
+  }
+
+  if (!channels.length) {
+    target.innerHTML = '<p class="empty-state">Nenhum canal interno disponivel.</p>';
+    return;
   }
 
   target.innerHTML = channels
@@ -2231,6 +2241,20 @@ function renderChat() {
   const sendButton = document.querySelector("#chat-form .send-button");
   const fileButton = document.querySelector('#chat-form label[for="chat-file"]');
   const fileInput = document.getElementById("chat-file");
+  if (!activeChannel) {
+    if (title) title.textContent = "Comunicação interna";
+    if (subtitle) subtitle.textContent = "Nenhum canal interno disponivel";
+    if (messageInput) {
+      messageInput.placeholder = "Nenhum canal disponivel";
+      messageInput.disabled = true;
+    }
+    if (sendButton) sendButton.disabled = true;
+    if (fileInput) fileInput.disabled = true;
+    if (fileButton) fileButton.classList.add("disabled");
+    target.innerHTML = '<p class="empty-state">Nenhum canal interno disponivel.</p>';
+    return;
+  }
+
   if (title) title.textContent = activeChannel.label;
   if (subtitle) subtitle.textContent = activeChannel.subtitle;
   if (messageInput) {
@@ -2245,7 +2269,7 @@ function renderChat() {
   const messages = data.comunicados.filter((item) => {
     const channel = normalizeChatChannel(item.canal);
     if (channel !== activeChatChannel) return false;
-    return channel === GENERAL_CHANNEL || isCurrentUserInChannel(channel);
+    return (channel === GENERAL_CHANNEL && !isManagerUser()) || isCurrentUserInChannel(channel);
   });
 
   if (!messages.length) {
@@ -2285,7 +2309,7 @@ document.querySelectorAll(".nav-item").forEach((button) => {
       window.location.href = button.dataset.externalUrl;
       return;
     }
-    if (isManagerUser() && button.dataset.view !== "documentos") {
+    if (isManagerUser() && !["comunicacao", "documentos"].includes(button.dataset.view)) {
       activateView("documentos");
       return;
     }
@@ -2501,6 +2525,10 @@ const chatForm = document.getElementById("chat-form");
 if (chatForm) {
   chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (!activeChatChannel || (isManagerUser() && activeChatChannel === GENERAL_CHANNEL)) {
+      showModal("Acao nao permitida", "Gerentes nao possuem acesso ao chat geral.", "error");
+      return;
+    }
     if (isDirectChannel(activeChatChannel) && !isCurrentUserInChannel(activeChatChannel)) {
       showModal("Acao nao permitida", "Voce nao participa deste chat individual.", "error");
       return;
