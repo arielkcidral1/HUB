@@ -1,0 +1,123 @@
+alter table public.hub_malotes enable row level security;
+alter table public.hub_vagas enable row level security;
+alter table public.hub_candidaturas enable row level security;
+
+alter table public.hub_malotes add column if not exists origem text not null default '';
+alter table public.hub_vagas add column if not exists descricao text not null default '';
+alter table public.hub_vagas add column if not exists requisitos text not null default '';
+alter table public.hub_candidaturas add column if not exists telefone text not null default '';
+
+alter table public.hub_candidaturas
+  drop constraint if exists hub_candidaturas_vaga_id_fkey;
+
+alter table public.hub_candidaturas
+  add constraint hub_candidaturas_vaga_id_fkey
+  foreign key (vaga_id) references public.hub_vagas(id) on delete cascade;
+
+drop policy if exists "hub_malotes_public_read" on public.hub_malotes;
+drop policy if exists "hub_malotes_public_insert" on public.hub_malotes;
+drop policy if exists "hub_malotes_public_update" on public.hub_malotes;
+drop policy if exists "hub_malotes_public_delete" on public.hub_malotes;
+
+create policy "hub_malotes_public_read"
+on public.hub_malotes
+for select
+to anon, authenticated
+using (true);
+
+create policy "hub_malotes_public_insert"
+on public.hub_malotes
+for insert
+to anon, authenticated
+with check (true);
+
+create policy "hub_malotes_public_update"
+on public.hub_malotes
+for update
+to anon, authenticated
+using (true)
+with check (true);
+
+create policy "hub_malotes_public_delete"
+on public.hub_malotes
+for delete
+to anon, authenticated
+using (true);
+
+drop policy if exists "hub_vagas_public_read" on public.hub_vagas;
+drop policy if exists "hub_vagas_public_insert" on public.hub_vagas;
+drop policy if exists "hub_vagas_public_update" on public.hub_vagas;
+drop policy if exists "hub_vagas_public_delete" on public.hub_vagas;
+
+create policy "hub_vagas_public_read"
+on public.hub_vagas
+for select
+to anon, authenticated
+using (true);
+
+create policy "hub_vagas_public_insert"
+on public.hub_vagas
+for insert
+to anon, authenticated
+with check (true);
+
+create policy "hub_vagas_public_update"
+on public.hub_vagas
+for update
+to anon, authenticated
+using (true)
+with check (true);
+
+create policy "hub_vagas_public_delete"
+on public.hub_vagas
+for delete
+to anon, authenticated
+using (true);
+
+drop policy if exists "hub_candidaturas_public_read" on public.hub_candidaturas;
+drop policy if exists "hub_candidaturas_public_insert" on public.hub_candidaturas;
+drop policy if exists "hub_candidaturas_public_delete" on public.hub_candidaturas;
+
+create policy "hub_candidaturas_public_read"
+on public.hub_candidaturas
+for select
+to anon, authenticated
+using (true);
+
+create policy "hub_candidaturas_public_insert"
+on public.hub_candidaturas
+for insert
+to anon, authenticated
+with check (true);
+
+create policy "hub_candidaturas_public_delete"
+on public.hub_candidaturas
+for delete
+to anon, authenticated
+using (true);
+
+grant select, insert, update, delete on public.hub_malotes to anon, authenticated;
+grant select, insert, update, delete on public.hub_vagas to anon, authenticated;
+grant select, insert, delete on public.hub_candidaturas to anon, authenticated;
+grant usage, select on all sequences in schema public to anon, authenticated;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.hub_malotes;
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.hub_vagas;
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.hub_candidaturas;
+exception
+  when duplicate_object then null;
+end $$;
