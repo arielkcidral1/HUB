@@ -1,6 +1,7 @@
 ﻿const STORAGE_KEY = "hub-rh-data";
 const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const SESSION_KEY = "hub-rh-session";
+const TEAM_USERS_KEY = "hub-team-users";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const RH_CHANNEL = "rh";
 const TEAM_DELETE_PASSWORD = "160712";
@@ -116,13 +117,25 @@ function getLoginDisplayName(value) {
   return LOGIN_DISPLAY_NAMES[normalized] || findLocalTeamUser(value)?.nome || String(value || "").trim();
 }
 
+function loadTeamUsersStore() {
+  try {
+    return JSON.parse(localStorage.getItem(TEAM_USERS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTeamUsersStore(users) {
+  localStorage.setItem(TEAM_USERS_KEY, JSON.stringify(users || []));
+}
+
 function getAllLocalUsers() {
   return mergeUsersByName(
     Object.values(LOGIN_USERS).map((user) => ({
       nome: user.nome,
       senha: user.senha,
     })),
-    data?.usuarios || []
+    mergeUsersByName(loadTeamUsersStore(), data?.usuarios || [])
   );
 }
 
@@ -340,7 +353,7 @@ function loadLocalData() {
       malotes: parsed.malotes || [],
       vagas: parsed.vagas || [],
       candidaturas: parsed.candidaturas || [],
-      usuarios: parsed.usuarios || defaultData.usuarios,
+      usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()),
     };
   } catch {
     return defaultData;
@@ -360,6 +373,9 @@ function saveDocumentRecords() {
 }
 
 function saveLocalData() {
+  if (data?.usuarios) {
+    saveTeamUsersStore(mergeUsersByName(loadTeamUsersStore(), data.usuarios));
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
@@ -859,6 +875,7 @@ function upsertLocalUser(values) {
     data.usuarios.unshift(user);
   }
 
+  saveTeamUsersStore(mergeUsersByName(loadTeamUsersStore(), data.usuarios));
   saveLocalData();
   renderAll();
 }
@@ -905,6 +922,7 @@ async function saveTeamUser(values) {
 function removeLocalUser(id) {
   const removedUser = data.usuarios.find((user) => String(user.id) === String(id));
   data.usuarios = data.usuarios.filter((user) => String(user.id) !== String(id));
+  saveTeamUsersStore(loadTeamUsersStore().filter((user) => String(user.id) !== String(id) && normalizeLoginName(user.nome) !== normalizeLoginName(removedUser?.nome)));
 
   if (removedUser && normalizeLoginName(removedUser.nome) === normalizeLoginName(getCurrentUserName())) {
     clearAuthenticatedUser();
