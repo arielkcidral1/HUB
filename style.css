@@ -363,6 +363,16 @@ h2 {
   background: var(--teal-surface);
 }
 
+#conta-avatar-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--teal-light);
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-sm);
+}
+
 .metric-card strong {
   display: block;
   margin-top: 12px;
@@ -590,6 +600,18 @@ label {
   color: var(--muted);
   font-size: 13px;
   font-weight: 600;
+}
+
+.avatar-upload-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.avatar-upload-wrapper label {
+  margin-bottom: 0;
+  flex: 1;
 }
 
 input,
