@@ -1796,8 +1796,8 @@ function applyRoleAccess() {
     ? new Set(["documentos"])
     : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "documentos", "equipe"]);
   const allowedExternalUrls = isManagerUser()
-    ? new Set(["https://hub-opal-nine.vercel.app/chamados.html"])
-    : new Set(["https://hub-opal-nine.vercel.app/chamados.html"]);
+    ? new Set(["https://hub-opal-nine.vercel.app/chamados.html", "https://hub-opal-nine.vercel.app/denuncia.html"])
+    : new Set(["https://hub-opal-nine.vercel.app/chamados.html", "https://hub-opal-nine.vercel.app/denuncia.html"]);
 
   document.querySelectorAll(".nav-item").forEach((button) => {
     const allowed = button.dataset.externalUrl
