@@ -22,6 +22,7 @@ const LOGIN_DISPLAY_NAMES = {
 };
 const USERS_TABLE = "hub_users";
 const GENERAL_CHANNEL = "geral";
+const MANAGER_GENERAL_CHANNEL = "geral-gerentes";
 const TABLES = {
   denuncias: "hub_denuncias",
   comunicados: "hub_chat_messages",
@@ -278,7 +279,12 @@ function isValidDirectChannel(channelId) {
 
 function isCurrentUserInChannel(channelId) {
   if (channelId === GENERAL_CHANNEL) return !isManagerUser();
+  if (channelId === MANAGER_GENERAL_CHANNEL) return true;
   return isValidDirectChannel(channelId) && getDirectChannelUsers(channelId).includes(normalizeLoginName(getCurrentUserName()));
+}
+
+function isGeneralChatChannel(channelId) {
+  return [GENERAL_CHANNEL, MANAGER_GENERAL_CHANNEL].includes(channelId);
 }
 
 function getTeamUsers() {
@@ -296,9 +302,13 @@ function getChatChannels() {
     }));
 
   return isManagerUser()
-    ? directChannels
+    ? [
+        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH" },
+        ...directChannels,
+      ]
     : [
-        { id: GENERAL_CHANNEL, label: "Chat geral", subtitle: "Mensagens e arquivos compartilhados pela equipe" },
+        { id: GENERAL_CHANNEL, label: "Chat geral RH", subtitle: "Mensagens compartilhadas apenas pela equipe de RH" },
+        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH" },
         ...directChannels,
       ];
 }
@@ -314,6 +324,7 @@ function getAllowedChatChannelIds() {
 
 function normalizeChatChannel(canal) {
   if (!canal || canal === GENERAL_CHANNEL) return GENERAL_CHANNEL;
+  if (canal === MANAGER_GENERAL_CHANNEL) return MANAGER_GENERAL_CHANNEL;
   if (isDirectChannel(canal)) return canal;
   if (canal === RH_CHANNEL) return getDirectChannel(getCurrentUserName(), "Ariel");
   if (String(canal).startsWith("usuario:")) {
@@ -324,7 +335,11 @@ function normalizeChatChannel(canal) {
 
 function canAccessChatChannel(canal) {
   const channel = normalizeChatChannel(canal);
-  return (channel === GENERAL_CHANNEL && !isManagerUser()) || (isValidDirectChannel(channel) && isCurrentUserInChannel(channel));
+  return (
+    (channel === GENERAL_CHANNEL && !isManagerUser()) ||
+    channel === MANAGER_GENERAL_CHANNEL ||
+    (isValidDirectChannel(channel) && isCurrentUserInChannel(channel))
+  );
 }
 
 function isAllowedLoginName(value) {
@@ -2181,7 +2196,7 @@ function renderChatChannels() {
   if (!target) return;
 
   const channels = getChatChannels();
-  if (!channels.some((channel) => channel.id === activeChatChannel) || !isCurrentUserInChannel(activeChatChannel)) {
+  if (!channels.some((channel) => channel.id === activeChatChannel) || !canAccessChatChannel(activeChatChannel)) {
     activeChatChannel = channels[0]?.id || "";
   }
 
@@ -2436,7 +2451,7 @@ function renderChat() {
   if (title) title.textContent = activeChannel.label;
   if (subtitle) subtitle.textContent = activeChannel.subtitle;
   if (messageInput) {
-    messageInput.placeholder = activeChannel.id === GENERAL_CHANNEL ? "Escreva no chat geral" : `Mensagem para ${activeChannel.label}`;
+    messageInput.placeholder = isGeneralChatChannel(activeChannel.id) ? `Escreva em ${activeChannel.label}` : `Mensagem para ${activeChannel.label}`;
     messageInput.disabled = false;
   }
   if (sendButton) sendButton.disabled = false;
@@ -2447,7 +2462,7 @@ function renderChat() {
   const messages = data.comunicados.filter((item) => {
     const channel = normalizeChatChannel(item.canal);
     if (channel !== activeChatChannel) return false;
-    return (channel === GENERAL_CHANNEL && !isManagerUser()) || isCurrentUserInChannel(channel);
+    return canAccessChatChannel(channel);
   });
 
   if (!messages.length) {
@@ -2728,8 +2743,8 @@ const chatForm = document.getElementById("chat-form");
 if (chatForm) {
   chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!activeChatChannel || (isManagerUser() && activeChatChannel === GENERAL_CHANNEL)) {
-      showModal("Acao nao permitida", "Gerentes nao possuem acesso ao chat geral.", "error");
+    if (!activeChatChannel || !canAccessChatChannel(activeChatChannel)) {
+      showModal("Acao nao permitida", "Voce nao possui acesso a este canal.", "error");
       return;
     }
     if (isDirectChannel(activeChatChannel) && !isCurrentUserInChannel(activeChatChannel)) {
