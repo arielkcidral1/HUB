@@ -42,10 +42,10 @@ grant usage, select on all sequences in schema public to anon, authenticated;
 insert into public.hub_users (nome, senha, created_by)
 values
   ('Ariel', 'arielc', 'Sistema'),
-  ('Andrei', 'hub123', 'Sistema'),
-  ('Patricia', 'hub123', 'Sistema'),
-  ('Dani', 'hub123', 'Sistema'),
-  ('Vanessa', 'hub123', 'Sistema')
+  ('Andrei', '1208', 'Sistema'),
+  ('Patricia', '1102', 'Sistema'),
+  ('Dani', '926710', 'Sistema'),
+  ('Vanessa', '521216', 'Sistema')
 on conflict ((lower(nome))) do update set
   nome = excluded.nome,
   senha = excluded.senha;

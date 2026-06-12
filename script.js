@@ -8,10 +8,10 @@ const RH_CHANNEL = "rh";
 const TEAM_DELETE_PASSWORD = "160712";
 const LOGIN_USERS = {
   ariel: { nome: "Ariel", senha: "arielc" },
-  andrei: { nome: "Andrei", senha: "hub123" },
-  patricia: { nome: "Patricia", senha: "hub123" },
-  dani: { nome: "Dani", senha: "hub123" },
-  vanessa: { nome: "Vanessa", senha: "hub123" },
+  andrei: { nome: "Andrei", senha: "1208" },
+  patricia: { nome: "Patricia", senha: "1102" },
+  dani: { nome: "Dani", senha: "926710" },
+  vanessa: { nome: "Vanessa", senha: "521216" },
 };
 const LOGIN_DISPLAY_NAMES = {
   ariel: "Ariel",
