@@ -651,8 +651,7 @@
         </section>
 
         <section class="view" id="conta">
-          <div class="workspace">
-          <div class="single-workspace" style="max-width: 720px; margin: 0 auto;">
+          <div class="single-workspace" style="max-width: 800px; margin: 0 auto;">
             <form class="panel form-panel" id="conta-form">
               <div class="panel-header">
                 <h2>Configuração de conta</h2>
@@ -663,16 +662,7 @@
               <label>Foto de Perfil
                 <input type="file" name="foto_perfil" accept="image/png, image/jpeg" />
               </label>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
-                <label>Nome do Usuário
-                  <input type="text" name="novo_nome" id="novo-nome" placeholder="Seu nome" />
-                </label>
-                <label>Foto de Perfil
-                  <input type="file" name="foto_perfil" accept="image/png, image/jpeg" />
-                </label>
-              </div>
               <label>Cargo
-                <input id="conta-cargo" type="text" disabled />
                 <input id="conta-cargo" type="text" disabled style="background: var(--surface-soft);" />
               </label>
               <label>Senha atual
@@ -684,14 +674,6 @@
               <label>Confirmar nova senha
                 <input name="confirmar_senha" type="password" placeholder="Confirme a nova senha" />
               </label>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
-                <label>Nova senha
-                  <input name="nova_senha" type="password" placeholder="Digite a nova senha" />
-                </label>
-                <label>Confirmar nova senha
-                  <input name="confirmar_senha" type="password" placeholder="Confirme a nova senha" />
-                </label>
-              </div>
               <button class="primary-button" type="submit">Atualizar conta</button>
             </form>
           </div>
