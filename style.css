@@ -739,6 +739,11 @@ textarea:focus {
   border-color: #fde68a;
 }
 
+.chamado-list .item-card {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
 /* --- DOCUMENTS MODULE --- */
 .document-grid {
   display: grid;

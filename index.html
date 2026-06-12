@@ -222,26 +222,18 @@
                 <p class="item-meta">Solicitacoes abertas pelos colaboradores</p>
               </div>
               <div class="job-actions" style="margin-top: 0;">
+                <button class="secondary-link" id="select-chamados" type="button">Selecionar chamados</button>
                 <button class="secondary-link" id="toggle-archived-chamados" type="button">Mostrar arquivados</button>
-                <a class="secondary-link" href="chamados.html" target="_blank" rel="noreferrer">Abrir chamado publico</a>
+                <button class="secondary-link" id="exit-chamados-selection" type="button" hidden>Sair da seleção</button>
+                <a class="secondary-link" id="open-chamados-public" href="chamados.html" target="_blank" rel="noreferrer">Abrir chamado publico</a>
               </div>
             </div>
           </div>
           <div class="panel">
-            <div class="panel-header split-header">
-              <div>
-                <h2>Chamados abertos</h2>
-                <p class="item-meta">Selecione os chamados finalizados para arquivar</p>
-              </div>
-              <button class="secondary-link" id="archive-selected-chamados" type="button">Selecionar Arquivos</button>
-            </div>
-            <div class="card-list" id="chamados-list"></div>
-          </div>
-          <div class="panel" id="chamados-arquivados-panel" style="margin-top: 24px; display: none;">
             <div class="panel-header">
-              <h2>Chamados arquivados</h2>
+              <h2 id="chamados-primary-title">Abertos</h2>
             </div>
-            <div class="card-list" id="chamados-arquivados-list"></div>
+            <div class="card-list chamado-list" id="chamados-list"></div>
           </div>
         </section>
 

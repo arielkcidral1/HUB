@@ -2261,23 +2261,37 @@ function renderAll() {
 
   const chamadosAbertos = (data.chamados || []).filter((item) => item.status !== "Arquivado");
   const chamadosArquivados = (data.chamados || []).filter((item) => item.status === "Arquivado");
-  const archiveButton = document.getElementById("archive-selected-chamados");
-  if (archiveButton) {
-    archiveButton.disabled = !chamadosAbertos.length;
-    archiveButton.textContent = chamadosSelectionMode ? "Arquivar selecionados" : "Selecionar Arquivos";
+  const selectChamadosButton = document.getElementById("select-chamados");
+  const primaryChamadosTitle = document.getElementById("chamados-primary-title");
+  const toggleArchivedChamadosButton = document.getElementById("toggle-archived-chamados");
+  const exitChamadosSelectionButton = document.getElementById("exit-chamados-selection");
+  const openChamadosPublicLink = document.getElementById("open-chamados-public");
+
+  if (chamadosSelectionMode) showArchivedChamados = false;
+
+  if (selectChamadosButton) {
+    selectChamadosButton.disabled = !chamadosAbertos.length && !chamadosArquivados.length;
+    selectChamadosButton.textContent = chamadosSelectionMode ? "Arquivar selecionados" : "Selecionar chamados";
+    selectChamadosButton.className = chamadosSelectionMode ? "danger-button" : "secondary-link";
   }
-  const archivedPanel = document.getElementById("chamados-arquivados-panel");
-  const toggleArchivedButton = document.getElementById("toggle-archived-chamados");
-  if (archivedPanel) archivedPanel.style.display = showArchivedChamados ? "" : "none";
-  if (toggleArchivedButton) {
-    toggleArchivedButton.textContent = showArchivedChamados ? "Ocultar arquivados" : "Mostrar arquivados";
-    toggleArchivedButton.disabled = !chamadosArquivados.length;
+  if (primaryChamadosTitle) primaryChamadosTitle.textContent = showArchivedChamados ? "Arquivados" : "Abertos";
+  if (toggleArchivedChamadosButton) {
+    toggleArchivedChamadosButton.textContent = showArchivedChamados ? "Ocultar arquivados" : "Mostrar arquivados";
+    toggleArchivedChamadosButton.disabled = false;
+    toggleArchivedChamadosButton.hidden = chamadosSelectionMode;
+    toggleArchivedChamadosButton.style.display = chamadosSelectionMode ? "none" : "";
   }
+  if (exitChamadosSelectionButton) {
+    exitChamadosSelectionButton.hidden = !chamadosSelectionMode;
+    exitChamadosSelectionButton.style.display = chamadosSelectionMode ? "" : "none";
+  }
+  if (openChamadosPublicLink) openChamadosPublicLink.hidden = chamadosSelectionMode;
+
   const chamadoCard = (item, archived = false) => `
-    <article class="item-card ${chamadosSelectionMode && !archived ? "selectable-card" : ""}">
+    <article class="item-card ${chamadosSelectionMode && !archived ? "selectable-card" : ""}" ${chamadosSelectionMode && !archived ? `style="cursor: pointer;" onclick="toggleChamadoSelection(event, '${escapeHtml(item.id)}')"` : ""}>
       <div class="item-topline">
         <p class="item-title">
-          ${!archived && chamadosSelectionMode ? `<input class="chamado-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar chamado de ${escapeHtml(item.solicitante)}" />` : ""}
+          ${!archived && chamadosSelectionMode ? `<input class="chamado-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar chamado de ${escapeHtml(item.solicitante)}" onclick="event.stopPropagation()" />` : ""}
           ${escapeHtml(item.unidade)}
         </p>
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
@@ -2287,13 +2301,19 @@ function renderAll() {
       <p><strong>EPIs:</strong> ${escapeHtml(item.epis)}</p>
       ${item.observacoes ? `<p><strong>Observacoes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
       <p class="item-meta">${escapeHtml(item.createdAt)}</p>
-      ${archived ? `<div class="job-actions"><button class="secondary-link" type="button" onclick="reabrirChamado('${escapeHtml(item.id)}')">Reabrir</button></div>` : ""}
+      ${archived ? `<div class="job-actions" style="margin-top: 8px;"><button class="secondary-link" type="button" onclick="event.stopPropagation(); reabrirChamado('${escapeHtml(item.id)}')">Reabrir</button></div>` : ""}
     </article>
   `;
 
-  renderCards("chamados-list", chamadosAbertos, (item) => chamadoCard(item));
   if (showArchivedChamados) {
-    renderCards("chamados-arquivados-list", chamadosArquivados, (item) => chamadoCard(item, true));
+    const primaryTarget = document.getElementById("chamados-list");
+    if (!chamadosArquivados.length && primaryTarget) {
+      primaryTarget.innerHTML = '<p class="empty-state">Sem chamados arquivados</p>';
+    } else {
+      renderCards("chamados-list", chamadosArquivados, (item) => chamadoCard(item, true));
+    }
+  } else {
+    renderCards("chamados-list", chamadosAbertos, (item) => chamadoCard(item, false));
   }
 
   renderCards("vagas-list", data.vagas, (item) => {
@@ -2461,9 +2481,10 @@ document.getElementById("malote-destino-filter")?.addEventListener("change", () 
   renderAll();
 });
 
-document.getElementById("archive-selected-chamados")?.addEventListener("click", () => {
+document.getElementById("select-chamados")?.addEventListener("click", () => {
   if (!chamadosSelectionMode) {
     chamadosSelectionMode = true;
+    showArchivedChamados = false;
     renderAll();
     return;
   }
@@ -2490,6 +2511,11 @@ document.getElementById("archive-selected-chamados")?.addEventListener("click", 
       }
     },
   });
+});
+
+document.getElementById("exit-chamados-selection")?.addEventListener("click", () => {
+  chamadosSelectionMode = false;
+  renderAll();
 });
 
 document.getElementById("toggle-archived-chamados")?.addEventListener("click", () => {
@@ -3078,6 +3104,12 @@ window.lerDenuncia = lerDenuncia;
 window.toggleDenunciaSelection = function(event, id) {
   event.stopPropagation();
   const checkbox = document.querySelector(`.denuncia-select[value="${CSS.escape(String(id))}"]`);
+  if (checkbox) checkbox.checked = !checkbox.checked;
+};
+
+window.toggleChamadoSelection = function(event, id) {
+  event.stopPropagation();
+  const checkbox = document.querySelector(`.chamado-select[value="${CSS.escape(String(id))}"]`);
   if (checkbox) checkbox.checked = !checkbox.checked;
 };
 
