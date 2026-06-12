@@ -315,6 +315,14 @@
                     <label>Data de admissao<input name="data" type="date" required /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Estado Civil<select name="estado_civil"><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option><option>União Estável</option></select></label>
+                    <label>Grau de Instrução<select name="grau_instrucao"><option>Ensino Fundamental</option><option>Ensino Médio</option><option>Ensino Superior Incompleto</option><option>Ensino Superior Completo</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Vale Transporte?<select name="vale_transporte"><option>Não</option><option>Sim</option></select></label>
+                    <label>Dependentes (IR/Salário Família)?<select name="dependentes"><option>Não</option><option>Sim</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Exame Admissional<select name="exame_admissional"><option>Pendente</option><option>Apto</option><option>Inapto</option></select></label>
                     <label>Entrega de Documentos<select name="entrega_documentos"><option>Pendente</option><option>Completa</option></select></label>
                   </div>
@@ -342,12 +350,17 @@
                     <label>Data(s) da ausencia<input name="data_ausencia" required placeholder="Ex: 12/04 a 14/04" /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Data da Entrevista<input name="data_entrevista" type="date" required /></label>
+                    <label>Horário/Período do Atraso<input name="horario_atraso" placeholder="Ex: 08:00 às 09:30 (se aplicável)" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Tipo de ocorrencia<select name="tipo_ocorrencia"><option>Falta justificada (Atestado)</option><option>Falta injustificada</option><option>Atraso</option><option>Saida antecipada</option></select></label>
                     <label>Apresentou Comprovante?<select name="apresentou_comprovante"><option>Sim</option><option>Nao</option><option>Nao se aplica</option></select></label>
                   </div>
                   <label>Motivo detalhado (Justificativa)<textarea name="motivo" rows="3" required></textarea></label>
                   <label>Medida Adotada<select name="medida_adotada"><option>Orientacao verbal</option><option>Advertencia verbal</option><option>Advertencia escrita</option><option>Suspensao</option><option>Apenas registro (Abonado)</option></select></label>
                   <label>Observacoes do Gestor / RH<textarea name="acao" rows="2"></textarea></label>
+                  <label>Colaborador Ciente/Assinou?<select name="colaborador_ciente"><option>Sim</option><option>Não quis assinar</option></select></label>
                   <button class="primary-button" type="submit">Salvar entrevista</button>
                 </form>
               </section>
@@ -374,6 +387,13 @@
                     <label>Iniciativa do Desligamento<select name="iniciativa_desligamento"><option>Pedido de demissao</option><option>Demissao sem justa causa</option><option>Demissao com justa causa</option><option>Termino de contrato</option></select></label>
                     <label>Motivo Principal<select name="motivo"><option>Nova oportunidade</option><option>Insatisfacao com o salario</option><option>Ambiente de trabalho</option><option>Relacionamento com gestor</option><option>Desempenho/Produtividade</option><option>Reestruturacao/Corte</option><option>Outros</option></select></label>
                   </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Entrevistador (RH)<input name="entrevistador" required /></label>
+                    <label>Avaliação da Liderança<select name="aval_lideranca"><option>Ótima</option><option>Boa</option><option>Regular</option><option>Ruim</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Avaliação de Salário e Benefícios<select name="aval_beneficios"><option>Ótima</option><option>Boa</option><option>Regular</option><option>Ruim</option></select></label>
+                  </div>
                   <label>O que mais gostava na empresa?<textarea name="pontos_positivos" rows="2"></textarea></label>
                   <label>O que poderia ser melhorado? (Ambiente, processos, lideranca)<textarea name="pontos_melhoria" rows="2"></textarea></label>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
@@ -399,6 +419,11 @@
                     <label>RG<input name="rg" placeholder="00.000.000-0" maxlength="12" inputmode="numeric" /></label>
                     <label>Data de Nasc.<input name="data_nasc" type="date" required /></label>
                   </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Nome da Mãe<input name="nome_mae" required /></label>
+                    <label>Celular / Telefone<input name="celular" required placeholder="(00) 00000-0000" /></label>
+                  </div>
+                  <label>CEP / Endereço Completo<input name="endereco" required placeholder="Rua, Número, Bairro, Cidade - UF, CEP" /></label>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Tipo de Solicitacao<select name="tipo_solicitacao"><option>Inclusao Novo Titular</option><option>Inclusao de Dependente</option><option>Cancelamento/Exclusao</option></select></label>
                     <label>Plano Solicitado<select name="plano"><option>Plano de Saude</option><option>Plano Odontologico</option><option>Saude + Odonto</option></select></label>
@@ -432,6 +457,10 @@
                     <label>Trabalho em Equipe<select name="aval_equipe"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
                     <label>Seguranca e uso de EPIs<select name="aval_seguranca"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
                   </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Comportamento e Respeito às Regras<select name="aval_comportamento"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                    <label>Organização e Limpeza (5S)<select name="aval_organizacao"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                  </div>
                   <label>Principais Pontos Fortes (O que o colaborador faz bem?)<textarea name="positivos" rows="3" required></textarea></label>
                   <label>Pontos a Desenvolver (O que precisa melhorar?)<textarea name="melhorias" rows="3" required></textarea></label>
                   <label>Plano de Acao / Metas para o proximo ciclo<textarea name="acao" rows="3" required></textarea></label>
@@ -452,6 +481,10 @@
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Setor<select name="setor" data-unit-select required></select></label>
                     <label>Data do Registro<input name="data_registro" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Gestor Aplicador<input name="gestor_aplicador" required /></label>
+                    <label>Acompanhamento do RH?<select name="acompanhamento_rh"><option>Não</option><option>Sim</option></select></label>
                   </div>
                   <label>Tipo de Feedback<select name="tipo_feedback"><option>Orientacao / Alinhamento de rotina</option><option>Elogio / Reconhecimento</option><option>Correcao Disciplinar</option></select></label>
                   <label>Situacao / Comportamento Observado (Descreva o fato)<textarea name="situacao" rows="4" required></textarea></label>
@@ -478,6 +511,13 @@
                     <label>Dias para gozo<input name="dias_gozo" type="number" min="1" required /></label>
                     <label>Data de início<input name="data_inicio" type="date" required /></label>
                     <label>Abono pecuniário<select name="abono"><option>Nao</option><option>Sim</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Período Aquisitivo (Início)<input name="periodo_aquisitivo_inicio" type="date" required /></label>
+                    <label>Período Aquisitivo (Fim)<input name="periodo_aquisitivo_fim" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Adiantamento 1ª Parcela 13º?<select name="adiantamento_13"><option>Não</option><option>Sim</option></select></label>
                   </div>
                   <label>Calcular abono com data anterior as ferias<select name="abono_data_anterior"><option>Nao</option><option>Sim</option></select></label>
                   <label>Responsavel pelas atividades<input name="responsavel_atividades" required /></label>
@@ -526,6 +566,10 @@
                     <label>Salario proposto<input name="salario_proposto" /></label>
                     <label>% reajuste<input name="reajuste" /></label>
                   </div>
+                  <label>Justificativa Detalhada da Movimentação<textarea name="justificativa_movimentacao" rows="2" required></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Status de Aprovação<select name="status_aprovacao"><option>Pendente</option><option>Aprovado</option><option>Recusado</option></select></label>
+                  </div>
                   <label>Observacoes<textarea name="observacoes" rows="3"></textarea></label>
                   <button class="primary-button" type="submit">Salvar movimentacao</button>
                 </form>
@@ -555,6 +599,10 @@
                     <label>Prevista em orcamento?<select name="orcamento"><option>Sim</option><option>Nao</option></select></label>
                     <label>Ha descritivo de cargo?<select name="descritivo_cargo"><option>Sim</option><option>Nao</option></select></label>
                     <label>Estacao disponivel?<select name="estacao_disponivel"><option>Sim</option><option>Nao</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Horário de Trabalho / Turno<input name="horario_trabalho" required placeholder="Ex: Segunda a Sexta, 08h às 18h" /></label>
+                    <label>Equipamentos (Notebook, Celular, Frota)<input name="equipamentos" placeholder="Ex: Notebook, Acesso Sistema X" /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
                     <label>Cargo/Função/Nível<input name="cargo" required /></label>
@@ -586,6 +634,13 @@
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
                     <label>Data da solicitacao<input name="data_solicitacao" type="date" required /></label>
                     <label>Data prevista do desligamento<input name="data_desligamento" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Gestor Solicitante<input name="gestor_solicitante" required /></label>
+                    <label>Possui Estabilidade? (CIPA, Gestante, etc)<input name="estabilidade" placeholder="Não / Sim (Descrever)" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Exame Demissional<select name="exame_demissional"><option>Pendente de Agendamento</option><option>Agendado</option><option>Realizado (Apto)</option><option>Realizado (Inapto)</option></select></label>
                   </div>
                   <label>Tipo de desligamento<select name="tipo_desligamento"><option>Pedido de demissao</option><option>Demissao sem justa causa</option><option>Demissao com justa causa</option><option>Termino de contrato</option><option>Acordo</option></select></label>
                   <label>Motivo<textarea name="motivo" rows="3" required></textarea></label>
