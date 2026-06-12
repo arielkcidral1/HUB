@@ -1938,7 +1938,7 @@ function renderAll() {
   const lidas = data.denuncias.filter(item => item.status === "Lida");
   const arquivadas = data.denuncias.filter(item => item.status === "Arquivada");
   const selectDenunciasButton = document.getElementById("select-denuncias");
-  const archivedDenunciasPanel = document.getElementById("denuncias-arquivadas-panel");
+  const primaryDenunciasTitle = document.getElementById("denuncias-primary-title");
   const toggleArchivedDenunciasButton = document.getElementById("toggle-archived-denuncias");
   const exitSelectionButton = document.getElementById("exit-denuncias-selection");
   const openDenunciaPublicLink = document.getElementById("open-denuncia-public");
@@ -1949,7 +1949,7 @@ function renderAll() {
     selectDenunciasButton.textContent = denunciasSelectionMode ? "Arquivar selecionadas" : "Selecionar denúncias";
     selectDenunciasButton.className = denunciasSelectionMode ? "danger-button" : "secondary-link";
   }
-  if (archivedDenunciasPanel) archivedDenunciasPanel.style.display = showArchivedDenuncias ? "" : "none";
+  if (primaryDenunciasTitle) primaryDenunciasTitle.textContent = showArchivedDenuncias ? "Arquivadas" : "Não Lidas";
   if (toggleArchivedDenunciasButton) {
     toggleArchivedDenunciasButton.textContent = showArchivedDenuncias ? "Ocultar arquivadas" : "Mostrar arquivadas";
     toggleArchivedDenunciasButton.disabled = false;
@@ -1980,16 +1980,17 @@ function renderAll() {
     </article>
   `;
 
-  renderCards("denuncias-nao-lidas", naoLidas, cardTemplate);
-  renderCards("denuncias-lidas", lidas, cardTemplate);
   if (showArchivedDenuncias) {
-    const archivedTarget = document.getElementById("denuncias-arquivadas");
-    if (!arquivadas.length && archivedTarget) {
-      archivedTarget.innerHTML = '<p class="empty-state">Sem denuncias arquivadas</p>';
+    const primaryTarget = document.getElementById("denuncias-nao-lidas");
+    if (!arquivadas.length && primaryTarget) {
+      primaryTarget.innerHTML = '<p class="empty-state">Sem denuncias arquivadas</p>';
     } else {
-      renderCards("denuncias-arquivadas", arquivadas, (item) => cardTemplate(item, true));
+      renderCards("denuncias-nao-lidas", arquivadas, (item) => cardTemplate(item, true));
     }
+  } else {
+    renderCards("denuncias-nao-lidas", naoLidas, cardTemplate);
   }
+  renderCards("denuncias-lidas", lidas, cardTemplate);
 
   renderChatChannels();
   renderChat();
