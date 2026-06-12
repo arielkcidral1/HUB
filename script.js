@@ -2862,6 +2862,12 @@ function showResetPasswordModal() {
       return;
     }
 
+    if (newPwd === currentPwd) {
+      errorEl.textContent = "A nova senha não pode ser igual à senha atual.";
+      errorEl.hidden = false;
+      return;
+    }
+
     const user = getCurrentUserRecord();
     if (!isLoginMatch(currentPwd, user.senha)) {
       errorEl.textContent = "A senha atual informada não confere.";
