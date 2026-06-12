@@ -1954,7 +1954,10 @@ function renderAll() {
     toggleArchivedDenunciasButton.disabled = !arquivadas.length;
     toggleArchivedDenunciasButton.hidden = denunciasSelectionMode;
   }
-  if (exitSelectionButton) exitSelectionButton.hidden = !denunciasSelectionMode;
+  if (exitSelectionButton) {
+    exitSelectionButton.hidden = !denunciasSelectionMode;
+    exitSelectionButton.style.display = denunciasSelectionMode ? "" : "none";
+  }
   if (openDenunciaPublicLink) openDenunciaPublicLink.hidden = denunciasSelectionMode;
 
   const cardAction = (item, archived) =>
