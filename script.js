@@ -87,6 +87,7 @@ const defaultData = {
     id: generateUUID(),
     nome: user.nome,
     senha: user.senha,
+    cargo: "RH",
     createdAt: "Hoje",
   })),
 };
@@ -512,6 +513,7 @@ function ensureRequiredTeamUsers() {
       id: existingIndex >= 0 ? data.usuarios[existingIndex].id : generateUUID(),
       nome: requiredUser.nome,
       senha: requiredUser.senha,
+      cargo: data.usuarios[existingIndex]?.cargo || "RH",
       syncStatus: existingIndex >= 0 ? data.usuarios[existingIndex].syncStatus : "local",
       createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
     };
@@ -1034,6 +1036,7 @@ function mapRows(collection, rows) {
       id: row.id,
       nome: row.nome,
       senha: row.senha,
+      cargo: row.cargo || "",
       createdBy: row.created_by || "Sistema",
       createdAt: formatDate(row.created_at),
     }));
@@ -1116,6 +1119,7 @@ function toDbPayload(collection, values) {
     return {
       nome: values.nome,
       senha: values.senha,
+      cargo: values.cargo || "",
       created_by: values.createdBy || getCurrentUserName(),
     };
   }
@@ -1612,6 +1616,7 @@ function upsertLocalUser(values) {
     id: values.id || (existingIndex >= 0 ? data.usuarios[existingIndex].id : generateUUID()),
     nome: getLoginDisplayName(values.nome) || values.nome,
     senha: values.senha,
+    cargo: values.cargo || data.usuarios[existingIndex]?.cargo || "",
     createdBy: values.createdBy || getCurrentUserName(),
     syncStatus: values.syncStatus || data.usuarios[existingIndex]?.syncStatus || "active",
     createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
@@ -1633,11 +1638,12 @@ function upsertLocalUser(values) {
 async function saveTeamUser(values) {
   const nome = String(values.nome || "").trim();
   const senha = String(values.senha || "").trim();
+  const cargo = String(values.cargo || "").trim();
   if (!nome || !senha) return false;
   persistTeamCredential(nome, senha);
 
   if (!supabaseClient) {
-    upsertLocalUser({ nome, senha, syncStatus: "active" });
+    upsertLocalUser({ nome, senha, cargo, syncStatus: "active" });
     return true;
   }
 
@@ -1652,28 +1658,35 @@ async function saveTeamUser(values) {
 
     const existing = existingRows?.[0];
     let query = existing
-      ? supabaseClient.from(USERS_TABLE).update({ nome, senha, created_by: getCurrentUserName() }).eq("id", existing.id)
-      : supabaseClient.from(USERS_TABLE).insert({ nome, senha, created_by: getCurrentUserName() });
+      ? supabaseClient.from(USERS_TABLE).update({ nome, senha, cargo, created_by: getCurrentUserName() }).eq("id", existing.id)
+      : supabaseClient.from(USERS_TABLE).insert({ nome, senha, cargo, created_by: getCurrentUserName() });
 
     let result = await query.select("*");
 
     if (result.error && isMissingCreatedByColumn(result.error)) {
       query = existing
-        ? supabaseClient.from(USERS_TABLE).update({ nome, senha }).eq("id", existing.id)
-        : supabaseClient.from(USERS_TABLE).insert({ nome, senha });
+        ? supabaseClient.from(USERS_TABLE).update({ nome, senha, cargo }).eq("id", existing.id)
+        : supabaseClient.from(USERS_TABLE).insert({ nome, senha, cargo });
+      result = await query.select("*");
+    }
+
+    if (result.error && isMissingColumn(result.error, "cargo")) {
+      query = existing
+        ? supabaseClient.from(USERS_TABLE).update({ nome, senha, created_by: getCurrentUserName() }).eq("id", existing.id)
+        : supabaseClient.from(USERS_TABLE).insert({ nome, senha, created_by: getCurrentUserName() });
       result = await query.select("*");
     }
 
     if (result.error) throw result.error;
     const savedRows = result.data;
 
-    const saved = mapRows("usuarios", savedRows || [])[0] || { nome, senha, createdAt: todayLabel() };
-    upsertLocalUser({ ...saved, syncStatus: "active" });
+    const saved = mapRows("usuarios", savedRows || [])[0] || { nome, senha, cargo, createdAt: todayLabel() };
+    upsertLocalUser({ ...saved, cargo: saved.cargo || cargo, syncStatus: "active" });
     setSyncStatus("Supabase EIXO online", true);
     return true;
   } catch (error) {
     console.error("Erro ao salvar usuario no Supabase:", error);
-    upsertLocalUser({ nome, senha, syncStatus: "local" });
+    upsertLocalUser({ nome, senha, cargo, syncStatus: "local" });
     setSyncStatus("Usuario salvo local", false);
     showModal("Aviso de Banco de Dados", "O usuário foi salvo apenas localmente. Para que o login funcione em outros computadores, execute o código SQL de criação da tabela 'hub_users' no painel do Supabase.", "error");
     return true;
@@ -1932,6 +1945,7 @@ function renderTeamUsers() {
         </div>
       </div>
       <p class="item-meta">Senha: <span id="senha-usuario-${escapeHtml(item.id)}">••••••</span></p>
+      <p class="item-meta">Cargo: ${escapeHtml(item.cargo || "Sem cargo definido")}</p>
       <button type="button" class="secondary-link" style="width: fit-content; min-height: 30px; padding: 0 10px; font-size: 12px;" onclick="mostrarSenhaUsuario('${escapeHtml(item.id)}')">Mostrar senha</button>
       <p class="item-meta">Cadastro: ${escapeHtml(item.createdAt || "Hoje")}</p>
     </article>
@@ -2548,6 +2562,7 @@ if (usuarioForm) {
     const success = await saveTeamUser({
       nome: form.get("nome"),
       senha: form.get("senha"),
+      cargo: form.get("cargo"),
     });
 
     if (success) {
