@@ -815,6 +815,35 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
   overlay.querySelector("#modal-action-password").focus();
 }
 
+function showConfirmActionModal({ title, text, confirmText = "Confirmar", danger = false, onConfirm }) {
+  const existing = document.getElementById("custom-modal");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "custom-modal";
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header ${danger ? "error" : "info"}">${escapeHtml(title)}</div>
+      <div class="modal-body"><p>${escapeHtml(text)}</p></div>
+      <div class="modal-footer modal-footer-split">
+        <button class="secondary-link" type="button" data-modal-cancel>Cancelar</button>
+        <button class="${danger ? "danger-button" : "primary-button"}" type="button" data-modal-confirm>${escapeHtml(confirmText)}</button>
+      </div>
+    </div>
+  `;
+
+  const close = () => overlay.remove();
+  overlay.querySelector("[data-modal-cancel]").addEventListener("click", close);
+  overlay.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+    await onConfirm();
+    close();
+  });
+
+  document.body.appendChild(overlay);
+  overlay.querySelector("[data-modal-confirm]").focus();
+}
+
 function formatFileSize(bytes) {
   if (!bytes) return "";
   if (bytes < 1024) return `${bytes} B`;
@@ -2327,11 +2356,17 @@ window.editarDocumento = function(id) {
 
 // Lógica de exclusão rápida
 window.excluirDocumento = function(id) {
-  if (confirm("Tem certeza que deseja excluir este registro?")) {
-    documentRecords = documentRecords.filter(d => d.id !== id);
-    saveDocumentRecords();
-    renderDocumentRecords();
-  }
+  showConfirmActionModal({
+    title: "Excluir registro",
+    text: "Tem certeza que deseja excluir este registro?",
+    confirmText: "Excluir",
+    danger: true,
+    onConfirm: () => {
+      documentRecords = documentRecords.filter(d => d.id !== id);
+      saveDocumentRecords();
+      renderDocumentRecords();
+    },
+  });
 };
 
 window.excluirUsuario = async function(id) {
@@ -2382,8 +2417,15 @@ window.editarVaga = function(id) {
 window.excluirVaga = async function(id) {
   const vaga = (data.vagas || []).find((item) => String(item.id) === String(id));
   if (!vaga) return;
-  if (!confirm(`Tem certeza que deseja deletar a vaga "${vaga.cargo}"?`)) return;
-  await deleteItem("vagas", id);
+  showConfirmActionModal({
+    title: "Deletar vaga",
+    text: `Tem certeza que deseja deletar a vaga "${vaga.cargo}"?`,
+    confirmText: "Deletar",
+    danger: true,
+    onConfirm: async () => {
+      await deleteItem("vagas", id);
+    },
+  });
 };
 
 window.editarMalote = function(id) {
@@ -2436,6 +2478,13 @@ window.baixarDocumentoMalote = function(id) {
 window.excluirMalote = async function(id) {
   const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
   if (!malote) return;
-  if (!confirm(`Tem certeza que deseja deletar o malote para "${malote.destino}"?`)) return;
-  await deleteItem("malotes", id);
+  showConfirmActionModal({
+    title: "Deletar malote",
+    text: `Tem certeza que deseja deletar o malote para "${malote.destino}"?`,
+    confirmText: "Deletar",
+    danger: true,
+    onConfirm: async () => {
+      await deleteItem("malotes", id);
+    },
+  });
 };
