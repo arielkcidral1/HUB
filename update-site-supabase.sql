@@ -39,6 +39,7 @@ drop policy if exists "hub_malotes_public_update" on public.hub_malotes;
 drop policy if exists "hub_malotes_public_delete" on public.hub_malotes;
 drop policy if exists "hub_chamados_public_read" on public.hub_chamados;
 drop policy if exists "hub_chamados_public_insert" on public.hub_chamados;
+drop policy if exists "hub_chamados_public_update" on public.hub_chamados;
 
 create policy "hub_malotes_public_read"
 on public.hub_malotes
@@ -75,6 +76,13 @@ create policy "hub_chamados_public_insert"
 on public.hub_chamados
 for insert
 to anon, authenticated
+with check (true);
+
+create policy "hub_chamados_public_update"
+on public.hub_chamados
+for update
+to anon, authenticated
+using (true)
 with check (true);
 
 drop policy if exists "hub_vagas_public_read" on public.hub_vagas;
@@ -130,7 +138,7 @@ to anon, authenticated
 using (true);
 
 grant select, insert, update, delete on public.hub_malotes to anon, authenticated;
-grant select, insert on public.hub_chamados to anon, authenticated;
+grant select, insert, update on public.hub_chamados to anon, authenticated;
 grant select, insert, update, delete on public.hub_vagas to anon, authenticated;
 grant select, insert, delete on public.hub_candidaturas to anon, authenticated;
 grant usage, select on all sequences in schema public to anon, authenticated;

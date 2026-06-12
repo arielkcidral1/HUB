@@ -202,10 +202,20 @@
             </div>
           </div>
           <div class="panel">
-            <div class="panel-header">
-              <h2>Chamados abertos</h2>
+            <div class="panel-header split-header">
+              <div>
+                <h2>Chamados abertos</h2>
+                <p class="item-meta">Selecione os chamados finalizados para arquivar</p>
+              </div>
+              <button class="secondary-link" id="archive-selected-chamados" type="button">Arquivar selecionados</button>
             </div>
             <div class="card-list" id="chamados-list"></div>
+          </div>
+          <div class="panel" style="margin-top: 24px;">
+            <div class="panel-header">
+              <h2>Chamados arquivados</h2>
+            </div>
+            <div class="card-list" id="chamados-arquivados-list"></div>
           </div>
         </section>
 

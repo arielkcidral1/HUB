@@ -1110,15 +1110,15 @@ function toDbPayload(collection, values) {
   }
 
   if (collection === "chamados") {
-    return {
-      solicitante: values.solicitante,
-      unidade: values.unidade,
-      setor: values.setor || "",
-      epis: values.epis,
-      observacoes: values.observacoes || "",
-      status: values.status || "Aberto",
-      created_by: values.createdBy || getCurrentUserName(),
-    };
+    const payload = {};
+    if ("solicitante" in values) payload.solicitante = values.solicitante;
+    if ("unidade" in values) payload.unidade = values.unidade;
+    if ("setor" in values) payload.setor = values.setor || "";
+    if ("epis" in values) payload.epis = values.epis;
+    if ("observacoes" in values) payload.observacoes = values.observacoes || "";
+    payload.status = values.status || "Aberto";
+    payload.created_by = values.createdBy || getCurrentUserName();
+    return payload;
   }
 
   const { createdBy, ...payload } = values;
@@ -1440,6 +1440,9 @@ async function updateItem(collection, id, values) {
     if (collection === "malotes") {
       delete payload.created_by;
       payload.updated_by = values.updatedBy || getCurrentUserName();
+    }
+    if (collection === "chamados") {
+      delete payload.created_by;
     }
     const { data: updated, error } = await supabaseClient
       .from(TABLES[collection])
@@ -1923,10 +1926,17 @@ function renderAll() {
     </article>
   `);
 
-  renderCards("chamados-list", data.chamados, (item) => `
+  const chamadosAbertos = (data.chamados || []).filter((item) => item.status !== "Arquivado");
+  const chamadosArquivados = (data.chamados || []).filter((item) => item.status === "Arquivado");
+  const archiveButton = document.getElementById("archive-selected-chamados");
+  if (archiveButton) archiveButton.disabled = !chamadosAbertos.length;
+  const chamadoCard = (item, archived = false) => `
     <article class="item-card">
       <div class="item-topline">
-        <p class="item-title">${escapeHtml(item.unidade)}</p>
+        <p class="item-title">
+          ${archived ? "" : `<input class="chamado-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar chamado de ${escapeHtml(item.solicitante)}" />`}
+          ${escapeHtml(item.unidade)}
+        </p>
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
       </div>
       <p><strong>Solicitante:</strong> ${escapeHtml(item.solicitante)}</p>
@@ -1934,8 +1944,12 @@ function renderAll() {
       <p><strong>EPIs:</strong> ${escapeHtml(item.epis)}</p>
       ${item.observacoes ? `<p><strong>Observacoes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
       <p class="item-meta">${escapeHtml(item.createdAt)}</p>
+      ${archived ? `<div class="job-actions"><button class="secondary-link" type="button" onclick="reabrirChamado('${escapeHtml(item.id)}')">Reabrir</button></div>` : ""}
     </article>
-  `);
+  `;
+
+  renderCards("chamados-list", chamadosAbertos, (item) => chamadoCard(item));
+  renderCards("chamados-arquivados-list", chamadosArquivados, (item) => chamadoCard(item, true));
 
   renderCards("vagas-list", data.vagas, (item) => {
     const candidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id) === String(item.id));
@@ -2081,6 +2095,29 @@ document.getElementById("chat-channel-list")?.addEventListener("click", (event) 
 
 document.getElementById("malote-destino-filter")?.addEventListener("change", () => {
   renderAll();
+});
+
+document.getElementById("archive-selected-chamados")?.addEventListener("click", () => {
+  const selectedIds = Array.from(document.querySelectorAll("#chamados-list .chamado-select:checked"))
+    .map((input) => input.value)
+    .filter(Boolean);
+
+  if (!selectedIds.length) {
+    showModal("Nenhum chamado selecionado", "Selecione pelo menos um chamado para arquivar.", "error");
+    return;
+  }
+
+  showConfirmActionModal({
+    title: "Arquivar chamados",
+    text: `Deseja arquivar ${selectedIds.length} chamado(s) selecionado(s)?`,
+    confirmText: "Arquivar",
+    onConfirm: async () => {
+      const results = await Promise.all(selectedIds.map((id) => updateItem("chamados", id, { status: "Arquivado" })));
+      if (results.every(Boolean)) {
+        showModal("Chamados arquivados", "Os chamados selecionados foram movidos para Arquivados.", "info");
+      }
+    },
+  });
 });
 
 document.querySelectorAll(".doc-tab").forEach((button) => {
@@ -2457,6 +2494,18 @@ if (setupLogin()) {
 
 // Vincula a função globalmente ao escopo de janela (window) para que o atributo onclick do HTML consiga disparar a leitura.
 window.lerDenuncia = lerDenuncia;
+
+window.reabrirChamado = function(id) {
+  showConfirmActionModal({
+    title: "Reabrir chamado",
+    text: "Deseja mover este chamado de volta para a lista de chamados abertos?",
+    confirmText: "Reabrir",
+    onConfirm: async () => {
+      const success = await updateItem("chamados", id, { status: "Aberto" });
+      if (success) showModal("Chamado reaberto", "O chamado voltou para a lista de abertos.", "info");
+    },
+  });
+};
 
 // Lógica para preparar os formulários com os dados de um documento existente
 window.editarDocumento = function(id) {

@@ -17,6 +17,7 @@ alter table public.hub_chamados enable row level security;
 
 drop policy if exists "hub_chamados_public_read" on public.hub_chamados;
 drop policy if exists "hub_chamados_public_insert" on public.hub_chamados;
+drop policy if exists "hub_chamados_public_update" on public.hub_chamados;
 
 create policy "hub_chamados_public_read"
 on public.hub_chamados
@@ -30,7 +31,14 @@ for insert
 to anon, authenticated
 with check (true);
 
-grant select, insert on public.hub_chamados to anon, authenticated;
+create policy "hub_chamados_public_update"
+on public.hub_chamados
+for update
+to anon, authenticated
+using (true)
+with check (true);
+
+grant select, insert, update on public.hub_chamados to anon, authenticated;
 grant usage, select on all sequences in schema public to anon, authenticated;
 
 do $$
