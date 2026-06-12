@@ -751,6 +751,24 @@ function formatPhone(value) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
+function formatCurrencyBR(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  const amount = Number(digits) / 100;
+  return amount.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function formatAbsencePeriod(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  if (digits.length <= 6) return `${digits.slice(0, 2)}/${digits.slice(2, 4)} a ${digits.slice(4)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)} a ${digits.slice(4, 6)}/${digits.slice(6)}`;
+}
+
 function formatCpf(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 3) return digits;
@@ -2592,6 +2610,15 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
     }
     if (event.target.name === "rg") {
       event.target.value = formatRg(event.target.value);
+    }
+    if (["telefone", "celular"].includes(event.target.name)) {
+      event.target.value = formatPhone(event.target.value);
+    }
+    if (["salario", "salario_atual", "salario_proposto", "faixa_salarial"].includes(event.target.name)) {
+      event.target.value = formatCurrencyBR(event.target.value);
+    }
+    if (event.target.name === "data_ausencia") {
+      event.target.value = formatAbsencePeriod(event.target.value);
     }
   });
 

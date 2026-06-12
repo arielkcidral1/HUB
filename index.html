@@ -314,7 +314,7 @@
                     <label>Cargo<input name="cargo" required /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
-                    <label>Salário<input name="salario" placeholder="R$ 0,00" /></label>
+                    <label>Salário<input name="salario" placeholder="R$ 0,00" inputmode="numeric" /></label>
                     <label>Horário de Trabalho<input name="horario_trabalho" /></label>
                     <label>Centro de Custo<input name="centro_custo" /></label>
                   </div>
@@ -360,7 +360,7 @@
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Filial / Setor<select name="filial" data-unit-select required></select></label>
-                    <label>Data(s) da ausencia<input name="data_ausencia" required placeholder="Ex: 12/04 a 14/04" /></label>
+                    <label>Data(s) da ausencia<input name="data_ausencia" required placeholder="00/00 a 00/00" maxlength="13" inputmode="numeric" /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Data da Entrevista<input name="data_entrevista" type="date" required /></label>
@@ -435,7 +435,7 @@
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
                     <label>Nome da Mãe<input name="nome_mae" required /></label>
-                    <label>Celular / Telefone<input name="celular" required placeholder="(00) 00000-0000" /></label>
+                    <label>Celular / Telefone<input name="celular" required placeholder="(00) 00000-0000" maxlength="15" inputmode="numeric" /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 16px;">
                     <label>Peso<input name="peso" /></label>
@@ -583,7 +583,7 @@
                     <label>Turno atual<input name="turno_atual" /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
-                    <label>Salario atual<input name="salario_atual" /></label>
+                    <label>Salario atual<input name="salario_atual" placeholder="R$ 0,00" inputmode="numeric" /></label>
                     <label>Gestor imediato<input name="gestor" /></label>
                   </div>
                   <label>Movimentacao<select name="movimentacao"><option>Enquadramento salarial</option><option>Merito</option><option>Promocao</option><option>Mudanca de cargo</option><option>Troca turno/area</option><option>Outros</option></select></label>
@@ -594,7 +594,7 @@
                     <label>Data da movimentacao<input name="data_movimentacao" type="date" /></label>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
-                    <label>Salario proposto<input name="salario_proposto" /></label>
+                    <label>Salario proposto<input name="salario_proposto" placeholder="R$ 0,00" inputmode="numeric" /></label>
                     <label>% reajuste<input name="reajuste" /></label>
                   </div>
                   <label>Justificativa Detalhada da Movimentação<textarea name="justificativa_movimentacao" rows="2" required></textarea></label>
@@ -638,7 +638,7 @@
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
                     <label>Cargo/Função/Nível<input name="cargo" required /></label>
                     <label>Nº de vagas<input name="numero_vagas" type="number" min="1" required /></label>
-                    <label>Faixa salarial<input name="faixa_salarial" /></label>
+                    <label>Faixa salarial<input name="faixa_salarial" placeholder="R$ 0,00" inputmode="numeric" /></label>
                   </div>
                   <label>Descricao da vaga<textarea name="descricao" rows="3" required></textarea></label>
                   <label>Requisitos<textarea name="requisitos" rows="3"></textarea></label>
