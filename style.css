@@ -670,7 +670,8 @@ textarea:focus {
   gap: 8px;
 }
 
-.chamado-select {
+.chamado-select,
+.denuncia-select {
   width: 16px;
   height: 16px;
   accent-color: var(--teal);

@@ -1,3 +1,4 @@
+alter table public.hub_denuncias enable row level security;
 alter table public.hub_malotes enable row level security;
 alter table public.hub_chamados enable row level security;
 alter table public.hub_vagas enable row level security;
@@ -33,6 +34,9 @@ alter table public.hub_candidaturas
   add constraint hub_candidaturas_vaga_id_fkey
   foreign key (vaga_id) references public.hub_vagas(id) on delete cascade;
 
+drop policy if exists "hub_denuncias_public_read" on public.hub_denuncias;
+drop policy if exists "hub_denuncias_public_insert" on public.hub_denuncias;
+drop policy if exists "hub_denuncias_public_update" on public.hub_denuncias;
 drop policy if exists "hub_malotes_public_read" on public.hub_malotes;
 drop policy if exists "hub_malotes_public_insert" on public.hub_malotes;
 drop policy if exists "hub_malotes_public_update" on public.hub_malotes;
@@ -40,6 +44,25 @@ drop policy if exists "hub_malotes_public_delete" on public.hub_malotes;
 drop policy if exists "hub_chamados_public_read" on public.hub_chamados;
 drop policy if exists "hub_chamados_public_insert" on public.hub_chamados;
 drop policy if exists "hub_chamados_public_update" on public.hub_chamados;
+
+create policy "hub_denuncias_public_read"
+on public.hub_denuncias
+for select
+to anon, authenticated
+using (true);
+
+create policy "hub_denuncias_public_insert"
+on public.hub_denuncias
+for insert
+to anon, authenticated
+with check (true);
+
+create policy "hub_denuncias_public_update"
+on public.hub_denuncias
+for update
+to anon, authenticated
+using (true)
+with check (true);
 
 create policy "hub_malotes_public_read"
 on public.hub_malotes
@@ -137,6 +160,7 @@ for delete
 to anon, authenticated
 using (true);
 
+grant select, insert, update on public.hub_denuncias to anon, authenticated;
 grant select, insert, update, delete on public.hub_malotes to anon, authenticated;
 grant select, insert, update on public.hub_chamados to anon, authenticated;
 grant select, insert, update, delete on public.hub_vagas to anon, authenticated;

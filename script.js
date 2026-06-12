@@ -101,6 +101,8 @@ let documentRecords = loadDocumentRecords();
 let readRhMessageIds = loadReadRhMessageIds();
 let chamadosSelectionMode = false;
 let showArchivedChamados = false;
+let denunciasSelectionMode = false;
+let showArchivedDenuncias = false;
 window.editingDocId = null;
 
 const documentLabels = {
@@ -1713,7 +1715,7 @@ function renderCards(targetId, items, template) {
 function renderDashboard() {
   if (!document.getElementById("metric-denuncias")) return;
 
-  document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status !== "Lida" && item.status !== "Fechada").length;
+  document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status === "Aberta" || item.status === "Urgente").length;
   const unreadRhMessages = getUnreadRhMessages();
   if (document.getElementById("metric-comunicados")) {
     document.getElementById("metric-comunicados").textContent = unreadRhMessages.length;
@@ -1799,6 +1801,37 @@ async function lerDenuncia(id) {
         showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada. Você precisa rodar o script SQL de UPDATE no painel do Supabase para consertar as permissões.", "error");
       }
     }
+  }
+}
+
+async function atualizarStatusDenuncia(id, status) {
+  const denuncia = data.denuncias.find((item) => String(item.id) === String(id));
+  if (!denuncia) return false;
+
+  if (!supabaseClient) {
+    denuncia.status = status;
+    saveLocalData();
+    renderAll();
+    return true;
+  }
+
+  try {
+    const { data: updated, error } = await supabaseClient
+      .from(TABLES.denuncias)
+      .update({ status })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !updated) throw error || new Error("Nenhuma linha alterada.");
+
+    mergeRealtimeRow("denuncias", updated, "UPDATE");
+    renderRealtimeUpdate("denuncias");
+    return true;
+  } catch (err) {
+    console.error("Erro ao atualizar status da denúncia no Supabase:", err);
+    showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada. Rode o supabase-schema.sql atualizado para liberar UPDATE em hub_denuncias.", "error");
+    return false;
   }
 }
 
@@ -1900,23 +1933,48 @@ function renderAll() {
   renderDashboard();
   renderPublicVagas();
 
-  // Filtra as denúncias entre as listas de Não Lidas e Lidas
-  const naoLidas = data.denuncias.filter(item => item.status === "Aberta");
+  // Filtra as denúncias entre as listas de Não Lidas, Lidas e Arquivadas
+  const naoLidas = data.denuncias.filter(item => item.status === "Aberta" || item.status === "Urgente");
   const lidas = data.denuncias.filter(item => item.status === "Lida");
+  const arquivadas = data.denuncias.filter(item => item.status === "Arquivada");
+  const selectDenunciasButton = document.getElementById("select-denuncias");
+  const archivedDenunciasPanel = document.getElementById("denuncias-arquivadas-panel");
+  const toggleArchivedDenunciasButton = document.getElementById("toggle-archived-denuncias");
 
-  const cardTemplate = (item) => `
-    <article class="item-card" style="cursor: pointer;" onclick="lerDenuncia('${item.id}')">
+  if (selectDenunciasButton) {
+    selectDenunciasButton.disabled = !naoLidas.length && !lidas.length;
+    selectDenunciasButton.textContent = denunciasSelectionMode ? "Arquivar selecionadas" : "Selecionar denúncias";
+  }
+  if (archivedDenunciasPanel) archivedDenunciasPanel.style.display = showArchivedDenuncias ? "" : "none";
+  if (toggleArchivedDenunciasButton) {
+    toggleArchivedDenunciasButton.textContent = showArchivedDenuncias ? "Ocultar arquivadas" : "Mostrar arquivadas";
+    toggleArchivedDenunciasButton.disabled = !arquivadas.length;
+  }
+
+  const cardAction = (item, archived) =>
+    denunciasSelectionMode && !archived
+      ? `toggleDenunciaSelection(event, '${escapeHtml(item.id)}')`
+      : `lerDenuncia('${escapeHtml(item.id)}')`;
+  const cardTemplate = (item, archived = false) => `
+    <article class="item-card ${denunciasSelectionMode && !archived ? "selectable-card" : ""}" style="cursor: pointer;" onclick="${cardAction(item, archived)}">
       <div class="item-topline">
-        <p class="item-title">Denuncia anonima</p>
+        <p class="item-title">
+          ${!archived && denunciasSelectionMode ? `<input class="denuncia-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar denúncia de ${escapeHtml(item.createdAt)}" onclick="event.stopPropagation()" />` : ""}
+          Denuncia anonima
+        </p>
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
       </div>
       <p>${escapeHtml(item.descricao.substring(0, 80))}${item.descricao.length > 80 ? '...' : ''}</p>
       <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+      ${archived ? `<div class="job-actions"><button class="secondary-link" type="button" onclick="event.stopPropagation(); reabrirDenuncia('${escapeHtml(item.id)}')">Reabrir</button></div>` : ""}
     </article>
   `;
 
   renderCards("denuncias-nao-lidas", naoLidas, cardTemplate);
   renderCards("denuncias-lidas", lidas, cardTemplate);
+  if (showArchivedDenuncias) {
+    renderCards("denuncias-arquivadas", arquivadas, (item) => cardTemplate(item, true));
+  }
 
   renderChatChannels();
   renderChat();
@@ -2152,6 +2210,42 @@ document.getElementById("archive-selected-chamados")?.addEventListener("click", 
 
 document.getElementById("toggle-archived-chamados")?.addEventListener("click", () => {
   showArchivedChamados = !showArchivedChamados;
+  renderAll();
+});
+
+document.getElementById("select-denuncias")?.addEventListener("click", () => {
+  if (!denunciasSelectionMode) {
+    denunciasSelectionMode = true;
+    renderAll();
+    return;
+  }
+
+  const selectedIds = Array.from(document.querySelectorAll(".denuncia-select:checked"))
+    .map((input) => input.value)
+    .filter(Boolean);
+
+  if (!selectedIds.length) {
+    showModal("Nenhuma denúncia selecionada", "Selecione pelo menos uma denúncia para arquivar.", "error");
+    return;
+  }
+
+  showConfirmActionModal({
+    title: "Arquivar denúncias",
+    text: `Deseja arquivar ${selectedIds.length} denúncia(s) selecionada(s)?`,
+    confirmText: "Arquivar",
+    onConfirm: async () => {
+      const results = await Promise.all(selectedIds.map((id) => atualizarStatusDenuncia(id, "Arquivada")));
+      if (results.every(Boolean)) {
+        denunciasSelectionMode = false;
+        renderAll();
+        showModal("Denúncias arquivadas", "As denúncias selecionadas foram movidas para Arquivadas.", "info");
+      }
+    },
+  });
+});
+
+document.getElementById("toggle-archived-denuncias")?.addEventListener("click", () => {
+  showArchivedDenuncias = !showArchivedDenuncias;
   renderAll();
 });
 
@@ -2529,6 +2623,24 @@ if (setupLogin()) {
 
 // Vincula a função globalmente ao escopo de janela (window) para que o atributo onclick do HTML consiga disparar a leitura.
 window.lerDenuncia = lerDenuncia;
+
+window.toggleDenunciaSelection = function(event, id) {
+  event.stopPropagation();
+  const checkbox = document.querySelector(`.denuncia-select[value="${CSS.escape(String(id))}"]`);
+  if (checkbox) checkbox.checked = !checkbox.checked;
+};
+
+window.reabrirDenuncia = function(id) {
+  showConfirmActionModal({
+    title: "Reabrir denúncia",
+    text: "Deseja mover esta denúncia de volta para a lista de lidas?",
+    confirmText: "Reabrir",
+    onConfirm: async () => {
+      const success = await atualizarStatusDenuncia(id, "Lida");
+      if (success) showModal("Denúncia reaberta", "A denúncia voltou para a lista de lidas.", "info");
+    },
+  });
+};
 
 window.reabrirChamado = function(id) {
   showConfirmActionModal({

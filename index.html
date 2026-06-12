@@ -88,7 +88,11 @@
                 <h2>Gestão de Denúncias Anônimas</h2>
                 <p class="item-meta">Clique numa denúncia para ler o conteúdo e movê-la para a lista de Lidas</p>
               </div>
-              <a class="secondary-link" href="denuncia.html" target="_blank" rel="noreferrer">Abrir canal publico</a>
+              <div class="job-actions" style="margin-top: 0;">
+                <button class="secondary-link" id="select-denuncias" type="button">Selecionar denúncias</button>
+                <button class="secondary-link" id="toggle-archived-denuncias" type="button">Mostrar arquivadas</button>
+                <a class="secondary-link" href="denuncia.html" target="_blank" rel="noreferrer">Abrir canal publico</a>
+              </div>
             </div>
           </div>
 
@@ -105,6 +109,13 @@
                 <h2>Lidas</h2>
               </div>
               <div class="card-list denuncia-list" id="denuncias-lidas"></div>
+            </div>
+
+            <div class="panel" id="denuncias-arquivadas-panel" style="display: none;">
+              <div class="panel-header">
+                <h2>Arquivadas</h2>
+              </div>
+              <div class="card-list denuncia-list" id="denuncias-arquivadas"></div>
             </div>
           </div>
         </section>

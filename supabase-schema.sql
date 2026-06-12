@@ -120,7 +120,7 @@ drop policy if exists "hub_users_public_delete" on public.hub_users;
 
 create policy "hub_denuncias_public_read" on public.hub_denuncias for select to anon, authenticated using (true);
 create policy "hub_denuncias_public_insert" on public.hub_denuncias for insert to anon, authenticated with check (true);
-create policy "hub_denuncias_public_update" on public.hub_denuncias for update to anon, authenticated using (true);
+create policy "hub_denuncias_public_update" on public.hub_denuncias for update to anon, authenticated using (true) with check (true);
 create policy "hub_chat_public_read" on public.hub_chat_messages for select to anon, authenticated using (true);
 create policy "hub_chat_public_insert" on public.hub_chat_messages for insert to anon, authenticated with check (true);
 create policy "hub_malotes_public_read" on public.hub_malotes for select to anon, authenticated using (true);
