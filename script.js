@@ -558,7 +558,8 @@ function renderCurrentUser() {
 function populateUnitSelects() {
   document.querySelectorAll("[data-unit-select]").forEach((select) => {
     const currentValue = select.value;
-    select.innerHTML = '<option value="">Selecione uma unidade</option>' + UNIT_OPTIONS
+    const placeholder = select.dataset.unitPlaceholder || "Selecione uma unidade";
+    select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>` + UNIT_OPTIONS
       .map((unit) => `<option value="${escapeHtml(unit)}">${escapeHtml(unit)}</option>`)
       .join("");
 
@@ -578,6 +579,55 @@ function setFieldValue(field, value) {
     field.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`);
   }
   field.value = value || "";
+}
+
+function getSelectedMaloteDestino() {
+  return document.getElementById("malote-destino-filter")?.value || "";
+}
+
+function getFilteredMalotes() {
+  const selectedDestino = getSelectedMaloteDestino();
+  if (!selectedDestino) return data.malotes;
+  return data.malotes.filter((item) => item.destino === selectedDestino);
+}
+
+function renderMaloteReport() {
+  const target = document.getElementById("malote-report");
+  if (!target) return;
+
+  const selectedDestino = getSelectedMaloteDestino();
+  const source = getFilteredMalotes();
+  const byDestino = data.malotes.reduce((acc, item) => {
+    const key = item.destino || "Sem destino";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const topDestino = Object.entries(byDestino).sort((a, b) => b[1] - a[1])[0];
+  const separacao = source.filter((item) => item.status === "Separação").length;
+  const entrega = source.filter((item) => item.status === "Entrega").length;
+
+  target.innerHTML = `
+    <article class="report-chip">
+      <span>${selectedDestino ? "Destino filtrado" : "Total geral"}</span>
+      <strong>${source.length}</strong>
+      <small>${escapeHtml(selectedDestino || "Todos os destinos")}</small>
+    </article>
+    <article class="report-chip">
+      <span>Em separacao</span>
+      <strong>${separacao}</strong>
+      <small>Malotes pendentes</small>
+    </article>
+    <article class="report-chip">
+      <span>Em entrega</span>
+      <strong>${entrega}</strong>
+      <small>Malotes em entrega</small>
+    </article>
+    <article class="report-chip">
+      <span>Destino com mais malotes</span>
+      <strong>${topDestino ? topDestino[1] : 0}</strong>
+      <small>${escapeHtml(topDestino ? topDestino[0] : "Sem dados")}</small>
+    </article>
+  `;
 }
 
 function formatDate(value) {
@@ -714,6 +764,55 @@ function showModal(title, text, type = "info") {
     </div>
   `;
   document.body.appendChild(overlay);
+}
+
+function showPasswordActionModal({ title, text, confirmText = "Confirmar", danger = false, onConfirm }) {
+  const existing = document.getElementById("custom-modal");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "custom-modal";
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header ${danger ? "error" : "info"}">${escapeHtml(title)}</div>
+      <div class="modal-body">
+        <p>${escapeHtml(text)}</p>
+        <label class="modal-password-label">Senha de autorizacao
+          <input id="modal-action-password" type="password" autocomplete="current-password" placeholder="Digite a senha" />
+        </label>
+        <p class="form-feedback error" id="modal-action-error" hidden>Senha incorreta.</p>
+      </div>
+      <div class="modal-footer modal-footer-split">
+        <button class="secondary-link" type="button" data-modal-cancel>Cancelar</button>
+        <button class="${danger ? "danger-button" : "primary-button"}" type="button" data-modal-confirm>${escapeHtml(confirmText)}</button>
+      </div>
+    </div>
+  `;
+
+  const close = () => overlay.remove();
+  overlay.querySelector("[data-modal-cancel]").addEventListener("click", close);
+  overlay.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+    const password = overlay.querySelector("#modal-action-password").value;
+    const error = overlay.querySelector("#modal-action-error");
+    if (String(password).trim() !== TEAM_DELETE_PASSWORD) {
+      error.hidden = false;
+      return;
+    }
+
+    await onConfirm();
+    close();
+  });
+
+  overlay.querySelector("#modal-action-password").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      overlay.querySelector("[data-modal-confirm]").click();
+    }
+  });
+
+  document.body.appendChild(overlay);
+  overlay.querySelector("#modal-action-password").focus();
 }
 
 function formatFileSize(bytes) {
@@ -1707,7 +1806,8 @@ function renderAll() {
   renderChatChannels();
   renderChat();
 
-  renderCards("malotes-list", data.malotes, (item) => `
+  renderMaloteReport();
+  renderCards("malotes-list", getFilteredMalotes(), (item) => `
     <article class="item-card">
       <div class="item-topline"><p class="item-title">${escapeHtml(item.destino)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
       <p><strong>Origem:</strong> ${escapeHtml(item.origem || "Nao informada")}</p>
@@ -1861,6 +1961,10 @@ document.getElementById("chat-channel-list")?.addEventListener("click", (event) 
   activeChatChannel = button.dataset.chatChannel || GENERAL_CHANNEL;
   renderChatChannels();
   renderChat();
+});
+
+document.getElementById("malote-destino-filter")?.addEventListener("change", () => {
+  renderAll();
 });
 
 document.querySelectorAll(".doc-tab").forEach((button) => {
@@ -2234,33 +2338,30 @@ window.excluirUsuario = async function(id) {
   const user = (data.usuarios || []).find((item) => String(item.id) === String(id));
   if (!user) return;
 
-  const password = prompt(`Digite a senha de exclusao para deletar ${user.nome}:`);
-  if (password === null) return;
-
-  if (String(password).trim() !== TEAM_DELETE_PASSWORD) {
-    showModal("Senha incorreta", "A senha informada nao autoriza a exclusao de funcionarios.", "error");
-    return;
-  }
-
-  if (!confirm(`Tem certeza que deseja deletar ${user.nome} da equipe?`)) return;
-
-  await deleteTeamUser(id);
+  showPasswordActionModal({
+    title: "Deletar conta",
+    text: `Confirme a senha de autorizacao para deletar ${user.nome} da equipe.`,
+    confirmText: "Deletar",
+    danger: true,
+    onConfirm: async () => {
+      await deleteTeamUser(id);
+    },
+  });
 };
 
 window.mostrarSenhaUsuario = function(id) {
   const user = (data.usuarios || []).find((item) => String(item.id) === String(id));
   if (!user) return;
 
-  const password = prompt(`Digite a senha de exclusao para visualizar a senha de ${user.nome}:`);
-  if (password === null) return;
-
-  if (String(password).trim() !== TEAM_DELETE_PASSWORD) {
-    showModal("Senha incorreta", "A senha informada nao autoriza a visualizacao das senhas.", "error");
-    return;
-  }
-
-  const target = document.getElementById(`senha-usuario-${id}`);
-  if (target) target.textContent = user.senha || "";
+  showPasswordActionModal({
+    title: "Mostrar senha",
+    text: `Confirme a senha de autorizacao para visualizar a senha de ${user.nome}.`,
+    confirmText: "Mostrar senha",
+    onConfirm: () => {
+      const target = document.getElementById(`senha-usuario-${id}`);
+      if (target) target.textContent = user.senha || "";
+    },
+  });
 };
 
 window.editarVaga = function(id) {

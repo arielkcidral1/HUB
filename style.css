@@ -1017,6 +1017,42 @@ textarea:focus {
   padding: 0 12px;
 }
 
+.malote-report {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+
+.report-chip {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.report-chip span,
+.report-chip small {
+  display: block;
+}
+
+.report-chip span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.report-chip strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 24px;
+}
+
+.report-chip small {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
 /* Descrição e textos de apoio */
 .public-description {
   margin: 0 0 24px 0;
@@ -1185,4 +1221,21 @@ form[data-public-denuncia="true"] .primary-button {
   width: auto;
   min-height: 40px;
   padding: 0 24px;
+}
+
+.modal-footer-split {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.modal-footer-split .secondary-link,
+.modal-footer-split .danger-button,
+.modal-footer-split .primary-button {
+  width: auto;
+  min-height: 40px;
+  padding: 0 18px;
+}
+
+.modal-password-label {
+  margin: 16px 0 0;
 }
