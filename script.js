@@ -1954,6 +1954,7 @@ function renderAll() {
     toggleArchivedDenunciasButton.textContent = showArchivedDenuncias ? "Ocultar arquivadas" : "Mostrar arquivadas";
     toggleArchivedDenunciasButton.disabled = false;
     toggleArchivedDenunciasButton.hidden = denunciasSelectionMode;
+    toggleArchivedDenunciasButton.style.display = denunciasSelectionMode ? "none" : "";
   }
   if (exitSelectionButton) {
     exitSelectionButton.hidden = !denunciasSelectionMode;
@@ -1982,10 +1983,11 @@ function renderAll() {
   renderCards("denuncias-nao-lidas", naoLidas, cardTemplate);
   renderCards("denuncias-lidas", lidas, cardTemplate);
   if (showArchivedDenuncias) {
-    renderCards("denuncias-arquivadas", arquivadas, (item) => cardTemplate(item, true));
-    if (!arquivadas.length) {
-      const emptyArchived = document.getElementById("denuncias-arquivadas");
-      if (emptyArchived) emptyArchived.innerHTML = '<p class="empty-state">Sem denuncias arquivadas</p>';
+    const archivedTarget = document.getElementById("denuncias-arquivadas");
+    if (!arquivadas.length && archivedTarget) {
+      archivedTarget.innerHTML = '<p class="empty-state">Sem denuncias arquivadas</p>';
+    } else {
+      renderCards("denuncias-arquivadas", arquivadas, (item) => cardTemplate(item, true));
     }
   }
 
