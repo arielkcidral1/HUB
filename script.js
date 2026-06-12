@@ -1976,7 +1976,6 @@ function renderAll() {
       </div>
       <p>${escapeHtml(item.descricao.substring(0, 80))}${item.descricao.length > 80 ? '...' : ''}</p>
       <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
-      ${archived ? `<div class="job-actions"><button class="secondary-link" type="button" onclick="event.stopPropagation(); reabrirDenuncia('${escapeHtml(item.id)}')">Reabrir</button></div>` : ""}
     </article>
   `;
 
@@ -2648,18 +2647,6 @@ window.toggleDenunciaSelection = function(event, id) {
   event.stopPropagation();
   const checkbox = document.querySelector(`.denuncia-select[value="${CSS.escape(String(id))}"]`);
   if (checkbox) checkbox.checked = !checkbox.checked;
-};
-
-window.reabrirDenuncia = function(id) {
-  showConfirmActionModal({
-    title: "Reabrir denúncia",
-    text: "Deseja mover esta denúncia de volta para a lista de lidas?",
-    confirmText: "Reabrir",
-    onConfirm: async () => {
-      const success = await atualizarStatusDenuncia(id, "Lida");
-      if (success) showModal("Denúncia reaberta", "A denúncia voltou para a lista de lidas.", "info");
-    },
-  });
 };
 
 window.reabrirChamado = function(id) {
