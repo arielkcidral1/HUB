@@ -1665,6 +1665,7 @@ function renderAll() {
       <div class="job-actions">
         <button class="secondary-link" type="button" onclick="editarMalote('${escapeHtml(item.id)}')">Editar</button>
         <button class="secondary-link" type="button" onclick="baixarDocumentoMalote('${escapeHtml(item.id)}')">Baixar documento</button>
+        <button class="danger-button" type="button" onclick="excluirMalote('${escapeHtml(item.id)}')">Deletar</button>
       </div>
     </article>
   `);
@@ -2261,4 +2262,11 @@ window.baixarDocumentoMalote = function(id) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+};
+
+window.excluirMalote = async function(id) {
+  const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
+  if (!malote) return;
+  if (!confirm(`Tem certeza que deseja deletar o malote para "${malote.destino}"?`)) return;
+  await deleteItem("malotes", id);
 };
