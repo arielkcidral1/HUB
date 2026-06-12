@@ -560,19 +560,20 @@ function ensureRequiredTeamUsers() {
 
   Object.values(LOGIN_USERS).forEach((requiredUser) => {
     const existingIndex = data.usuarios.findIndex((user) => normalizeLoginName(user.nome) === normalizeLoginName(requiredUser.nome));
-    const requiredRecord = {
-      id: existingIndex >= 0 ? data.usuarios[existingIndex].id : generateUUID(),
-      nome: requiredUser.nome,
-      senha: requiredUser.senha,
-      cargo: data.usuarios[existingIndex]?.cargo || "RH",
-      syncStatus: existingIndex >= 0 ? data.usuarios[existingIndex].syncStatus : "local",
-      createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
-    };
 
     if (existingIndex >= 0) {
-      data.usuarios[existingIndex] = requiredRecord;
+      if (!data.usuarios[existingIndex].cargo) {
+        data.usuarios[existingIndex].cargo = "RH";
+      }
     } else {
-      data.usuarios.push(requiredRecord);
+      data.usuarios.push({
+        id: generateUUID(),
+        nome: requiredUser.nome,
+        senha: requiredUser.senha,
+        cargo: "RH",
+        syncStatus: "local",
+        createdAt: todayLabel(),
+      });
     }
   });
 }
