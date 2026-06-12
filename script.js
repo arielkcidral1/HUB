@@ -3096,12 +3096,12 @@ window.reabrirChamado = function(id) {
 window.reabrirDenuncia = function(id) {
   showConfirmActionModal({
     title: "Reabrir denúncia",
-    text: "Deseja mover esta denúncia de volta para a lista de Não Lidas?",
+    text: "Deseja mover esta denúncia de volta para a lista de Lidas?",
     confirmText: "Reabrir",
     onConfirm: async () => {
-      const success = await atualizarStatusDenuncia(id, "Aberta");
+      const success = await atualizarStatusDenuncia(id, "Lida");
       if (success) {
-        showModal("Denúncia reaberta", "A denúncia voltou para a lista de Não Lidas.", "info");
+        showModal("Denúncia reaberta", "A denúncia voltou para a lista de Lidas.", "info");
       }
     },
   });
