@@ -838,10 +838,10 @@ function getCurrentYearDateLimit() {
   return `${new Date().getFullYear()}-12-31`;
 }
 
-function applyDocumentDateLimits(root = document) {
+function normalizeDocumentDateValues(root = document) {
   const maxDate = getCurrentYearDateLimit();
   root.querySelectorAll('[data-doc-form] input[type="date"]').forEach((input) => {
-    input.max = maxDate;
+    input.removeAttribute("max");
     if (input.value && input.value > maxDate) {
       input.value = maxDate;
     }
@@ -2999,7 +2999,7 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
 });
 
 document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
-  applyDocumentDateLimits(formElement);
+  normalizeDocumentDateValues(formElement);
 
   formElement.addEventListener("input", (event) => {
     if (event.target.name === "cpf") {
@@ -3022,18 +3022,9 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
     }
   });
 
-  formElement.addEventListener("change", (event) => {
-    if (!event.target.matches('input[type="date"]')) return;
-    const maxDate = getCurrentYearDateLimit();
-    event.target.max = maxDate;
-    if (event.target.value && event.target.value > maxDate) {
-      event.target.value = maxDate;
-    }
-  });
-
   formElement.addEventListener("submit", (event) => {
     event.preventDefault();
-    applyDocumentDateLimits(event.currentTarget);
+    normalizeDocumentDateValues(event.currentTarget);
     const form = new FormData(event.currentTarget);
     const entries = [...form.entries()].filter(([, value]) => String(value || "").trim());
     const collaborator = form.get("colaborador") || form.get("cargo") || "Registro sem colaborador";
@@ -3662,7 +3653,7 @@ window.editarDocumento = function(id) {
     Object.entries(doc.formData).forEach(([key, value]) => {
       if (form.elements[key]) setFieldValue(form.elements[key], value);
     });
-    applyDocumentDateLimits(form);
+    normalizeDocumentDateValues(form);
     const btn = form.querySelector("button[type='submit']");
     if (btn) {
       if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
