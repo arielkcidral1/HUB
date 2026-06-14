@@ -2086,6 +2086,10 @@ async function saveTeamUser(values) {
   const senha = String(values.senha || "").trim();
   const cargo = String(values.cargo || "").trim();
   if (!nome || !senha) return false;
+  if (!cargo) {
+    showModal("Cargo obrigatorio", "Selecione um cargo para cadastrar o usuario.", "error");
+    return false;
+  }
   persistTeamCredential(nome, senha);
 
   if (!supabaseClient) {
