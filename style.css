@@ -226,6 +226,13 @@ h2 {
   flex-shrink: 0;
 }
 
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .brand strong {
   display: block;
   font-size: 15px;
@@ -574,31 +581,18 @@ h2 {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-raised);
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-  transition: var(--transition);
-}
-
-.calendar-day:hover,
-.calendar-cell:hover {
-  border-color: var(--teal-border);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
 }
 
 .calendar-day {
   display: grid;
-  width: 100%;
-  min-height: 104px;
-  align-content: start;
-  justify-items: stretch;
+  min-height: 82px;
+  align-content: center;
+  justify-items: center;
   gap: 4px;
   padding: 10px 6px;
 }
 
-.calendar-weekday-label,
+.calendar-day span,
 .calendar-weekdays span {
   color: var(--muted);
   font-size: 11px;
@@ -608,32 +602,24 @@ h2 {
 }
 
 .calendar-day strong {
-  display: block;
   color: var(--ink);
   font-size: 24px;
   font-weight: 800;
-  text-align: center;
 }
 
-.calendar-weekday-label {
-  text-align: center;
-}
-
-.calendar-event-preview {
-  display: block;
-  overflow: hidden;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--teal-dark);
-  padding: 4px 6px;
-  font-size: 11px;
+.calendar-day small {
+  display: grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 12px;
   font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.calendar-day.has-event,
-.calendar-cell.has-event {
+.calendar-day.has-event {
   border-color: var(--teal-border);
   background: var(--teal-surface);
 }
@@ -677,7 +663,6 @@ h2 {
 
 .calendar-cell {
   display: grid;
-  width: 100%;
   align-content: start;
   gap: 5px;
   min-height: 106px;
@@ -690,7 +675,6 @@ h2 {
   background: transparent;
 }
 
-.calendar-day.today,
 .calendar-cell.today {
   border-color: var(--teal-border);
   box-shadow: inset 0 0 0 2px rgba(12, 98, 89, 0.12);
@@ -1353,40 +1337,6 @@ textarea {
   padding: 0 16px;
 }
 
-.day-events-modal {
-  width: min(100%, 760px);
-}
-
-.day-events-body {
-  display: grid;
-  gap: 12px;
-  max-height: min(62vh, 560px);
-  overflow-y: auto;
-  white-space: normal;
-}
-
-.day-event-card {
-  display: grid;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface-soft);
-  padding: 16px;
-}
-
-.day-event-card p {
-  margin: 0;
-}
-
-.day-empty-state {
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface-soft);
-  padding: 24px;
-  text-align: center;
-  font-weight: 700;
-}
-
 .modal-password-label {
   margin: 16px 0 0;
 }
@@ -1429,6 +1379,12 @@ textarea {
   font-weight: 800;
   letter-spacing: -0.4px;
   color: var(--ink);
+}
+
+.public-brand-logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
 }
 
 .public-header {
