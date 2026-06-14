@@ -794,6 +794,29 @@ function formatDateTime(value) {
   }).format(new Date(value));
 }
 
+function getChatMessageTime(value) {
+  if (!value || value === "Hoje") return 0;
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
+
+  const match = String(value).match(/^(\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2})/);
+  if (!match) return 0;
+
+  const [, day, month, year, hour, minute] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)).getTime();
+}
+
+function compareChatMessagesOldestFirst(a, b) {
+  const timeDiff = getChatMessageTime(a.createdAt) - getChatMessageTime(b.createdAt);
+  if (timeDiff !== 0) return timeDiff;
+
+  const idA = Number(a.id);
+  const idB = Number(b.id);
+  if (Number.isFinite(idA) && Number.isFinite(idB)) return idA - idB;
+  return 0;
+}
+
 function formatPhone(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 2) return digits ? `(${digits}` : "";
@@ -2922,7 +2945,7 @@ function renderChat() {
     const channel = normalizeChatChannel(item.canal);
     if (channel !== activeChatChannel) return false;
     return canAccessChatChannel(channel);
-  });
+  }).sort(compareChatMessagesOldestFirst);
 
   if (!messages.length) {
     target.innerHTML = '<p class="empty-state">Nenhuma mensagem neste chat ainda.</p>';
@@ -2951,7 +2974,7 @@ function renderChat() {
     })
     .join("");
 
-  target.scrollTop = 0;
+  target.scrollTop = target.scrollHeight;
 
   checkAndMarkChatAsRead();
 }
