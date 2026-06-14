@@ -120,6 +120,7 @@ let showArchivedChamados = false;
 let denunciasSelectionMode = false;
 let showArchivedDenuncias = false;
 let dashboardCalendarViewMode = "week";
+let visibleCalendarDate = new Date();
 window.editingDocId = null;
 
 const documentLabels = {
@@ -1010,11 +1011,14 @@ function getCurrentWeekDates() {
   });
 }
 
-function isEventInCurrentMonth(item) {
+function isEventInMonth(item, baseDate = new Date()) {
   if (!item.data) return false;
-  const today = new Date();
   const eventDate = new Date(`${item.data}T00:00:00`);
-  return eventDate.getFullYear() === today.getFullYear() && eventDate.getMonth() === today.getMonth();
+  return eventDate.getFullYear() === baseDate.getFullYear() && eventDate.getMonth() === baseDate.getMonth();
+}
+
+function isEventInCurrentMonth(item) {
+  return isEventInMonth(item);
 }
 
 function escapeHtml(value) {
@@ -2221,8 +2225,8 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
   if (!strip || !list) return;
 
   const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
+  const currentMonth = visibleCalendarDate.getMonth();
+  const currentYear = visibleCalendarDate.getFullYear();
   const weekDates = getCurrentWeekDates();
   const monthDates = Array.from({ length: new Date(currentYear, currentMonth + 1, 0).getDate() }, (_, index) => {
     const date = new Date(currentYear, currentMonth, index + 1);
@@ -2232,9 +2236,12 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
   const visibleEvents =
     dashboardCalendarViewMode === "week"
       ? getSortedEvents().filter((item) => visibleDates.includes(item.data))
-      : getSortedEvents().filter(isEventInCurrentMonth);
+      : getSortedEvents().filter((item) => isEventInMonth(item, visibleCalendarDate));
 
-  if (title) title.textContent = dashboardCalendarViewMode === "week" ? "Agenda da semana" : "Agenda do mes";
+  if (title) {
+    const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(visibleCalendarDate);
+    title.textContent = dashboardCalendarViewMode === "week" ? "Agenda da semana" : `Agenda do mes - ${monthLabel}`;
+  }
   if (toggleButton) toggleButton.textContent = dashboardCalendarViewMode === "week" ? "Ver agenda do mes" : "Ver agenda da semana";
   strip.classList.toggle("calendar-strip-month", dashboardCalendarViewMode === "month");
 
@@ -2267,12 +2274,12 @@ function renderCalendar() {
   if (!month) return;
 
   const today = new Date();
-  const year = today.getFullYear();
-  const monthIndex = today.getMonth();
+  const year = visibleCalendarDate.getFullYear();
+  const monthIndex = visibleCalendarDate.getMonth();
   const firstDay = new Date(year, monthIndex, 1);
   const totalDays = new Date(year, monthIndex + 1, 0).getDate();
   const leadingDays = firstDay.getDay();
-  const title = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(today);
+  const title = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(visibleCalendarDate);
   const cells = [];
 
   for (let index = 0; index < leadingDays; index += 1) {
@@ -2290,7 +2297,7 @@ function renderCalendar() {
     `);
   }
 
-  const visibleEvents = getSortedEvents().filter(isEventInCurrentMonth);
+  const visibleEvents = getSortedEvents().filter((item) => isEventInMonth(item, visibleCalendarDate));
 
   month.innerHTML = `
     <div class="calendar-title">${escapeHtml(title)}</div>
@@ -3226,6 +3233,18 @@ document.getElementById("cancelar-edicao-evento")?.addEventListener("click", () 
 
 document.getElementById("toggle-dashboard-calendar-view")?.addEventListener("click", () => {
   dashboardCalendarViewMode = dashboardCalendarViewMode === "week" ? "month" : "week";
+  renderDashboardCalendar();
+});
+
+document.getElementById("previous-calendar-month")?.addEventListener("click", () => {
+  visibleCalendarDate = new Date(visibleCalendarDate.getFullYear(), visibleCalendarDate.getMonth() - 1, 1);
+  renderCalendar();
+  renderDashboardCalendar();
+});
+
+document.getElementById("next-calendar-month")?.addEventListener("click", () => {
+  visibleCalendarDate = new Date(visibleCalendarDate.getFullYear(), visibleCalendarDate.getMonth() + 1, 1);
+  renderCalendar();
   renderDashboardCalendar();
 });
 

@@ -638,6 +638,13 @@ h2 {
   gap: 14px;
 }
 
+.calendar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .calendar-month {
   display: grid;
   gap: 12px;
@@ -1680,6 +1687,14 @@ form.panel[data-public-chamados="true"].panel {
   .calendar-panel .panel-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .calendar-actions {
+    width: 100%;
+  }
+
+  .calendar-actions .secondary-link {
+    flex: 1;
   }
 
   .nav-list,
