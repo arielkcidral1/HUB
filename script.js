@@ -2396,14 +2396,17 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
   if (toggleButton) toggleButton.textContent = dashboardCalendarViewMode === "week" ? "Ver agenda do mes" : "Ver agenda da semana";
   strip.classList.toggle("calendar-strip-month", dashboardCalendarViewMode === "month");
 
+  const todayKey = today.toISOString().slice(0, 10);
   strip.innerHTML = visibleDates
     .map((date) => {
       const dayEvents = (data.eventos || []).filter((item) => item.data === date);
       const holiday = getHolidayForDate(date);
+      const isToday = date === todayKey;
       return `
-        <button class="calendar-day ${date === today.toISOString().slice(0, 10) ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+        <button class="calendar-day ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
           <span class="calendar-weekday-label">${escapeHtml(formatWeekday(date))}</span>
           <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
+          ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
           ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
           ${dayEvents.slice(0, 2).map((item) => `<span class="calendar-event-preview">${escapeHtml(item.titulo)}</span>`).join("")}
         </button>
@@ -2434,6 +2437,7 @@ function renderCalendar() {
   const leadingDays = firstDay.getDay();
   const title = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(visibleCalendarDate);
   const cells = [];
+  const todayKey = today.toISOString().slice(0, 10);
 
   for (let index = 0; index < leadingDays; index += 1) {
     cells.push('<div class="calendar-cell muted"></div>');
@@ -2443,9 +2447,11 @@ function renderCalendar() {
     const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const dayEvents = (data.eventos || []).filter((item) => item.data === date);
     const holiday = getHolidayForDate(date);
+    const isToday = date === todayKey;
     cells.push(`
-      <button class="calendar-cell ${date === today.toISOString().slice(0, 10) ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+      <button class="calendar-cell ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
         <strong>${day}</strong>
+        ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
         ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
         ${dayEvents.slice(0, 2).map((item) => `<span>${escapeHtml(item.titulo)}</span>`).join("")}
       </button>

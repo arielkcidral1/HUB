@@ -613,18 +613,25 @@ h2 {
   background: var(--teal-surface);
 }
 
+.calendar-day.today,
+.calendar-cell.today {
+  border-color: var(--teal-border);
+  box-shadow: inset 0 0 0 2px rgba(12, 98, 89, 0.12);
+}
+
 .calendar-day.is-holiday,
 .calendar-cell.is-holiday {
   border-color: var(--gold-border);
   background: var(--gold-surface);
 }
 
-.calendar-holiday-label {
+.calendar-day .calendar-today-label,
+.calendar-cell .calendar-today-label,
+.calendar-day .calendar-holiday-label,
+.calendar-cell .calendar-holiday-label {
   display: block;
   overflow: hidden;
   border-radius: var(--radius-sm);
-  background: var(--gold-light);
-  color: #442f03;
   padding: 4px 6px;
   font-size: 11px;
   font-weight: 900;
@@ -632,6 +639,18 @@ h2 {
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.calendar-day .calendar-today-label,
+.calendar-cell .calendar-today-label {
+  background: var(--teal);
+  color: #fff;
+}
+
+.calendar-day .calendar-holiday-label,
+.calendar-cell .calendar-holiday-label {
+  background: var(--gold-light);
+  color: #442f03;
 }
 
 .calendar-workspace {
@@ -690,11 +709,6 @@ h2 {
 .calendar-cell.muted {
   border-color: transparent;
   background: transparent;
-}
-
-.calendar-cell.today {
-  border-color: var(--teal-border);
-  box-shadow: inset 0 0 0 2px rgba(12, 98, 89, 0.12);
 }
 
 .calendar-cell strong {
