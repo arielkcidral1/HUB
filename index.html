@@ -29,6 +29,7 @@
           <button class="nav-item" data-view="malotes" type="button">Malotes de EPI</button>
           <button class="nav-item" data-view="chamados" type="button">Chamados</button>
           <button class="nav-item" data-view="vagas" type="button">Vagas e Projetos</button>
+          <button class="nav-item" data-view="calendario" type="button">Calendario</button>
           <button class="nav-item" data-view="documentos" type="button">Documentos RH</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/chamados.html" type="button">Solicitar EPIs</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/denuncia.html" type="button">Canal de Denúncia</button>
@@ -76,6 +77,10 @@
               <span>Vagas abertas</span>
               <strong id="metric-vagas">0</strong>
             </article>
+            <article class="metric-card">
+              <span>Eventos proximos</span>
+              <strong id="metric-eventos">0</strong>
+            </article>
           </div>
 
           <article class="panel">
@@ -83,6 +88,14 @@
               <h2>Acompanhamento</h2>
             </div>
             <ul class="activity-list" id="dashboard-list"></ul>
+          </article>
+
+          <article class="panel calendar-preview-panel">
+            <div class="panel-header">
+              <h2>Agenda da semana</h2>
+            </div>
+            <div class="calendar-strip" id="dashboard-calendar-strip"></div>
+            <ul class="activity-list" id="dashboard-events-list"></ul>
           </article>
         </section>
 
@@ -270,6 +283,51 @@
                 <h2>Vagas cadastradas</h2>
               </div>
               <div class="card-list" id="vagas-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="calendario">
+          <div class="workspace calendar-workspace">
+            <form class="panel form-panel" id="evento-form">
+              <div class="panel-header">
+                <h2>Novo evento</h2>
+              </div>
+              <label>Atividade
+                <input name="titulo" placeholder="Ex: Treinamento de seguranca" required />
+              </label>
+              <label>Data
+                <input name="data" type="date" required />
+              </label>
+              <label>Horario
+                <input name="horario" type="time" required />
+              </label>
+              <label>Responsavel
+                <input name="responsavel" placeholder="Nome ou area responsavel" required />
+              </label>
+              <label>Tipo
+                <select name="tipo">
+                  <option>Evento</option>
+                  <option>Treinamento</option>
+                  <option>Reuniao</option>
+                  <option>Atividade</option>
+                </select>
+              </label>
+              <label>Observacoes
+                <textarea name="descricao" rows="4" placeholder="Detalhes, local ou participantes"></textarea>
+              </label>
+              <button class="primary-button" type="submit">Registrar evento</button>
+            </form>
+
+            <div class="panel calendar-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Calendario do RH</h2>
+                  <p class="item-meta">Eventos e atividades registrados</p>
+                </div>
+              </div>
+              <div class="calendar-month" id="calendar-month"></div>
+              <div class="card-list" id="eventos-list"></div>
             </div>
           </div>
         </section>

@@ -29,6 +29,7 @@ const TABLES = {
   malotes: "hub_malotes",
   chamados: "hub_chamados",
   vagas: "hub_vagas",
+  eventos: "hub_eventos",
   candidaturas: "hub_candidaturas",
   usuarios: USERS_TABLE,
 };
@@ -80,6 +81,19 @@ const defaultData = {
       descricao: "Apoio as rotinas administrativas, organizacao de documentos e atendimento interno.",
       requisitos: "Ensino medio completo, organizacao e conhecimento basico em pacote Office.",
       status: "Aberta",
+      createdAt: "Hoje",
+    },
+  ],
+  eventos: [
+    {
+      id: generateUUID(),
+      titulo: "Reuniao semanal do RH",
+      data: new Date().toISOString().slice(0, 10),
+      horario: "09:00",
+      responsavel: "Equipe RH",
+      tipo: "Reuniao",
+      descricao: "Alinhamento de prioridades da semana.",
+      createdBy: "Sistema",
       createdAt: "Hoje",
     },
   ],
@@ -554,6 +568,7 @@ function loadLocalData() {
       malotes: parsed.malotes || [],
       chamados: parsed.chamados || [],
       vagas: parsed.vagas || [],
+      eventos: parsed.eventos || [],
       candidaturas: parsed.candidaturas || [],
       usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()),
     };
@@ -951,6 +966,30 @@ function todayLabel() {
   return formatDate(new Date().toISOString());
 }
 
+function formatEventDate(value) {
+  if (!value) return "Sem data";
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+  }).format(new Date(`${value}T00:00:00`));
+}
+
+function formatWeekday(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(new Date(`${value}T00:00:00`));
+}
+
+function getSortedEvents() {
+  return (data.eventos || [])
+    .slice()
+    .sort((a, b) => `${a.data || ""}T${a.horario || "00:00"}`.localeCompare(`${b.data || ""}T${b.horario || "00:00"}`));
+}
+
+function getUpcomingEvents() {
+  const today = new Date().toISOString().slice(0, 10);
+  return getSortedEvents().filter((item) => !item.data || item.data >= today);
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -1154,6 +1193,20 @@ function mapRows(collection, rows) {
     }));
   }
 
+  if (collection === "eventos") {
+    return rows.map((row) => ({
+      id: row.id,
+      titulo: row.titulo,
+      data: row.data,
+      horario: row.horario,
+      responsavel: row.responsavel,
+      tipo: row.tipo || "Evento",
+      descricao: row.descricao || "",
+      createdBy: row.created_by || "Sistema",
+      createdAt: formatDate(row.created_at),
+    }));
+  }
+
   if (collection === "usuarios") {
     return rows.map((row) => ({
       id: row.id,
@@ -1283,6 +1336,18 @@ function toDbPayload(collection, values) {
     payload.status = values.status || "Aberto";
     payload.created_by = values.createdBy || getCurrentUserName();
     return payload;
+  }
+
+  if (collection === "eventos") {
+    return {
+      titulo: values.titulo,
+      data: values.data,
+      horario: values.horario,
+      responsavel: values.responsavel,
+      tipo: values.tipo || "Evento",
+      descricao: values.descricao || "",
+      created_by: values.createdBy || getCurrentUserName(),
+    };
   }
 
   const { createdBy, ...payload } = values;
@@ -1577,6 +1642,19 @@ async function addItem(collection, values) {
     return true;
   } catch (error) {
     console.error("Erro ao salvar no Supabase:", error);
+    if (collection === "eventos") {
+      data[collection].unshift({
+        id: generateUUID(),
+        createdAt: todayLabel(),
+        createdBy: values.createdBy || getCurrentUserName(),
+        ...values,
+      });
+      saveLocalData();
+      setSyncStatus("Evento salvo localmente", false);
+      renderAll();
+      showModal("Evento salvo localmente", "Rode o SQL do calendario no Supabase para sincronizar esta agenda entre computadores.", "info");
+      return true;
+    }
     setSyncStatus("Erro no Supabase", false);
     const message =
       collection === "chamados"
@@ -1965,7 +2043,7 @@ function applyRoleAccess() {
 
   const allowedViews = isManagerUser()
     ? new Set(["comunicacao", "documentos", "conta"])
-    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "documentos", "equipe", "conta"]);
+    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "calendario", "documentos", "equipe", "conta"]);
   const allowedExternalUrls = isManagerUser()
     ? new Set(["https://hub-opal-nine.vercel.app/chamados.html", "https://hub-opal-nine.vercel.app/denuncia.html"])
     : new Set();
@@ -2003,6 +2081,10 @@ function renderDashboard() {
   if (document.getElementById("metric-vagas")) {
     document.getElementById("metric-vagas").textContent = data.vagas.filter((item) => item.status !== "Fechada").length;
   }
+  const upcomingEvents = getUpcomingEvents();
+  if (document.getElementById("metric-eventos")) {
+    document.getElementById("metric-eventos").textContent = upcomingEvents.length;
+  }
   if (document.getElementById("metric-documentos")) {
     document.getElementById("metric-documentos").textContent = documentRecords.length;
   }
@@ -2039,6 +2121,89 @@ function renderDashboard() {
         .join("");
     }
   }
+
+  renderDashboardCalendar(upcomingEvents);
+}
+
+function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
+  const strip = document.getElementById("dashboard-calendar-strip");
+  const list = document.getElementById("dashboard-events-list");
+  if (!strip || !list) return;
+
+  const nextDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() + index);
+    return date.toISOString().slice(0, 10);
+  });
+
+  strip.innerHTML = nextDays
+    .map((date) => {
+      const count = (data.eventos || []).filter((item) => item.data === date).length;
+      return `
+        <div class="calendar-day ${count ? "has-event" : ""}">
+          <span>${escapeHtml(formatWeekday(date))}</span>
+          <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
+          ${count ? `<small>${count}</small>` : ""}
+        </div>
+      `;
+    })
+    .join("");
+
+  if (!upcomingEvents.length) {
+    list.innerHTML = '<li><p class="empty-state">Nenhum evento proximo registrado.</p></li>';
+    return;
+  }
+
+  list.innerHTML = upcomingEvents
+    .slice(0, 4)
+    .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag">${escapeHtml(item.tipo)}</span></div><p>${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(item.horario)} | ${escapeHtml(item.responsavel)}</p></li>`)
+    .join("");
+}
+
+function renderCalendar() {
+  const month = document.getElementById("calendar-month");
+  if (!month) return;
+
+  const today = new Date();
+  const year = today.getFullYear();
+  const monthIndex = today.getMonth();
+  const firstDay = new Date(year, monthIndex, 1);
+  const totalDays = new Date(year, monthIndex + 1, 0).getDate();
+  const leadingDays = firstDay.getDay();
+  const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(today);
+  const cells = [];
+
+  for (let index = 0; index < leadingDays; index += 1) {
+    cells.push('<div class="calendar-cell muted"></div>');
+  }
+
+  for (let day = 1; day <= totalDays; day += 1) {
+    const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dayEvents = (data.eventos || []).filter((item) => item.data === date);
+    cells.push(`
+      <div class="calendar-cell ${date === today.toISOString().slice(0, 10) ? "today" : ""}">
+        <strong>${day}</strong>
+        ${dayEvents.slice(0, 2).map((item) => `<span>${escapeHtml(item.titulo)}</span>`).join("")}
+        ${dayEvents.length > 2 ? `<small>+${dayEvents.length - 2}</small>` : ""}
+      </div>
+    `);
+  }
+
+  month.innerHTML = `
+    <div class="calendar-title">${escapeHtml(monthLabel)}</div>
+    <div class="calendar-weekdays">
+      <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sab</span>
+    </div>
+    <div class="calendar-grid">${cells.join("")}</div>
+  `;
+
+  renderCards("eventos-list", getSortedEvents(), (item) => `
+    <article class="item-card">
+      <div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag">${escapeHtml(item.tipo)}</span></div>
+      <p>${escapeHtml(item.descricao || "Sem observacoes adicionais.")}</p>
+      <p class="item-meta">${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(item.horario)} | Responsavel: ${escapeHtml(item.responsavel)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+    </article>
+  `);
 }
 
 // Lógica de abertura de denúncia para leitura e transição de estado automática
@@ -2427,6 +2592,7 @@ function renderAll() {
     `;
   });
 
+  renderCalendar();
   renderDocumentRecords();
   renderTeamUsers();
 }
@@ -2916,6 +3082,27 @@ document.getElementById("cancelar-edicao-vaga")?.addEventListener("click", () =>
   document.getElementById("cancelar-edicao-vaga").setAttribute("hidden", "");
   vagaForm.querySelector('button[type="submit"]').textContent = "Salvar vaga";
 });
+
+const eventoForm = document.getElementById("evento-form");
+if (eventoForm) {
+  eventoForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const success = await addItem("eventos", {
+      titulo: form.get("titulo"),
+      data: form.get("data"),
+      horario: form.get("horario"),
+      responsavel: form.get("responsavel"),
+      tipo: form.get("tipo"),
+      descricao: form.get("descricao"),
+      createdBy: getCurrentUserName(),
+    });
+    if (success) {
+      formElement.reset();
+    }
+  });
+}
 
 const usuarioForm = document.getElementById("usuario-form");
 if (usuarioForm) {
