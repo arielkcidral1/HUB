@@ -2245,7 +2245,6 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
         <button class="calendar-day ${count ? "has-event" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
           <span>${escapeHtml(formatWeekday(date))}</span>
           <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
-          ${count ? `<small>${count}</small>` : ""}
         </button>
       `;
     })
@@ -2283,10 +2282,9 @@ function renderCalendar() {
     const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const dayEvents = (data.eventos || []).filter((item) => item.data === date);
     cells.push(`
-      <button class="calendar-cell ${date === today.toISOString().slice(0, 10) ? "today" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+      <button class="calendar-cell ${date === today.toISOString().slice(0, 10) ? "today" : ""} ${dayEvents.length ? "has-event" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
         <strong>${day}</strong>
         ${dayEvents.slice(0, 2).map((item) => `<span>${escapeHtml(item.titulo)}</span>`).join("")}
-        ${dayEvents.length > 2 ? `<small>+${dayEvents.length - 2}</small>` : ""}
       </button>
     `);
   }

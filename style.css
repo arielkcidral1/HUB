@@ -613,19 +613,8 @@ h2 {
   font-weight: 800;
 }
 
-.calendar-day small {
-  display: grid;
-  min-width: 24px;
-  height: 24px;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--teal);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.calendar-day.has-event {
+.calendar-day.has-event,
+.calendar-cell.has-event {
   border-color: var(--teal-border);
   background: var(--teal-surface);
 }
