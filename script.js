@@ -627,7 +627,7 @@ function saveReadRhMessageIds() {
 function getUnreadRhMessages() {
   const currentUser = getCurrentUserName();
   return data.comunicados.filter(
-    (item) => isDirectChannel(normalizeChatChannel(item.canal)) && isCurrentUserInChannel(normalizeChatChannel(item.canal)) && item.autor !== currentUser && !readRhMessageIds.has(String(item.id))
+    (item) => canAccessChatChannel(normalizeChatChannel(item.canal)) && item.autor !== currentUser && !readRhMessageIds.has(String(item.id))
   );
 }
 
@@ -641,9 +641,15 @@ function markRhMessagesRead() {
 
 function checkAndMarkChatAsRead() {
   const communicationView = document.getElementById("comunicacao");
-  if (!communicationView?.classList.contains("active") || !isDirectChannel(activeChatChannel) || !isCurrentUserInChannel(activeChatChannel)) return;
+  if (!communicationView?.classList.contains("active") || !canAccessChatChannel(activeChatChannel)) return;
+  
+  const currentChannel = activeChatChannel;
+  const unread = getUnreadRhMessages().filter((item) => normalizeChatChannel(item.canal) === currentChannel);
+  if (!unread.length) return;
+  
   markRhMessagesRead();
   renderDashboard();
+  renderChatChannels();
 }
 
 function renderCurrentUser() {
@@ -2207,11 +2213,16 @@ function renderChatChannels() {
   }
 
   target.innerHTML = channels
-    .map((channel) => `
+    .map((channel) => {
+      const unreadCount = getUnreadRhMessages().filter(item => normalizeChatChannel(item.canal) === channel.id).length;
+      const badge = unreadCount > 0 ? `<span class="chat-badge">${unreadCount}</span>` : "";
+      return `
         <button class="channel-item ${channel.id === activeChatChannel ? "active" : ""}" data-chat-channel="${escapeHtml(channel.id)}" type="button">
           <span>${escapeHtml(channel.label)}</span>
+          ${badge}
         </button>
-      `)
+      `;
+    })
     .join("");
 }
 
@@ -2394,6 +2405,15 @@ function renderAll() {
   renderTeamUsers();
 }
 
+function getAuthorAvatar(authorName) {
+  const user = (data.usuarios || []).find((u) => normalizeLoginName(u.nome) === normalizeLoginName(authorName));
+  if (user && user.foto_perfil) {
+    return `<img src="${escapeHtml(user.foto_perfil)}" alt="${escapeHtml(authorName)}" class="chat-avatar" />`;
+  }
+  const initial = String(authorName || "?").charAt(0).toUpperCase();
+  return `<div class="chat-avatar-fallback">${initial}</div>`;
+}
+
 function renderDocumentRecords() {
   const target = document.getElementById("document-records");
   if (!target) return;
@@ -2472,8 +2492,6 @@ function renderChat() {
   }
 
   target.innerHTML = messages
-    .slice()
-    .reverse()
     .map((item) => {
       const attachment = item.arquivo
         ? `<a class="attachment-chip" href="${escapeHtml(item.arquivo.url || "#")}" target="_blank" rel="noreferrer">Arquivo: ${escapeHtml(item.arquivo.name)} ${escapeHtml(formatFileSize(item.arquivo.size))}</a>`
@@ -2481,9 +2499,12 @@ function renderChat() {
 
       return `
         <article class="chat-message ${item.autor === currentUser ? "own" : ""}">
-          <div class="chat-author">
-            <span>${escapeHtml(item.autor)}</span>
-            <time>${escapeHtml(item.createdAt)}</time>
+          <div class="chat-message-header">
+            ${getAuthorAvatar(item.autor)}
+            <div class="chat-author">
+              <span>${escapeHtml(item.autor)}</span>
+              <time>${escapeHtml(item.createdAt)}</time>
+            </div>
           </div>
           ${item.mensagem ? `<p>${escapeHtml(item.mensagem)}</p>` : ""}
           ${attachment}
@@ -2492,7 +2513,7 @@ function renderChat() {
     })
     .join("");
 
-  target.scrollTop = target.scrollHeight;
+  target.scrollTop = 0;
 
   checkAndMarkChatAsRead();
 }
