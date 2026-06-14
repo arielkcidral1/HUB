@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chamados de EPI | HUB RH</title>
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="public-layout" data-public-chamados="true">
+      <div class="public-container">
+        <div class="public-brand">
+          <img class="public-brand-logo" src="assets/logo.svg" alt="HUB RH" />
+          <strong>HUB</strong>
+        </div>
+
+        <header class="public-header">
+          <p class="eyebrow">Solicitacao de EPI</p>
+          <h1>Abrir chamado</h1>
+          <p class="public-header-text">Informe a unidade, os EPIs necessarios e os dados para acompanhamento.</p>
+        </header>
+
+        <form class="panel" id="chamado-form" data-public-chamados="true">
+          <div class="panel-header">
+            <h2>Dados do chamado</h2>
+          </div>
+          <label>Solicitante
+            <input name="solicitante" placeholder="Seu nome" required />
+          </label>
+          <label>Unidade / Loja
+            <select name="unidade" data-unit-select required></select>
+          </label>
+          <div class="dynamic-fieldset">
+            <div class="item-topline">
+              <span>EPIs solicitados</span>
+              <button class="secondary-link" id="adicionar-epi" type="button">Adicionar EPI</button>
+            </div>
+            <div class="epi-list" id="epi-list">
+              <div class="epi-row">
+                <label>Nome
+                  <select name="epi_nome[]" data-epi-select required></select>
+                </label>
+                <label>Quantidade
+                  <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
+                </label>
+                <label>Tamanho
+                  <select name="epi_tamanho[]" required>
+                    <option>Nao se aplica</option>
+                    <option>PP</option>
+                    <option>P</option>
+                    <option>M</option>
+                    <option>G</option>
+                    <option>GG</option>
+                    <option>EG</option>
+                  </select>
+                </label>
+                <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+              </div>
+            </div>
+          </div>
+          <label>Observacoes
+            <textarea name="observacoes" rows="3" placeholder="Urgencia, CA, motivo da troca..."></textarea>
+          </label>
+          <button class="primary-button" type="submit">Abrir chamado</button>
+        </form>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

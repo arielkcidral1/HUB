@@ -1,36 +1,22 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>HUB | RH</title>
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <script>
+      if (sessionStorage.getItem("hub-rh-session") !== "active") {
+        window.location.replace("login.html");
+      }
+    </script>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <section class="login-screen" id="login-screen">
-      <form class="login-card" id="login-form">
-        <div class="brand login-brand">
-          <div class="brand-mark">H</div>
-          <div>
-            <strong>HUB</strong>
-            <span>Acesso do RH</span>
-          </div>
-        </div>
-        <label>Nome
-          <input name="nome" autocomplete="username" required />
-        </label>
-        <label>Senha
-          <input name="senha" type="password" autocomplete="current-password" required />
-        </label>
-        <p class="login-error" id="login-error" role="alert"></p>
-        <button class="primary-button" type="submit">Entrar</button>
-      </form>
-    </section>
-
-    <div class="app-shell is-locked" id="app-shell">
+    <div class="app-shell" id="app-shell">
       <aside class="sidebar" aria-label="Navegacao principal">
         <div class="brand">
-          <div class="brand-mark">H</div>
+          <img class="brand-logo" src="assets/logo.svg" alt="HUB RH" />
           <div>
             <strong>HUB</strong>
             <span>Equipe de RH</span>
@@ -42,8 +28,13 @@
           <button class="nav-item" data-view="denuncias" type="button">Denuncias recebidas</button>
           <button class="nav-item" data-view="comunicacao" type="button">Comunicacao RH</button>
           <button class="nav-item" data-view="malotes" type="button">Malotes de EPI</button>
+          <button class="nav-item" data-view="chamados" type="button">Chamados</button>
           <button class="nav-item" data-view="vagas" type="button">Vagas e Projetos</button>
+          <button class="nav-item" data-view="calendario" type="button">Calendario</button>
           <button class="nav-item" data-view="documentos" type="button">Documentos RH</button>
+          <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/chamados.html" type="button">Solicitar EPIs</button>
+          <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/denuncia.html" type="button">Canal de Denúncia</button>
+          <button class="nav-item" data-view="equipe" type="button">Equipe</button>
         </nav>
       </aside>
 
@@ -53,7 +44,13 @@
             <p class="eyebrow">Central operacional</p>
             <h1>HUB</h1>
           </div>
-          <button class="logout-button" id="logout-button" type="button">Sair</button>
+          <div class="topbar-actions">
+            <button type="button" class="user-chip" data-view="conta">
+              <img id="current-user-avatar" class="user-avatar" src="" style="display: none;" alt="Avatar">
+              <span id="current-user">Usuario</span>
+            </button>
+            <button class="logout-button" id="logout-button" type="button">Sair</button>
+          </div>
         </header>
 
         <section class="hero-panel" aria-label="Resumo do HUB">
@@ -74,42 +71,65 @@
               <strong id="metric-comunicados">0</strong>
             </article>
             <article class="metric-card">
-              <span>Malotes em transito</span>
+              <span>Malotes feitos hoje</span>
               <strong id="metric-malotes">0</strong>
             </article>
             <article class="metric-card">
               <span>Vagas abertas</span>
               <strong id="metric-vagas">0</strong>
             </article>
+            <article class="metric-card">
+              <span>Eventos proximos</span>
+              <strong id="metric-eventos">0</strong>
+            </article>
           </div>
 
-          <div class="section-grid">
-            <article class="panel">
-              <div class="panel-header">
-                <h2>Fila de prioridade</h2>
-              </div>
-              <ul class="activity-list" id="priority-list"></ul>
-            </article>
-            <article class="panel">
-              <div class="panel-header">
-                <h2>Ultimas atualizacoes</h2>
-              </div>
-              <ul class="activity-list" id="recent-list"></ul>
-            </article>
-          </div>
+          <article class="panel">
+            <div class="panel-header">
+              <h2>Acompanhamento</h2>
+            </div>
+            <ul class="activity-list" id="dashboard-list"></ul>
+          </article>
+
+          <article class="panel calendar-preview-panel">
+            <div class="panel-header">
+              <h2 id="dashboard-calendar-title">Agenda da semana</h2>
+              <button class="secondary-link" id="toggle-dashboard-calendar-view" type="button">Ver agenda do mes</button>
+            </div>
+            <div class="calendar-strip" id="dashboard-calendar-strip"></div>
+            <ul class="activity-list" id="dashboard-events-list"></ul>
+          </article>
         </section>
 
         <section class="view" id="denuncias">
-          <div class="single-workspace">
-            <div class="panel">
-              <div class="panel-header split-header">
-                <div>
-                  <h2>Denuncias anonimas recebidas</h2>
-                  <p class="item-meta">Este painel e somente para visualizacao do RH</p>
-                </div>
-                <a class="secondary-link" href="denuncia.html" target="_blank" rel="noreferrer">Abrir canal publico</a>
+          <div class="panel" style="margin-bottom: 24px;">
+            <div class="panel-header split-header" style="margin-bottom: 0;">
+              <div>
+                <h2>Gestão de Denúncias Anônimas</h2>
+                <p class="item-meta">Clique numa denúncia para ler o conteúdo e movê-la para a lista de Lidas</p>
               </div>
-              <div class="card-list denuncia-list" id="denuncias-list"></div>
+              <div class="job-actions" style="margin-top: 0;">
+                <button class="secondary-link" id="select-denuncias" type="button">Selecionar denúncias</button>
+                <button class="secondary-link" id="toggle-archived-denuncias" type="button">Mostrar arquivadas</button>
+                <button class="secondary-link" id="exit-denuncias-selection" type="button" hidden>Sair da seleção</button>
+                <a class="secondary-link" id="open-denuncia-public" href="denuncia.html" target="_blank" rel="noreferrer">Abrir canal publico</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="workspace">
+            <div class="panel">
+              <div class="panel-header">
+                <h2 id="denuncias-primary-title">Não Lidas</h2>
+              </div>
+              <div class="card-list denuncia-list" id="denuncias-nao-lidas"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Lidas</h2>
+              </div>
+              <div class="card-list denuncia-list" id="denuncias-lidas"></div>
             </div>
           </div>
         </section>
@@ -120,25 +140,14 @@
               <div class="panel-header">
                 <h2>Canais</h2>
               </div>
-              <button class="channel-item active" type="button">
-                <span>Equipe RH</span>
-                <strong id="chat-total">0</strong>
-              </button>
-              <button class="channel-item" type="button">
-                <span>Beneficios</span>
-                <strong>2</strong>
-              </button>
-              <button class="channel-item" type="button">
-                <span>Recrutamento</span>
-                <strong>1</strong>
-              </button>
+              <div class="channel-list" id="chat-channel-list"></div>
             </aside>
 
             <div class="panel chat-panel">
               <div class="panel-header">
                 <div>
-                  <h2>Chat interno do RH</h2>
-                  <p class="item-meta">Mensagens e arquivos compartilhados pela equipe</p>
+                  <h2 id="chat-title">Chat geral RH</h2>
+                  <p class="item-meta" id="chat-subtitle">Mensagens e arquivos compartilhados pela equipe</p>
                 </div>
               </div>
               <div class="chat-feed" id="chat-feed" aria-live="polite"></div>
@@ -159,57 +168,174 @@
               <div class="panel-header">
                 <h2>Cadastrar malote</h2>
               </div>
+              <input name="id" type="hidden" />
               <label>Destino
-                <input name="destino" placeholder="Unidade, setor ou colaborador" required />
+                <select name="destino" data-unit-select required></select>
               </label>
-              <label>EPIs
-                <textarea name="epis" rows="4" placeholder="Capacete, luvas, oculos..." required></textarea>
+              <label>Origem
+                <select name="origem" data-unit-select required></select>
               </label>
+              <div class="dynamic-fieldset">
+                <div class="item-topline">
+                  <span>EPIs</span>
+                  <button class="secondary-link" id="adicionar-epi" type="button">Adicionar EPI</button>
+                </div>
+                <div class="epi-list" id="epi-list">
+                  <div class="epi-row">
+                    <label>Nome
+                      <select name="epi_nome[]" data-epi-select required>
+                        <option value="">Selecione</option>
+                      </select>
+                    </label>
+                    <label>Quantidade
+                      <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
+                    </label>
+                    <label>Tamanho
+                      <select name="epi_tamanho[]" required>
+                        <option>Nao se aplica</option>
+                        <option>PP</option>
+                        <option>P</option>
+                        <option>M</option>
+                        <option>G</option>
+                        <option>GG</option>
+                        <option>EG</option>
+                      </select>
+                    </label>
+                    <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+                  </div>
+                </div>
+              </div>
               <label>Status
                 <select name="status">
-                  <option>Separacao</option>
-                  <option>Em transito</option>
-                  <option>Entregue</option>
+                  <option>Separação</option>
+                  <option>Entrega</option>
                 </select>
               </label>
               <button class="primary-button" type="submit">Salvar malote</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-malote" type="button" hidden>Cancelar edicao</button>
             </form>
             <div class="panel">
               <div class="panel-header">
                 <h2>Malotes cadastrados</h2>
               </div>
+              <label>Filtrar por destino
+                <select id="malote-destino-filter" data-unit-select data-unit-placeholder="Todos os destinos">
+                  <option value="">Todos os destinos</option>
+                </select>
+              </label>
+              <div class="malote-report" id="malote-report"></div>
               <div class="card-list" id="malotes-list"></div>
             </div>
+          </div>
+        </section>
+
+        <section class="view" id="chamados">
+          <div class="panel" style="margin-bottom: 24px;">
+            <div class="panel-header split-header" style="margin-bottom: 0;">
+              <div>
+                <h2>Chamados de EPI</h2>
+                <p class="item-meta">Solicitacoes abertas pelos colaboradores</p>
+              </div>
+              <div class="job-actions" style="margin-top: 0;">
+                <button class="secondary-link" id="select-chamados" type="button">Selecionar chamados</button>
+                <button class="secondary-link" id="toggle-archived-chamados" type="button">Mostrar arquivados</button>
+                <button class="secondary-link" id="exit-chamados-selection" type="button" hidden>Sair da seleção</button>
+                <a class="secondary-link" id="open-chamados-public" href="chamados.html" target="_blank" rel="noreferrer">Abrir chamado publico</a>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <h2 id="chamados-primary-title">Abertos</h2>
+            </div>
+            <div class="card-list chamado-list" id="chamados-list"></div>
           </div>
         </section>
 
         <section class="view" id="vagas">
           <div class="workspace">
             <form class="panel form-panel" id="vaga-form">
-              <div class="panel-header">
-                <h2>Cadastrar vaga</h2>
+              <div class="panel-header split-header">
+                <div>
+                  <h2>Cadastrar vaga</h2>
+                </div>
+                <a class="secondary-link" href="vagas.html" target="_blank" rel="noreferrer">Ver portal publico</a>
               </div>
+              <input name="id" type="hidden" />
               <label>Cargo
                 <input name="cargo" placeholder="Ex: Tecnico de Seguranca" required />
               </label>
-              <label>Projeto
-                <input name="projeto" placeholder="Nome do projeto" required />
+              <label>Descricao
+                <textarea name="descricao" rows="4" placeholder="Resumo das atividades da vaga" required></textarea>
+              </label>
+              <label>Requisitos
+                <textarea name="requisitos" rows="4" placeholder="Experiencia, cursos, disponibilidade..." required></textarea>
               </label>
               <label>Status
                 <select name="status">
                   <option>Aberta</option>
-                  <option>Triagem</option>
-                  <option>Entrevistas</option>
                   <option>Fechada</option>
                 </select>
               </label>
               <button class="primary-button" type="submit">Salvar vaga</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-vaga" type="button" hidden>Cancelar edicao</button>
             </form>
             <div class="panel">
               <div class="panel-header">
-                <h2>Vagas do projeto</h2>
+                <h2>Vagas cadastradas</h2>
               </div>
               <div class="card-list" id="vagas-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="calendario">
+          <div class="workspace calendar-workspace">
+            <form class="panel form-panel" id="evento-form">
+              <div class="panel-header">
+                <h2>Novo evento</h2>
+              </div>
+              <input name="id" type="hidden" />
+              <label>Atividade
+                <input name="titulo" placeholder="Ex: Treinamento de seguranca" required />
+              </label>
+              <label>Data
+                <input name="data" type="date" required />
+              </label>
+              <label>Horario
+                <input name="horario" type="time" required />
+              </label>
+              <label>Responsavel
+                <input name="responsavel" placeholder="Nome ou area responsavel" required />
+              </label>
+              <label>Tipo
+                <select name="tipo">
+                  <option>Evento</option>
+                  <option>Treinamento</option>
+                  <option>Reuniao</option>
+                  <option>Atividade</option>
+                </select>
+              </label>
+              <label>Observacoes
+                <textarea name="descricao" rows="4" placeholder="Detalhes, local ou participantes"></textarea>
+              </label>
+              <button class="primary-button" type="submit">Registrar evento</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-evento" type="button" hidden>Cancelar edicao</button>
+            </form>
+
+            <div class="panel calendar-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Calendario do RH</h2>
+                  <p class="item-meta">Eventos e atividades registrados</p>
+                </div>
+                <div class="calendar-actions" aria-label="Navegar meses">
+                  <button class="secondary-link" id="previous-calendar-month" type="button">Mes anterior</button>
+                  <button class="secondary-link" id="next-calendar-month" type="button">Proximo mes</button>
+                </div>
+              </div>
+              <div class="calendar-month" id="calendar-month"></div>
+              <div class="card-list" id="eventos-list"></div>
             </div>
           </div>
         </section>
@@ -229,6 +355,10 @@
               <button class="doc-tab" data-doc="beneficios" type="button">Plano saude e odonto</button>
               <button class="doc-tab" data-doc="feedback-operacional" type="button">Feedback operacional</button>
               <button class="doc-tab" data-doc="feedback-fredy" type="button">Feedback Fredy Pneus</button>
+              <button class="doc-tab" data-doc="ferias" type="button">Solicitacao de Ferias</button>
+              <button class="doc-tab" data-doc="movimentacao-pessoal" type="button">MP - Movimentacao Pessoal</button>
+              <button class="doc-tab" data-doc="requisicao-pessoal" type="button">RP - Requisicao Pessoal</button>
+              <button class="doc-tab" data-doc="solicitacao-desligamento" type="button">SD - Solicitacao de Desligamento</button>
             </aside>
 
             <div class="doc-content">
@@ -237,15 +367,40 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>Checklist de Admissao</h2>
-                      <p class="item-meta">Controle de documentos e etapas de entrada</p>
+                      <p class="item-meta">Novas Admissões</p>
                     </div>
-                    <a class="secondary-link" href="docs/checklist-admissao-fredy-pneus-filiais.xlsx" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>Filial<input name="filial" required /></label>
-                  <label>Cargo<input name="cargo" required /></label>
-                  <label>Data de admissao<input name="data" type="date" /></label>
-                  <label>Etapas concluidas<textarea name="observacoes" rows="4" placeholder="Documentos, exames, contrato, beneficios..."></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>CPF<input name="cpf" required placeholder="000.000.000-00" maxlength="14" inputmode="numeric" /></label>
+                    <label>Cargo<input name="cargo" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Salário<input name="salario" placeholder="R$ 0,00" inputmode="numeric" /></label>
+                    <label>Horário de Trabalho<input name="horario_trabalho" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
+                    <label>Centro de Custo<input name="centro_custo" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Filial / Unidade<select name="filial" data-unit-select required></select></label>
+                    <label>Data de admissao<input name="data" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Estado Civil<select name="estado_civil"><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option><option>União Estável</option></select></label>
+                    <label>Grau de Instrução<select name="grau_instrucao"><option>Ensino Fundamental</option><option>Ensino Médio</option><option>Ensino Superior Incompleto</option><option>Ensino Superior Completo</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Vale Transporte?<select name="vale_transporte"><option>Não</option><option>Sim</option></select></label>
+                    <label>Dependentes (IR/Salário Família)?<select name="dependentes"><option>Não</option><option>Sim</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Exame Admissional<select name="exame_admissional"><option>Pendente</option><option>Apto</option><option>Inapto</option></select></label>
+                    <label>Entrega de Documentos<select name="entrega_documentos"><option>Pendente</option><option>Completa</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Entrega de EPIs / Uniforme<select name="entrega_epis"><option>Nao se aplica</option><option>Pendente</option><option>Entregue</option></select></label>
+                    <label>Contrato Assinado<select name="contrato_assinado"><option>Pendente</option><option>Assinado</option></select></label>
+                  </div>
+                  <label>Observacoes gerais<textarea name="observacoes" rows="3" placeholder="Informacoes adicionais sobre a integracao..."></textarea></label>
                   <button class="primary-button" type="submit">Salvar checklist</button>
                 </form>
               </section>
@@ -255,15 +410,32 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>Entrevista ausencia</h2>
-                      <p class="item-meta">Registro de ausencia e plano de acompanhamento</p>
+                      <p class="item-meta">Faltas sem atestados</p>
                     </div>
-                    <a class="secondary-link" href="docs/entrevista-ausencia-fredy-pneus.docx" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>Filial / setor<input name="filial" /></label>
-                  <label>Periodo da ausencia<input name="periodo" /></label>
-                  <label>Motivo informado<textarea name="motivo" rows="4" required></textarea></label>
-                  <label>Acao combinada<textarea name="acao" rows="3"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Função<input name="funcao" /></label>
+                    <label>Admissão<input name="admissao" type="date" /></label>
+                    <label>Superior<input name="superior" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Filial / Setor<select name="filial" data-unit-select required></select></label>
+                    <label>Data(s) da ausencia<input name="data_ausencia" required placeholder="00/00 a 00/00" maxlength="13" inputmode="numeric" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Data da Entrevista<input name="data_entrevista" type="date" required /></label>
+                    <label>Horário/Período do Atraso<input name="horario_atraso" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Tipo de ocorrencia<select name="tipo_ocorrencia"><option>Falta justificada (Atestado)</option><option>Falta injustificada</option><option>Atraso</option><option>Saida antecipada</option></select></label>
+                    <label>Apresentou Comprovante?<select name="apresentou_comprovante"><option>Sim</option><option>Nao</option><option>Nao se aplica</option></select></label>
+                  </div>
+                  <label>Motivo detalhado (Justificativa)<textarea name="motivo" rows="3" required></textarea></label>
+                  <label>Impacto da ausência para a empresa<textarea name="impacto" rows="3"></textarea></label>
+                  <label>Medida Adotada<select name="medida_adotada"><option>Orientacao verbal</option><option>Advertencia verbal</option><option>Advertencia escrita</option><option>Suspensao</option><option>Apenas registro (Abonado)</option></select></label>
+                  <label>Observacoes do Gestor / RH<textarea name="acao" rows="2"></textarea></label>
+                  <label>Colaborador Ciente/Assinou?<select name="colaborador_ciente"><option>Sim</option><option>Não quis assinar</option></select></label>
                   <button class="primary-button" type="submit">Salvar entrevista</button>
                 </form>
               </section>
@@ -273,14 +445,35 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>Entrevista de Desligamento</h2>
-                      <p class="item-meta">Registro dos pontos de saida do colaborador</p>
+                      <p class="item-meta">Entrevista de desligamento na recisão (Obrigatório)</p>
                     </div>
-                    <a class="secondary-link" href="docs/entrevista-de-desligamento.doc" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>Cargo<input name="cargo" /></label>
-                  <label>Motivo do desligamento<select name="motivo"><option>Pedido de demissao</option><option>Desligamento pela empresa</option><option>Termino de contrato</option><option>Outro</option></select></label>
-                  <label>Feedback do colaborador<textarea name="feedback" rows="5"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Cargo<input name="cargo" required /></label>
+                    <label>Filial / Setor<select name="filial" data-unit-select required></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Data de Admissao<input name="data_admissao" type="date" required /></label>
+                    <label>Data de Desligamento<input name="data_desligamento" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Iniciativa do Desligamento<select name="iniciativa_desligamento"><option>Pedido de demissao</option><option>Demissao sem justa causa</option><option>Demissao com justa causa</option><option>Termino de contrato</option></select></label>
+                    <label>Motivo Principal<select name="motivo"><option>Nova oportunidade</option><option>Insatisfacao com o salario</option><option>Ambiente de trabalho</option><option>Relacionamento com gestor</option><option>Desempenho/Produtividade</option><option>Reestruturacao/Corte</option><option>Outros</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Entrevistador (RH)<input name="entrevistador" required /></label>
+                    <label>Avaliação da Liderança<select name="aval_lideranca"><option>Ótima</option><option>Boa</option><option>Regular</option><option>Ruim</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Avaliação de Salário e Benefícios<select name="aval_beneficios"><option>Ótima</option><option>Boa</option><option>Regular</option><option>Ruim</option></select></label>
+                  </div>
+                  <label>O que mais gostava na empresa?<textarea name="pontos_positivos" rows="2"></textarea></label>
+                  <label>O que poderia ser melhorado? (Ambiente, processos, lideranca)<textarea name="pontos_melhoria" rows="2"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Recomendaria a empresa para amigos?<select name="recomendaria"><option>Sim</option><option>Nao</option></select></label>
+                  </div>
+                  <label>Outros comentarios / Feedback final<textarea name="feedback" rows="3"></textarea></label>
                   <button class="primary-button" type="submit">Salvar desligamento</button>
                 </form>
               </section>
@@ -290,14 +483,36 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>Adesao plano de saude e odonto</h2>
-                      <p class="item-meta">Solicitacao de inclusao em beneficios</p>
+                      <p class="item-meta">Adesão de beneficios</p>
                     </div>
-                    <a class="secondary-link" href="docs/formulario-adesao-plano-saude-odonto.docx" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>CPF<input name="cpf" /></label>
-                  <label>Plano<select name="plano"><option>Saude</option><option>Odonto</option><option>Saude e odonto</option></select></label>
-                  <label>Dependentes<textarea name="dependentes" rows="4" placeholder="Nome, parentesco e documento"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 16px;">
+                    <label>CPF<input name="cpf" required placeholder="000.000.000-00" maxlength="14" inputmode="numeric" /></label>
+                    <label>RG<input name="rg" placeholder="00.000.000-0" maxlength="12" inputmode="numeric" /></label>
+                    <label>Data de Nasc.<input name="data_nasc" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Nome da Mãe<input name="nome_mae" required /></label>
+                    <label>Celular / Telefone<input name="celular" required placeholder="(00) 00000-0000" maxlength="15" inputmode="numeric" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 16px;">
+                    <label>Peso<input name="peso" /></label>
+                    <label>Altura<input name="altura" /></label>
+                    <label>E-mail Pessoal<input name="email" type="email" /></label>
+                  </div>
+                  <label>CEP / Endereço Completo<input name="endereco" required placeholder="Rua, Número, Bairro, Cidade - UF, CEP" /></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Tipo de Solicitacao<select name="tipo_solicitacao"><option>Inclusao Novo Titular</option><option>Inclusao de Dependente</option><option>Cancelamento/Exclusao</option></select></label>
+                    <label>Plano Solicitado<select name="plano"><option>Plano de Saude</option><option>Plano Odontologico</option><option>Saude + Odonto</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Nome do Dependente<input name="dependente" /></label>
+                    <label>Grau de Parentesco<input name="parentesco" /></label>
+                  </div>
+                  <label>Dados dos Dependentes (Nome completo, CPF, Parentesco e Data de Nasc.)<textarea name="dependentes" rows="4" placeholder="Ex: Maria da Silva, CPF 000.000.000-00, Conjuge, 10/05/1990"></textarea></label>
+                  <label>Local e Data<input name="local_data" placeholder="Cidade, dd/mm/aaaa" /></label>
+                  <label>Autorizacao de Desconto<select name="autoriza_desconto"><option>Ciente e autorizo o desconto em folha</option><option>Nao se aplica (cancelamento)</option></select></label>
                   <button class="primary-button" type="submit">Salvar adesao</button>
                 </form>
               </section>
@@ -307,15 +522,30 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>Feedback operacional</h2>
-                      <p class="item-meta">Acompanhamento de desempenho operacional</p>
+                      <p class="item-meta">Feedback para cargos operacionais</p>
                     </div>
-                    <a class="secondary-link" href="docs/formulario-feedback-operacional.docx" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>Lider<input name="lider" /></label>
-                  <label>Pontos positivos<textarea name="positivos" rows="3"></textarea></label>
-                  <label>Pontos de melhoria<textarea name="melhorias" rows="3"></textarea></label>
-                  <label>Plano de acao<textarea name="acao" rows="3"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Cargo / Funcao<input name="cargo" required /></label>
+                    <label>Gestor / Lider Avaliador<input name="lider" required /></label>
+                  </div>
+                  <label>Data do Feedback<input name="data_feedback" type="date" required /></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Assiduidade e Pontualidade<select name="aval_assiduidade"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                    <label>Produtividade e Qualidade<select name="aval_produtividade"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Trabalho em Equipe<select name="aval_equipe"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                    <label>Seguranca e uso de EPIs<select name="aval_seguranca"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Comportamento e Respeito às Regras<select name="aval_comportamento"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                    <label>Organização e Limpeza (5S)<select name="aval_organizacao"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                  </div>
+                  <label>Principais Pontos Fortes (O que o colaborador faz bem?)<textarea name="positivos" rows="3" required></textarea></label>
+                  <label>Pontos a Desenvolver (O que precisa melhorar?)<textarea name="melhorias" rows="3" required></textarea></label>
+                  <label>Plano de Acao / Metas para o proximo ciclo<textarea name="acao" rows="3" required></textarea></label>
                   <button class="primary-button" type="submit">Salvar feedback</button>
                 </form>
               </section>
@@ -325,15 +555,185 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>Feedback Fredy Pneus</h2>
-                      <p class="item-meta">Registro geral de feedback e acompanhamento</p>
+                      <p class="item-meta">Feedback para cargos estratégicos</p>
                     </div>
-                    <a class="secondary-link" href="docs/formulario-feedback-fredy-pneus.docx" download>Baixar modelo</a>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
-                  <label>Setor<input name="setor" /></label>
-                  <label>Avaliacao geral<select name="avaliacao"><option>Excelente</option><option>Bom</option><option>Regular</option><option>Precisa melhorar</option></select></label>
-                  <label>Observacoes<textarea name="observacoes" rows="5"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Setor<select name="setor" data-unit-select required></select></label>
+                    <label>Data do Registro<input name="data_registro" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Gestor Aplicador<input name="gestor_aplicador" required /></label>
+                    <label>Cargo<input name="cargo" /></label>
+                    <label>Tempo de Empresa<input name="tempo_empresa" /></label>
+                    <label>Acompanhamento do RH?<select name="acompanhamento_rh"><option>Não</option><option>Sim</option></select></label>
+                  </div>
+                  <label>Tipo de Feedback<select name="tipo_feedback"><option>Orientacao / Alinhamento de rotina</option><option>Elogio / Reconhecimento</option><option>Correcao Disciplinar</option></select></label>
+                  <label>Situacao / Comportamento Observado (Descreva o fato)<textarea name="situacao" rows="4" required></textarea></label>
+                  <label>Pontos positivos / fortalezas<textarea name="positivos" rows="3"></textarea></label>
+                  <label>Pontos de melhoria / desenvolvimento<textarea name="melhorias" rows="3"></textarea></label>
+                  <label>Expectativa do colaborador<textarea name="expectativa_colaborador" rows="3"></textarea></label>
+                  <label>Plano de ação<textarea name="plano_acao" rows="3"></textarea></label>
+                  <label>Acompanhamento<textarea name="acompanhamento" rows="3"></textarea></label>
+                  <label>Reacao do Colaborador e Compromisso Assumido<textarea name="observacoes" rows="4" required></textarea></label>
                   <button class="primary-button" type="submit">Salvar feedback</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-ferias">
+                <form class="panel doc-form" data-doc-form="ferias">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Solicitacao de Ferias</h2>
+                      <p class="item-meta">Solicitação de Ferias</p>
+                    </div>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Setor requisitante<select name="filial" data-unit-select required></select></label>
+                    <label>Requisitante<input name="requisitante" required /></label>
+                  </div>
+                  <label>Funcionário<input name="colaborador" required /></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 16px;">
+                    <label>Dias para gozo<input name="dias_gozo" type="number" min="1" required /></label>
+                    <label>Data de início<input name="data_inicio" type="date" required /></label>
+                    <label>Abono pecuniário<select name="abono"><option>Nao</option><option>Sim</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Período Aquisitivo (Início)<input name="periodo_aquisitivo_inicio" type="date" required /></label>
+                    <label>Período Aquisitivo (Fim)<input name="periodo_aquisitivo_fim" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Adiantamento 1ª Parcela 13º?<select name="adiantamento_13"><option>Não</option><option>Sim</option></select></label>
+                  </div>
+                  <label>Calcular abono com data anterior as ferias<select name="abono_data_anterior"><option>Nao</option><option>Sim</option></select></label>
+                  <label>Responsavel pelas atividades<input name="responsavel_atividades" required /></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Tipo de cobertura<select name="tipo_cobertura"><option>Temporario</option><option>Substituicao Interna</option><option>Nao se aplica</option></select></label>
+                    <label>Nome do responsavel<input name="nome_responsavel" /></label>
+                  </div>
+                  <label>Observacoes<textarea name="observacoes" rows="3"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar solicitacao</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-movimentacao-pessoal">
+                <form class="panel doc-form" data-doc-form="movimentacao-pessoal">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>MP - Movimentacao Pessoal</h2>
+                      <p class="item-meta">Movimentação de histórico promocional e aditivos contratuais</p>
+                    </div>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Nome<input name="colaborador" required /></label>
+                    <label>Matricula<input name="matricula" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Cargo atual<input name="cargo_atual" required /></label>
+                    <label>Admissao<input name="admissao" type="date" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Area atual<select name="filial" data-unit-select required></select></label>
+                    <label>Turno atual<input name="turno_atual" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Salario atual<input name="salario_atual" placeholder="R$ 0,00" inputmode="numeric" /></label>
+                    <label>Gestor imediato<input name="gestor" /></label>
+                  </div>
+                  <label>Movimentacao<select name="movimentacao"><option>Enquadramento salarial</option><option>Merito</option><option>Promocao</option><option>Mudanca de cargo</option><option>Troca turno/area</option><option>Outros</option></select></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Cargo proposto<input name="cargo_proposto" /></label>
+                    <label>Area proposta<select name="area_proposta" data-unit-select></select></label>
+                    <label>Turno proposto<input name="turno_proposto" /></label>
+                    <label>Data da movimentacao<input name="data_movimentacao" type="date" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Salario proposto<input name="salario_proposto" placeholder="R$ 0,00" inputmode="numeric" /></label>
+                    <label>% reajuste<input name="reajuste" /></label>
+                  </div>
+                  <label>Justificativa Detalhada da Movimentação<textarea name="justificativa_movimentacao" rows="2" required></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Status de Aprovação<select name="status_aprovacao"><option>Pendente</option><option>Aprovado</option><option>Recusado</option></select></label>
+                  </div>
+                  <label>Observacoes<textarea name="observacoes" rows="3"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar movimentacao</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-requisicao-pessoal">
+                <form class="panel doc-form" data-doc-form="requisicao-pessoal">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>RP - Requisicao Pessoal</h2>
+                      <p class="item-meta">Contratação de novas vagas</p>
+                    </div>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Nome do requisitante<input name="colaborador" required /></label>
+                    <label>Area do requisitante<select name="filial" data-unit-select required></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Cargo do requisitante<input name="cargo_requisitante" /></label>
+                    <label>Data de abertura<input name="data_abertura" type="date" required /></label>
+                  </div>
+                  <label>Motivo<select name="motivo"><option>Aumento de Quadro</option><option>Substituicao</option><option>Transferencia</option></select></label>
+                  <label>Regime de contratacao<select name="regime"><option>Efetivo CLT</option><option>Estagiario</option><option>Menor Aprendiz</option><option>Pessoa Juridica</option></select></label>
+                  <label>Justificativa em caso de aumento de quadro<textarea name="justificativa" rows="3"></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Prevista em orcamento?<select name="orcamento"><option>Sim</option><option>Nao</option></select></label>
+                    <label>Ha descritivo de cargo?<select name="descritivo_cargo"><option>Sim</option><option>Nao</option></select></label>
+                    <label>Estacao disponivel?<select name="estacao_disponivel"><option>Sim</option><option>Nao</option></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Horário de Trabalho / Turno<input name="horario_trabalho" required placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
+                    <label>Equipamentos (Notebook, Celular, Frota)<input name="equipamentos" placeholder="Ex: Notebook, Acesso Sistema X" /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Cargo/Função/Nível<input name="cargo" required /></label>
+                    <label>Nº de vagas<input name="numero_vagas" type="number" min="1" required /></label>
+                    <label>Faixa salarial<input name="faixa_salarial" placeholder="R$ 0,00" inputmode="numeric" /></label>
+                  </div>
+                  <label>Descricao da vaga<textarea name="descricao" rows="3" required></textarea></label>
+                  <label>Requisitos<textarea name="requisitos" rows="3"></textarea></label>
+                  <label>Pontos de atencao<textarea name="pontos_atencao" rows="2"></textarea></label>
+                  <label>Tipo de recrutamento<select name="tipo_recrutamento"><option>Recrutamento Interno</option><option>Recrutamento Externo</option><option>Interno e Externo</option></select></label>
+                  <button class="primary-button" type="submit">Salvar requisicao</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-solicitacao-desligamento">
+                <form class="panel doc-form" data-doc-form="solicitacao-desligamento">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>SD - Solicitacao de Desligamento</h2>
+                      <p class="item-meta">Desligamento de colaboradores (uso obrigatorio)</p>
+                    </div>
+                  </div>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Cargo<input name="cargo" required /></label>
+                    <label>Filial / Setor<select name="filial" data-unit-select required></select></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Data da solicitacao<input name="data_solicitacao" type="date" required /></label>
+                    <label>Data prevista do desligamento<input name="data_desligamento" type="date" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Gestor Solicitante<input name="gestor_solicitante" required /></label>
+                    <label>Possui Estabilidade? (CIPA, Gestante, etc)<input name="estabilidade" placeholder="Não / Sim (Descrever)" required /></label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 16px;">
+                    <label>Exame Demissional<select name="exame_demissional"><option>Pendente de Agendamento</option><option>Agendado</option><option>Realizado (Apto)</option><option>Realizado (Inapto)</option></select></label>
+                  </div>
+                  <label>Tipo de desligamento<select name="tipo_desligamento"><option>Pedido de demissao</option><option>Demissao sem justa causa</option><option>Demissao com justa causa</option><option>Termino de contrato</option><option>Acordo</option></select></label>
+                  <label>Motivo<textarea name="motivo" rows="3" required></textarea></label>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px;">
+                    <label>Aviso previo<select name="aviso_previo"><option>Trabalhado</option><option>Indenizado</option><option>Dispensado</option><option>Nao se aplica</option></select></label>
+                    <label>Substituicao necessaria?<select name="substituicao"><option>Sim</option><option>Nao</option></select></label>
+                  </div>
+                  <label>Observacoes<textarea name="observacoes" rows="3"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar solicitacao</button>
                 </form>
               </section>
 
@@ -346,6 +746,69 @@
             </div>
           </div>
         </section>
+
+        <section class="view" id="equipe">
+          <div class="workspace">
+            <form class="panel form-panel" id="usuario-form">
+              <div class="panel-header">
+                <h2>Adicionar usuario</h2>
+              </div>
+              <label>Nome
+                <input name="nome" placeholder="Nome de acesso" required />
+              </label>
+              <label>Senha
+                <input name="senha" type="password" placeholder="Senha do usuario" required />
+              </label>
+              <label>Cargo
+                <select name="cargo">
+                  <option value="">Sem cargo definido</option>
+                  <option>RH</option>
+                  <option>Gerente</option>
+                </select>
+              </label>
+              <button class="primary-button" type="submit">Salvar usuario</button>
+            </form>
+
+            <div class="panel">
+              <div class="panel-header split-header">
+                <div>
+                  <h2>Equipe cadastrada</h2>
+                  <p class="item-meta">Usuarios com acesso ao HUB</p>
+                </div>
+              </div>
+              <div class="card-list" id="usuarios-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="conta">
+          <div class="single-workspace">
+            <form class="panel form-panel" id="conta-form">
+              <div class="panel-header">
+                <h2>Configuração de conta</h2>
+              </div>
+              <label>Nome do Usuário
+                <input type="text" name="novo_nome" id="novo-nome" placeholder="Seu nome" />
+              </label>
+              <div style="margin-bottom: 16px;">
+                <label style="margin-bottom: 8px;">Foto de Perfil</label>
+                <div class="avatar-upload-wrapper">
+                  <img id="conta-avatar-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392a7a2'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar">
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label class="secondary-link" for="foto-perfil-input" style="cursor: pointer; width: fit-content; margin: 0;">Escolher nova foto</label>
+                    <input type="file" name="foto_perfil" id="foto-perfil-input" accept="image/png, image/jpeg" style="display: none;" />
+                    <span id="foto-perfil-filename" style="font-size: 12px; color: var(--muted);">Nenhuma foto selecionada</span>
+                  </div>
+                </div>
+              </div>
+              <label>Cargo
+                <input id="conta-cargo" type="text" disabled style="background: var(--surface-soft);" />
+              </label>
+              <button class="secondary-link" type="button" id="btn-redefinir-senha" style="margin-bottom: 16px; width: fit-content;">Redefinir senha</button>
+              <button class="primary-button" type="submit">Atualizar conta</button>
+            </form>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -354,3 +817,4 @@
     <script src="script.js"></script>
   </body>
 </html>
+

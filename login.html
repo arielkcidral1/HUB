@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login | HUB RH</title>
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <section class="login-screen" id="login-screen">
+      <form class="login-card" id="login-form">
+        <div class="brand login-brand">
+          <img class="brand-logo" src="assets/logo.svg" alt="HUB RH" />
+          <div>
+            <strong>HUB</strong>
+            <span>Acesso do RH</span>
+          </div>
+        </div>
+        <label>Nome
+          <input name="nome" autocomplete="username" required />
+        </label>
+        <label>Senha
+          <input name="senha" type="password" autocomplete="current-password" required />
+        </label>
+        <p class="login-error" id="login-error" role="alert"></p>
+        <button class="primary-button" type="submit">Entrar</button>
+      </form>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
