@@ -119,6 +119,7 @@ let chamadosSelectionMode = false;
 let showArchivedChamados = false;
 let denunciasSelectionMode = false;
 let showArchivedDenuncias = false;
+let calendarViewMode = "month";
 window.editingDocId = null;
 
 const documentLabels = {
@@ -988,6 +989,25 @@ function getSortedEvents() {
 function getUpcomingEvents() {
   const today = new Date().toISOString().slice(0, 10);
   return getSortedEvents().filter((item) => !item.data || item.data >= today);
+}
+
+function getCurrentWeekDates() {
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(today.getDate() - today.getDay());
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return date.toISOString().slice(0, 10);
+  });
+}
+
+function isEventInCurrentMonth(item) {
+  if (!item.data) return false;
+  const today = new Date();
+  const eventDate = new Date(`${item.data}T00:00:00`);
+  return eventDate.getFullYear() === today.getFullYear() && eventDate.getMonth() === today.getMonth();
 }
 
 function escapeHtml(value) {
@@ -2185,37 +2205,67 @@ function renderCalendar() {
   const today = new Date();
   const year = today.getFullYear();
   const monthIndex = today.getMonth();
-  const firstDay = new Date(year, monthIndex, 1);
-  const totalDays = new Date(year, monthIndex + 1, 0).getDate();
-  const leadingDays = firstDay.getDay();
-  const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(today);
+  const toggleButton = document.getElementById("toggle-calendar-view");
+  if (toggleButton) {
+    toggleButton.textContent = calendarViewMode === "month" ? "Ver agenda da semana" : "Ver agenda do mes";
+  }
+
+  const weekDates = getCurrentWeekDates();
+  const firstWeekDate = weekDates[0];
+  const lastWeekDate = weekDates[weekDates.length - 1];
+  const title =
+    calendarViewMode === "week"
+      ? `Semana de ${formatEventDate(firstWeekDate)} a ${formatEventDate(lastWeekDate)}`
+      : new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(today);
   const cells = [];
 
-  for (let index = 0; index < leadingDays; index += 1) {
-    cells.push('<div class="calendar-cell muted"></div>');
+  if (calendarViewMode === "week") {
+    weekDates.forEach((date) => {
+      const dayEvents = (data.eventos || []).filter((item) => item.data === date);
+      cells.push(`
+        <div class="calendar-cell ${date === today.toISOString().slice(0, 10) ? "today" : ""}">
+          <strong>${new Date(`${date}T00:00:00`).getDate()}</strong>
+          ${dayEvents.slice(0, 4).map((item) => `<span>${escapeHtml(item.titulo)}</span>`).join("")}
+          ${dayEvents.length > 4 ? `<small>+${dayEvents.length - 4}</small>` : ""}
+        </div>
+      `);
+    });
+  } else {
+    const firstDay = new Date(year, monthIndex, 1);
+    const totalDays = new Date(year, monthIndex + 1, 0).getDate();
+    const leadingDays = firstDay.getDay();
+
+    for (let index = 0; index < leadingDays; index += 1) {
+      cells.push('<div class="calendar-cell muted"></div>');
+    }
+
+    for (let day = 1; day <= totalDays; day += 1) {
+      const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const dayEvents = (data.eventos || []).filter((item) => item.data === date);
+      cells.push(`
+        <div class="calendar-cell ${date === today.toISOString().slice(0, 10) ? "today" : ""}">
+          <strong>${day}</strong>
+          ${dayEvents.slice(0, 2).map((item) => `<span>${escapeHtml(item.titulo)}</span>`).join("")}
+          ${dayEvents.length > 2 ? `<small>+${dayEvents.length - 2}</small>` : ""}
+        </div>
+      `);
+    }
   }
 
-  for (let day = 1; day <= totalDays; day += 1) {
-    const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const dayEvents = (data.eventos || []).filter((item) => item.data === date);
-    cells.push(`
-      <div class="calendar-cell ${date === today.toISOString().slice(0, 10) ? "today" : ""}">
-        <strong>${day}</strong>
-        ${dayEvents.slice(0, 2).map((item) => `<span>${escapeHtml(item.titulo)}</span>`).join("")}
-        ${dayEvents.length > 2 ? `<small>+${dayEvents.length - 2}</small>` : ""}
-      </div>
-    `);
-  }
+  const visibleEvents =
+    calendarViewMode === "week"
+      ? getSortedEvents().filter((item) => weekDates.includes(item.data))
+      : getSortedEvents().filter(isEventInCurrentMonth);
 
   month.innerHTML = `
-    <div class="calendar-title">${escapeHtml(monthLabel)}</div>
+    <div class="calendar-title">${escapeHtml(title)}</div>
     <div class="calendar-weekdays">
       <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sab</span>
     </div>
     <div class="calendar-grid">${cells.join("")}</div>
   `;
 
-  renderCards("eventos-list", getSortedEvents(), (item) => `
+  renderCards("eventos-list", visibleEvents, (item) => `
     <article class="item-card">
       <div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag">${escapeHtml(item.tipo)}</span></div>
       <p>${escapeHtml(item.descricao || "Sem observacoes adicionais.")}</p>
@@ -3137,6 +3187,11 @@ document.getElementById("cancelar-edicao-evento")?.addEventListener("click", () 
   eventoForm.elements.id.value = "";
   document.getElementById("cancelar-edicao-evento").setAttribute("hidden", "");
   eventoForm.querySelector('button[type="submit"]').textContent = "Registrar evento";
+});
+
+document.getElementById("toggle-calendar-view")?.addEventListener("click", () => {
+  calendarViewMode = calendarViewMode === "month" ? "week" : "month";
+  renderCalendar();
 });
 
 const usuarioForm = document.getElementById("usuario-form");

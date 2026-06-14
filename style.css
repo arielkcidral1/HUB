@@ -623,6 +623,10 @@ h2 {
   gap: 16px;
 }
 
+.calendar-panel .panel-header {
+  gap: 14px;
+}
+
 .calendar-month {
   display: grid;
   gap: 12px;
@@ -1654,6 +1658,11 @@ form.panel[data-public-chamados="true"].panel {
     align-items: flex-start;
     flex-direction: column;
     gap: 10px;
+  }
+
+  .calendar-panel .panel-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .nav-list,
