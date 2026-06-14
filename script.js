@@ -813,10 +813,39 @@ function formatCurrencyBR(value) {
 
 function formatAbsencePeriod(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-  if (digits.length <= 6) return `${digits.slice(0, 2)}/${digits.slice(2, 4)} a ${digits.slice(4)}`;
-  return `${digits.slice(0, 2)}/${digits.slice(2, 4)} a ${digits.slice(4, 6)}/${digits.slice(6)}`;
+  const formatDay = (value) => {
+    if (!value) return "";
+    if (value.length < 2) return value;
+    return String(Math.min(Math.max(Number(value), 1), 31)).padStart(2, "0");
+  };
+  const formatMonth = (value) => {
+    if (!value) return "";
+    if (value.length < 2) return value;
+    return String(Math.min(Math.max(Number(value), 1), 12)).padStart(2, "0");
+  };
+  const firstDay = formatDay(digits.slice(0, 2));
+  const firstMonth = formatMonth(digits.slice(2, 4));
+  const secondDay = formatDay(digits.slice(4, 6));
+  const secondMonth = formatMonth(digits.slice(6, 8));
+
+  if (digits.length <= 2) return firstDay;
+  if (digits.length <= 4) return `${firstDay}/${firstMonth}`;
+  if (digits.length <= 6) return `${firstDay}/${firstMonth} a ${secondDay}`;
+  return `${firstDay}/${firstMonth} a ${secondDay}/${secondMonth}`;
+}
+
+function getCurrentYearDateLimit() {
+  return `${new Date().getFullYear()}-12-31`;
+}
+
+function applyDocumentDateLimits(root = document) {
+  const maxDate = getCurrentYearDateLimit();
+  root.querySelectorAll('[data-doc-form] input[type="date"]').forEach((input) => {
+    input.max = maxDate;
+    if (input.value && input.value > maxDate) {
+      input.value = maxDate;
+    }
+  });
 }
 
 function formatTimeRange(value) {
@@ -2955,6 +2984,8 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
 });
 
 document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
+  applyDocumentDateLimits(formElement);
+
   formElement.addEventListener("input", (event) => {
     if (event.target.name === "cpf") {
       event.target.value = formatCpf(event.target.value);
@@ -2973,6 +3004,22 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
     }
     if (["horario_trabalho", "horario_atraso"].includes(event.target.name)) {
       event.target.value = formatTimeRange(event.target.value);
+    }
+    if (event.target.matches('input[type="date"]')) {
+      const maxDate = getCurrentYearDateLimit();
+      event.target.max = maxDate;
+      if (event.target.value && event.target.value > maxDate) {
+        event.target.value = maxDate;
+      }
+    }
+  });
+
+  formElement.addEventListener("change", (event) => {
+    if (!event.target.matches('input[type="date"]')) return;
+    const maxDate = getCurrentYearDateLimit();
+    event.target.max = maxDate;
+    if (event.target.value && event.target.value > maxDate) {
+      event.target.value = maxDate;
     }
   });
 
@@ -3606,6 +3653,7 @@ window.editarDocumento = function(id) {
     Object.entries(doc.formData).forEach(([key, value]) => {
       if (form.elements[key]) setFieldValue(form.elements[key], value);
     });
+    applyDocumentDateLimits(form);
     const btn = form.querySelector("button[type='submit']");
     if (btn) {
       if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
