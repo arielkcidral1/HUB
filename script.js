@@ -834,17 +834,44 @@ function formatAbsencePeriod(value) {
   return `${firstDay}/${firstMonth} a ${secondDay}/${secondMonth}`;
 }
 
-function getCurrentYearDateLimit() {
-  return `${new Date().getFullYear()}-12-31`;
+function formatDocumentDate(value) {
+  const currentYear = new Date().getFullYear();
+  const raw = String(value || "");
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const normalized = isoMatch ? `${isoMatch[3]}${isoMatch[2]}${isoMatch[1]}` : raw;
+  const digits = normalized.replace(/\D/g, "").slice(0, 8);
+  const formatDay = (value) => {
+    if (!value) return "";
+    if (value.length < 2) return value;
+    return String(Math.min(Math.max(Number(value), 1), 31)).padStart(2, "0");
+  };
+  const formatMonth = (value) => {
+    if (!value) return "";
+    if (value.length < 2) return value;
+    return String(Math.min(Math.max(Number(value), 1), 12)).padStart(2, "0");
+  };
+  const formatYear = (value) => {
+    if (!value) return "";
+    if (value.length < 4) return value;
+    return String(Math.min(Number(value), currentYear)).padStart(4, "0");
+  };
+  const day = formatDay(digits.slice(0, 2));
+  const month = formatMonth(digits.slice(2, 4));
+  const year = formatYear(digits.slice(4, 8));
+
+  if (digits.length <= 2) return day;
+  if (digits.length <= 4) return `${day}/${month}`;
+  return `${day}/${month}/${year}`;
 }
 
-function normalizeDocumentDateValues(root = document) {
-  const maxDate = getCurrentYearDateLimit();
+function normalizeDocumentDateInputs(root = document) {
   root.querySelectorAll('[data-doc-form] input[type="date"]').forEach((input) => {
-    input.removeAttribute("max");
-    if (input.value && input.value > maxDate) {
-      input.value = maxDate;
-    }
+    input.type = "text";
+    input.inputMode = "numeric";
+    input.maxLength = 10;
+    input.placeholder = "00/00/0000";
+    input.dataset.docDate = "true";
+    input.value = formatDocumentDate(input.value);
   });
 }
 
@@ -2999,7 +3026,7 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
 });
 
 document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
-  normalizeDocumentDateValues(formElement);
+  normalizeDocumentDateInputs(formElement);
 
   formElement.addEventListener("input", (event) => {
     if (event.target.name === "cpf") {
@@ -3017,6 +3044,9 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
     if (event.target.name === "data_ausencia") {
       event.target.value = formatAbsencePeriod(event.target.value);
     }
+    if (event.target.dataset.docDate === "true" || event.target.placeholder === "00/00/0000") {
+      event.target.value = formatDocumentDate(event.target.value);
+    }
     if (["horario_trabalho", "horario_atraso"].includes(event.target.name)) {
       event.target.value = formatTimeRange(event.target.value);
     }
@@ -3024,7 +3054,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
 
   formElement.addEventListener("submit", (event) => {
     event.preventDefault();
-    normalizeDocumentDateValues(event.currentTarget);
+    normalizeDocumentDateInputs(event.currentTarget);
     const form = new FormData(event.currentTarget);
     const entries = [...form.entries()].filter(([, value]) => String(value || "").trim());
     const collaborator = form.get("colaborador") || form.get("cargo") || "Registro sem colaborador";
@@ -3653,7 +3683,7 @@ window.editarDocumento = function(id) {
     Object.entries(doc.formData).forEach(([key, value]) => {
       if (form.elements[key]) setFieldValue(form.elements[key], value);
     });
-    normalizeDocumentDateValues(form);
+    normalizeDocumentDateInputs(form);
     const btn = form.querySelector("button[type='submit']");
     if (btn) {
       if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
