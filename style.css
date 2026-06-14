@@ -690,6 +690,7 @@ h2 {
   background: transparent;
 }
 
+.calendar-day.today,
 .calendar-cell.today {
   border-color: var(--teal-border);
   box-shadow: inset 0 0 0 2px rgba(12, 98, 89, 0.12);

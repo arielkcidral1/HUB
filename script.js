@@ -2242,7 +2242,7 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
     .map((date) => {
       const dayEvents = (data.eventos || []).filter((item) => item.data === date);
       return `
-        <button class="calendar-day ${dayEvents.length ? "has-event" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+        <button class="calendar-day ${date === today.toISOString().slice(0, 10) ? "today" : ""} ${dayEvents.length ? "has-event" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
           <span class="calendar-weekday-label">${escapeHtml(formatWeekday(date))}</span>
           <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
           ${dayEvents.slice(0, 2).map((item) => `<span class="calendar-event-preview">${escapeHtml(item.titulo)}</span>`).join("")}
