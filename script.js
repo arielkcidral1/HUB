@@ -1958,6 +1958,7 @@ function applyRoleAccess() {
       : allowedViews.has(button.dataset.view);
     button.hidden = !allowed;
     button.disabled = !allowed;
+    button.style.display = allowed ? "" : "none";
   });
 
   document.querySelectorAll(".view").forEach((view) => {
