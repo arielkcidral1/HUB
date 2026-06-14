@@ -1756,6 +1756,16 @@ async function updateItem(collection, id, values) {
     return true;
   } catch (error) {
     console.error("Erro ao atualizar no Supabase:", error);
+    if (collection === "eventos") {
+      data[collection] = (data[collection] || []).map((item) =>
+        String(item.id) === String(id) ? { ...item, ...values, createdBy: values.createdBy || item.createdBy || getCurrentUserName() } : item
+      );
+      saveLocalData();
+      setSyncStatus("Evento atualizado localmente", false);
+      renderAll();
+      showModal("Evento atualizado localmente", "Rode o SQL do calendario no Supabase para sincronizar esta agenda entre computadores.", "info");
+      return true;
+    }
     setSyncStatus("Erro no Supabase", false);
     const message =
       collection === "chamados"
@@ -1805,8 +1815,16 @@ async function deleteItem(collection, id) {
     return true;
   } catch (error) {
     console.error("Erro ao deletar no Supabase:", error);
+    if (collection === "eventos") {
+      data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
+      saveLocalData();
+      renderAll();
+      setSyncStatus("Evento deletado localmente", false);
+      showModal("Evento deletado localmente", "Rode o SQL do calendario no Supabase para sincronizar esta agenda entre computadores.", "info");
+      return true;
+    }
     setSyncStatus("Erro no Supabase", false);
-    showModal("Erro ao Deletar", "Nao foi possivel deletar a vaga no Supabase.", "error");
+    showModal("Erro ao Deletar", "Nao foi possivel deletar o registro no Supabase.", "error");
     return false;
   }
 }
@@ -2202,6 +2220,10 @@ function renderCalendar() {
       <div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag">${escapeHtml(item.tipo)}</span></div>
       <p>${escapeHtml(item.descricao || "Sem observacoes adicionais.")}</p>
       <p class="item-meta">${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(item.horario)} | Responsavel: ${escapeHtml(item.responsavel)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+      <div class="job-actions">
+        <button class="secondary-link" type="button" onclick="editarEvento('${escapeHtml(item.id)}')">Editar</button>
+        <button class="danger-button" type="button" onclick="excluirEvento('${escapeHtml(item.id)}')">Deletar</button>
+      </div>
     </article>
   `);
 }
@@ -3089,7 +3111,8 @@ if (eventoForm) {
     event.preventDefault();
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
-    const success = await addItem("eventos", {
+    const id = form.get("id");
+    const payload = {
       titulo: form.get("titulo"),
       data: form.get("data"),
       horario: form.get("horario"),
@@ -3097,12 +3120,24 @@ if (eventoForm) {
       tipo: form.get("tipo"),
       descricao: form.get("descricao"),
       createdBy: getCurrentUserName(),
-    });
+    };
+    const success = id ? await updateItem("eventos", id, payload) : await addItem("eventos", payload);
     if (success) {
       formElement.reset();
+      formElement.elements.id.value = "";
+      document.getElementById("cancelar-edicao-evento")?.setAttribute("hidden", "");
+      formElement.querySelector('button[type="submit"]').textContent = "Registrar evento";
     }
   });
 }
+
+document.getElementById("cancelar-edicao-evento")?.addEventListener("click", () => {
+  if (!eventoForm) return;
+  eventoForm.reset();
+  eventoForm.elements.id.value = "";
+  document.getElementById("cancelar-edicao-evento").setAttribute("hidden", "");
+  eventoForm.querySelector('button[type="submit"]').textContent = "Registrar evento";
+});
 
 const usuarioForm = document.getElementById("usuario-form");
 if (usuarioForm) {
@@ -3535,6 +3570,38 @@ window.excluirVaga = async function(id) {
     danger: true,
     onConfirm: async () => {
       await deleteItem("vagas", id);
+    },
+  });
+};
+
+window.editarEvento = function(id) {
+  const evento = (data.eventos || []).find((item) => String(item.id) === String(id));
+  const form = document.getElementById("evento-form");
+  if (!evento || !form) return;
+
+  form.elements.id.value = evento.id;
+  form.elements.titulo.value = evento.titulo || "";
+  form.elements.data.value = evento.data || "";
+  form.elements.horario.value = evento.horario || "";
+  form.elements.responsavel.value = evento.responsavel || "";
+  form.elements.tipo.value = evento.tipo || "Evento";
+  form.elements.descricao.value = evento.descricao || "";
+  document.getElementById("cancelar-edicao-evento")?.removeAttribute("hidden");
+  form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+window.excluirEvento = async function(id) {
+  const evento = (data.eventos || []).find((item) => String(item.id) === String(id));
+  if (!evento) return;
+
+  showConfirmActionModal({
+    title: "Deletar evento",
+    text: `Tem certeza que deseja deletar o evento "${evento.titulo}"?`,
+    confirmText: "Deletar",
+    danger: true,
+    onConfirm: async () => {
+      await deleteItem("eventos", id);
     },
   });
 };

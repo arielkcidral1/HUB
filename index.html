@@ -293,6 +293,7 @@
               <div class="panel-header">
                 <h2>Novo evento</h2>
               </div>
+              <input name="id" type="hidden" />
               <label>Atividade
                 <input name="titulo" placeholder="Ex: Treinamento de seguranca" required />
               </label>
@@ -317,6 +318,7 @@
                 <textarea name="descricao" rows="4" placeholder="Detalhes, local ou participantes"></textarea>
               </label>
               <button class="primary-button" type="submit">Registrar evento</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-evento" type="button" hidden>Cancelar edicao</button>
             </form>
 
             <div class="panel calendar-panel">
