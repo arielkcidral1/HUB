@@ -299,18 +299,30 @@ function getChatChannels() {
       id: getDirectChannel(currentUser, user.nome),
       label: `${user.nome}${getUserRoleLabel(user.nome)}`,
       subtitle: `Conversa individual com ${user.nome}`,
+      targetUser: user.nome
     }));
 
-  return isManagerUser()
+  let channels = isManagerUser()
     ? [
-        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH" },
+        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
         ...directChannels,
       ]
     : [
-        { id: GENERAL_CHANNEL, label: "Chat geral RH", subtitle: "Mensagens compartilhadas apenas pela equipe de RH" },
-        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH" },
+        { id: GENERAL_CHANNEL, label: "Chat geral RH", subtitle: "Mensagens compartilhadas apenas pela equipe de RH", isGroup: true },
+        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
         ...directChannels,
       ];
+
+  channels.sort((a, b) => {
+    const msgA = data.comunicados.find(m => normalizeChatChannel(m.canal) === a.id);
+    const msgB = data.comunicados.find(m => normalizeChatChannel(m.canal) === b.id);
+    if (!msgA && !msgB) return 0;
+    if (msgA && !msgB) return -1;
+    if (!msgA && msgB) return 1;
+    return data.comunicados.indexOf(msgA) - data.comunicados.indexOf(msgB);
+  });
+
+  return channels;
 }
 
 function getActiveChatChannel() {
@@ -2162,16 +2174,19 @@ function renderTeamUsers() {
   renderCards("usuarios-list", users, (item) => `
     <article class="item-card">
       <div class="item-topline">
-        <p class="item-title">${escapeHtml(item.nome)}</p>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          ${getAuthorAvatar(item.nome)}
+          <p class="item-title" style="margin: 0;">${escapeHtml(item.nome)}</p>
+        </div>
         <div>
           <span class="tag">Ativo</span>
           <button type="button" class="tag alert" style="cursor: pointer; border: none; margin-left: 6px;" onclick="excluirUsuario('${item.id}')">Deletar</button>
         </div>
       </div>
-      <p class="item-meta">Senha: <span id="senha-usuario-${escapeHtml(item.id)}">••••••</span></p>
+      <p class="item-meta" style="margin-top: 8px;">Senha: <span id="senha-usuario-${escapeHtml(item.id)}">••••••</span></p>
       <p class="item-meta">Cargo: ${escapeHtml(item.cargo || "Sem cargo definido")}</p>
-      <button type="button" class="secondary-link" style="width: fit-content; min-height: 30px; padding: 0 10px; font-size: 12px;" onclick="mostrarSenhaUsuario('${escapeHtml(item.id)}')">Mostrar senha</button>
-      <p class="item-meta">Cadastro: ${escapeHtml(item.createdAt || "Hoje")}</p>
+      <button type="button" class="secondary-link" style="width: fit-content; min-height: 30px; padding: 0 10px; font-size: 12px; margin-top: 4px;" onclick="mostrarSenhaUsuario('${escapeHtml(item.id)}')">Mostrar senha</button>
+      <p class="item-meta" style="margin-top: 4px;">Cadastro: ${escapeHtml(item.createdAt || "Hoje")}</p>
     </article>
   `);
 }
@@ -2216,9 +2231,20 @@ function renderChatChannels() {
     .map((channel) => {
       const unreadCount = getUnreadRhMessages().filter(item => normalizeChatChannel(item.canal) === channel.id).length;
       const badge = unreadCount > 0 ? `<span class="chat-badge">${unreadCount}</span>` : "";
+      
+      let avatarHtml = "";
+      if (channel.isGroup) {
+        avatarHtml = `<div class="chat-avatar-fallback"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>`;
+      } else if (channel.targetUser) {
+        avatarHtml = getAuthorAvatar(channel.targetUser);
+      }
+
       return `
         <button class="channel-item ${channel.id === activeChatChannel ? "active" : ""}" data-chat-channel="${escapeHtml(channel.id)}" type="button">
-          <span>${escapeHtml(channel.label)}</span>
+          <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+            ${avatarHtml}
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(channel.label)}</span>
+          </div>
           ${badge}
         </button>
       `;
