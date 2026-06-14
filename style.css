@@ -1625,8 +1625,13 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 /* IDs ocultos */
+[hidden] {
+  display: none !important;
+}
+
 #cancelar-edicao-vaga[hidden],
-#cancelar-edicao-malote[hidden] {
+#cancelar-edicao-malote[hidden],
+#cancelar-edicao-evento[hidden] {
   display: none;
 }
 
