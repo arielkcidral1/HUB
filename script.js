@@ -975,6 +975,13 @@ function formatEventDate(value) {
   }).format(new Date(`${value}T00:00:00`));
 }
 
+function formatEventTime(value) {
+  if (!value) return "00:00";
+  const text = String(value);
+  const match = text.match(/^(\d{2}):(\d{2})/);
+  return match ? `${match[1]}:${match[2]}` : text;
+}
+
 function formatWeekday(value) {
   if (!value) return "";
   return new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(new Date(`${value}T00:00:00`));
@@ -1139,7 +1146,7 @@ function showDayEventsModal(date) {
               <span class="tag">${escapeHtml(item.tipo)}</span>
             </div>
             <p>${escapeHtml(item.descricao || "Sem observacoes adicionais.")}</p>
-            <p class="item-meta">${escapeHtml(item.horario)} | Responsavel: ${escapeHtml(item.responsavel)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+            <p class="item-meta">${escapeHtml(formatEventTime(item.horario))} | Responsavel: ${escapeHtml(item.responsavel)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
           </article>
         `)
         .join("")
@@ -2251,7 +2258,7 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
 
   list.innerHTML = visibleEvents
     .slice(0, dashboardCalendarViewMode === "week" ? 4 : 6)
-    .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag">${escapeHtml(item.tipo)}</span></div><p>${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(item.horario)} | ${escapeHtml(item.responsavel)}</p></li>`)
+    .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag">${escapeHtml(item.tipo)}</span></div><p>${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(formatEventTime(item.horario))} | ${escapeHtml(item.responsavel)}</p></li>`)
     .join("");
 }
 
@@ -2298,7 +2305,7 @@ function renderCalendar() {
     <article class="item-card">
       <div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag">${escapeHtml(item.tipo)}</span></div>
       <p>${escapeHtml(item.descricao || "Sem observacoes adicionais.")}</p>
-      <p class="item-meta">${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(item.horario)} | Responsavel: ${escapeHtml(item.responsavel)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+      <p class="item-meta">${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(formatEventTime(item.horario))} | Responsavel: ${escapeHtml(item.responsavel)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
       <div class="job-actions">
         <button class="secondary-link" type="button" onclick="editarEvento('${escapeHtml(item.id)}')">Editar</button>
         <button class="danger-button" type="button" onclick="excluirEvento('${escapeHtml(item.id)}')">Deletar</button>
