@@ -2240,11 +2240,12 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
 
   strip.innerHTML = visibleDates
     .map((date) => {
-      const count = (data.eventos || []).filter((item) => item.data === date).length;
+      const dayEvents = (data.eventos || []).filter((item) => item.data === date);
       return `
-        <button class="calendar-day ${count ? "has-event" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
-          <span>${escapeHtml(formatWeekday(date))}</span>
+        <button class="calendar-day ${dayEvents.length ? "has-event" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+          <span class="calendar-weekday-label">${escapeHtml(formatWeekday(date))}</span>
           <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
+          ${dayEvents.slice(0, 2).map((item) => `<span class="calendar-event-preview">${escapeHtml(item.titulo)}</span>`).join("")}
         </button>
       `;
     })

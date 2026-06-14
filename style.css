@@ -591,14 +591,14 @@ h2 {
 .calendar-day {
   display: grid;
   width: 100%;
-  min-height: 82px;
-  align-content: center;
-  justify-items: center;
+  min-height: 104px;
+  align-content: start;
+  justify-items: stretch;
   gap: 4px;
   padding: 10px 6px;
 }
 
-.calendar-day span,
+.calendar-weekday-label,
 .calendar-weekdays span {
   color: var(--muted);
   font-size: 11px;
@@ -608,9 +608,28 @@ h2 {
 }
 
 .calendar-day strong {
+  display: block;
   color: var(--ink);
   font-size: 24px;
   font-weight: 800;
+  text-align: center;
+}
+
+.calendar-weekday-label {
+  text-align: center;
+}
+
+.calendar-event-preview {
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--teal-dark);
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendar-day.has-event,
