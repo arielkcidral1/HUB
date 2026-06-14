@@ -565,6 +565,10 @@ h2 {
   margin-bottom: 16px;
 }
 
+.calendar-strip.calendar-strip-month {
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+}
+
 .calendar-day,
 .calendar-cell {
   border: 1px solid var(--line);
