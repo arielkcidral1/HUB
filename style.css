@@ -607,21 +607,31 @@ h2 {
   font-weight: 800;
 }
 
-.calendar-day small {
-  display: grid;
-  min-width: 24px;
-  height: 24px;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--teal);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.calendar-day.has-event {
+.calendar-day.has-event,
+.calendar-cell.has-event {
   border-color: var(--teal-border);
   background: var(--teal-surface);
+}
+
+.calendar-day.is-holiday,
+.calendar-cell.is-holiday {
+  border-color: var(--gold-border);
+  background: var(--gold-surface);
+}
+
+.calendar-holiday-label {
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--gold-light);
+  color: #442f03;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .calendar-workspace {
@@ -1342,6 +1352,49 @@ textarea {
   width: auto;
   min-height: 38px;
   padding: 0 16px;
+}
+
+.day-events-modal {
+  width: min(100%, 760px);
+}
+
+.day-events-body {
+  display: grid;
+  gap: 12px;
+  max-height: min(62vh, 560px);
+  overflow-y: auto;
+  white-space: normal;
+}
+
+.day-event-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  padding: 16px;
+}
+
+.day-event-card p {
+  margin: 0;
+}
+
+.day-holiday-note {
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-md);
+  background: var(--gold-surface);
+  color: #5c4308;
+  margin: 0;
+  padding: 14px 16px;
+}
+
+.day-empty-state {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  padding: 24px;
+  text-align: center;
+  font-weight: 700;
 }
 
 .modal-password-label {

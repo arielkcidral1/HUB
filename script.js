@@ -1059,6 +1059,60 @@ function formatWeekday(value) {
   return new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(new Date(`${value}T00:00:00`));
 }
 
+function dateKeyFromParts(year, month, day) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function addDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function getEasterDate(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+
+function getJoinvilleHolidayMap(year) {
+  const easter = getEasterDate(year);
+  const goodFriday = addDays(easter, -2);
+  const corpusChristi = addDays(easter, 60);
+  const holidays = [
+    [dateKeyFromParts(year, 1, 1), "Ano-novo"],
+    [dateKeyFromParts(year, 3, 9), "Aniversario de Joinville"],
+    [dateKeyFromParts(year, goodFriday.getMonth() + 1, goodFriday.getDate()), "Sexta-feira Santa"],
+    [dateKeyFromParts(year, 4, 21), "Tiradentes"],
+    [dateKeyFromParts(year, 5, 1), "Dia do Trabalhador"],
+    [dateKeyFromParts(year, corpusChristi.getMonth() + 1, corpusChristi.getDate()), "Corpus Christi"],
+    [dateKeyFromParts(year, 9, 7), "Independencia do Brasil"],
+    [dateKeyFromParts(year, 10, 12), "Nossa Senhora Aparecida"],
+    [dateKeyFromParts(year, 11, 2), "Finados"],
+    [dateKeyFromParts(year, 11, 15), "Proclamacao da Republica"],
+    [dateKeyFromParts(year, 11, 20), "Consciencia Negra"],
+    [dateKeyFromParts(year, 12, 25), "Natal"],
+  ];
+  return new Map(holidays);
+}
+
+function getHolidayForDate(date) {
+  if (!date) return null;
+  return getJoinvilleHolidayMap(Number(date.slice(0, 4))).get(date) || null;
+}
+
 function getSortedEvents() {
   return (data.eventos || [])
     .slice()
@@ -1211,8 +1265,10 @@ function showDayEventsModal(date) {
 
   const dayEvents = getSortedEvents().filter((item) => item.data === date);
   const dayNumber = String(new Date(`${date}T00:00:00`).getDate()).padStart(2, "0");
+  const holiday = getHolidayForDate(date);
   const title = `Agenda de ${formatEventDate(date)}`;
-  const content = dayEvents.length
+  const holidayContent = holiday ? `<p class="day-holiday-note"><strong>Feriado:</strong> ${escapeHtml(holiday)}</p>` : "";
+  const eventContent = dayEvents.length
     ? dayEvents
         .map((item) => `
           <article class="day-event-card">
@@ -1226,6 +1282,7 @@ function showDayEventsModal(date) {
         `)
         .join("")
     : `<p class="empty-state day-empty-state">Nenhum evento dia (${escapeHtml(dayNumber)})</p>`;
+  const content = `${holidayContent}${eventContent}`;
 
   const overlay = document.createElement("div");
   overlay.id = "custom-modal";
@@ -2319,10 +2376,12 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
   strip.innerHTML = visibleDates
     .map((date) => {
       const dayEvents = (data.eventos || []).filter((item) => item.data === date);
+      const holiday = getHolidayForDate(date);
       return `
-        <button class="calendar-day ${date === today.toISOString().slice(0, 10) ? "today" : ""} ${dayEvents.length ? "has-event" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+        <button class="calendar-day ${date === today.toISOString().slice(0, 10) ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
           <span class="calendar-weekday-label">${escapeHtml(formatWeekday(date))}</span>
           <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
+          ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
           ${dayEvents.slice(0, 2).map((item) => `<span class="calendar-event-preview">${escapeHtml(item.titulo)}</span>`).join("")}
         </button>
       `;
@@ -2360,9 +2419,11 @@ function renderCalendar() {
   for (let day = 1; day <= totalDays; day += 1) {
     const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const dayEvents = (data.eventos || []).filter((item) => item.data === date);
+    const holiday = getHolidayForDate(date);
     cells.push(`
-      <button class="calendar-cell ${date === today.toISOString().slice(0, 10) ? "today" : ""} ${dayEvents.length ? "has-event" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+      <button class="calendar-cell ${date === today.toISOString().slice(0, 10) ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
         <strong>${day}</strong>
+        ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
         ${dayEvents.slice(0, 2).map((item) => `<span>${escapeHtml(item.titulo)}</span>`).join("")}
       </button>
     `);
