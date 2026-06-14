@@ -574,10 +574,23 @@ h2 {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-raised);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: var(--transition);
+}
+
+.calendar-day:hover,
+.calendar-cell:hover {
+  border-color: var(--teal-border);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 .calendar-day {
   display: grid;
+  width: 100%;
   min-height: 82px;
   align-content: center;
   justify-items: center;
@@ -656,6 +669,7 @@ h2 {
 
 .calendar-cell {
   display: grid;
+  width: 100%;
   align-content: start;
   gap: 5px;
   min-height: 106px;
@@ -1328,6 +1342,40 @@ textarea {
   width: auto;
   min-height: 38px;
   padding: 0 16px;
+}
+
+.day-events-modal {
+  width: min(100%, 760px);
+}
+
+.day-events-body {
+  display: grid;
+  gap: 12px;
+  max-height: min(62vh, 560px);
+  overflow-y: auto;
+  white-space: normal;
+}
+
+.day-event-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  padding: 16px;
+}
+
+.day-event-card p {
+  margin: 0;
+}
+
+.day-empty-state {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  padding: 24px;
+  text-align: center;
+  font-weight: 700;
 }
 
 .modal-password-label {

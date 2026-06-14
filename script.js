@@ -1123,6 +1123,49 @@ function showConfirmActionModal({ title, text, confirmText = "Confirmar", danger
   overlay.querySelector("[data-modal-confirm]").focus();
 }
 
+function showDayEventsModal(date) {
+  const existing = document.getElementById("custom-modal");
+  if (existing) existing.remove();
+
+  const dayEvents = getSortedEvents().filter((item) => item.data === date);
+  const dayNumber = String(new Date(`${date}T00:00:00`).getDate()).padStart(2, "0");
+  const title = `Agenda de ${formatEventDate(date)}`;
+  const content = dayEvents.length
+    ? dayEvents
+        .map((item) => `
+          <article class="day-event-card">
+            <div class="item-topline">
+              <p class="item-title">${escapeHtml(item.titulo)}</p>
+              <span class="tag">${escapeHtml(item.tipo)}</span>
+            </div>
+            <p>${escapeHtml(item.descricao || "Sem observacoes adicionais.")}</p>
+            <p class="item-meta">${escapeHtml(item.horario)} | Responsavel: ${escapeHtml(item.responsavel)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+          </article>
+        `)
+        .join("")
+    : `<p class="empty-state day-empty-state">Nenhum evento dia (${escapeHtml(dayNumber)})</p>`;
+
+  const overlay = document.createElement("div");
+  overlay.id = "custom-modal";
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-card day-events-modal">
+      <div class="modal-header info">${escapeHtml(title)}</div>
+      <div class="modal-body day-events-body">${content}</div>
+      <div class="modal-footer">
+        <button class="primary-button" type="button" data-modal-close>Fechar</button>
+      </div>
+    </div>
+  `;
+
+  overlay.querySelector("[data-modal-close]").addEventListener("click", () => overlay.remove());
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) overlay.remove();
+  });
+  document.body.appendChild(overlay);
+  overlay.querySelector("[data-modal-close]").focus();
+}
+
 function formatFileSize(bytes) {
   if (!bytes) return "";
   if (bytes < 1024) return `${bytes} B`;
@@ -2192,11 +2235,11 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
     .map((date) => {
       const count = (data.eventos || []).filter((item) => item.data === date).length;
       return `
-        <div class="calendar-day ${count ? "has-event" : ""}">
+        <button class="calendar-day ${count ? "has-event" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
           <span>${escapeHtml(formatWeekday(date))}</span>
           <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
           ${count ? `<small>${count}</small>` : ""}
-        </div>
+        </button>
       `;
     })
     .join("");
@@ -2233,11 +2276,11 @@ function renderCalendar() {
     const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const dayEvents = (data.eventos || []).filter((item) => item.data === date);
     cells.push(`
-      <div class="calendar-cell ${date === today.toISOString().slice(0, 10) ? "today" : ""}">
+      <button class="calendar-cell ${date === today.toISOString().slice(0, 10) ? "today" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
         <strong>${day}</strong>
         ${dayEvents.slice(0, 2).map((item) => `<span>${escapeHtml(item.titulo)}</span>`).join("")}
         ${dayEvents.length > 2 ? `<small>+${dayEvents.length - 2}</small>` : ""}
-      </div>
+      </button>
     `);
   }
 
@@ -3178,6 +3221,12 @@ document.getElementById("cancelar-edicao-evento")?.addEventListener("click", () 
 document.getElementById("toggle-dashboard-calendar-view")?.addEventListener("click", () => {
   dashboardCalendarViewMode = dashboardCalendarViewMode === "week" ? "month" : "week";
   renderDashboardCalendar();
+});
+
+document.addEventListener("click", (event) => {
+  const dayButton = event.target.closest("[data-date]");
+  if (!dayButton) return;
+  showDayEventsModal(dayButton.dataset.date);
 });
 
 const usuarioForm = document.getElementById("usuario-form");
