@@ -850,10 +850,25 @@ function applyDocumentDateLimits(root = document) {
 
 function formatTimeRange(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 4) return `${digits.slice(0, 2)}:${digits.slice(2)}`;
-  if (digits.length <= 6) return `${digits.slice(0, 2)}:${digits.slice(2, 4)} às ${digits.slice(4)}`;
-  return `${digits.slice(0, 2)}:${digits.slice(2, 4)} às ${digits.slice(4, 6)}:${digits.slice(6)}`;
+  const formatHour = (value) => {
+    if (!value) return "";
+    if (value.length < 2) return value;
+    return String(Math.min(Number(value), 23)).padStart(2, "0");
+  };
+  const formatMinute = (value) => {
+    if (!value) return "";
+    if (value.length < 2) return value;
+    return String(Math.min(Number(value), 59)).padStart(2, "0");
+  };
+  const firstHour = formatHour(digits.slice(0, 2));
+  const firstMinute = formatMinute(digits.slice(2, 4));
+  const secondHour = formatHour(digits.slice(4, 6));
+  const secondMinute = formatMinute(digits.slice(6, 8));
+
+  if (digits.length <= 2) return firstHour;
+  if (digits.length <= 4) return `${firstHour}:${firstMinute}`;
+  if (digits.length <= 6) return `${firstHour}:${firstMinute} às ${secondHour}`;
+  return `${firstHour}:${firstMinute} às ${secondHour}:${secondMinute}`;
 }
 
 function formatCpf(value) {
@@ -3005,13 +3020,6 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
     if (["horario_trabalho", "horario_atraso"].includes(event.target.name)) {
       event.target.value = formatTimeRange(event.target.value);
     }
-    if (event.target.matches('input[type="date"]')) {
-      const maxDate = getCurrentYearDateLimit();
-      event.target.max = maxDate;
-      if (event.target.value && event.target.value > maxDate) {
-        event.target.value = maxDate;
-      }
-    }
   });
 
   formElement.addEventListener("change", (event) => {
@@ -3025,6 +3033,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
 
   formElement.addEventListener("submit", (event) => {
     event.preventDefault();
+    applyDocumentDateLimits(event.currentTarget);
     const form = new FormData(event.currentTarget);
     const entries = [...form.entries()].filter(([, value]) => String(value || "").trim());
     const collaborator = form.get("colaborador") || form.get("cargo") || "Registro sem colaborador";
