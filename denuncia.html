@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Denuncia Anonima | HUB RH</title>
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="public-layout">
+      <div class="public-container">
+        <div class="public-brand">
+          <img class="public-brand-logo" src="assets/logo.svg" alt="HUB RH" />
+          <strong>HUB</strong>
+        </div>
+
+        <header class="public-header">
+          <p class="eyebrow">Canal seguro e confidencial</p>
+          <h1>Denuncia anonima</h1>
+        </header>
+
+        <form class="panel" id="denuncia-form" data-public-denuncia="true">
+          <div class="panel-header">
+            <h2>Enviar denuncia</h2>
+          </div>
+          <p class="public-description">Este canal não solicita nome, documento, telefone ou e-mail. Sua denuncia é totalmente anonima e segura.</p>
+          <label>Mensagem da denuncia
+            <textarea name="mensagem" rows="7" placeholder="Descreva sua situação" required></textarea>
+          </label>
+          <p class="form-feedback" id="denuncia-feedback" role="status"></p>
+          <button class="primary-button" type="submit">Enviar denuncia anonima</button>
+        </form>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
