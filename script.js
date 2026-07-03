@@ -2328,20 +2328,21 @@ function mapRows(collection, rows) {
     });
   }
 
-  if (collection === "malotes") {
-    return rows.map((row) => ({
-      id: row.id,
-      destino: row.destino,
-      origem: row.origem || "",
-      epis: row.epis,
-      codigoSolicitacao: row.codigo_solicitacao || "",
-      observacoes: row.observacoes || "",
-      status: row.status,
-      createdBy: row.created_by || getSystemFallbackAuthor(),
-      updatedBy: row.updated_by || "",
-      createdAt: formatDate(row.created_at),
-    }));
-  }
+if (collection === "malotes") {
+  return rows.map((row) => ({
+    id: row.id,
+    destino: row.destino,
+    origem: row.origem || "",
+    epis: row.epis,
+    colaboradores: Array.isArray(row.colaboradores) ? row.colaboradores : [],
+    codigoSolicitacao: row.codigo_solicitacao || "",
+    observacoes: row.observacoes || "",
+    status: row.status,
+    createdBy: row.created_by || getSystemFallbackAuthor(),
+    updatedBy: row.updated_by || "",
+    createdAt: formatDate(row.created_at),
+  }));
+}
 
   if (collection === "chamados") {
     return rows.map((row) => ({
@@ -2669,18 +2670,19 @@ function toDbPayload(collection, values) {
     };
   }
 
-  if (collection === "malotes") {
-    return {
-      destino: values.destino,
-      origem: values.origem || "",
-      epis: values.epis,
-      codigo_solicitacao: values.codigoSolicitacao || "",
-      observacoes: values.observacoes || "",
-      status: values.status || "Separação",
-      created_by: values.createdBy || getCurrentUserName(),
-      updated_by: values.updatedBy || null,
-    };
-  }
+ if (collection === "malotes") {
+  return {
+    destino: values.destino,
+    origem: values.origem || "",
+    epis: values.epis,
+    colaboradores: values.colaboradores || [],
+    codigo_solicitacao: values.codigoSolicitacao || "",
+    observacoes: values.observacoes || "",
+    status: values.status || "Separação",
+    created_by: values.createdBy || getCurrentUserName(),
+    updated_by: values.updatedBy || null,
+  };
+}
 
   if (collection === "chamados") {
     const payload = {};
@@ -8562,3 +8564,4 @@ document.addEventListener('click', (event) => {
       break;
   }
 });
+
