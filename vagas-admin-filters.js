@@ -1,9 +1,23 @@
+<<<<<<< HEAD
 /* Filtros da aba Vagas e Projetos - arquivo separado para nao quebrar o script principal */
 (function () {
   let renderOriginal = null;
   let wrapperAtivo = false;
 
   function html(value) {
+=======
+﻿(function () {
+  const SUPABASE_URL = "https://nblfwesptlpetbwfmdqf.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_zHawhaceNuAtRyTn3MRbmw_g_LFUGov";
+
+  let client = null;
+  let vagas = [];
+  let candidaturas = [];
+  let internalRender = false;
+  let observerReady = false;
+
+  function escapeHtml(value) {
+>>>>>>> b3751af (feat: adicionar filtros e formatação em vagas e projetos)
     return String(value ?? "")
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
@@ -24,6 +38,7 @@
     return String(value || "").replace(/\D/g, "");
   }
 
+<<<<<<< HEAD
   function maskCpf(value) {
     const digits = onlyDigits(value).slice(0, 11);
     if (digits.length <= 3) return digits;
@@ -119,11 +134,123 @@
       const candidatos = getCandidaturas(vaga.id);
       if (filtros.nome && !candidatos.some((c) => normalize(c.nome).includes(filtros.nome))) return false;
       if (filtros.cpf && !candidatos.some((c) => onlyDigits(c.cpf).includes(filtros.cpf))) return false;
+=======
+  function getClient() {
+    if (client) return client;
+    if (!window.supabase?.createClient) return null;
+
+    client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: {
+        storage: window.sessionStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    });
+
+    return client;
+  }
+
+  function getCandidatesByVagaId(vagaId) {
+    return candidaturas.filter((item) => String(item.vaga_id) === String(vagaId));
+  }
+
+  function ensureFilters() {
+    const list = document.getElementById("vagas-list");
+    if (!list) return;
+
+    const panel = list.closest(".panel");
+    if (!panel || document.getElementById("admin-vaga-filters")) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.id = "admin-vaga-filters";
+    wrapper.className = "admin-vaga-filter-panel";
+    wrapper.innerHTML = `
+      <div class="admin-vaga-filter-grid">
+        <label>Filtrar por unidade
+          <select id="admin-vaga-filter-unidade">
+            <option value="">Todas as unidades</option>
+          </select>
+        </label>
+
+        <label>Nome do candidato
+          <input id="admin-vaga-filter-nome" type="search" placeholder="Digite o nome" autocomplete="off" />
+        </label>
+
+        <label>CPF do candidato
+          <input id="admin-vaga-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" autocomplete="off" />
+        </label>
+
+        <button class="secondary-link" id="admin-vaga-filter-clear" type="button">Limpar</button>
+      </div>
+
+      <p class="admin-vaga-filter-summary" id="admin-vaga-filter-summary">Carregando vagas...</p>
+    `;
+
+    panel.insertBefore(wrapper, list);
+
+    wrapper.querySelectorAll("input, select").forEach((field) => {
+      field.addEventListener("input", () => renderAdminVagas());
+      field.addEventListener("change", () => renderAdminVagas());
+    });
+
+    document.getElementById("admin-vaga-filter-cpf")?.addEventListener("input", (event) => {
+      const digits = onlyDigits(event.currentTarget.value).slice(0, 11);
+      if (digits.length <= 3) event.currentTarget.value = digits;
+      else if (digits.length <= 6) event.currentTarget.value = `${digits.slice(0, 3)}.${digits.slice(3)}`;
+      else if (digits.length <= 9) event.currentTarget.value = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+      else event.currentTarget.value = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+      renderAdminVagas();
+    });
+
+    document.getElementById("admin-vaga-filter-clear")?.addEventListener("click", () => {
+      ["admin-vaga-filter-unidade", "admin-vaga-filter-nome", "admin-vaga-filter-cpf"].forEach((id) => {
+        const field = document.getElementById(id);
+        if (field) field.value = "";
+      });
+      renderAdminVagas();
+    });
+  }
+
+  function populateUnitFilter() {
+    const select = document.getElementById("admin-vaga-filter-unidade");
+    if (!select) return;
+
+    const current = select.value;
+    const units = [...new Set(vagas.map((vaga) => vaga.unidade).filter(Boolean))]
+      .sort((a, b) => String(a).localeCompare(String(b), "pt-BR"));
+
+    select.innerHTML = '<option value="">Todas as unidades</option>' +
+      units.map((unit) => `<option value="${escapeHtml(unit)}">${escapeHtml(unit)}</option>`).join("");
+
+    if (current && units.includes(current)) select.value = current;
+  }
+
+  function getFilteredVagas() {
+    const unit = document.getElementById("admin-vaga-filter-unidade")?.value || "";
+    const name = normalize(document.getElementById("admin-vaga-filter-nome")?.value || "");
+    const cpf = onlyDigits(document.getElementById("admin-vaga-filter-cpf")?.value || "");
+
+    return vagas.filter((vaga) => {
+      if (unit && String(vaga.unidade || "") !== unit) return false;
+
+      const candidates = getCandidatesByVagaId(vaga.id);
+
+      if (name) {
+        const hasName = candidates.some((candidate) => normalize(candidate.nome).includes(name));
+        if (!hasName) return false;
+      }
+
+      if (cpf) {
+        const hasCpf = candidates.some((candidate) => onlyDigits(candidate.cpf).includes(cpf));
+        if (!hasCpf) return false;
+      }
+>>>>>>> b3751af (feat: adicionar filtros e formatação em vagas e projetos)
 
       return true;
     });
   }
 
+<<<<<<< HEAD
   function renderTexto(titulo, valor, fallback) {
     return `
       <div class="job-text-block">
@@ -228,5 +355,194 @@
     document.addEventListener("DOMContentLoaded", iniciar);
   } else {
     iniciar();
+=======
+  function renderCandidateList(vagaId) {
+    const candidates = getCandidatesByVagaId(vagaId);
+
+    if (!candidates.length) {
+      return `<p class="item-meta">Nenhum candidato vinculado a esta vaga.</p>`;
+    }
+
+    return `
+      <details>
+        <summary>Candidatos (${candidates.length})</summary>
+        <div class="admin-candidate-list">
+          ${candidates.map((candidate) => `
+            <div class="admin-candidate-chip">
+              <strong>${escapeHtml(candidate.nome || "Nome não informado")}</strong>
+              <span>CPF: ${escapeHtml(candidate.cpf || "Não informado")}</span>
+              ${candidate.telefone ? `<span>Telefone: ${escapeHtml(candidate.telefone)}</span>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      </details>
+    `;
+  }
+
+  function renderAdminVagas() {
+    const list = document.getElementById("vagas-list");
+    if (!list) return;
+
+    ensureFilters();
+    populateUnitFilter();
+
+    const filtered = getFilteredVagas();
+    const summary = document.getElementById("admin-vaga-filter-summary");
+    if (summary) {
+      summary.textContent = `${filtered.length} vaga(s) exibida(s) de ${vagas.length} cadastrada(s).`;
+    }
+
+    internalRender = true;
+    list.classList.add("admin-vagas-grid");
+
+    if (!filtered.length) {
+      list.innerHTML = `<p class="empty-state">Nenhuma vaga encontrada com os filtros aplicados.</p>`;
+      internalRender = false;
+      return;
+    }
+
+    list.innerHTML = filtered.map((vaga) => `
+      <article class="item-card admin-job-card" data-admin-vaga-id="${escapeHtml(vaga.id)}">
+        <div class="item-topline">
+          <p class="item-title">${escapeHtml(vaga.cargo || "Cargo não informado")}</p>
+          <span class="${vaga.status === "Aberta" ? "tag alert" : "tag"}">${escapeHtml(vaga.status || "Aberta")}</span>
+        </div>
+
+        <p><strong>Unidade destinada:</strong> ${escapeHtml(vaga.unidade || "Não informada")}</p>
+
+        <div class="job-text-block">
+          <strong>Descrição</strong>
+          <p>${escapeHtml(vaga.descricao || "Descrição não informada.")}</p>
+        </div>
+
+        <div class="job-text-block">
+          <strong>Requisitos</strong>
+          <p>${escapeHtml(vaga.requisitos || "Requisitos não informados.")}</p>
+        </div>
+
+        ${renderCandidateList(vaga.id)}
+
+        <div class="job-actions">
+          <button class="secondary-link" type="button" data-admin-edit-vaga="${escapeHtml(vaga.id)}">Editar</button>
+          <button class="danger-button" type="button" data-admin-delete-vaga="${escapeHtml(vaga.id)}">Excluir</button>
+        </div>
+      </article>
+    `).join("");
+
+    internalRender = false;
+  }
+
+  async function loadAdminVagas() {
+    const supabase = getClient();
+    if (!supabase) return;
+
+    ensureFilters();
+
+    const [{ data: vagasData, error: vagasError }, { data: candData, error: candError }] = await Promise.all([
+      supabase.from("hub_vagas").select("*").order("created_at", { ascending: false }),
+      supabase.from("hub_candidaturas").select("id, vaga_id, nome, cpf, telefone, created_at").order("created_at", { ascending: false }),
+    ]);
+
+    if (vagasError || candError) {
+      console.error("Erro ao carregar vagas/candidaturas:", vagasError || candError);
+      const summary = document.getElementById("admin-vaga-filter-summary");
+      if (summary) summary.textContent = "Não foi possível carregar os filtros de vagas.";
+      return;
+    }
+
+    vagas = Array.isArray(vagasData) ? vagasData : [];
+    candidaturas = Array.isArray(candData) ? candData : [];
+    renderAdminVagas();
+  }
+
+  function fillEditForm(id) {
+    const vaga = vagas.find((item) => String(item.id) === String(id));
+    const form = document.getElementById("vaga-form");
+    if (!vaga || !form) return;
+
+    form.elements.id.value = vaga.id || "";
+    form.elements.cargo.value = vaga.cargo || "";
+    form.elements.unidade.value = vaga.unidade || "";
+    form.elements.descricao.value = vaga.descricao || "";
+    form.elements.requisitos.value = vaga.requisitos || "";
+    form.elements.status.value = vaga.status || "Aberta";
+
+    document.getElementById("cancelar-edicao-vaga")?.removeAttribute("hidden");
+    form.querySelector('button[type="submit"]').textContent = "Atualizar vaga";
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function deleteVaga(id) {
+    const vaga = vagas.find((item) => String(item.id) === String(id));
+    if (!vaga) return;
+
+    const confirmed = window.confirm(`Deseja excluir a vaga "${vaga.cargo}" da unidade "${vaga.unidade || "sem unidade"}"?`);
+    if (!confirmed) return;
+
+    const supabase = getClient();
+    const { error } = await supabase.from("hub_vagas").delete().eq("id", id);
+
+    if (error) {
+      alert("Não foi possível excluir a vaga. Verifique as permissões no Supabase.");
+      console.error(error);
+      return;
+    }
+
+    await loadAdminVagas();
+  }
+
+  function setupEvents() {
+    document.addEventListener("click", (event) => {
+      const editButton = event.target.closest("[data-admin-edit-vaga]");
+      if (editButton) {
+        fillEditForm(editButton.dataset.adminEditVaga);
+        return;
+      }
+
+      const deleteButton = event.target.closest("[data-admin-delete-vaga]");
+      if (deleteButton) {
+        deleteVaga(deleteButton.dataset.adminDeleteVaga);
+      }
+    });
+
+    document.getElementById("vaga-form")?.addEventListener("submit", () => {
+      setTimeout(loadAdminVagas, 1200);
+    });
+
+    document.getElementById("cancelar-edicao-vaga")?.addEventListener("click", () => {
+      setTimeout(loadAdminVagas, 200);
+    });
+  }
+
+  function setupObserver() {
+    const list = document.getElementById("vagas-list");
+    if (!list || observerReady) return;
+
+    const observer = new MutationObserver(() => {
+      if (internalRender) return;
+      window.clearTimeout(window.__adminVagaFilterTimer);
+      window.__adminVagaFilterTimer = window.setTimeout(renderAdminVagas, 100);
+    });
+
+    observer.observe(list, { childList: true });
+    observerReady = true;
+  }
+
+  function init() {
+    if (!document.getElementById("vagas")) return;
+
+    ensureFilters();
+    setupEvents();
+    setupObserver();
+
+    setTimeout(loadAdminVagas, 500);
+    setTimeout(loadAdminVagas, 1800);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+>>>>>>> b3751af (feat: adicionar filtros e formatação em vagas e projetos)
   }
 })();
