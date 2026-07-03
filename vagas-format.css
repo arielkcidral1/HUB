@@ -1,0 +1,48 @@
+/* Ajustes específicos do portal público de vagas */
+.public-container.public-container-wide {
+  width: min(100%, 1180px);
+}
+
+.public-job-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.public-job-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 100%;
+  padding: 18px 18px 20px;
+}
+
+.public-job-card p,
+.selected-public-job p,
+#vagas-list .item-card p {
+  white-space: pre-line;
+  line-height: 1.55;
+}
+
+.public-job-card p strong,
+.selected-public-job p strong,
+#vagas-list .item-card p strong {
+  color: var(--ink);
+}
+
+.public-job-card .button-link {
+  margin-top: auto;
+}
+
+@media (max-width: 980px) {
+  .public-job-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .public-job-grid {
+    grid-template-columns: 1fr;
+  }
+}
