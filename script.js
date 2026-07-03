@@ -827,6 +827,12 @@ function getLoginRedirectTarget() {
   return allowedTargets.has(page) ? target : "index.html";
 }
 
+async function logout() {
+  if (supabaseClient?.auth) await supabaseClient.auth.signOut();
+  clearAuthenticatedUser();
+  window.location.href = "login.html";
+}
+
 async function setupLogin() {
   const loginForm = document.getElementById("login-form");
   const settingsLogoutButton = document.getElementById("settings-logout-button");
@@ -872,12 +878,6 @@ async function setupLogin() {
       window.location.replace(getLoginRedirectTarget());
     });
   }
-
-  const logout = async () => {
-    if (supabaseClient?.auth) await supabaseClient.auth.signOut();
-    clearAuthenticatedUser();
-    window.location.href = "login.html";
-  };
 
   settingsLogoutButton?.addEventListener("click", logout);
 
