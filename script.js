@@ -1,4 +1,4 @@
-﻿﻿﻿﻿const STORAGE_KEY = "hub-rh-data";
+﻿﻿const STORAGE_KEY = "hub-rh-data";
 const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const CONTRACTOR_PENDING_DOCUMENTS_KEY = "hub-contractor-pending-documents";
 const SESSION_KEY = "hub-rh-session";
@@ -65,6 +65,21 @@ const CHAT_FILE_EXTENSION_MIME_TYPES = new Map([
   ["mp4", "video/mp4"],
   ["mov", "video/quicktime"],
 ]);
+const CHAT_EMOJIS = ["\u{1F60A}", "\u{1F602}", "\u{1F60D}", "\u{1F44D}", "\u{1F44F}", "\u{1F64F}", "\u{1F604}", "\u{1F62E}", "\u{1F622}", "\u{1F621}", "\u{1F525}", "\u2705", "\u26A0\uFE0F", "\u{1F4CC}", "\u{1F4CE}", "\u{1F389}", "\u2764\uFE0F", "\u{1F499}", "\u{1F4AC}", "\u{1F440}", "\u{1F64C}", "\u{1F91D}", "\u{1F4A1}", "\u2B50"];
+const USER_SETTINGS_STORAGE_KEY = "hub-user-settings-v1";
+const USER_SETTINGS_DEFAULTS = Object.freeze({
+  hidePresence: false,
+  blurChatPreviews: false,
+  localPrivacyMode: false,
+  compactMode: false,
+  messageSize: "normal",
+  showEmojiButton: true,
+  enterToSend: true,
+  notificationSound: false,
+  desktopNotifications: false,
+  dashboardNotificationBadges: true,
+  keyboardShortcuts: true,
+});
 const DEFAULT_HUB_SUPABASE = {
   url: "https://nblfwesptlpetbwfmdqf.supabase.co",
   anonKey: "sb_publishable_zHawhaceNuAtRyTn3MRbmw_g_LFUGov",
@@ -216,6 +231,10 @@ let dashboardCalendarViewMode = "week";
 let visibleCalendarDate = new Date();
 let dashboardNotificationOffset = 0;
 let visibleDashboardActivityItems = [];
+let currentUserSettings = loadUserSettings();
+let lastUnreadNotificationCount = 0;
+let chatMessageFilterQuery = "";
+let chatMessageFilterVisible = false;
 window.editingDocId = null;
 
 const documentLabels = {
@@ -585,6 +604,7 @@ function setAuthenticatedUser(authUser, profile = null) {
   const displayName = profile?.nome || getAuthUserDisplayName(authUser);
   storageService.setSessionItem(SESSION_KEY, "active");
   storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
+  reloadUserSettingsForCurrentUser();
 }
 
 function clearSensitiveClientCache() {
@@ -602,6 +622,8 @@ function clearAuthenticatedUser() {
   storageService.removeSessionItem(`${SESSION_KEY}-role`);
   storageService.removeSessionItem(`${SESSION_KEY}-email`);
   clearSensitiveClientCache();
+  currentUserSettings = normalizeUserSettings();
+  applyUserSettings();
 }
 
 async function getCurrentAuthUser() {
@@ -813,7 +835,6 @@ async function logout() {
 
 async function setupLogin() {
   const loginForm = document.getElementById("login-form");
-  const logoutButton = document.getElementById("logout-button");
   const settingsLogoutButton = document.getElementById("settings-logout-button");
   clearLegacyTeamCredentials();
   supabaseClient = supabaseClient || getSupabaseClient();
@@ -858,16 +879,6 @@ async function setupLogin() {
     });
   }
 
-<<<<<<< HEAD
-=======
-  const logout = async () => {
-    if (supabaseClient?.auth) await supabaseClient.auth.signOut();
-    clearAuthenticatedUser();
-    window.location.href = "login.html";
-  };
-
-  logoutButton?.addEventListener("click", logout);
->>>>>>> 5a7496f (as)
   settingsLogoutButton?.addEventListener("click", logout);
 
   return hasAuthSession || isPublicPage();
@@ -2977,6 +2988,13 @@ function closeChatAttachMenu() {
   button?.setAttribute("aria-expanded", "false");
 }
 
+function closeChatEmojiMenu() {
+  const menu = document.getElementById("chat-emoji-menu");
+  const button = document.getElementById("chat-emoji-button");
+  if (menu) menu.hidden = true;
+  button?.setAttribute("aria-expanded", "false");
+}
+
 function toggleChatAttachMenu() {
   const menu = document.getElementById("chat-attach-menu");
   const button = document.getElementById("chat-attach-menu-button");
@@ -2984,6 +3002,39 @@ function toggleChatAttachMenu() {
   const nextOpen = menu.hidden;
   menu.hidden = !nextOpen;
   button.setAttribute("aria-expanded", String(nextOpen));
+  if (nextOpen) closeChatEmojiMenu();
+}
+
+function renderChatEmojiMenu() {
+  const menu = document.getElementById("chat-emoji-menu");
+  if (!menu || menu.dataset.ready === "true") return;
+  menu.innerHTML = CHAT_EMOJIS.map((emoji) => `
+    <button type="button" class="chat-emoji-option" data-action="insert-chat-emoji" data-emoji="${escapeHtml(emoji)}" aria-label="Inserir ${escapeHtml(emoji)}">${escapeHtml(emoji)}</button>
+  `).join("");
+  menu.dataset.ready = "true";
+}
+
+function toggleChatEmojiMenu() {
+  const menu = document.getElementById("chat-emoji-menu");
+  const button = document.getElementById("chat-emoji-button");
+  if (!menu || !button || button.disabled) return;
+  renderChatEmojiMenu();
+  const nextOpen = menu.hidden;
+  menu.hidden = !nextOpen;
+  button.setAttribute("aria-expanded", String(nextOpen));
+  if (nextOpen) closeChatAttachMenu();
+}
+
+function insertChatEmoji(emoji) {
+  const input = document.querySelector('#chat-form textarea[name="mensagem"]');
+  if (!input || input.disabled) return;
+  const value = input.value || "";
+  const start = Number.isInteger(input.selectionStart) ? input.selectionStart : value.length;
+  const end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : start;
+  input.value = `${value.slice(0, start)}${emoji}${value.slice(end)}`;
+  const cursor = start + String(emoji).length;
+  input.focus();
+  input.setSelectionRange(cursor, cursor);
 }
 
 function openChatFilePicker({ accept = getChatDefaultFileAccept(), capture = "" } = {}) {
@@ -4214,6 +4265,96 @@ function activateView(viewId) {
   }
 }
 
+function closeUserMenuDropdown() {
+  const menu = document.getElementById("user-menu");
+  const dropdown = document.getElementById("user-menu-dropdown");
+  const trigger = document.getElementById("user-menu-trigger");
+  if (!menu || !dropdown) return;
+  menu.classList.remove("open");
+  dropdown.hidden = true;
+  trigger?.setAttribute("aria-expanded", "false");
+}
+
+function openUserMenuDropdown() {
+  const menu = document.getElementById("user-menu");
+  const dropdown = document.getElementById("user-menu-dropdown");
+  const trigger = document.getElementById("user-menu-trigger");
+  if (!menu || !dropdown) return;
+  updateUserMenuHeader();
+  menu.classList.add("open");
+  dropdown.hidden = false;
+  trigger?.setAttribute("aria-expanded", "true");
+}
+
+function toggleUserMenuDropdown() {
+  const dropdown = document.getElementById("user-menu-dropdown");
+  if (!dropdown) return;
+  if (dropdown.hidden) {
+    openUserMenuDropdown();
+  } else {
+    closeUserMenuDropdown();
+  }
+}
+
+function updateUserMenuHeader() {
+  const nameEl = document.getElementById("user-menu-name");
+  const roleEl = document.getElementById("user-menu-role");
+  const avatarEl = document.getElementById("user-menu-avatar");
+  const user = getCurrentUserRecord?.();
+  if (nameEl) nameEl.textContent = getCurrentUserName?.() || "Usuario";
+  if (roleEl) roleEl.textContent = user?.cargo || getCurrentUserRole?.() || "Colaborador HUB";
+  if (avatarEl) {
+    if (user?.foto_perfil && isHttpUrl(user.foto_perfil)) {
+      avatarEl.src = user.foto_perfil;
+    } else if (user?.foto_perfil && supabaseClient) {
+      createPrivateStorageUrl(getHubSupabaseConfig().chatFilesBucket || "hub-chat-files", user.foto_perfil)
+        .then((signedUrl) => { avatarEl.src = signedUrl; })
+        .catch(() => {});
+    }
+  }
+}
+
+function setupUserMenuDropdown() {
+  const trigger = document.getElementById("user-menu-trigger");
+  const dropdown = document.getElementById("user-menu-dropdown");
+  if (!trigger || !dropdown) return;
+  if (trigger.dataset.menuReady === "true") return;
+  trigger.dataset.menuReady = "true";
+
+  trigger.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleUserMenuDropdown();
+  });
+
+  dropdown.querySelectorAll(".user-menu-item[data-view]").forEach((item) => {
+    item.addEventListener("click", () => {
+      const panelId = item.dataset.settingsTarget || "settings-account-panel";
+      showSettingsPanel(panelId);
+      renderAccountSettings();
+      closeUserMenuDropdown();
+    });
+  });
+
+  document.getElementById("user-menu-logout")?.addEventListener("click", () => {
+    closeUserMenuDropdown();
+    logout();
+  });
+
+  document.addEventListener("click", (event) => {
+    const menu = document.getElementById("user-menu");
+    if (menu && !menu.contains(event.target)) closeUserMenuDropdown();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeUserMenuDropdown();
+  });
+}
+
+document.addEventListener("DOMContentLoaded", setupUserMenuDropdown);
+if (document.readyState === "complete" || document.readyState === "interactive") {
+  setupUserMenuDropdown();
+}
+
 function formatCurrencyBRL(value) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -4753,6 +4894,7 @@ function renderDashboard() {
 
   document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status === "Aberta" || item.status === "Urgente").length;
   const unreadRhMessages = getUnreadRhMessages();
+  notifyUnreadRhMessages(unreadRhMessages.length);
   if (document.getElementById("metric-comunicados")) {
     document.getElementById("metric-comunicados").textContent = unreadRhMessages.length;
   }
@@ -4895,6 +5037,14 @@ function renderDashboard() {
 
   const dashboardTarget = document.getElementById("dashboard-list");
   if (dashboardTarget) {
+    if (!currentUserSettings.dashboardNotificationBadges) {
+      visibleDashboardActivityItems = [];
+      dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configurações.</p>';
+      if (previousDashboardButton) previousDashboardButton.hidden = true;
+      if (nextDashboardButton) nextDashboardButton.hidden = true;
+      renderDashboardCalendar(upcomingEvents);
+      return;
+    }
     if (visibleDashboardItems.length === 0) {
       dashboardTarget.innerHTML = '<p class="empty-state">Nenhuma pendência para acompanhar no momento.</p>';
     } else {
@@ -5204,6 +5354,8 @@ function renderAccountSettings() {
   if (roleInput) roleInput.value = currentRole;
   if (settingsName) settingsName.textContent = currentName;
   if (settingsRole) settingsRole.textContent = currentRole;
+  document.getElementById("user-menu-role")?.classList.toggle("hidden", currentUserSettings.hidePresence);
+  if (settingsRole) settingsRole.hidden = currentUserSettings.hidePresence;
 
   if (avatarPreview) {
     avatarPreview.style.display = "block";
@@ -5250,6 +5402,292 @@ function filterSettingsItems(query) {
     const haystack = normalizeSettingsText(`${button.textContent || ""} ${button.dataset.settingsKeywords || ""}`);
     button.hidden = Boolean(normalizedQuery) && !haystack.includes(normalizedQuery);
   });
+}
+
+function getUserSettingsStorageKey() {
+  const userKey = currentAuthUser?.id || currentUserProfile?.email || currentUserProfile?.cpf || "local";
+  return `${USER_SETTINGS_STORAGE_KEY}:${userKey}`;
+}
+
+function migrateUserSettingsToCurrentKey(settings) {
+  const currentKey = getUserSettingsStorageKey();
+  if (currentKey.endsWith(":local")) return;
+  try {
+    if (!localStorage.getItem(currentKey)) {
+      localStorage.setItem(currentKey, JSON.stringify(normalizeUserSettings(settings)));
+    }
+  } catch {
+    // Mantem o fallback global se o navegador bloquear escrita na chave por usuario.
+  }
+}
+
+function normalizeUserSettings(settings = {}) {
+  const normalized = { ...USER_SETTINGS_DEFAULTS, ...settings };
+  if (!["normal", "small", "large"].includes(normalized.messageSize)) normalized.messageSize = "normal";
+  Object.keys(USER_SETTINGS_DEFAULTS).forEach((key) => {
+    if (typeof USER_SETTINGS_DEFAULTS[key] === "boolean") normalized[key] = Boolean(normalized[key]);
+  });
+  return normalized;
+}
+
+function loadUserSettings() {
+  try {
+    const saved = localStorage.getItem(getUserSettingsStorageKey()) || localStorage.getItem(USER_SETTINGS_STORAGE_KEY);
+    const settings = normalizeUserSettings(saved ? JSON.parse(saved) : {});
+    migrateUserSettingsToCurrentKey(settings);
+    return settings;
+  } catch {
+    return normalizeUserSettings();
+  }
+}
+
+function saveUserSettings(settings = currentUserSettings) {
+  currentUserSettings = normalizeUserSettings(settings);
+  try {
+    localStorage.setItem(getUserSettingsStorageKey(), JSON.stringify(currentUserSettings));
+    localStorage.setItem(USER_SETTINGS_STORAGE_KEY, JSON.stringify(currentUserSettings));
+  } catch {
+    localStorage.setItem(USER_SETTINGS_STORAGE_KEY, JSON.stringify(currentUserSettings));
+  }
+}
+
+function reloadUserSettingsForCurrentUser() {
+  currentUserSettings = loadUserSettings();
+  applyUserSettings();
+  renderAccountSettings();
+}
+
+function syncUserSettingsControls() {
+  document.querySelectorAll("[data-user-setting]").forEach((field) => {
+    const key = field.dataset.userSetting;
+    if (!(key in currentUserSettings)) return;
+    if (field.type === "checkbox") {
+      field.checked = Boolean(currentUserSettings[key]);
+    } else {
+      field.value = currentUserSettings[key];
+    }
+  });
+}
+
+function applyUserSettings() {
+  currentUserSettings = normalizeUserSettings(currentUserSettings);
+  document.body?.classList.toggle("user-setting-compact", currentUserSettings.compactMode);
+  document.body?.classList.toggle("user-setting-message-small", currentUserSettings.messageSize === "small");
+  document.body?.classList.toggle("user-setting-message-large", currentUserSettings.messageSize === "large");
+  document.body?.classList.toggle("user-setting-blur-previews", currentUserSettings.blurChatPreviews);
+  document.body?.classList.toggle("user-setting-hide-presence", currentUserSettings.hidePresence);
+  document.body?.classList.toggle("user-setting-local-privacy", currentUserSettings.localPrivacyMode);
+
+  const emojiWrap = document.querySelector(".chat-emoji-menu-wrap");
+  if (emojiWrap) {
+    emojiWrap.hidden = !currentUserSettings.showEmojiButton;
+    if (!currentUserSettings.showEmojiButton) closeChatEmojiMenu();
+  }
+
+  const dashboardTarget = document.getElementById("dashboard-list");
+  const previousDashboardButton = document.getElementById("dashboard-notifications-prev");
+  const nextDashboardButton = document.getElementById("dashboard-notifications-next");
+  if (!currentUserSettings.dashboardNotificationBadges) {
+    visibleDashboardActivityItems = [];
+    if (dashboardTarget) dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configurações.</p>';
+    if (previousDashboardButton) previousDashboardButton.hidden = true;
+    if (nextDashboardButton) nextDashboardButton.hidden = true;
+  }
+
+  syncUserSettingsControls();
+}
+
+function updateUserSetting(key, rawValue) {
+  if (!(key in USER_SETTINGS_DEFAULTS)) return;
+  const value = typeof USER_SETTINGS_DEFAULTS[key] === "boolean" ? Boolean(rawValue) : rawValue;
+  const nextSettings = normalizeUserSettings({ ...currentUserSettings, [key]: value });
+  saveUserSettings(nextSettings);
+  applyUserSettings();
+  renderAccountSettings();
+  if (key === "dashboardNotificationBadges") renderDashboard();
+  if (key === "desktopNotifications" && nextSettings.desktopNotifications) requestDesktopNotificationPermission();
+}
+
+function requestDesktopNotificationPermission() {
+  if (!("Notification" in window)) {
+    showModal("Notificações indisponíveis", "Este navegador não suporta notificações do sistema.", "error");
+    currentUserSettings.desktopNotifications = false;
+    saveUserSettings();
+    syncUserSettingsControls();
+    return;
+  }
+  if (Notification.permission === "granted") return;
+  Notification.requestPermission().then((permission) => {
+    if (permission !== "granted") {
+      currentUserSettings.desktopNotifications = false;
+      saveUserSettings();
+      syncUserSettingsControls();
+      showModal("Permissão negada", "As notificações do navegador não foram liberadas.", "error");
+    }
+  });
+}
+
+function playUserNotificationSound() {
+  if (!currentUserSettings.notificationSound) return;
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.value = 740;
+    gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, audioContext.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.18);
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.2);
+  } catch {
+    // Sem som quando o navegador bloquear autoplay/audio context.
+  }
+}
+
+function notifyUnreadRhMessages(count) {
+  if (count <= lastUnreadNotificationCount) {
+    lastUnreadNotificationCount = count;
+    return;
+  }
+  playUserNotificationSound();
+  if (currentUserSettings.desktopNotifications && "Notification" in window && Notification.permission === "granted") {
+    new Notification("Comunicação RH", { body: `${count - lastUnreadNotificationCount} nova(s) mensagem(ns) não lida(s).` });
+  }
+  lastUnreadNotificationCount = count;
+}
+
+function getChatMessageFilterText(item = {}) {
+  const attachment = item.arquivo && typeof item.arquivo === "object" ? item.arquivo : null;
+  return normalizeSettingsText([
+    item.autor,
+    item.mensagem,
+    item.createdAt,
+    attachment?.name,
+    attachment?.type,
+    attachment?.mimeType,
+  ].filter(Boolean).join(" "));
+}
+
+function syncChatMessageFilterVisibility() {
+  const wrap = document.getElementById("chat-message-filter-wrap");
+  const input = document.getElementById("chat-message-filter");
+  const shouldShow = Boolean(chatMessageFilterVisible && activeChatChannel);
+  if (wrap) wrap.hidden = !shouldShow;
+  if (input) {
+    input.disabled = !activeChatChannel;
+    if (!shouldShow && input.value) input.value = "";
+  }
+}
+
+function clearChatMessageFilter() {
+  chatMessageFilterQuery = "";
+  chatMessageFilterVisible = false;
+  syncChatMessageFilterVisibility();
+}
+
+function focusChatMessageFilter() {
+  activateView("comunicacao");
+  if (!activeChatChannel) {
+    renderChat();
+    return;
+  }
+  chatMessageFilterVisible = true;
+  syncChatMessageFilterVisibility();
+  const filterInput = document.getElementById("chat-message-filter");
+  if (filterInput) {
+    filterInput.focus();
+    filterInput.select();
+  }
+}
+
+function resetChatComposerState() {
+  const chatForm = document.getElementById("chat-form");
+  const messageInput = chatForm?.querySelector('textarea[name="mensagem"]');
+  if (messageInput) messageInput.value = "";
+  clearChatSelectedFile();
+}
+
+function closeActiveChat() {
+  if (!activeChatChannel) return false;
+  activeChatChannel = "";
+  clearChatMessageFilter();
+  resetChatComposerState();
+  closeChatAttachMenu();
+  closeChatEmojiMenu();
+  renderChatChannels();
+  renderChat();
+  return true;
+}
+
+function wrapChatSelection(prefix, suffix = prefix) {
+  const input = document.querySelector('#chat-form textarea[name="mensagem"]');
+  if (!input || input.disabled) return false;
+  const value = input.value || "";
+  const start = Number.isInteger(input.selectionStart) ? input.selectionStart : value.length;
+  const end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : start;
+  const selected = value.slice(start, end);
+  input.value = `${value.slice(0, start)}${prefix}${selected}${suffix}${value.slice(end)}`;
+  const cursorStart = start + prefix.length;
+  const cursorEnd = cursorStart + selected.length;
+  input.focus();
+  input.setSelectionRange(cursorStart, cursorEnd || cursorStart);
+  return true;
+}
+
+function applyChatEditingShortcut(key) {
+  const normalizedKey = String(key || "").toLowerCase();
+  if (normalizedKey === "b") return wrapChatSelection("**");
+  if (normalizedKey === "i") return wrapChatSelection("_");
+  if (normalizedKey === "u") return wrapChatSelection("<u>", "</u>");
+  return false;
+}
+
+function renderFormattedChatText(message = "") {
+  let html = escapeHtml(message);
+  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/_([^_]+)_/g, "<em>$1</em>");
+  html = html.replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, "<u>$1</u>");
+  return html.replace(/\n/g, "<br>");
+}
+
+function handleSettingsKeyboardShortcut(event) {
+  if (event.defaultPrevented || event.isComposing) return;
+  const target = event.target;
+  const isTyping = target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+  if (event.key === "Escape") {
+    closeChatAttachMenu();
+    closeChatEmojiMenu();
+    closeUserMenuDropdown();
+    if (document.getElementById("comunicacao")?.classList.contains("active") && closeActiveChat()) {
+      event.preventDefault();
+    }
+    return;
+  }
+  if (!currentUserSettings.keyboardShortcuts) return;
+  if (!event.ctrlKey || event.altKey || event.metaKey) return;
+  if (event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    focusChatMessageFilter();
+    return;
+  }
+  if (["b", "i", "u"].includes(event.key.toLowerCase()) && target?.matches?.('#chat-form textarea[name="mensagem"]')) {
+    event.preventDefault();
+    applyChatEditingShortcut(event.key);
+    return;
+  }
+  if (/^[0-9]$/.test(event.key) && !isTyping) {
+    const visibleNavButtons = [...document.querySelectorAll(".nav-item[data-view]")].filter((button) => !button.hidden);
+    const shortcutIndex = event.key === "0" ? 9 : Number(event.key) - 1;
+    const button = visibleNavButtons[shortcutIndex];
+    if (button) {
+      event.preventDefault();
+      activateView(button.dataset.view);
+      closeMobileMenu();
+    }
+  }
 }
 
 function renderChatChannels() {
@@ -5682,10 +6120,13 @@ function renderChat() {
   const sendButton = document.querySelector("#chat-form .send-button");
   const fileButton = document.getElementById("chat-attach-menu-button");
   const fileInput = document.getElementById("chat-file");
+  const emojiButton = document.getElementById("chat-emoji-button");
   const recordButton = document.getElementById("record-audio-button");
   const pollButton = document.getElementById("create-poll-button");
+  const filterInput = document.getElementById("chat-message-filter");
   const pollMenuOption = document.querySelector('[data-attach-type="poll"]');
   if (!activeChannel) {
+    clearChatMessageFilter();
     if (title) title.textContent = "Comunicação interna";
     if (subtitle) subtitle.textContent = "Selecione um canal para abrir a conversa";
     if (messageInput) {
@@ -5694,7 +6135,9 @@ function renderChat() {
     }
     if (sendButton) sendButton.disabled = true;
     if (fileInput) fileInput.disabled = true;
+    if (emojiButton) emojiButton.disabled = true;
     if (recordButton) recordButton.disabled = true;
+    if (filterInput) filterInput.disabled = true;
     if (pollButton) {
       pollButton.hidden = true;
       pollButton.disabled = true;
@@ -5705,6 +6148,7 @@ function renderChat() {
       fileButton.classList.add("disabled");
     }
     closeChatAttachMenu();
+    closeChatEmojiMenu();
     target.innerHTML = '<p class="empty-state">Selecione um canal de comunicação para visualizar as mensagens.</p>';
     return;
   }
@@ -5717,7 +6161,10 @@ function renderChat() {
   }
   if (sendButton) sendButton.disabled = false;
   if (fileInput) fileInput.disabled = false;
+  if (emojiButton) emojiButton.disabled = false;
   if (recordButton) recordButton.disabled = false;
+  if (filterInput) filterInput.disabled = false;
+  syncChatMessageFilterVisibility();
   if (pollButton) {
     const canCreatePoll = isGeneralChatChannel(activeChannel.id);
     pollButton.hidden = true;
@@ -5730,14 +6177,18 @@ function renderChat() {
   }
 
 
+  const normalizedFilter = normalizeSettingsText(chatMessageFilterQuery);
   const messages = data.comunicados.filter((item) => {
     const channel = normalizeChatChannel(item.canal);
     if (channel !== activeChatChannel) return false;
-    return canAccessChatChannel(channel);
+    if (!canAccessChatChannel(channel)) return false;
+    return !normalizedFilter || getChatMessageFilterText(item).includes(normalizedFilter);
   }).sort(compareChatMessagesOldestFirst);
 
   if (!messages.length) {
-    target.innerHTML = '<p class="empty-state">Nenhuma mensagem neste chat ainda.</p>';
+    target.innerHTML = normalizedFilter
+      ? '<p class="empty-state">Nenhuma mensagem encontrada para este filtro.</p>'
+      : '<p class="empty-state">Nenhuma mensagem neste chat ainda.</p>';
     return;
   }
 
@@ -5748,7 +6199,7 @@ function renderChat() {
     const messageBody = poll
       ? renderChatPoll(item, poll)
       : item.mensagem
-        ? `<p>${escapeHtml(item.mensagem)}</p>`
+        ? `<p>${renderFormattedChatText(item.mensagem)}</p>`
         : "";
     const messageDate = getChatMessageDate(item.createdAt);
     const messageTime = getChatMessageTimeLabel(item.createdAt);
@@ -6062,11 +6513,11 @@ document.getElementById("chat-channel-list")?.addEventListener("click", (event) 
   if (!button) return;
 
   activeChatChannel = button.dataset.chatChannel || GENERAL_CHANNEL;
+  clearChatMessageFilter();
   renderChatChannels();
   renderChat();
 });
 
-<<<<<<< HEAD
 document.getElementById("chat-message-filter")?.addEventListener("input", (event) => {
   chatMessageFilterQuery = event.currentTarget.value || "";
   renderChat();
@@ -6077,8 +6528,6 @@ document.getElementById("chat-message-filter-close")?.addEventListener("click", 
   clearChatMessageFilter();
 });
 
-=======
->>>>>>> 5a7496f (as)
 document.getElementById("malote-destino-filter")?.addEventListener("change", () => {
   renderAll();
 });
@@ -6384,6 +6833,7 @@ document.getElementById("record-audio-button")?.addEventListener("click", () => 
 
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".chat-attach-menu-wrap")) closeChatAttachMenu();
+  if (!event.target.closest(".chat-emoji-menu-wrap")) closeChatEmojiMenu();
 });
 
 const chatForm = document.getElementById("chat-form");
@@ -6391,6 +6841,7 @@ if (chatForm) {
   const chatMessageInput = chatForm.querySelector('textarea[name="mensagem"]');
   chatMessageInput?.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+    if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
     event.preventDefault();
     chatForm.requestSubmit();
   });
@@ -6398,6 +6849,7 @@ if (chatForm) {
   // Garante que Enter em qualquer elemento do formulário (ex: após anexar arquivo) também envia
   chatForm.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+    if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
     if (event.target === chatMessageInput) return; // já tratado acima
     if (event.target.tagName === "BUTTON") return; // deixa botões funcionarem normalmente
     event.preventDefault();
@@ -6429,10 +6881,10 @@ if (chatForm) {
       return;
     }
 
-    // ── OTIMISMO: mostra a mensagem imediatamente ────────────────────────
+    // ── OTIMISMO: mostra a mensagem imediatamente ──────────────────────────
     const pendingMessages = files.length
       ? files.map((file, index) => {
-        const attachmentType = getChatFileMimeType(file); // Corrigido
+        const attachmentType = getChatFileMimeType(file);
         return {
           id: "pending-" + generateUUID(),
           autor: getCurrentUserName(),
@@ -6457,13 +6909,13 @@ if (chatForm) {
     renderChat();
     // Limpa o formulário imediatamente
     formElement.reset();
-    clearChatSelectedFile(); // Corrigido
+    clearChatSelectedFile();
 
-    // ── UPLOAD de arquivos em background ────────────────────────────────
+    // ── UPLOAD de arquivos em background ──────────────────────────────────
     const uploadedFiles = [];
     try {
       for (const file of files) {
-        const attachmentType = getChatFileMimeType(file); // Corrigido
+        const attachmentType = getChatFileMimeType(file);
         const fileUrl = await uploadChatFile(file);
         uploadedFiles.push({ name: file.name, size: file.size, type: attachmentType, url: fileUrl });
       }
@@ -6477,7 +6929,7 @@ if (chatForm) {
       return;
     }
 
-    // ── PERSISTÊNCIA: remove otimistas e deixa o realtime confirmar ──────
+    // ── PERSISTÊNCIA: remove otimistas e deixa o realtime confirmar ───────
     data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
 
     const payloads = uploadedFiles.length
@@ -6952,8 +7404,19 @@ document.getElementById("settings-search-input")?.addEventListener("input", (eve
   filterSettingsItems(event.currentTarget.value);
 });
 
+document.querySelectorAll("[data-user-setting]").forEach((field) => {
+  field.addEventListener("change", (event) => {
+    const input = event.currentTarget;
+    updateUserSetting(input.dataset.userSetting, input.type === "checkbox" ? input.checked : input.value);
+  });
+});
+
+document.addEventListener("keydown", handleSettingsKeyboardShortcut);
+
 // Function to initialize account settings form
 function initializeAccountSettingsForm() {
+  currentUserSettings = loadUserSettings();
+  applyUserSettings();
   renderAccountSettings();
   
   // Handle file input changes
@@ -8075,6 +8538,14 @@ document.addEventListener('click', (event) => {
     case 'chat-attach-option':
       event.preventDefault();
       handleChatAttachOption(target.dataset.attachType);
+      break;
+    case 'toggle-chat-emoji-menu':
+      event.preventDefault();
+      toggleChatEmojiMenu();
+      break;
+    case 'insert-chat-emoji':
+      event.preventDefault();
+      insertChatEmoji(target.dataset.emoji || "");
       break;
     case 'open-chat-poll':
       showChatPollModal();
