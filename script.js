@@ -7664,6 +7664,7 @@ document.addEventListener("click", (event) => {
       privateFileButton.dataset.privateStorageName || "documento",
     );
     return;
+  }
   const dayButton = event.target.closest("[data-date]");
   if (!dayButton) return;
   showDayEventsModal(dayButton.dataset.date);
