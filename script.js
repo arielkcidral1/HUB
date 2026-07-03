@@ -4936,8 +4936,8 @@ function renderDashboard() {
         ? messages[0].mensagem || "Nova notificação recebida."
         : `${messages.length} mensagens de ${author}`,
       details: sortedMessages
-        .map((msg) => `${msg.createdAt || "Não informada"}\n${msg.mensagem || "Nova notificação recebida."}`)
-        .join("\n\n---\n\n"),
+        .map((msg) => msg.mensagem || "Nova notificação recebida.")
+        .join("\n\n"),
       detailsHeader: `Autor: ${author}\nTotal de mensagens: ${messages.length}`,
       tag: "Nova",
       date: sortedMessages[0].createdAt,
