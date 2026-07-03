@@ -6493,6 +6493,11 @@ document.getElementById("chat-message-filter")?.addEventListener("input", (event
   renderChat();
 });
 
+document.getElementById("chat-message-filter-close")?.addEventListener("click", (event) => {
+  event.preventDefault();
+  clearChatMessageFilter();
+});
+
 document.getElementById("malote-destino-filter")?.addEventListener("change", () => {
   renderAll();
 });
