@@ -415,8 +415,16 @@
               <button class="secondary-link full-width-action" id="cancelar-edicao-vaga" type="button" hidden>Cancelar edicao</button>
             </form>
             <div class="panel">
-              <div class="panel-header">
+              <div class="panel-header chamados-records-header">
                 <h2>Vagas cadastradas</h2>
+                <div class="chamados-filter-bar" aria-label="Filtros de vagas">
+                  <div class="chamados-filter-fields">
+                    <select id="vaga-filter-unidade" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar vagas por unidade"></select>
+                    <input id="vaga-filter-nome" type="search" placeholder="Nome do candidato" autocomplete="off" aria-label="Filtrar vagas por nome do candidato" />
+                    <input id="vaga-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF do candidato" autocomplete="off" aria-label="Filtrar vagas por CPF do candidato" />
+                  </div>
+                  <button class="secondary-link compact-filter-button" id="limpar-filtros-vagas" type="button" hidden>Limpar</button>
+                </div>
               </div>
               <div class="card-list" id="vagas-list"></div>
             </div>
@@ -1245,10 +1253,4 @@
     <script src="script.js"></script>
     <script src="vagas-admin-filters.js"></script>
   </body>
-<<<<<<< HEAD
 </html>
-=======
-</html>
-
->>>>>>> b3751af (feat: adicionar filtros e formatação em vagas e projetos)
-

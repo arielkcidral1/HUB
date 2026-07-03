@@ -5772,6 +5772,41 @@ function filterChamadosByCurrentFilters(items = []) {
   });
 }
 
+function getVagasFilterValues() {
+  return {
+    unidade: String(document.getElementById("vaga-filter-unidade")?.value || "").trim(),
+    nome: String(document.getElementById("vaga-filter-nome")?.value || "").trim().toLowerCase(),
+    cpf: String(document.getElementById("vaga-filter-cpf")?.value || "").replace(/\D/g, ""),
+  };
+}
+
+function getVagaCandidaturas(vagaId, filters = null) {
+  const all = (data.candidaturas || []).filter((c) => String(c.vaga_id) === String(vagaId));
+  const activeFilters = filters || getVagasFilterValues();
+  if (!activeFilters.nome && !activeFilters.cpf) return all;
+  return all.filter((c) => {
+    if (activeFilters.nome && !String(c.nome || "").toLowerCase().includes(activeFilters.nome)) return false;
+    if (activeFilters.cpf && !normalizeCpf(c.cpf || "").includes(activeFilters.cpf)) return false;
+    return true;
+  });
+}
+
+function filterVagasByCurrentFilters(items = []) {
+  const filters = getVagasFilterValues();
+  return items.filter((item) => {
+    if (filters.unidade && String(item.unidade || "") !== filters.unidade) return false;
+    if ((filters.nome || filters.cpf) && !getVagaCandidaturas(item.id, filters).length) return false;
+    return true;
+  });
+}
+
+function updateVagasFilterClearButton() {
+  const clearButton = document.getElementById("limpar-filtros-vagas");
+  if (!clearButton) return;
+  const filters = getVagasFilterValues();
+  clearButton.hidden = !Boolean(filters.unidade || filters.nome || filters.cpf);
+}
+
 function updateChamadosFilterClearButton() {
   const clearButton = document.getElementById("limpar-filtros-chamados");
   if (!clearButton) return;
@@ -5929,10 +5964,16 @@ function renderAll() {
 
   renderChamadosSection();
 
-  renderCards("vagas-list", data.vagas, (item) => {
-    const candidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id) === String(item.id));
+  updateVagasFilterClearButton();
+  const vagasFilters = getVagasFilterValues();
+  renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
+    const candidaturas = getVagaCandidaturas(item.id, vagasFilters);
+    const totalCandidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id) === String(item.id)).length;
     let candidaturasHtml = `<p class="empty-candidates">Nenhum currículo recebido.</p>`;
-    
+    if (totalCandidaturas > 0 && !candidaturas.length) {
+      candidaturasHtml = `<p class="empty-candidates">Nenhum candidato encontrado para o filtro aplicado.</p>`;
+    }
+
     if (candidaturas.length > 0) {
       candidaturasHtml = candidaturas.map(c => `
         <div class="candidate-row">
@@ -5947,8 +5988,8 @@ function renderAll() {
     }
 
     return `
-      <article class="item-card">
-        <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
+      <article class="item-card public-job-card">
+        <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="tag">${escapeHtml(item.status)}</span></div>
         <p><strong>Unidade destinada:</strong> ${escapeHtml(item.unidade || "Nao informada.")}</p>
         <p>${escapeHtml(item.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(item.requisitos || "Nao informado.")}</p>
@@ -5957,7 +5998,7 @@ function renderAll() {
           <button class="secondary-link" type="button" data-action="editar-vaga" data-id="${escapeHtml(item.id)}">Editar</button>
           <button class="danger-button" type="button" data-action="excluir-vaga" data-id="${escapeHtml(item.id)}">Deletar</button>
         </div>
-        <div class="candidate-list"><p class="candidate-list-title">Currículos Recebidos (${candidaturas.length})</p>${candidaturasHtml}</div>
+        <div class="candidate-list"><p class="candidate-list-title">Currículos Recebidos (${candidaturas.length}${candidaturas.length !== totalCandidaturas ? ` de ${totalCandidaturas}` : ""})</p>${candidaturasHtml}</div>
       </article>
     `;
   });
@@ -6553,6 +6594,20 @@ document.getElementById("limpar-filtros-chamados")?.addEventListener("click", ()
     if (field) field.value = "";
   });
   renderChamadosSection();
+});
+
+document.getElementById("vaga-filter-unidade")?.addEventListener("change", renderAll);
+document.getElementById("vaga-filter-nome")?.addEventListener("input", renderAll);
+document.getElementById("vaga-filter-cpf")?.addEventListener("input", (event) => {
+  event.currentTarget.value = formatCpf(event.currentTarget.value);
+  renderAll();
+});
+document.getElementById("limpar-filtros-vagas")?.addEventListener("click", () => {
+  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf"].forEach((id) => {
+    const field = document.getElementById(id);
+    if (field) field.value = "";
+  });
+  renderAll();
 });
 
 document.getElementById("document-filter-name")?.addEventListener("input", () => {
@@ -8564,4 +8619,3 @@ document.addEventListener('click', (event) => {
       break;
   }
 });
-
