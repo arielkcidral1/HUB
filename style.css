@@ -1641,11 +1641,10 @@ textarea {
 .chat-composer {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 14px;
   position: relative;
-  min-height: 44px;
 }
 
 .chat-composer input[type="file"] {
@@ -1659,10 +1658,10 @@ textarea {
 .chat-composer textarea[name="mensagem"] {
   flex: 1 1 260px;
   width: auto;
-  height: 44px;
-  resize: none;
+  min-height: 44px;
+  max-height: 132px;
+  resize: vertical;
   line-height: 1.45;
-  overflow-y: hidden;
 }
 
 .file-button {
@@ -3261,7 +3260,7 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer {
-    gap: 6px;
+    gap: 8px;
   }
 
   .chat-workspace {
