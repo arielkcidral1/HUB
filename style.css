@@ -1317,7 +1317,8 @@ textarea {
 
 .chat-panel {
   display: grid;
-  grid-template-rows: auto auto minmax(200px, 30vh) auto;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 0;
   min-height: 380px;
 }
 
@@ -1382,7 +1383,7 @@ textarea {
   gap: 12px;
   overflow-y: auto;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   background: var(--surface-soft);
   padding: 18px;
 }
@@ -1643,7 +1644,12 @@ textarea {
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 0;
+  padding: 8px 8px 8px 8px;
+  border: 1px solid var(--line);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: var(--surface);
   position: relative;
 }
 
@@ -3147,7 +3153,8 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-panel {
-    grid-template-rows: auto minmax(180px, 30vh) auto;
+    grid-template-rows: auto 1fr auto;
+    gap: 0;
   }
 
   .panel {
@@ -3286,7 +3293,8 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-panel {
     min-height: auto;
-    grid-template-rows: auto minmax(160px, 28vh) auto;
+    grid-template-rows: auto 1fr auto;
+    gap: 0;
   }
 
   .chat-feed {
