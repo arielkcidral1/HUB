@@ -1,0 +1,1245 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://nblfwesptlpetbwfmdqf.supabase.co; media-src 'self' blob: https://nblfwesptlpetbwfmdqf.supabase.co; connect-src 'self' https://nblfwesptlpetbwfmdqf.supabase.co wss://nblfwesptlpetbwfmdqf.supabase.co https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+    <title>HUB | RH</title>
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app-shell">
+      <aside class="sidebar" id="primary-sidebar" aria-label="Navegacao principal">
+        <div class="brand">
+          <img class="brand-logo" src="assets/logo.svg" alt="HUB RH" />
+          <div>
+            <strong>HUB</strong>
+            <span>Equipe de RH</span>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item active" data-view="dashboard" type="button">Painel</button>
+          <button class="nav-item" data-view="denuncias" type="button">Denuncias recebidas</button>
+          <button class="nav-item" data-view="comunicacao" type="button">Comunicacao RH</button>
+          <button class="nav-item" data-view="malotes" type="button">Malotes de EPI</button>
+          <button class="nav-item" data-view="chamados" type="button">Chamados</button>
+          <button class="nav-item" data-view="vagas" type="button">Vagas e Projetos</button>
+          <button class="nav-item" data-view="calendario" type="button">Calendario</button>
+          <button class="nav-item" data-view="documentos" type="button">Documentos RH</button>
+          <button class="nav-item" data-view="documentos-contratados" type="button">Documentos de Contratados</button>
+          <button class="nav-item" data-view="gerenciamento-vt" type="button">Gerenciamento VT</button>
+          <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/chamados.html" type="button">Solicitar EPIs</button>
+          <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/denuncia.html" type="button">Canal de Denúncia</button>
+          <button class="nav-item" data-view="equipe" type="button">Equipe</button>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-controls="primary-sidebar" aria-expanded="false">
+            <span aria-hidden="true">☰</span>
+            Menu
+          </button>
+          <div>
+            <p class="eyebrow">Central operacional</p>
+            <h1>HUB</h1>
+          </div>
+          <div class="topbar-actions">
+            <div class="user-menu" id="user-menu">
+              <button type="button" class="user-chip" id="user-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu-dropdown">
+                <img id="current-user-avatar" class="user-avatar hidden" src="" alt="Avatar">
+                <span id="current-user">Usuario</span>
+              </button>
+
+              <div class="user-menu-dropdown" id="user-menu-dropdown" role="menu" aria-label="Menu do usuario" hidden>
+                <div class="user-menu-header">
+                  <img id="user-menu-avatar" class="user-menu-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392a7a2'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar">
+                  <div class="user-menu-identity">
+                    <strong id="user-menu-name">Usuario</strong>
+                    <span id="user-menu-role">Colaborador HUB</span>
+                  </div>
+                </div>
+
+                <div class="user-menu-divider"></div>
+
+                <button type="button" class="user-menu-item" data-view="conta" role="menuitem">
+                  <span class="user-menu-icon" aria-hidden="true">⚿</span>
+                  <span class="user-menu-item-text">
+                    <strong>Minha conta</strong>
+                    <small>Dados, foto de perfil e senha</small>
+                  </span>
+                </button>
+
+                <button type="button" class="user-menu-item" data-view="conta" data-settings-target="settings-notifications-panel" role="menuitem">
+                  <span class="user-menu-icon" aria-hidden="true">◌</span>
+                  <span class="user-menu-item-text">
+                    <strong>Notificacoes</strong>
+                    <small>Preferencias de avisos</small>
+                  </span>
+                </button>
+
+                <button type="button" class="user-menu-item" data-view="conta" data-settings-target="settings-shortcuts-panel" role="menuitem">
+                  <span class="user-menu-icon" aria-hidden="true">⌨</span>
+                  <span class="user-menu-item-text">
+                    <strong>Atalhos de teclado</strong>
+                    <small>Acoes rapidas do sistema</small>
+                  </span>
+                </button>
+
+                <div class="user-menu-divider"></div>
+
+                <button type="button" class="user-menu-item user-menu-item-danger" id="user-menu-logout" role="menuitem">
+                  <span class="user-menu-icon" aria-hidden="true">↪</span>
+                  <span class="user-menu-item-text"><strong>Sair</strong></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <section class="hero-panel" aria-label="Resumo do HUB">
+          <img src="assets/hub-operations.png" alt="Mesa organizada com documentos de RH, envelope confidencial, EPIs e cartoes de vagas" />
+          <div class="hero-copy">
+            <p>Gestao integrada para denuncias, comunicados, malotes de EPI e vagas do projeto.</p>
+          </div>
+        </section>
+
+        <section class="view active" id="dashboard">
+          <div class="metric-grid">
+            <article class="metric-card">
+              <span>Denuncias abertas</span>
+              <strong id="metric-denuncias">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Mensagens do RH</span>
+              <strong id="metric-comunicados">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Malotes feitos hoje</span>
+              <strong id="metric-malotes">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Vagas abertas</span>
+              <strong id="metric-vagas">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Eventos proximos</span>
+              <strong id="metric-eventos">0</strong>
+            </article>
+          </div>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Acompanhamento</h2>
+                <p class="item-meta">Notificações e pendências recentes</p>
+              </div>
+              <div class="job-actions flush-top">
+                <button class="secondary-link" id="dashboard-notifications-prev" type="button" hidden>Anterior</button>
+                <button class="secondary-link" id="dashboard-notifications-next" type="button" hidden>Ver próximas</button>
+              </div>
+            </div>
+            <ul class="activity-list" id="dashboard-list"></ul>
+          </article>
+
+          <article class="panel calendar-preview-panel">
+            <div class="panel-header">
+              <h2 id="dashboard-calendar-title">Agenda da semana</h2>
+              <button class="secondary-link" id="toggle-dashboard-calendar-view" type="button">Ver agenda do mes</button>
+            </div>
+            <div class="calendar-strip" id="dashboard-calendar-strip"></div>
+            <ul class="activity-list" id="dashboard-events-list"></ul>
+          </article>
+        </section>
+
+        <section class="view" id="denuncias">
+          <div class="panel panel-spaced">
+            <div class="panel-header split-header flush-bottom">
+              <div>
+                <h2>Gestão de Denúncias Anônimas</h2>
+                <p class="item-meta">Clique numa denúncia para ler o conteúdo e movê-la para a lista de Lidas</p>
+              </div>
+              <div class="job-actions flush-top">
+                <button class="secondary-link" id="select-denuncias" type="button">Selecionar denúncias</button>
+                <button class="secondary-link" id="toggle-archived-denuncias" type="button">Mostrar arquivadas</button>
+                <button class="secondary-link" id="exit-denuncias-selection" type="button" hidden>Sair da seleção</button>
+                <a class="secondary-link" id="open-denuncia-public" href="denuncia.html" target="_blank" rel="noreferrer">Abrir canal publico</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="workspace">
+            <div class="panel">
+              <div class="panel-header">
+                <h2 id="denuncias-primary-title">Não Lidas</h2>
+              </div>
+              <div class="card-list denuncia-list" id="denuncias-nao-lidas"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Lidas</h2>
+              </div>
+              <div class="card-list denuncia-list" id="denuncias-lidas"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="comunicacao">
+          <div class="chat-workspace">
+            <aside class="panel chat-sidebar">
+              <div class="panel-header">
+                <h2>Canais</h2>
+              </div>
+              <div class="channel-list" id="chat-channel-list"></div>
+            </aside>
+
+            <div class="panel chat-panel">
+              <div class="panel-header">
+                <div>
+                  <h2 id="chat-title">Chat geral RH</h2>
+                  <p class="item-meta" id="chat-subtitle">Mensagens e arquivos compartilhados pela equipe</p>
+                </div>
+              </div>
+              <label class="chat-message-filter" id="chat-message-filter-wrap" for="chat-message-filter" hidden>
+                <span aria-hidden="true">⌕</span>
+                <input id="chat-message-filter" type="search" placeholder="Filtrar mensagens deste chat" autocomplete="off" />
+              </label>
+              <div class="chat-feed" id="chat-feed" aria-live="polite"></div>
+              <form class="chat-composer" id="chat-form">
+                <div class="chat-attachment-preview" id="chat-attachment-preview" hidden aria-live="polite"></div>
+                <div class="chat-attach-menu-wrap">
+                  <button class="chat-attach-button" id="chat-attach-menu-button" type="button" data-action="toggle-chat-attach-menu" aria-label="Adicionar anexo" aria-expanded="false">+</button>
+                  <div class="chat-attach-menu" id="chat-attach-menu" hidden>
+                    <button type="button" data-action="chat-attach-option" data-attach-type="document"><span aria-hidden="true">▣</span>Documento</button>
+                    <button type="button" data-action="chat-attach-option" data-attach-type="media"><span aria-hidden="true">▧</span>Fotos e v&iacute;deos</button>
+                    <button type="button" data-action="chat-attach-option" data-attach-type="poll"><span aria-hidden="true">◈</span>Enquete</button>
+                  </div>
+                </div>
+                <input id="chat-file" name="arquivo" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/webm,audio/mp4,.m4a,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                <div class="chat-emoji-menu-wrap">
+                  <button class="chat-emoji-button" id="chat-emoji-button" type="button" data-action="toggle-chat-emoji-menu" aria-label="Abrir emojis" aria-expanded="false">&#128522;</button>
+                  <div class="chat-emoji-menu" id="chat-emoji-menu" hidden aria-label="Emojis do chat"></div>
+                </div>
+                <textarea name="mensagem" rows="1" placeholder="Escreva uma mensagem para o RH" autocomplete="off"></textarea>
+                <button class="secondary-link poll-button" id="create-poll-button" type="button" data-action="open-chat-poll" hidden>Enquete</button>
+                <button class="record-audio-button" id="record-audio-button" type="button" aria-label="Gravar áudio" title="Gravar áudio">
+                  <img src="assets/microphone-icon.png" alt="" aria-hidden="true" />
+                  <span class="recording-duration" id="recording-duration" aria-live="polite">00:00</span>
+                </button>
+                <button class="primary-button send-button" type="submit">Enviar</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="malotes">
+          <div class="workspace">
+            <form class="panel form-panel" id="malote-form">
+              <div class="panel-header">
+                <h2>Cadastrar malote</h2>
+              </div>
+              <input name="id" type="hidden" />
+              <label>Código da Solicitação
+                <input name="codigo_solicitacao" type="text" inputmode="numeric" maxlength="6" pattern="\d{4}-\d" placeholder="xxxx-x" required />
+              </label>
+              <label>Destino
+                <select name="destino" data-unit-select required></select>
+              </label>
+              <label>Origem
+                <select name="origem" data-unit-select required></select>
+              </label>
+              <div class="dynamic-fieldset">
+                <div class="item-topline">
+                  <span>Colaboradores e itens</span>
+                  <button class="secondary-link" id="adicionar-colaborador-malote" type="button">Adicionar colaborador</button>
+                </div>
+                <div class="epi-list" id="epi-list">
+                  <div class="malote-collaborator" data-malote-collaborator>
+                    <div class="item-topline">
+                      <label>Colaborador que irá receber
+                        <input name="malote_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\S+\s+\S+.*" placeholder="Nome e sobrenome" autocomplete="off" required />
+                      </label>
+                      <button class="danger-button remove-malote-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
+                    </div>
+                    <div class="malote-collaborator-items" data-malote-collaborator-items>
+                      <div class="epi-row">
+                        <label>Tipo
+                          <select name="epi_tipo[]" data-item-type-select required>
+                            <option value="epi">EPIs</option>
+                            <option value="uniforme">Uniforme</option>
+                          </select>
+                        </label>
+                        <label>Nome
+                          <select name="epi_nome[]" data-item-select data-epi-select required>
+                            <option value="">Selecione</option>
+                          </select>
+                        </label>
+                        <label>Quantidade
+                          <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
+                        </label>
+                        <label>Tamanho
+                          <select name="epi_tamanho[]" required>
+                            <option>Nao se aplica</option>
+                            <option>PP</option>
+                            <option>P</option>
+                            <option>M</option>
+                            <option>G</option>
+                            <option>GG</option>
+                            <option>XG</option>
+                            <option>EXG</option>
+                            <option>EXGG</option>
+                            <option>EXGGG</option>
+                            <option>EXGGGG</option>
+                          </select>
+                        </label>
+                        <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+                      </div>
+                    </div>
+                    <button class="secondary-link add-malote-item" type="button">Adicionar item para este colaborador</button>
+                  </div>
+                </div>
+              </div>
+              <label>Status
+                <select name="status">
+                  <option>Separação</option>
+                  <option>Entrega</option>
+                </select>
+              </label>
+              <label>Observações
+                <textarea name="observacoes" rows="3" maxlength="1000" placeholder="Informações adicionais (opcional)"></textarea>
+              </label>
+              <button class="primary-button" type="submit">Salvar malote</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-malote" type="button" hidden>Cancelar edicao</button>
+            </form>
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Malotes cadastrados</h2>
+              </div>
+              <label>Filtrar por destino
+                <select id="malote-destino-filter" data-unit-select data-unit-placeholder="Todos os destinos">
+                  <option value="">Todos os destinos</option>
+                </select>
+              </label>
+              <label>Filtrar por colaborador
+                <input id="malote-filter-colaborador" type="search" placeholder="Colaborador" autocomplete="off" />
+              </label>
+              <label>Buscar por Código da Solicitação
+                <input id="malote-code-search" type="search" inputmode="numeric" maxlength="6" placeholder="xxxx-x" autocomplete="off" />
+              </label>
+              <div class="malote-report" id="malote-report"></div>
+              <div class="card-list" id="malotes-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="chamados">
+          <div class="panel panel-spaced">
+            <div class="panel-header split-header flush-bottom">
+              <div>
+                <h2>Chamados de EPI</h2>
+                <p class="item-meta">Solicitacoes abertas pelos colaboradores</p>
+              </div>
+              <div class="job-actions flush-top">
+                <button class="secondary-link" id="select-chamados" type="button">Selecionar chamados</button>
+                <button class="secondary-link" id="toggle-archived-chamados" type="button">Mostrar arquivados</button>
+                <button class="secondary-link" id="exit-chamados-selection" type="button" hidden>Sair da seleção</button>
+                <a class="secondary-link" id="open-chamados-public" href="chamados.html" target="_blank" rel="noreferrer">Abrir solicitacao</a>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header chamados-records-header">
+              <h2 id="chamados-primary-title">Abertos</h2>
+              <div class="chamados-filter-bar" aria-label="Filtros de chamados">
+                <div class="chamados-filter-fields">
+                  <select id="chamado-filter-destino" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar chamados por destino"></select>
+                  <input id="chamado-filter-colaborador" type="search" placeholder="Colaborador" autocomplete="off" aria-label="Filtrar chamados por colaborador" />
+                  <input id="chamado-filter-codigo" type="search" inputmode="numeric" maxlength="6" placeholder="xxxx-x" autocomplete="off" aria-label="Filtrar chamados por codigo da solicitacao" />
+                  <select id="chamado-filter-mes" aria-label="Filtrar chamados por mes">
+                    <option value="">Mês</option>
+                    <option>Janeiro</option>
+                    <option>Fevereiro</option>
+                    <option>Março</option>
+                    <option>Abril</option>
+                    <option>Maio</option>
+                    <option>Junho</option>
+                    <option>Julho</option>
+                    <option>Agosto</option>
+                    <option>Setembro</option>
+                    <option>Outubro</option>
+                    <option>Novembro</option>
+                    <option>Dezembro</option>
+                  </select>
+                </div>
+                <button class="secondary-link compact-filter-button" id="limpar-filtros-chamados" type="button" hidden>Limpar</button>
+              </div>
+            </div>
+            <div class="card-list chamado-list" id="chamados-list"></div>
+          </div>
+        </section>
+
+        <section class="view" id="vagas">
+          <div class="workspace">
+            <form class="panel form-panel" id="vaga-form">
+              <div class="panel-header split-header">
+                <div>
+                  <h2>Cadastrar vaga</h2>
+                </div>
+                <a class="secondary-link" href="vagas.html" target="_blank" rel="noreferrer">Ver portal publico</a>
+              </div>
+              <input name="id" type="hidden" />
+              <label>Cargo
+                <input name="cargo" placeholder="Ex: Tecnico de Seguranca" required />
+              </label>
+              <label>Unidade destinada
+                <select name="unidade" data-unit-select required></select>
+              </label>
+              <label>Descricao
+                <textarea name="descricao" rows="4" placeholder="Resumo das atividades da vaga" required></textarea>
+              </label>
+              <label>Requisitos
+                <textarea name="requisitos" rows="4" placeholder="Experiencia, cursos, disponibilidade..." required></textarea>
+              </label>
+              <label>Status
+                <select name="status">
+                  <option>Aberta</option>
+                  <option>Fechada</option>
+                </select>
+              </label>
+              <button class="primary-button" type="submit">Salvar vaga</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-vaga" type="button" hidden>Cancelar edicao</button>
+            </form>
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Vagas cadastradas</h2>
+              </div>
+              <div class="card-list" id="vagas-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="calendario">
+          <div class="workspace calendar-workspace">
+            <form class="panel form-panel" id="evento-form">
+              <div class="panel-header">
+                <h2>Novo evento</h2>
+              </div>
+              <input name="id" type="hidden" />
+              <label>Atividade
+                <input name="titulo" placeholder="Ex: Treinamento de seguranca" required />
+              </label>
+              <label>Data
+                <input name="data" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" required />
+              </label>
+              <label>Horario
+                <input name="horario" type="time" required />
+              </label>
+              <label>Responsavel
+                <input name="responsavel" placeholder="Nome ou area responsavel" required />
+              </label>
+              <label>Tipo
+                <select name="tipo">
+                  <option>Evento</option>
+                  <option>Treinamento</option>
+                  <option>Reuniao</option>
+                  <option>Atividade</option>
+                </select>
+              </label>
+              <label>Observacoes
+                <textarea name="descricao" rows="4" placeholder="Detalhes, local ou participantes"></textarea>
+              </label>
+              <button class="primary-button" type="submit">Registrar evento</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-evento" type="button" hidden>Cancelar edicao</button>
+            </form>
+
+            <div class="panel calendar-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Calendario do RH</h2>
+                  <p class="item-meta">Eventos e atividades registrados</p>
+                </div>
+                <div class="calendar-actions" aria-label="Navegar meses">
+                  <button class="secondary-link" id="previous-calendar-month" type="button">Mes anterior</button>
+                  <button class="secondary-link" id="next-calendar-month" type="button">Proximo mes</button>
+                </div>
+              </div>
+              <div class="calendar-month" id="calendar-month"></div>
+              <div class="card-list" id="eventos-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="documentos">
+          <div class="document-workspace">
+            <aside class="panel doc-menu">
+              <div class="panel-header split-header">
+                <div>
+                  <h2>Rotinas RH</h2>
+                  <p class="item-meta">Formularios digitais</p>
+                </div>
+              </div>
+              <button class="doc-tab active" data-doc="admissao" type="button">Checklist de Admissao</button>
+              <button class="doc-tab" data-doc="ausencia" type="button">Entrevista ausencia</button>
+              <button class="doc-tab" data-doc="desligamento" type="button">Entrevista desligamento</button>
+              <button class="doc-tab" data-doc="beneficios" type="button">Plano saude e odonto</button>
+              <button class="doc-tab" data-doc="feedback-operacional" type="button">Feedback operacional</button>
+              <button class="doc-tab" data-doc="feedback-fredy" type="button">Feedback Fredy Pneus</button>
+              <button class="doc-tab" data-doc="ferias" type="button">Solicitacao de Ferias</button>
+              <button class="doc-tab" data-doc="movimentacao-pessoal" type="button">MP - Movimentacao Pessoal</button>
+              <button class="doc-tab" data-doc="requisicao-pessoal" type="button">RP - Requisicao Pessoal</button>
+              <button class="doc-tab" data-doc="solicitacao-desligamento" type="button">SD - Solicitacao de Desligamento</button>
+            </aside>
+
+            <div class="doc-content">
+              <section class="doc-view active" id="doc-admissao">
+                <form class="panel doc-form" data-doc-form="admissao">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Checklist de Admissao</h2>
+                      <p class="item-meta">Novas Admissões</p>
+                    </div>
+                  </div>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <div class="form-grid">
+                    <label>CPF<input name="cpf" required placeholder="000.000.000-00" maxlength="14" inputmode="numeric" /></label>
+                    <label>Cargo<input name="cargo" required /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Salário<input name="salario" placeholder="R$ 0,00" inputmode="numeric" /></label>
+                    <label>Horário de Trabalho<input name="horario_trabalho" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
+                    <label>Centro de Custo<input name="centro_custo" /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Filial / Unidade<select name="filial" data-unit-select required></select></label>
+                    <label>Data de admissao<input name="data" type="date" required /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Estado Civil<select name="estado_civil"><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option><option>União Estável</option></select></label>
+                    <label>Grau de Instrução<select name="grau_instrucao"><option>Ensino Fundamental</option><option>Ensino Médio</option><option>Ensino Superior Incompleto</option><option>Ensino Superior Completo</option></select></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Vale Transporte?<select name="vale_transporte"><option>Não</option><option>Sim</option></select></label>
+                    <label>Dependentes (IR/Salário Família)?<select name="dependentes"><option>Não</option><option>Sim</option></select></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Exame Admissional<select name="exame_admissional"><option>Pendente</option><option>Apto</option><option>Inapto</option></select></label>
+                    <label>Entrega de Documentos<select name="entrega_documentos"><option>Pendente</option><option>Completa</option></select></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Entrega de EPIs / Uniforme<select name="entrega_epis"><option>Nao se aplica</option><option>Pendente</option><option>Entregue</option></select></label>
+                    <label>Contrato Assinado<select name="contrato_assinado"><option>Pendente</option><option>Assinado</option></select></label>
+                  </div>
+                  <label>Observacoes gerais<textarea name="observacoes" rows="3" placeholder="Informacoes adicionais sobre a integracao..."></textarea></label>
+                  <button class="primary-button" type="submit">Salvar checklist</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-ausencia">
+                <form class="panel doc-form" data-doc-form="ausencia">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Entrevista ausencia</h2>
+                      <p class="item-meta">Faltas sem atestados</p>
+                    </div>
+                  </div>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <div class="form-grid">
+                    <label>Função<input name="funcao" /></label>
+                    <label>Admissão<input name="admissao" type="date" /></label>
+                    <label>Superior<input name="superior" /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Filial / Setor<select name="filial" data-unit-select required></select></label>
+                    <label>Data(s) da ausencia<input name="data_ausencia" required placeholder="00/00 a 00/00" maxlength="13" inputmode="numeric" /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Data da Entrevista<input name="data_entrevista" type="date" required /></label>
+                    <label>Horário/Período do Atraso<input name="horario_atraso" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Tipo de ocorrencia<select name="tipo_ocorrencia"><option>Falta justificada (Atestado)</option><option>Falta injustificada</option><option>Atraso</option><option>Saida antecipada</option></select></label>
+                    <label>Apresentou Comprovante?<select name="apresentou_comprovante"><option>Sim</option><option>Nao</option><option>Nao se aplica</option></select></label>
+                  </div>
+                  <label>Motivo detalhado (Justificativa)<textarea name="motivo" rows="3" required></textarea></label>
+                  <label>Impacto da ausência para a empresa<textarea name="impacto" rows="3"></textarea></label>
+                  <label>Medida Adotada<select name="medida_adotada"><option>Orientacao verbal</option><option>Advertencia verbal</option><option>Advertencia escrita</option><option>Suspensao</option><option>Apenas registro (Abonado)</option></select></label>
+                  <label>Observacoes do Gestor / RH<textarea name="acao" rows="2"></textarea></label>
+                  <label>Colaborador Ciente/Assinou?<select name="colaborador_ciente"><option>Sim</option><option>Não quis assinar</option></select></label>
+                  <button class="primary-button" type="submit">Salvar entrevista</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-desligamento">
+                <form class="panel doc-form" data-doc-form="desligamento">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Entrevista de Desligamento</h2>
+                      <p class="item-meta">Entrevista de desligamento na recisão (Obrigatório)</p>
+                    </div>
+                  </div>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <div class="form-grid">
+                    <label>Cargo<input name="cargo" required /></label>
+                    <label>Filial / Setor<select name="filial" data-unit-select required></select></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Data de Admissao<input name="data_admissao" type="date" required /></label>
+                    <label>Data de Desligamento<input name="data_desligamento" type="date" required /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Iniciativa do Desligamento<select name="iniciativa_desligamento"><option>Pedido de demissao</option><option>Demissao sem justa causa</option><option>Demissao com justa causa</option><option>Termino de contrato</option></select></label>
+                    <label>Motivo Principal<select name="motivo"><option>Nova oportunidade</option><option>Insatisfacao com o salario</option><option>Ambiente de trabalho</option><option>Relacionamento com gestor</option><option>Desempenho/Produtividade</option><option>Reestruturacao/Corte</option><option>Outros</option></select></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Entrevistador (RH)<input name="entrevistador" required /></label>
+                    <label>Avaliação da Liderança<select name="aval_lideranca"><option>Ótima</option><option>Boa</option><option>Regular</option><option>Ruim</option></select></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Avaliação de Salário e Benefícios<select name="aval_beneficios"><option>Ótima</option><option>Boa</option><option>Regular</option><option>Ruim</option></select></label>
+                  </div>
+                  <label>O que mais gostava na empresa?<textarea name="pontos_positivos" rows="2"></textarea></label>
+                  <label>O que poderia ser melhorado? (Ambiente, processos, lideranca)<textarea name="pontos_melhoria" rows="2"></textarea></label>
+                  <div class="form-grid">
+                    <label>Recomendaria a empresa para amigos?<select name="recomendaria"><option>Sim</option><option>Nao</option></select></label>
+                  </div>
+                  <label>Outros comentarios / Feedback final<textarea name="feedback" rows="3"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar desligamento</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-beneficios">
+                <form class="panel doc-form" data-doc-form="beneficios">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Adesao plano de saude e odonto</h2>
+                      <p class="item-meta">Adesão de beneficios</p>
+                    </div>
+                  </div>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <div class="form-grid form-grid-sm">
+                    <label>CPF<input name="cpf" required placeholder="000.000.000-00" maxlength="14" inputmode="numeric" /></label>
+                    <label>RG<input name="rg" placeholder="00.000.000-0" maxlength="12" inputmode="numeric" /></label>
+                    <label>Data de Nasc.<input name="data_nasc" type="date" required /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Nome da Mãe<input name="nome_mae" required /></label>
+                    <label>Celular / Telefone<input name="celular" required placeholder="(00) 00000-0000" maxlength="15" inputmode="numeric" /></label>
+                  </div>
+                  <div class="form-grid form-grid-sm">
+                    <label>Peso<input name="peso" /></label>
+                    <label>Altura<input name="altura" /></label>
+                    <label>E-mail Pessoal<input name="email" type="email" /></label>
+                  </div>
+                  <label>CEP / Endereço Completo<input name="endereco" required placeholder="Rua, Número, Bairro, Cidade - UF, CEP" /></label>
+                  <div class="form-grid">
+                    <label>Tipo de Solicitacao<select name="tipo_solicitacao"><option>Inclusao Novo Titular</option><option>Inclusao de Dependente</option><option>Cancelamento/Exclusao</option></select></label>
+                    <label>Plano Solicitado<select name="plano"><option>Plano de Saude</option><option>Plano Odontologico</option><option>Saude + Odonto</option></select></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Nome do Dependente<input name="dependente" /></label>
+                    <label>Grau de Parentesco<input name="parentesco" /></label>
+                  </div>
+                  <label>Dados dos Dependentes (Nome completo, CPF, Parentesco e Data de Nasc.)<textarea name="dependentes" rows="4" placeholder="Ex: Maria da Silva, CPF 000.000.000-00, Conjuge, 10/05/1990"></textarea></label>
+                  <label>Local e Data<input name="local_data" placeholder="Cidade, dd/mm/aaaa" /></label>
+                  <label>Autorizacao de Desconto<select name="autoriza_desconto"><option>Ciente e autorizo o desconto em folha</option><option>Nao se aplica (cancelamento)</option></select></label>
+                  <button class="primary-button" type="submit">Salvar adesao</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-feedback-operacional">
+                <form class="panel doc-form" data-doc-form="feedback-operacional">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Feedback operacional</h2>
+                      <p class="item-meta">Feedback para cargos operacionais</p>
+                    </div>
+                  </div>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <div class="form-grid">
+                    <label>Cargo / Funcao<input name="cargo" required /></label>
+                    <label>Gestor / Lider Avaliador<input name="lider" required /></label>
+                  </div>
+                  <label>Data do Feedback<input name="data_feedback" type="date" required /></label>
+                  <div class="form-grid">
+                    <label>Assiduidade e Pontualidade<select name="aval_assiduidade"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                    <label>Produtividade e Qualidade<select name="aval_produtividade"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Trabalho em Equipe<select name="aval_equipe"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                    <label>Seguranca e uso de EPIs<select name="aval_seguranca"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Comportamento e Respeito às Regras<select name="aval_comportamento"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                    <label>Organização e Limpeza (5S)<select name="aval_organizacao"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                  </div>
+                  <label>Principais Pontos Fortes (O que o colaborador faz bem?)<textarea name="positivos" rows="3" required></textarea></label>
+                  <label>Pontos a Desenvolver (O que precisa melhorar?)<textarea name="melhorias" rows="3" required></textarea></label>
+                  <label>Plano de Acao / Metas para o proximo ciclo<textarea name="acao" rows="3" required></textarea></label>
+                  <button class="primary-button" type="submit">Salvar feedback</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-feedback-fredy">
+                <form class="panel doc-form" data-doc-form="feedback-fredy">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Feedback Fredy Pneus</h2>
+                      <p class="item-meta">Feedback para cargos estratégicos</p>
+                    </div>
+                  </div>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <div class="form-grid">
+                    <label>Setor<select name="setor" data-unit-select required></select></label>
+                    <label>Data do Registro<input name="data_registro" type="date" required /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Gestor Aplicador<input name="gestor_aplicador" required /></label>
+                    <label>Cargo<input name="cargo" /></label>
+                    <label>Tempo de Empresa<input name="tempo_empresa" /></label>
+                    <label>Acompanhamento do RH?<select name="acompanhamento_rh"><option>Não</option><option>Sim</option></select></label>
+                  </div>
+                  <label>Tipo de Feedback<select name="tipo_feedback"><option>Orientacao / Alinhamento de rotina</option><option>Elogio / Reconhecimento</option><option>Correcao Disciplinar</option></select></label>
+                  <label>Situacao / Comportamento Observado (Descreva o fato)<textarea name="situacao" rows="4" required></textarea></label>
+                  <label>Pontos positivos / fortalezas<textarea name="positivos" rows="3"></textarea></label>
+                  <label>Pontos de melhoria / desenvolvimento<textarea name="melhorias" rows="3"></textarea></label>
+                  <label>Expectativa do colaborador<textarea name="expectativa_colaborador" rows="3"></textarea></label>
+                  <label>Plano de ação<textarea name="plano_acao" rows="3"></textarea></label>
+                  <label>Acompanhamento<textarea name="acompanhamento" rows="3"></textarea></label>
+                  <label>Reacao do Colaborador e Compromisso Assumido<textarea name="observacoes" rows="4" required></textarea></label>
+                  <button class="primary-button" type="submit">Salvar feedback</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-ferias">
+                <form class="panel doc-form" data-doc-form="ferias">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Solicitacao de Ferias</h2>
+                      <p class="item-meta">Solicitação de Ferias</p>
+                    </div>
+                  </div>
+                  <div class="form-grid">
+                    <label>Setor requisitante<select name="filial" data-unit-select required></select></label>
+                    <label>Requisitante<input name="requisitante" required /></label>
+                  </div>
+                  <label>Funcionário<input name="colaborador" required /></label>
+                  <div class="form-grid form-grid-sm">
+                    <label>Dias para gozo<input name="dias_gozo" type="number" min="1" required /></label>
+                    <label>Data de início<input name="data_inicio" type="date" required /></label>
+                    <label>Abono pecuniário<select name="abono"><option>Nao</option><option>Sim</option></select></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Período Aquisitivo (Início)<input name="periodo_aquisitivo_inicio" type="date" required /></label>
+                    <label>Período Aquisitivo (Fim)<input name="periodo_aquisitivo_fim" type="date" required /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Adiantamento 1ª Parcela 13º?<select name="adiantamento_13"><option>Não</option><option>Sim</option></select></label>
+                  </div>
+                  <label>Calcular abono com data anterior as ferias<select name="abono_data_anterior"><option>Nao</option><option>Sim</option></select></label>
+                  <label>Responsavel pelas atividades<input name="responsavel_atividades" required /></label>
+                  <div class="form-grid form-grid-md">
+                    <label>Tipo de cobertura<select name="tipo_cobertura"><option>Temporario</option><option>Substituicao Interna</option><option>Nao se aplica</option></select></label>
+                    <label>Nome do responsavel<input name="nome_responsavel" /></label>
+                  </div>
+                  <label>Observacoes<textarea name="observacoes" rows="3"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar solicitacao</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-movimentacao-pessoal">
+                <form class="panel doc-form" data-doc-form="movimentacao-pessoal">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>MP - Movimentacao Pessoal</h2>
+                      <p class="item-meta">Movimentação de histórico promocional e aditivos contratuais</p>
+                    </div>
+                  </div>
+                  <div class="form-grid form-grid-md">
+                    <label>Nome<input name="colaborador" required /></label>
+                    <label>Matricula<input name="matricula" /></label>
+                  </div>
+                  <div class="form-grid form-grid-md">
+                    <label>Cargo atual<input name="cargo_atual" required /></label>
+                    <label>Admissao<input name="admissao" type="date" /></label>
+                  </div>
+                  <div class="form-grid form-grid-md">
+                    <label>Area atual<select name="filial" data-unit-select required></select></label>
+                    <label>Turno atual<input name="turno_atual" /></label>
+                  </div>
+                  <div class="form-grid form-grid-md">
+                    <label>Salario atual<input name="salario_atual" placeholder="R$ 0,00" inputmode="numeric" /></label>
+                    <label>Gestor imediato<input name="gestor" /></label>
+                  </div>
+                  <label>Movimentacao<select name="movimentacao"><option>Enquadramento salarial</option><option>Merito</option><option>Promocao</option><option>Mudanca de cargo</option><option>Troca turno/area</option><option>Outros</option></select></label>
+                  <div class="form-grid form-grid-md">
+                    <label>Cargo proposto<input name="cargo_proposto" /></label>
+                    <label>Area proposta<select name="area_proposta" data-unit-select></select></label>
+                    <label>Turno proposto<input name="turno_proposto" /></label>
+                    <label>Data da movimentacao<input name="data_movimentacao" type="date" /></label>
+                  </div>
+                  <div class="form-grid form-grid-md">
+                    <label>Salario proposto<input name="salario_proposto" placeholder="R$ 0,00" inputmode="numeric" /></label>
+                    <label>% reajuste<input name="reajuste" /></label>
+                  </div>
+                  <label>Justificativa Detalhada da Movimentação<textarea name="justificativa_movimentacao" rows="2" required></textarea></label>
+                  <div class="form-grid">
+                    <label>Status de Aprovação<select name="status_aprovacao"><option>Pendente</option><option>Aprovado</option><option>Recusado</option></select></label>
+                  </div>
+                  <label>Observacoes<textarea name="observacoes" rows="3"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar movimentacao</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-requisicao-pessoal">
+                <form class="panel doc-form" data-doc-form="requisicao-pessoal">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>RP - Requisicao Pessoal</h2>
+                      <p class="item-meta">Contratação de novas vagas</p>
+                    </div>
+                  </div>
+                  <div class="form-grid">
+                    <label>Nome do requisitante<input name="colaborador" required /></label>
+                    <label>Area do requisitante<select name="filial" data-unit-select required></select></label>
+                  </div>
+                  <div class="form-grid form-grid-md">
+                    <label>Cargo do requisitante<input name="cargo_requisitante" /></label>
+                    <label>Data de abertura<input name="data_abertura" type="date" required /></label>
+                  </div>
+                  <label>Motivo<select name="motivo"><option>Aumento de Quadro</option><option>Substituicao</option><option>Transferencia</option></select></label>
+                  <label>Regime de contratacao<select name="regime"><option>Efetivo CLT</option><option>Estagiario</option><option>Menor Aprendiz</option><option>Pessoa Juridica</option></select></label>
+                  <label>Justificativa em caso de aumento de quadro<textarea name="justificativa" rows="3"></textarea></label>
+                  <div class="form-grid form-grid-md">
+                    <label>Prevista em orcamento?<select name="orcamento"><option>Sim</option><option>Nao</option></select></label>
+                    <label>Ha descritivo de cargo?<select name="descritivo_cargo"><option>Sim</option><option>Nao</option></select></label>
+                    <label>Estacao disponivel?<select name="estacao_disponivel"><option>Sim</option><option>Nao</option></select></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Horário de Trabalho / Turno<input name="horario_trabalho" required placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
+                    <label>Equipamentos (Notebook, Celular, Frota)<input name="equipamentos" placeholder="Ex: Notebook, Acesso Sistema X" /></label>
+                  </div>
+                  <div class="form-grid form-grid-md">
+                    <label>Cargo/Função/Nível<input name="cargo" required /></label>
+                    <label>Nº de vagas<input name="numero_vagas" type="number" min="1" required /></label>
+                    <label>Faixa salarial<input name="faixa_salarial" placeholder="R$ 0,00" inputmode="numeric" /></label>
+                  </div>
+                  <label>Descricao da vaga<textarea name="descricao" rows="3" required></textarea></label>
+                  <label>Requisitos<textarea name="requisitos" rows="3"></textarea></label>
+                  <label>Pontos de atencao<textarea name="pontos_atencao" rows="2"></textarea></label>
+                  <label>Tipo de recrutamento<select name="tipo_recrutamento"><option>Recrutamento Interno</option><option>Recrutamento Externo</option><option>Interno e Externo</option></select></label>
+                  <button class="primary-button" type="submit">Salvar requisicao</button>
+                </form>
+              </section>
+
+              <section class="doc-view" id="doc-solicitacao-desligamento">
+                <form class="panel doc-form" data-doc-form="solicitacao-desligamento">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>SD - Solicitacao de Desligamento</h2>
+                      <p class="item-meta">Desligamento de colaboradores (uso obrigatorio)</p>
+                    </div>
+                  </div>
+                  <label>Colaborador<input name="colaborador" required /></label>
+                  <div class="form-grid form-grid-md">
+                    <label>Cargo<input name="cargo" required /></label>
+                    <label>Filial / Setor<select name="filial" data-unit-select required></select></label>
+                  </div>
+                  <div class="form-grid form-grid-md">
+                    <label>Data da solicitacao<input name="data_solicitacao" type="date" required /></label>
+                    <label>Data prevista do desligamento<input name="data_desligamento" type="date" required /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Gestor Solicitante<input name="gestor_solicitante" required /></label>
+                    <label>Possui Estabilidade? (CIPA, Gestante, etc)<input name="estabilidade" placeholder="Não / Sim (Descrever)" required /></label>
+                  </div>
+                  <div class="form-grid">
+                    <label>Exame Demissional<select name="exame_demissional"><option>Pendente de Agendamento</option><option>Agendado</option><option>Realizado (Apto)</option><option>Realizado (Inapto)</option></select></label>
+                  </div>
+                  <label>Tipo de desligamento<select name="tipo_desligamento"><option>Pedido de demissao</option><option>Demissao sem justa causa</option><option>Demissao com justa causa</option><option>Termino de contrato</option><option>Acordo</option></select></label>
+                  <label>Motivo<textarea name="motivo" rows="3" required></textarea></label>
+                  <div class="form-grid form-grid-md">
+                    <label>Aviso previo<select name="aviso_previo"><option>Trabalhado</option><option>Indenizado</option><option>Dispensado</option><option>Nao se aplica</option></select></label>
+                    <label>Substituicao necessaria?<select name="substituicao"><option>Sim</option><option>Nao</option></select></label>
+                  </div>
+                  <label>Observacoes<textarea name="observacoes" rows="3"></textarea></label>
+                  <button class="primary-button" type="submit">Salvar solicitacao</button>
+                </form>
+              </section>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <h2>Registros salvos</h2>
+                </div>
+                <div class="vt-filter-bar" aria-label="Filtros de Documentos RH">
+                  <div class="vt-filter-fields">
+                    <input id="document-filter-name" type="search" placeholder="Nome do colaborador" autocomplete="off" aria-label="Filtrar por nome do colaborador" />
+                  <input id="document-filter-cpf" type="search" placeholder="CPF" inputmode="numeric" maxlength="14" autocomplete="off" aria-label="Filtrar por CPF" />
+                  <select id="document-filter-type" aria-label="Filtrar por tipo de documento">
+                    <option value="">Todos os tipos</option>
+                      <option value="admissao">Checklist de Admissao</option>
+                      <option value="ausencia">Entrevista ausencia</option>
+                      <option value="desligamento">Entrevista desligamento</option>
+                      <option value="beneficios">Plano saude e odonto</option>
+                      <option value="feedback-operacional">Feedback operacional</option>
+                      <option value="feedback-fredy">Feedback Fredy Pneus</option>
+                      <option value="ferias">Solicitacao de Ferias</option>
+                      <option value="movimentacao-pessoal">MP - Movimentacao Pessoal</option>
+                      <option value="requisicao-pessoal">RP - Requisicao Pessoal</option>
+                      <option value="solicitacao-desligamento">SD - Solicitacao de Desligamento</option>
+                    </select>
+                  </div>
+                  <button class="secondary-link compact-filter-button" id="clear-document-filters" type="button" hidden>Limpar</button>
+                </div>
+                <div class="card-list" id="document-records"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="documentos-contratados">
+          <div class="panel panel-spaced">
+            <div class="panel-header split-header">
+              <div>
+                <h2>Documentos de Contratados</h2>
+                <p class="item-meta">Envios recebidos pelos formulários das empresas</p>
+              </div>
+              <div class="job-actions flush-top">
+                <a class="secondary-link" href="documentos-fredy.html" target="_blank" rel="noreferrer">Fredy Pneus</a>
+                <a class="secondary-link" href="documentos-besten.html" target="_blank" rel="noreferrer">Besten Pneus</a>
+                <a class="secondary-link" href="documentos-achei.html" target="_blank" rel="noreferrer">Achei Pneus</a>
+                <a class="secondary-link" href="documentos-trinca.html" target="_blank" rel="noreferrer">Trinca Mkt</a>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Recebidos</h2>
+                <p class="item-meta">Arquivos privados, acessíveis apenas por usuários autorizados do HUB</p>
+              </div>
+            </div>
+            <div class="card-list" id="documentos-contratados-list"></div>
+          </div>
+        </section>
+
+        <section class="view" id="gerenciamento-vt">
+          <div class="single-workspace">
+            <form class="panel form-panel" id="vt-form">
+              <div class="panel-header">
+                <div>
+                  <h2>Gerenciamento VT</h2>
+                  <p class="item-meta">Calcule o valor necessário de vale-transporte para o colaborador</p>
+                </div>
+              </div>
+              <input name="id" type="hidden" />
+              <label>Nome e sobrenome do colaborador
+                <input id="vt-colaborador" name="colaborador" type="text" minlength="3" maxlength="120" pattern="\S+\s+\S+.*" placeholder="Nome e sobrenome" autocomplete="off" required />
+              </label>
+              <div class="form-grid form-grid-md">
+                <label>Mês
+                  <select id="vt-mes" name="mes" required>
+                    <option value="" disabled selected>Selecione o mês</option>
+                    <option>Janeiro</option>
+                    <option>Fevereiro</option>
+                    <option>Março</option>
+                    <option>Abril</option>
+                    <option>Maio</option>
+                    <option>Junho</option>
+                    <option>Julho</option>
+                    <option>Agosto</option>
+                    <option>Setembro</option>
+                    <option>Outubro</option>
+                    <option>Novembro</option>
+                    <option>Dezembro</option>
+                  </select>
+                </label>
+                <label>Unidade do trabalhador
+                  <select id="vt-unidade" name="unidade" data-unit-select required></select>
+                </label>
+              </div>
+              <div class="form-grid form-grid-md">
+                <label>Dias úteis no mês
+                  <input id="vt-dias-uteis" name="dias_uteis" type="number" min="0" step="1" placeholder="Ex: 22" required />
+                </label>
+                <label>Valor da passagem
+                  <input id="vt-valor-passagem" name="valor_passagem" type="text" inputmode="numeric" pattern="\d+,\d{2}" maxlength="8" placeholder="Ex: 5,50" autocomplete="off" required />
+                </label>
+                <label>Saldo atual
+                  <input id="vt-saldo-atual" name="saldo_atual" type="number" min="0" step="0.01" placeholder="Ex: 30,00" required />
+                </label>
+              </div>
+              <div class="vt-result-card" aria-live="polite">
+                <span>Valor necessário</span>
+                <strong id="vt-valor-necessario">R$ 0,00</strong>
+                <p id="vt-calculo-detalhe">Informe os dados para calcular.</p>
+              </div>
+              <button class="primary-button" type="submit">Registrar cálculo VT</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-vt" type="button" hidden>Cancelar edição</button>
+            </form>
+            <div class="panel">
+              <div class="panel-header vt-records-header">
+                <div>
+                  <h2>Registros de VT</h2>
+                  <p class="item-meta">Histórico dos cálculos registrados</p>
+                </div>
+                <div class="vt-filter-bar" aria-label="Filtros de registros de VT">
+                  <button class="secondary-link vt-report-button" id="abrir-relatorio-vt" type="button">Relatório</button>
+                  <div class="vt-filter-fields">
+                    <input id="vt-filter-nome" type="search" placeholder="Nome" autocomplete="off" aria-label="Filtrar por nome" />
+                    <select id="vt-filter-mes" aria-label="Filtrar por mês">
+                      <option value="">Mês</option>
+                      <option>Janeiro</option>
+                      <option>Fevereiro</option>
+                      <option>Março</option>
+                      <option>Abril</option>
+                      <option>Maio</option>
+                      <option>Junho</option>
+                      <option>Julho</option>
+                      <option>Agosto</option>
+                      <option>Setembro</option>
+                      <option>Outubro</option>
+                      <option>Novembro</option>
+                      <option>Dezembro</option>
+                    </select>
+                    <select id="vt-filter-unidade" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar por unidade"></select>
+                  </div>
+                  <button class="secondary-link compact-filter-button" id="limpar-filtros-vt" type="button" hidden>Limpar</button>
+                </div>
+              </div>
+              <div class="card-list" id="vt-registros-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="equipe">
+          <div class="workspace">
+            <form class="panel form-panel" id="usuario-form">
+              <div class="panel-header">
+                <h2>Adicionar usuario</h2>
+              </div>
+              <label>Nome
+                <input name="nome" placeholder="Nome do usuario" required />
+              </label>
+              <label>E-mail
+                <input name="email" type="email" placeholder="email@empresa.com" required />
+              </label>
+              <label>CPF
+                <input name="cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" required />
+              </label>
+              <label>Cargo
+                <select name="cargo" required>
+                  <option value="" disabled selected>Selecione um cargo</option>
+                  <option>RH</option>
+                  <option>Gerente</option>
+                  <option>Caixa/Crediarista</option>
+                </select>
+              </label>
+              <button class="primary-button" type="submit">Salvar usuario</button>
+            </form>
+
+            <div class="panel">
+              <div class="panel-header split-header">
+                <div>
+                  <h2>Equipe cadastrada</h2>
+                  <p class="item-meta">Usuarios com acesso ao HUB</p>
+                </div>
+              </div>
+              <div class="card-list" id="usuarios-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="conta">
+          <div class="settings-shell">
+            <aside class="settings-panel" aria-label="Configuracoes do usuario">
+              <h2>Configuracoes</h2>
+              <label class="settings-search" aria-label="Pesquisar configuracoes">
+                <span aria-hidden="true">⌕</span>
+                <input id="settings-search-input" type="search" placeholder="Pesquisar configuracoes" autocomplete="off" />
+              </label>
+              <div class="settings-user-card">
+                <img id="settings-user-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392a7a2'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar">
+                <div>
+                  <strong id="settings-user-name">Usuario</strong>
+                  <span id="settings-user-role">Conta do HUB</span>
+                </div>
+              </div>
+              <div class="settings-list" id="settings-list">
+                <button class="settings-item active" type="button" data-settings-target="settings-account-panel" data-settings-keywords="conta seguranca dados conta"><span aria-hidden="true">⚿</span><span><strong>Conta</strong><small>Notificacoes de seguranca, dados da conta</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-privacy-panel" data-settings-keywords="privacidade contatos bloqueados mensagens temporarias"><span aria-hidden="true">▣</span><span><strong>Privacidade</strong><small>Contatos bloqueados, mensagens temporarias</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-chats-panel" data-settings-keywords="conversas tema configuracoes conversas"><span aria-hidden="true">▤</span><span><strong>Conversas</strong><small>Tema, configuracoes de conversas</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-notifications-panel" data-settings-keywords="notificacoes mensagens avisos"><span aria-hidden="true">◌</span><span><strong>Notificacoes</strong><small>Notificacoes de mensagens</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-shortcuts-panel" data-settings-keywords="atalhos teclado acoes rapidas"><span aria-hidden="true">⌨</span><span><strong>Atalhos de teclado</strong><small>Acoes rapidas</small></span></button>
+              </div>
+              <button class="settings-logout" id="settings-logout-button" type="button"><span aria-hidden="true">↪</span>Desconectar</button>
+            </aside>
+            <div class="settings-detail">
+              <form class="panel form-panel settings-detail-panel active" id="conta-form" data-settings-panel="settings-account-panel">
+              <div class="panel-header">
+                <h2>Configuração de conta</h2>
+              </div>
+              <label>Nome do Usuário
+                <input type="text" name="novo_nome" id="novo-nome" placeholder="Seu nome" />
+              </label>
+              <div class="account-photo-block">
+                <label class="account-photo-label">Foto de Perfil</label>
+                <div class="avatar-upload-wrapper">
+                  <img id="conta-avatar-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392a7a2'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar">
+                  <div class="stack-sm">
+                    <label class="secondary-link clickable fit-link flush-bottom" for="foto-perfil-input">Escolher nova foto</label>
+                    <input class="hidden" type="file" name="foto_perfil" id="foto-perfil-input" accept="image/png, image/jpeg, image/webp" />
+                    <span id="foto-perfil-filename" class="meta-sm">Nenhuma foto selecionada</span>
+                  </div>
+                </div>
+              </div>
+              <label>Cargo
+                <input id="conta-cargo" class="readonly-field" type="text" disabled />
+              </label>
+              <button class="secondary-link account-password-action fit-link" type="button" id="btn-redefinir-senha">Redefinir senha</button>
+              <button class="primary-button" type="submit">Atualizar conta</button>
+              </form>
+            <section class="panel settings-detail-panel" data-settings-panel="settings-privacy-panel">
+              <div class="panel-header"><h2>Privacidade</h2></div>
+              <p class="item-meta">Configurações de privacidade da conta e das conversas.</p>
+              <div class="settings-section">
+                <h3>Exibi&ccedil;&atilde;o</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-privacy-hide-presence" data-user-setting="hidePresence" />
+                  <span><strong>Ocultar status no cabe&ccedil;alho</strong><small>Remove cargo/status do menu do usu&aacute;rio e do cart&atilde;o de configura&ccedil;&otilde;es.</small></span>
+                </label>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-privacy-blur-previews" data-user-setting="blurChatPreviews" />
+                  <span><strong>Proteger pr&eacute;vias do chat</strong><small>Desfoca imagens e documentos anexados at&eacute; passar o mouse ou focar no item.</small></span>
+                </label>
+              </div>
+              <div class="settings-section">
+                <h3>Sess&atilde;o</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-privacy-local-only" data-user-setting="localPrivacyMode" />
+                  <span><strong>Modo privado local</strong><small>Mant&eacute;m prefer&ecirc;ncias somente neste navegador e evita exposi&ccedil;&atilde;o visual desnecess&aacute;ria.</small></span>
+                </label>
+              </div>
+            </section>
+            <section class="panel settings-detail-panel" data-settings-panel="settings-chats-panel">
+              <div class="panel-header"><h2>Conversas</h2></div>
+              <p class="item-meta">Preferências visuais e comportamento das conversas.</p>
+              <div class="settings-section">
+                <h3>Apar&ecirc;ncia</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-chat-compact" data-user-setting="compactMode" />
+                  <span><strong>Modo compacto</strong><small>Reduz espa&ccedil;amentos do chat e listas para caber mais informa&ccedil;&atilde;o na tela.</small></span>
+                </label>
+                <label class="settings-option">
+                  <span><strong>Tamanho das mensagens</strong><small>Ajusta a leitura das mensagens no canal de comunica&ccedil;&atilde;o.</small></span>
+                  <select id="settings-chat-message-size" data-user-setting="messageSize">
+                    <option value="normal">Normal</option>
+                    <option value="small">Pequeno</option>
+                    <option value="large">Grande</option>
+                  </select>
+                </label>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-chat-show-emojis" data-user-setting="showEmojiButton" />
+                  <span><strong>Mostrar bot&atilde;o de emojis</strong><small>Exibe ou oculta o seletor de emojis no compositor do chat.</small></span>
+                </label>
+              </div>
+              <div class="settings-section">
+                <h3>Envio</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-chat-enter-send" data-user-setting="enterToSend" />
+                  <span><strong>Enter envia mensagem</strong><small>Quando desativado, use Ctrl + Enter para enviar e Enter para quebrar linha.</small></span>
+                </label>
+              </div>
+            </section>
+            <section class="panel settings-detail-panel" data-settings-panel="settings-notifications-panel">
+              <div class="panel-header"><h2>Notificações</h2></div>
+              <p class="item-meta">Preferências de avisos e mensagens do sistema.</p>
+              <div class="settings-section">
+                <h3>Mensagens</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-notify-sound" data-user-setting="notificationSound" />
+                  <span><strong>Som de nova mensagem</strong><small>Toca um aviso discreto quando novas mensagens forem carregadas.</small></span>
+                </label>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-notify-desktop" data-user-setting="desktopNotifications" />
+                  <span><strong>Notifica&ccedil;&otilde;es do navegador</strong><small>Solicita permiss&atilde;o do navegador para avisos fora da aba.</small></span>
+                </label>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-notify-dashboard" data-user-setting="dashboardNotificationBadges" />
+                  <span><strong>Destacar novidades no painel</strong><small>Mostra os blocos de notifica&ccedil;&otilde;es minimalistas no acompanhamento.</small></span>
+                </label>
+              </div>
+            </section>
+            <section class="panel settings-detail-panel" data-settings-panel="settings-shortcuts-panel">
+              <div class="panel-header"><h2>Atalhos de teclado</h2></div>
+              <div class="settings-section">
+                <h3>Funcionamento</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-shortcuts-enabled" data-user-setting="keyboardShortcuts" />
+                  <span><strong>Ativar atalhos de teclado</strong><small>Permite usar Ctrl + n&uacute;mero, Ctrl + K e Escape nas telas do HUB.</small></span>
+                </label>
+              </div>
+              <div class="settings-section">
+                <h3>Navegação</h3>
+                <div class="shortcuts-list">
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>1</kbd> a <kbd>0</kbd></div>
+                    <span class="shortcut-desc">Alternar entre abas de visualização</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>K</kbd></div>
+                    <span class="shortcut-desc">Filtrar mensagens especificas no chat</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Escape</kbd></div>
+                    <span class="shortcut-desc">Fechar modais e menus</span>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-section">
+                <h3>Mensagens</h3>
+                <div class="shortcuts-list">
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></div>
+                    <span class="shortcut-desc">Enviar mensagem</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Shift</kbd> + <kbd>Enter</kbd></div>
+                    <span class="shortcut-desc">Quebra de linha na mensagem</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>↑</kbd> / <kbd>↓</kbd></div>
+                    <span class="shortcut-desc">Navegar no histórico de mensagens</span>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-section">
+                <h3>Edição</h3>
+                <div class="shortcuts-list">
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>B</kbd></div>
+                    <span class="shortcut-desc">Negrito</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>I</kbd></div>
+                    <span class="shortcut-desc">Itálico</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>U</kbd></div>
+                    <span class="shortcut-desc">Sublinhado</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

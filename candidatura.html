@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://nblfwesptlpetbwfmdqf.supabase.co; media-src 'self' blob: https://nblfwesptlpetbwfmdqf.supabase.co; connect-src 'self' https://nblfwesptlpetbwfmdqf.supabase.co wss://nblfwesptlpetbwfmdqf.supabase.co https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+    <title>Enviar Curriculo | HUB RH</title>
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="public-layout" data-public-vagas="true">
+      <div class="public-container">
+        <div class="public-brand">
+          <img class="public-brand-logo" src="assets/logo.svg" alt="HUB RH" />
+          <strong>HUB</strong>
+        </div>
+
+        <header class="public-header">
+          <p class="eyebrow">Candidatura</p>
+          <h1>Envie seu Curriculo</h1>
+          <p class="public-header-text">Preencha seus dados e anexe o curriculo para a vaga selecionada.</p>
+        </header>
+
+        <form class="panel" id="candidatura-form" data-public-vagas="true">
+          <div class="panel-header">
+            <h2>Informacoes do candidato</h2>
+          </div>
+          <p class="public-description">E permitido o envio de apenas um curriculo por CPF para cada vaga.</p>
+
+          <label class="bot-field" aria-hidden="true" tabindex="-1">Nao preencha este campo
+            <input name="website" type="text" autocomplete="off" tabindex="-1" />
+          </label>
+          <input name="vaga_id" id="vaga-id" type="hidden" required />
+          <div class="selected-public-job" id="selected-public-job">
+            <p class="empty-state">Carregando vaga selecionada...</p>
+          </div>
+          <label>Nome completo
+            <input name="nome" minlength="3" maxlength="160" required placeholder="Ex: Joao da Silva" />
+          </label>
+          <label>Telefone
+            <input name="telefone" id="telefone-input" required placeholder="(00) 00000-0000" maxlength="15" inputmode="numeric" />
+          </label>
+          <label>CPF
+            <input name="cpf" id="cpf-input" required placeholder="000.000.000-00" maxlength="14" inputmode="numeric" pattern="\d{3}\.\d{3}\.\d{3}-\d{2}" title="Digite o CPF no formato 000.000.000-00" />
+          </label>
+          <label>Curriculo (PDF ou Word)
+            <input name="curriculo" type="file" accept=".pdf,.doc,.docx" required />
+          </label>
+          <button class="primary-button" type="submit">Enviar curriculo</button>
+          <a class="secondary-link public-back-link" href="vagas.html">Voltar para vagas</a>
+        </form>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+    <script src="script.js?v=20260621-captcha-fix"></script>
+  </body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://nblfwesptlpetbwfmdqf.supabase.co; media-src 'self' blob: https://nblfwesptlpetbwfmdqf.supabase.co; connect-src 'self' https://nblfwesptlpetbwfmdqf.supabase.co wss://nblfwesptlpetbwfmdqf.supabase.co https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+    <title>Chamados de EPI | HUB RH</title>
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="public-layout" data-public-chamados="true">
+      <div class="public-container">
+        <div class="public-brand">
+          <img class="public-brand-logo" src="assets/logo.svg" alt="HUB RH" />
+          <strong>HUB</strong>
+        </div>
+
+        <header class="public-header">
+          <p class="eyebrow">Área autenticada</p>
+          <h1>Abrir chamado</h1>
+          <p class="public-header-text">Informe a unidade, os EPIs necessarios e os dados para acompanhamento.</p>
+        </header>
+
+        <form class="panel" id="chamado-form" data-public-chamados="true">
+          <div class="panel-header">
+            <h2>Dados do chamado</h2>
+          </div>
+          <label class="bot-field" aria-hidden="true" tabindex="-1">Nao preencha este campo
+            <input name="website" type="text" autocomplete="off" tabindex="-1" />
+          </label>
+          <label>Solicitante
+            <input name="solicitante" minlength="3" maxlength="120" placeholder="Seu nome" readonly aria-readonly="true" required />
+          </label>
+          <label>Unidade / Loja
+            <select name="unidade" data-unit-select required></select>
+          </label>
+          <div class="dynamic-fieldset">
+            <div class="item-topline">
+              <span>Colaboradores e itens solicitados</span>
+              <button class="secondary-link" id="adicionar-colaborador-chamado" type="button">Adicionar colaborador</button>
+            </div>
+            <div class="epi-list" id="epi-list">
+              <div class="malote-collaborator" data-chamado-collaborator>
+                <div class="item-topline">
+                  <label>Colaborador que irá receber
+                    <input name="chamado_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\S+\s+\S+.*" placeholder="Nome e sobrenome" autocomplete="off" required />
+                  </label>
+                  <button class="danger-button remove-chamado-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
+                </div>
+                <div class="malote-collaborator-items" data-chamado-collaborator-items>
+                  <div class="epi-row">
+                    <label>Tipo
+                      <select name="epi_tipo[]" data-item-type-select required>
+                        <option value="epi">EPIs</option>
+                        <option value="uniforme">Uniforme</option>
+                      </select>
+                    </label>
+                    <label>Nome
+                      <select name="epi_nome[]" data-item-select data-epi-select required></select>
+                    </label>
+                    <label>Quantidade
+                      <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
+                    </label>
+                    <label>Tamanho
+                      <select name="epi_tamanho[]" required>
+                        <option>Nao se aplica</option>
+                        <option>PP</option>
+                        <option>P</option>
+                        <option>M</option>
+                        <option>G</option>
+                        <option>GG</option>
+                        <option>XG</option>
+                        <option>EXG</option>
+                        <option>EXGG</option>
+                        <option>EXGGG</option>
+                        <option>EXGGGG</option>
+                      </select>
+                    </label>
+                    <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+                  </div>
+                </div>
+                <button class="secondary-link add-chamado-item" type="button">Adicionar item para este colaborador</button>
+              </div>
+            </div>
+          </div>
+          <label>Observacoes
+            <textarea name="observacoes" rows="3" maxlength="1000" placeholder="Urgencia, CA, motivo da troca..."></textarea>
+          </label>
+          <button class="primary-button" type="submit">Abrir chamado</button>
+        </form>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+    <script src="script.js?v=20260621-captcha-fix"></script>
+  </body>
+</html>

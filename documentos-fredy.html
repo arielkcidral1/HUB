@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://nblfwesptlpetbwfmdqf.supabase.co; connect-src 'self' https://nblfwesptlpetbwfmdqf.supabase.co wss://nblfwesptlpetbwfmdqf.supabase.co https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+    <title>Envio de Documentos | Fredy Pneus</title>
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="public-layout" data-public-contratados="true" data-contractor-password="fredy5212" data-contractor-source="documentos-fredy.html">
+      <div class="public-container contractor-doc-container">
+        <div class="public-brand contractor-company-brand">
+          <img class="contractor-company-logo" src="assets/logo-fredy-pneus.jpeg" alt="Fredy Pneus" />
+          <strong>Fredy Pneus</strong>
+        </div>
+        <header class="public-header">
+          <p class="eyebrow">Admissão</p>
+          <h1>Envio de documentos</h1>
+          <p class="public-header-text">Preencha seus dados e envie os documentos solicitados para contratação.</p>
+        </header>
+        <form class="panel contractor-password-form" id="contractor-password-form">
+          <div class="panel-header">
+            <h2>Acesso restrito</h2>
+          </div>
+          <p class="item-meta">Informe a senha recebida para acessar o envio de documentos.</p>
+          <label>Senha de acesso
+            <input name="senha_acesso" type="password" autocomplete="off" required />
+          </label>
+          <button class="primary-button" type="submit">Acessar</button>
+        </form>
+        <form class="panel contractor-doc-form" id="contratado-doc-form" data-company="Fredy Pneus" hidden>
+          <div class="panel-header">
+            <h2>Documentos do contratado</h2>
+          </div>
+          <a class="secondary-link public-back-link" href="docs/Checklist%20de%20Admissao%20-%20Empresas.xlsx" download>Baixar checklist de documentos</a>
+          <label class="bot-field" aria-hidden="true" tabindex="-1">Não preencha este campo
+            <input name="website" type="text" autocomplete="off" tabindex="-1" />
+          </label>
+          <input name="empresa" type="hidden" value="Fredy Pneus" />
+          <input name="origem_html" type="hidden" value="documentos-fredy.html" />
+          <label>Nome completo
+            <input name="nome" minlength="3" maxlength="160" placeholder="Nome e sobrenome" autocomplete="off" required />
+          </label>
+          <div class="form-grid">
+            <label>CPF
+              <input name="cpf" id="cpf-input" maxlength="14" inputmode="numeric" placeholder="000.000.000-00" pattern="\d{3}\.\d{3}\.\d{3}-\d{2}" autocomplete="off" required />
+            </label>
+            <label>Telefone
+              <input name="telefone" id="telefone-input" maxlength="15" inputmode="numeric" placeholder="(00) 00000-0000" autocomplete="off" required />
+            </label>
+          </div>
+          <div class="contractor-documents-fieldset" id="contractor-documents-fields">
+            <div class="contractor-document-field">
+              <label>Documentos
+                <input name="documentos" type="file" multiple required />
+              </label>
+            </div>
+          </div>
+          <button class="secondary-link contractor-add-document-button" id="adicionar-documento-contratado" type="button">Adicionar documento</button>
+          <p class="item-meta">Anexe os documentos solicitados em qualquer formato. Limite: 10 MB por arquivo.</p>
+          <button class="primary-button" type="submit">Enviar documentos</button>
+        </form>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+    <script src="script.js?v=20260701-docs-label-download"></script>
+  </body>
+</html>

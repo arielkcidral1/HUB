@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://nblfwesptlpetbwfmdqf.supabase.co; media-src 'self' blob: https://nblfwesptlpetbwfmdqf.supabase.co; connect-src 'self' https://nblfwesptlpetbwfmdqf.supabase.co wss://nblfwesptlpetbwfmdqf.supabase.co https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+    <title>Portal de Vagas | HUB RH</title>
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="public-layout" data-public-vagas="true">
+      <div class="public-container public-container-wide">
+        <div class="public-brand">
+          <img class="public-brand-logo" src="assets/logo.svg" alt="HUB RH" />
+          <strong>HUB</strong>
+        </div>
+
+        <header class="public-header">
+          <p class="eyebrow">Trabalhe conosco</p>
+          <h1>Vagas Abertas</h1>
+          <p class="public-header-text">Veja as oportunidades disponiveis e escolha a vaga para enviar seu curriculo.</p>
+        </header>
+
+        <div class="panel">
+          <div class="panel-header public-jobs-header">
+            <h2>Oportunidades disponiveis</h2>
+            <div class="public-job-filters" aria-label="Filtros de vagas">
+              <button class="secondary-link public-filter-button" id="open-vaga-filters" type="button">Filtrar</button>
+            </div>
+          </div>
+          <div class="public-job-grid" id="public-vagas-list">
+            <p class="empty-state">Carregando vagas...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
