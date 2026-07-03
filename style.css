@@ -2251,11 +2251,6 @@ textarea {
   cursor: pointer;
 }
 
-.chat-preview-chip:hover {
-  border-color: var(--teal);
-  transform: translateY(-1px);
-}
-
 .chat-preview-chip.is-active {
   border: 4px solid #22c55e;
   background: var(--surface);
@@ -2285,6 +2280,11 @@ textarea {
   color: var(--danger);
   border-color: rgba(192, 57, 43, 0.35);
   background: var(--danger-surface);
+}
+
+.chat-preview-chip:hover {
+  border-color: var(--teal);
+  transform: translateY(-1px);
 }
 
 .chat-preview-chip-image {
@@ -3227,6 +3227,11 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-composer {
     align-items: stretch;
+  }
+  .chat-composer {
+    grid-template-columns: auto 1fr auto auto;
+    align-items: flex-end;
+    gap: 8px;
   }
 
   .chat-composer textarea[name="mensagem"] {
