@@ -5841,7 +5841,7 @@ function renderChamadosSection() {
 }
 
 function renderMalotesSection() {
-  renderMalotesSection();
+  renderAll();
 }
 
 function renderDenunciasSection() {
