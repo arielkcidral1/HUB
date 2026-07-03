@@ -1642,8 +1642,8 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 6px;
+  margin-top: 6px;
   position: relative;
   min-height: 44px;
 }
@@ -3261,7 +3261,7 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer {
-    gap: 8px;
+    gap: 6px;
   }
 
   .chat-workspace {
