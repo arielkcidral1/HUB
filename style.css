@@ -1642,8 +1642,8 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-top: 8px;
   position: relative;
 }
 
@@ -1658,7 +1658,7 @@ textarea {
 .chat-composer textarea[name="mensagem"] {
   flex: 1 1 260px;
   width: auto;
-  min-height: 44px;
+  min-height: 40px;
   max-height: 132px;
   resize: vertical;
   line-height: 1.45;
