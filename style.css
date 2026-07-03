@@ -1317,8 +1317,8 @@ textarea {
 
 .chat-panel {
   display: grid;
-  grid-template-rows: auto auto minmax(380px, 55vh) auto;
-  min-height: 580px;
+  grid-template-rows: auto auto minmax(300px, 40vh) auto;
+  min-height: 480px;
 }
 
 .chat-message-filter {
@@ -3147,7 +3147,7 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-panel {
-    grid-template-rows: auto minmax(340px, 50vh) auto;
+    grid-template-rows: auto minmax(280px, 40vh) auto;
   }
 
   .panel {
@@ -3286,7 +3286,7 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-panel {
     min-height: auto;
-    grid-template-rows: auto minmax(300px, 48vh) auto;
+    grid-template-rows: auto minmax(240px, 40vh) auto;
   }
 
   .chat-feed {
