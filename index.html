@@ -203,10 +203,11 @@
                   <p class="item-meta" id="chat-subtitle">Mensagens e arquivos compartilhados pela equipe</p>
                 </div>
               </div>
-              <label class="chat-message-filter" id="chat-message-filter-wrap" for="chat-message-filter" hidden>
+              <div class="chat-message-filter" id="chat-message-filter-wrap" hidden>
                 <span aria-hidden="true">⌕</span>
                 <input id="chat-message-filter" type="search" placeholder="Filtrar mensagens deste chat" autocomplete="off" />
-              </label>
+                <button class="chat-message-filter-close" id="chat-message-filter-close" type="button" title="Fechar filtro" aria-label="Fechar filtro de mensagens">✕</button>
+              </div>
               <div class="chat-feed" id="chat-feed" aria-live="polite"></div>
               <form class="chat-composer" id="chat-form">
                 <div class="chat-attachment-preview" id="chat-attachment-preview" hidden aria-live="polite"></div>

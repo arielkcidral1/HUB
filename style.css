@@ -1348,6 +1348,34 @@ textarea {
   box-shadow: 0 0 0 3px rgba(12, 98, 89, 0.1);
 }
 
+.chat-message-filter-close {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.chat-message-filter-close:hover {
+  background: rgba(12, 98, 89, 0.1);
+  color: var(--teal);
+}
+
+.chat-message-filter-close:active {
+  background: rgba(12, 98, 89, 0.2);
+}
+
 .chat-feed {
   display: flex;
   flex-direction: column;
