@@ -1666,7 +1666,8 @@ textarea {
   width: auto;
   min-height: 40px;
   max-height: 132px;
-  resize: vertical;
+  overflow-y: auto;
+  resize: none;
   line-height: 1.45;
 }
 
@@ -3226,25 +3227,23 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer {
-    align-items: stretch;
-  }
-  .chat-composer {
-    grid-template-columns: auto 1fr auto auto;
     align-items: flex-end;
     gap: 8px;
   }
 
   .chat-composer textarea[name="mensagem"] {
-    flex-basis: 100%;
+    flex: 1 1 100%;
     order: 2;
   }
 
   .chat-attachment-preview {
     order: 1;
+    flex-basis: 100%;
   }
 
   .chat-attach-menu-wrap,
   .chat-emoji-menu-wrap,
+  .poll-button,
   .record-audio-button,
   .send-button {
     order: 3;
@@ -3269,10 +3268,6 @@ form.panel[data-public-chamados="true"].panel {
 
   .hero-copy p {
     font-size: 20px;
-  }
-
-  .chat-composer {
-    gap: 8px;
   }
 
   .chat-workspace {
