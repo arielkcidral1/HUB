@@ -86,13 +86,27 @@ export function useMalotes() {
         throw new Error('Nome do colaborador que recebe o EPI é obrigatório');
       }
 
-      // Preparar dados para atualização
+      // Buscar o registro atual para garantir campos obrigatórios
+      const { data: maloteAtual, error: fetchError } = await supabase
+        .from('hub_malotes')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) {
+        throw new Error(`Erro ao buscar registro: ${fetchError.message}`);
+      }
+
+      // Preparar dados para atualização com TODOS os campos obrigatórios
       const dataToUpdate = {
-        destino: updates.destino.trim(),
-        status: updates.status || 'Separação',
+        destino: updates.destino?.trim() || maloteAtual.destino,
+        epis: updates.epis || maloteAtual.epis,
+        status: updates.status || maloteAtual.status,
+        origem: maloteAtual.origem, // Campo obrigatório
+        observacoes: updates.observacoes || maloteAtual.observacoes,
         updated_by: updates.updated_by.trim(), // Nome do colaborador
-        observacoes: updates.observacoes || '',
-        epis: updates.epis || ''
+        created_by: maloteAtual.created_by, // Preservar criador
+        codigo_solicitacao: maloteAtual.codigo_solicitacao // Preservar código
       };
 
       const { data, error: supabaseError } = await supabase
@@ -133,10 +147,27 @@ export function useMalotes() {
         throw new Error('Nome do colaborador é obrigatório');
       }
 
+      // Primeiro, busca o registro atual para pegar todos os campos obrigatórios
+      const { data: maloteAtual, error: fetchError } = await supabase
+        .from('hub_malotes')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) {
+        throw new Error(`Erro ao buscar registro: ${fetchError.message}`);
+      }
+
+      // Atualiza com TODOS os campos (especialmente os obrigatórios)
       const { data, error: supabaseError } = await supabase
         .from('hub_malotes')
         .update({
-          updated_by: nomColaborador.trim()
+          destino: maloteAtual.destino,
+          epis: maloteAtual.epis,
+          status: maloteAtual.status,
+          origem: maloteAtual.origem,
+          observacoes: maloteAtual.observacoes,
+          updated_by: nomColaborador.trim() // ← O campo que você quer atualizar
         })
         .eq('id', id)
         .select();

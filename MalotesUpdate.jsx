@@ -90,15 +90,29 @@ export default function MalotesUpdate() {
         return;
       }
 
-      // Atualizar o registro
+      // Buscar o registro atual para garantir campos obrigatórios
+      const { data: maloteAtual, error: fetchError } = await supabase
+        .from('hub_malotes')
+        .select('*')
+        .eq('id', maloteId)
+        .single();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      // Atualizar o registro com TODOS os campos obrigatórios
       const { data, error } = await supabase
         .from('hub_malotes')
         .update({
-          destino: formData.destino,
-          epis: formData.epis,
-          status: formData.status,
-          observacoes: formData.observacoes,
-          updated_by: formData.updated_by
+          destino: formData.destino || maloteAtual.destino,
+          epis: formData.epis || maloteAtual.epis,
+          status: formData.status || maloteAtual.status,
+          observacoes: formData.observacoes || maloteAtual.observacoes,
+          origem: maloteAtual.origem, // Campo obrigatório - preservar
+          updated_by: formData.updated_by,
+          created_by: maloteAtual.created_by, // Preservar
+          codigo_solicitacao: maloteAtual.codigo_solicitacao // Preservar
         })
         .eq('id', maloteId)
         .select();
