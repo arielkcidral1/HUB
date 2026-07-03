@@ -4910,15 +4910,43 @@ function renderDashboard() {
     document.getElementById("metric-documentos").textContent = documentRecords.filter((item) => !isArchivedRecord(item)).length;
   }
 
-  const dashboardItems = [
-    ...unreadRhMessages.map((item) => ({
+  // Group messages by author
+  const messagesByAuthor = {};
+  unreadRhMessages.forEach((item) => {
+    const author = item.autor || "Equipe";
+    if (!messagesByAuthor[author]) {
+      messagesByAuthor[author] = [];
+    }
+    messagesByAuthor[author].push(item);
+  });
+
+  // Convert grouped messages to dashboard items
+  const groupedMessages = Object.entries(messagesByAuthor).map(([author, messages]) => {
+    // Sort messages by date (most recent first)
+    const sortedMessages = [...messages].sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+    
+    return {
       kind: "notificacao",
-      title: `Mensagem · ${item.autor || "Equipe"}`,
-      text: item.mensagem || "Nova notificação recebida.",
-      details: `Autor: ${item.autor || "Equipe"}\nData: ${item.createdAt || "Não informada"}\n\n${item.mensagem || "Nova notificação recebida."}`,
+      title: `Mensagem · ${author}`,
+      text: messages.length === 1 
+        ? messages[0].mensagem || "Nova notificação recebida."
+        : `${messages.length} mensagens de ${author}`,
+      details: sortedMessages
+        .map((msg) => `${msg.createdAt || "Não informada"}\n${msg.mensagem || "Nova notificação recebida."}`)
+        .join("\n\n---\n\n"),
+      detailsHeader: `Autor: ${author}\nTotal de mensagens: ${messages.length}`,
       tag: "Nova",
-      date: item.createdAt,
-    })),
+      date: sortedMessages[0].createdAt,
+      messageCount: messages.length,
+    };
+  });
+
+  const dashboardItems = [
+    ...groupedMessages,
     ...data.denuncias
       .filter(item => item.status === "Aberta" || item.status === "Urgente")
       .map((item) => ({
