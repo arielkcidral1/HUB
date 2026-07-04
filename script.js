@@ -5757,15 +5757,158 @@ function playUserNotificationSound() {
   }
 }
 
+
+const HUB_NOTIFICATION_POPOUT_CONTAINER_ID = "hub-notification-popout-container";
+
+function ensureUserNotificationPopoutContainer() {
+  let container = document.getElementById(HUB_NOTIFICATION_POPOUT_CONTAINER_ID);
+  if (container) return container;
+
+  container = document.createElement("div");
+  container.id = HUB_NOTIFICATION_POPOUT_CONTAINER_ID;
+  container.className = "hub-notification-popout-container";
+  container.setAttribute("aria-live", "polite");
+  container.setAttribute("aria-atomic", "false");
+  document.body.appendChild(container);
+  return container;
+}
+
+function removeUserNotificationPopout(popout) {
+  if (!popout || popout.dataset.closing === "true") return;
+  popout.dataset.closing = "true";
+  popout.classList.add("is-leaving");
+  window.setTimeout(() => popout.remove(), 180);
+}
+
+function showUserNotificationPopout(title, message, options = {}) {
+  try {
+    const container = ensureUserNotificationPopoutContainer();
+    const popout = document.createElement("article");
+    popout.className = `hub-notification-popout ${options.type || "mensagem"}`;
+    popout.tabIndex = 0;
+    popout.setAttribute("role", "button");
+    popout.setAttribute("aria-label", `${title}. ${message}`);
+
+    const icon = document.createElement("div");
+    icon.className = "hub-notification-popout-icon";
+    icon.textContent = options.icon || "🔔";
+
+    const content = document.createElement("div");
+    content.className = "hub-notification-popout-content";
+
+    const heading = document.createElement("strong");
+    heading.textContent = title || "Nova notificação";
+
+    const body = document.createElement("p");
+    body.textContent = message || "Você possui uma nova atualização no HUB.";
+
+    const hint = document.createElement("span");
+    hint.textContent = options.hint || "Clique para abrir o acompanhamento";
+
+    content.append(heading, body, hint);
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "hub-notification-popout-close";
+    closeButton.setAttribute("aria-label", "Fechar notificação");
+    closeButton.textContent = "×";
+
+    popout.append(icon, content, closeButton);
+    container.prepend(popout);
+
+    const timer = window.setTimeout(() => removeUserNotificationPopout(popout), options.duration || 8000);
+
+    closeButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      window.clearTimeout(timer);
+      removeUserNotificationPopout(popout);
+    });
+
+    const openCallback = () => {
+      window.clearTimeout(timer);
+      if (typeof options.onClick === "function") options.onClick();
+      removeUserNotificationPopout(popout);
+    };
+
+    popout.addEventListener("click", openCallback);
+    popout.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openCallback();
+      }
+    });
+
+    const popouts = [...container.querySelectorAll(".hub-notification-popout")];
+    popouts.slice(3).forEach(removeUserNotificationPopout);
+  } catch (error) {
+    console.warn("Não foi possível exibir o popout de notificação:", error);
+  }
+}
+
+function openNotificationTrackerFromPopout() {
+  if (window.notificationTracker && typeof window.notificationTracker.openModal === "function") {
+    window.notificationTracker.openModal();
+    return;
+  }
+
+  const trackerButton = document.getElementById("dashboard-notifications-tracker");
+  if (trackerButton) trackerButton.click();
+}
+
+function showBrowserDesktopNotification(title, body) {
+  if (!currentUserSettings.desktopNotifications || !("Notification" in window)) return;
+
+  const createNotification = () => {
+    try {
+      const notification = new Notification(title, {
+        body,
+        icon: "assets/logo.svg",
+        badge: "assets/logo.svg",
+        tag: "hub-rh-comunicacao",
+        renotify: true,
+      });
+      notification.onclick = () => {
+        window.focus?.();
+        openNotificationTrackerFromPopout();
+        notification.close?.();
+      };
+    } catch (error) {
+      console.warn("Notificação do navegador bloqueada:", error);
+    }
+  };
+
+  if (Notification.permission === "granted") {
+    createNotification();
+    return;
+  }
+
+  if (Notification.permission === "default") {
+    Notification.requestPermission()
+      .then((permission) => {
+        if (permission === "granted") createNotification();
+      })
+      .catch((error) => console.warn("Permissão de notificação não pôde ser solicitada:", error));
+  }
+}
+
 function notifyUnreadRhMessages(count) {
   if (count <= lastUnreadNotificationCount) {
     lastUnreadNotificationCount = count;
     return;
   }
+
+  const newMessageCount = count - lastUnreadNotificationCount;
+  const messageText = `${newMessageCount} nova(s) mensagem(ns) não lida(s).`;
+
   playUserNotificationSound();
-  if (currentUserSettings.desktopNotifications && "Notification" in window && Notification.permission === "granted") {
-    new Notification("Comunicação RH", { body: `${count - lastUnreadNotificationCount} nova(s) mensagem(ns) não lida(s).` });
-  }
+  showUserNotificationPopout("Comunicação RH", messageText, {
+    type: "mensagem",
+    icon: "💬",
+    onClick: openNotificationTrackerFromPopout,
+  });
+  showBrowserDesktopNotification("Comunicação RH", messageText);
+
   lastUnreadNotificationCount = count;
 }
 
