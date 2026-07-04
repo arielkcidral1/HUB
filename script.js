@@ -312,6 +312,8 @@ let currentUserSettings = loadUserSettings();
 let lastUnreadNotificationCount = 0;
 let hubNotificationServiceWorkerRegistration = null;
 let lastRealtimeNotificationSignature = "";
+let hubPollingNotificationKeys = new Set();
+let hubPollingNotificationsReady = false;
 const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
@@ -3019,6 +3021,7 @@ async function loadFromSupabase(options = {}) {
     const hasFailures = requests.some((result) => result.status === "rejected");
     setSyncStatus(hasFailures ? "Supabase parcial" : "Supabase EIXO online", !hasFailures);
     renderAll();
+    if (setupLive) rememberCurrentNotificationKeysForPolling();
   } catch (error) {
     console.error("Erro ao carregar Supabase:", error);
     setSyncStatus("Supabase pendente", false);
@@ -3032,6 +3035,7 @@ async function refreshFromSupabase() {
   refreshInProgress = true;
   try {
     await loadFromSupabase({ setupLive: false });
+    notifyNewItemsFromPolling();
   } finally {
     refreshInProgress = false;
   }
@@ -5215,8 +5219,9 @@ function renderDashboard() {
         : hasUnread
           ? `${unreadMessageIds.length} nova(s) de ${messages.length} mensagem(ns) de ${author}`
           : `${messages.length} mensagem(ns) de ${author}`,
-      details: sortedMessages
-        .slice(0, 12)
+      details: [...sortedMessages]
+        .reverse()
+        .slice(-12)
         .map((msg) => `${msg.createdAt || "Sem data"} · ${msg.mensagem || "Nova notificação recebida."}`)
         .join("\n\n"),
       detailsHeader: `Autor: ${author}\nTotal de mensagens: ${messages.length}`,
@@ -5832,42 +5837,57 @@ async function registerHubNotificationServiceWorker() {
   }
 }
 
-function requestDesktopNotificationPermission() {
+async function requestDesktopNotificationPermission({ showSuccess = true } = {}) {
   if (!isBrowserNotificationSupported()) {
     showModal("Notificações indisponíveis", "Este navegador não suporta notificações do sistema.", "error");
     currentUserSettings.desktopNotifications = false;
-    saveUserSettings();
+    saveUserSettings(currentUserSettings);
     syncUserSettingsControls();
-    return;
+    return "unsupported";
   }
 
   currentUserSettings.desktopNotifications = true;
   currentUserSettings.notificationSound = true;
   saveUserSettings(currentUserSettings);
   syncUserSettingsControls();
-  registerHubNotificationServiceWorker();
+  await registerHubNotificationServiceWorker();
 
   if (Notification.permission === "granted") {
     removeDesktopNotificationPermissionPrompt();
-    return;
+    return "granted";
   }
 
-  Notification.requestPermission().then((permission) => {
+  try {
+    const permission = await Notification.requestPermission();
     if (permission === "granted") {
       removeDesktopNotificationPermissionPrompt();
-      showHubCrossPageNotification("Notificações ativadas", "Agora o HUB pode avisar mesmo quando você estiver em outra aba.", {
-        type: "geral",
-        icon: "🔔",
-        tag: "hub-rh-notificacoes-ativadas",
-      });
-      return;
+      if (showSuccess) {
+        await showBrowserDesktopNotification("Notificações ativadas", "Agora o HUB pode avisar mesmo quando você estiver em outra aba.", {
+          type: "geral",
+          icon: "🔔",
+          tag: "hub-rh-notificacoes-ativadas",
+          requireInteraction: true,
+        });
+        showUserNotificationPopout("Notificações ativadas", "Avisos externos do HUB foram liberados neste navegador.", {
+          type: "geral",
+          icon: "🔔",
+          duration: 7000,
+          hint: "Você também receberá o aviso nativo do navegador",
+        });
+      }
+      return "granted";
     }
 
     currentUserSettings.desktopNotifications = false;
     saveUserSettings(currentUserSettings);
     syncUserSettingsControls();
     showDesktopNotificationPermissionPrompt(true);
-  });
+    return permission;
+  } catch (error) {
+    console.warn("Permissão de notificações não pôde ser solicitada:", error);
+    showDesktopNotificationPermissionPrompt(true);
+    return "error";
+  }
 }
 
 const HUB_NOTIFICATION_PERMISSION_PROMPT_ID = "hub-notification-permission-prompt";
@@ -5901,17 +5921,35 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
       <button class="primary-button" type="button" data-permission-enable>Permitir notificações</button>
     `;
     document.body.appendChild(prompt);
-    prompt.querySelector("[data-permission-enable]")?.addEventListener("click", requestDesktopNotificationPermission);
-    prompt.querySelector("[data-permission-test]")?.addEventListener("click", () => {
-      if (Notification.permission !== "granted") {
-        requestDesktopNotificationPermission();
+    prompt.querySelector("[data-permission-enable]")?.addEventListener("click", () => requestDesktopNotificationPermission());
+    prompt.querySelector("[data-permission-test]")?.addEventListener("click", async () => {
+      const permission = Notification.permission === "granted"
+        ? "granted"
+        : await requestDesktopNotificationPermission({ showSuccess: false });
+
+      if (permission !== "granted") {
+        showUserNotificationPopout("Permissão pendente", "O navegador ainda não liberou as notificações externas do HUB.", {
+          type: "geral",
+          icon: "⚠️",
+          duration: 9000,
+          hint: "Libere no cadeado do navegador: Notificações > Permitir",
+        });
         return;
       }
-      showHubCrossPageNotification("Teste de notificação HUB", "Se este aviso apareceu, as notificações fora da aba estão ativas.", {
+
+      const shown = await showBrowserDesktopNotification("Teste de notificação HUB", "Este é o aviso visual que aparecerá fora da aba do HUB.", {
         type: "geral",
         icon: "🔔",
         tag: `hub-rh-teste-${Date.now()}`,
         requireInteraction: true,
+      });
+      showUserNotificationPopout(shown ? "Teste enviado" : "Teste bloqueado", shown
+        ? "A notificação nativa do navegador foi disparada. Verifique o canto da tela ou a central de notificações."
+        : "O navegador bloqueou o aviso externo. Confira as permissões do site.", {
+        type: "geral",
+        icon: shown ? "🔔" : "⚠️",
+        duration: 10000,
+        hint: shown ? "Se estiver em outra aba, o aviso aparecerá fora do HUB" : "Cadeado do navegador > Notificações > Permitir",
       });
     });
     prompt.querySelector("[data-permission-dismiss]")?.addEventListener("click", () => prompt.remove());
@@ -6109,7 +6147,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
     requireInteraction: Boolean(options.requireInteraction ?? true),
     silent: false,
     timestamp: Date.now(),
-    vibrate: [180, 80, 180, 80, 240],
+    vibrate: [220, 90, 220, 90, 280],
     data: {
       url: targetUrl.href,
       type: options.type || "geral",
@@ -6118,20 +6156,8 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
     },
   };
 
-  // A notificação via Service Worker é a forma mais estável para aparecer fora da aba do HUB.
-  // Ela aparece como notificação nativa do navegador/Chrome quando a permissão está liberada.
-  try {
-    const registration = await registerHubNotificationServiceWorker();
-    const readyRegistration = await navigator.serviceWorker?.ready?.catch?.(() => registration) || registration;
-    if (readyRegistration?.showNotification) {
-      await readyRegistration.showNotification(title || "HUB RH", notificationOptions);
-      return true;
-    }
-  } catch (swError) {
-    console.warn("Notificação via Service Worker bloqueada:", swError);
-  }
-
-  // Fallback direto para navegadores sem Service Worker disponível.
+  // Primeiro tenta a notificação direta do navegador. No Chrome/Edge desktop,
+  // esta é a forma que normalmente aparece como aviso visual fora da aba/app.
   try {
     const notification = new Notification(title || "HUB RH", notificationOptions);
     notification.onclick = () => {
@@ -6143,6 +6169,23 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
     return true;
   } catch (directError) {
     console.warn("Notificação direta do navegador bloqueada:", directError);
+  }
+
+  // Fallback via Service Worker. Mantém compatibilidade e melhora o clique
+  // quando a aba do HUB está em segundo plano.
+  try {
+    const registration = await registerHubNotificationServiceWorker();
+    const readyPromise = navigator.serviceWorker?.ready?.catch?.(() => registration) || Promise.resolve(registration);
+    const readyRegistration = await Promise.race([
+      readyPromise,
+      new Promise((resolve) => window.setTimeout(() => resolve(registration), 1800)),
+    ]);
+    if (readyRegistration?.showNotification) {
+      await readyRegistration.showNotification(title || "HUB RH", notificationOptions);
+      return true;
+    }
+  } catch (swError) {
+    console.warn("Notificação via Service Worker bloqueada:", swError);
   }
 
   return false;
@@ -6281,6 +6324,54 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   return true;
 }
 
+function getNotificationPollingKey(collection, item = {}) {
+  if (!collection || !item) return "";
+  const identity = item.id || item.notificationId || item.codigoSolicitacao || item.createdAt || item.created_at || "";
+  if (!identity) return "";
+  const version = item.updatedAt || item.updated_at || item.sortAt || item.createdAt || item.created_at || "";
+  return `${collection}|${identity}|${version}`;
+}
+
+function getNotificationPollingCandidates() {
+  const sourceData = typeof data === "object" && data ? data : {};
+  const candidates = [];
+  const allowedCollections = ["comunicados", "denuncias", "chamados", "malotes", "vagas", "documentosContratados"];
+
+  allowedCollections.forEach((collection) => {
+    const rows = Array.isArray(sourceData[collection]) ? sourceData[collection] : [];
+    rows.forEach((item) => {
+      if (!item) return;
+      if (collection === "comunicados" && !canAccessChatChannel(item.canal)) return;
+      const key = getNotificationPollingKey(collection, item);
+      if (!key) return;
+      candidates.push({ collection, item, key, time: getDashboardRecordSortValue(item) || Date.now() });
+    });
+  });
+
+  return candidates.sort((a, b) => a.time - b.time);
+}
+
+function rememberCurrentNotificationKeysForPolling() {
+  hubPollingNotificationKeys = new Set(getNotificationPollingCandidates().map((entry) => entry.key));
+  hubPollingNotificationsReady = true;
+}
+
+function notifyNewItemsFromPolling() {
+  if (!isAuthenticated()) return;
+  const candidates = getNotificationPollingCandidates();
+  if (!hubPollingNotificationsReady) {
+    hubPollingNotificationKeys = new Set(candidates.map((entry) => entry.key));
+    hubPollingNotificationsReady = true;
+    return;
+  }
+
+  candidates.forEach(({ collection, item, key }) => {
+    if (hubPollingNotificationKeys.has(key)) return;
+    hubPollingNotificationKeys.add(key);
+    notifyRealtimeItem(collection, item, "INSERT");
+  });
+}
+
 function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!shouldNotifyRealtimeItem(collection, item, action)) return;
   const notification = getRealtimeNotificationText(collection, item);
@@ -6295,6 +6386,9 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
     notificationId: `${notification.type || collection}-${item.id || Date.now()}`,
     messageIds: collection === "comunicados" && item.id ? [item.id] : [],
   });
+
+  const pollingKey = getNotificationPollingKey(collection, item);
+  if (pollingKey) hubPollingNotificationKeys.add(pollingKey);
 }
 
 function startAuthenticatedNotificationsOnAnyPage() {
@@ -9551,7 +9645,7 @@ class NotificationTracker {
           : hasUnread
             ? `${unreadMessageIds.length} nova(s) de ${messages.length} mensagem(ns) de ${author}`
             : `${messages.length} mensagem(ns) de ${author}`,
-        details: sortedMessages.slice(0, 20).map((message) => `${message.createdAt || "Sem data"} · ${message.mensagem || "Nova notificação recebida."}`).join("\n\n"),
+        details: [...sortedMessages].reverse().slice(-20).map((message) => `${message.createdAt || "Sem data"} · ${message.mensagem || "Nova notificação recebida."}`).join("\n\n"),
         time: latestMessage.createdAt || "Agora",
         dateTime: latestMessage.sortAt || latestMessage.createdAt || "Agora",
         status: hasUnread ? "unread" : "pending",
