@@ -8768,3 +8768,298 @@ document.addEventListener('click', (event) => {
       break;
   }
 });
+/* ==================== TRACKER MODAL ==================== */
+
+// Classe para gerenciar o modal de acompanhamento
+class NotificationTracker {
+  constructor() {
+    this.modal = document.getElementById('tracker-modal');
+    this.modalOverlay = document.getElementById('tracker-modal-overlay');
+    this.modalClose = document.getElementById('tracker-modal-close');
+    this.openBtn = document.getElementById('dashboard-notifications-tracker');
+    this.notificationsList = document.getElementById('tracker-notifications-list');
+    this.emptyState = document.getElementById('tracker-empty');
+    
+    // Filtros e busca
+    this.filterType = document.getElementById('tracker-filter-type');
+    this.searchInput = document.getElementById('tracker-search');
+    this.sortSelect = document.getElementById('tracker-sort');
+    
+    // Estatísticas
+    this.statTotal = document.getElementById('tracker-stat-total');
+    this.statUnread = document.getElementById('tracker-stat-unread');
+    this.statPending = document.getElementById('tracker-stat-pending');
+    
+    // Botões de ação
+    this.markAllReadBtn = document.getElementById('tracker-mark-all-read');
+    this.clearAllBtn = document.getElementById('tracker-clear-all');
+    
+    this.notifications = [];
+    this.filteredNotifications = [];
+    
+    this.init();
+  }
+
+  init() {
+    // Event listeners
+    this.openBtn?.addEventListener('click', () => this.openModal());
+    this.modalClose?.addEventListener('click', () => this.closeModal());
+    this.modalOverlay?.addEventListener('click', () => this.closeModal());
+    this.filterType?.addEventListener('change', () => this.applyFilters());
+    this.searchInput?.addEventListener('input', () => this.applyFilters());
+    this.sortSelect?.addEventListener('change', () => this.applySorting());
+    this.markAllReadBtn?.addEventListener('click', () => this.markAllRead());
+    this.clearAllBtn?.addEventListener('click', () => this.clearAll());
+    
+    // Fechar com ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !this.modal?.hidden) {
+        this.closeModal();
+      }
+    });
+    
+    // Carregar notificações iniciais
+    this.loadNotifications();
+  }
+
+  openModal() {
+    if (this.modal) {
+      this.modal.removeAttribute('hidden');
+      document.body.style.overflow = 'hidden';
+      this.loadNotifications();
+    }
+  }
+
+  closeModal() {
+    if (this.modal) {
+      this.modal.setAttribute('hidden', '');
+      document.body.style.overflow = '';
+    }
+  }
+
+  loadNotifications() {
+    // Coletar notificações de todos os dashboards
+    this.notifications = [];
+    
+    const dashboardList = document.getElementById('dashboard-list');
+    if (dashboardList) {
+      const items = dashboardList.querySelectorAll('[data-notification-type]');
+      items.forEach((item) => {
+        this.notifications.push(this.parseNotificationItem(item));
+      });
+    }
+    
+    // Ordenar por padrão
+    this.sortNotifications('recente');
+    this.applyFilters();
+    this.updateStats();
+  }
+
+  parseNotificationItem(element) {
+    const type = element.getAttribute('data-notification-type') || 'geral';
+    const title = element.querySelector('.activity-item-title')?.textContent || 'Notificação';
+    const description = element.querySelector('.activity-item-meta')?.textContent || '';
+    const time = element.querySelector('.activity-item-time')?.textContent || 'Recentemente';
+    const isUnread = element.classList.contains('unread');
+    const status = element.getAttribute('data-status') || 'pending';
+    
+    return {
+      id: Math.random().toString(36).substr(2, 9),
+      type,
+      title,
+      description,
+      time,
+      unread: isUnread,
+      status,
+      element,
+      icon: this.getIconForType(type),
+      badgeText: this.getBadgeText(status)
+    };
+  }
+
+  getIconForType(type) {
+    const icons = {
+      'denuncia': '🚨',
+      'mensagem': '💬',
+      'malote': '📦',
+      'chamado': '🎫',
+      'vaga': '💼',
+      'evento': '📅',
+      'documento': '📄',
+      'geral': '📢'
+    };
+    return icons[type] || '📢';
+  }
+
+  getBadgeText(status) {
+    const badges = {
+      'unread': 'Não lido',
+      'pending': 'Pendente',
+      'resolved': 'Resolvido',
+      'urgent': 'Urgente'
+    };
+    return badges[status] || '';
+  }
+
+  applyFilters() {
+    const filterValue = this.filterType?.value || '';
+    const searchValue = this.searchInput?.value.toLowerCase() || '';
+    
+    this.filteredNotifications = this.notifications.filter((notif) => {
+      const typeMatch = !filterValue || notif.type === filterValue;
+      const searchMatch = !searchValue || 
+        notif.title.toLowerCase().includes(searchValue) ||
+        notif.description.toLowerCase().includes(searchValue);
+      
+      return typeMatch && searchMatch;
+    });
+    
+    this.applySorting();
+  }
+
+  applySorting() {
+    const sortValue = this.sortSelect?.value || 'recente';
+    
+    switch(sortValue) {
+      case 'antigo':
+        this.filteredNotifications.reverse();
+        break;
+      case 'tipo':
+        this.filteredNotifications.sort((a, b) => a.type.localeCompare(b.type));
+        break;
+      case 'prioridade':
+        const priorityOrder = { urgent: 0, pending: 1, unread: 2, resolved: 3 };
+        this.filteredNotifications.sort((a, b) => 
+          (priorityOrder[a.status] || 999) - (priorityOrder[b.status] || 999)
+        );
+        break;
+      case 'recente':
+      default:
+        // Já vem em ordem recente por padrão
+        break;
+    }
+    
+    this.renderNotifications();
+  }
+
+  sortNotifications(order) {
+    this.sortSelect && (this.sortSelect.value = order);
+    this.applySorting();
+  }
+
+  renderNotifications() {
+    if (!this.notificationsList) return;
+    
+    this.notificationsList.innerHTML = '';
+    
+    if (this.filteredNotifications.length === 0) {
+      this.emptyState?.removeAttribute('hidden');
+      return;
+    }
+    
+    this.emptyState?.setAttribute('hidden', '');
+    
+    this.filteredNotifications.forEach((notif) => {
+      const li = document.createElement('li');
+      li.className = `tracker-notification-item ${notif.type}`;
+      if (notif.unread) li.classList.add('unread');
+      
+      let badgeHTML = '';
+      if (notif.badgeText) {
+        const badgeClass = notif.unread ? 'unread' : (notif.status === 'pending' ? 'pending' : 'resolved');
+        badgeHTML = `<span class="tracker-badge ${badgeClass}">${notif.badgeText}</span>`;
+      }
+      
+      li.innerHTML = `
+        <div class="tracker-notification-icon">${notif.icon}</div>
+        <div class="tracker-notification-content">
+          <div class="tracker-notification-type">${this.humanizeType(notif.type)}</div>
+          <h3 class="tracker-notification-title">${this.escapeHtml(notif.title)}</h3>
+          ${notif.description ? `<p class="tracker-notification-description">${this.escapeHtml(notif.description)}</p>` : ''}
+          <div class="tracker-notification-time">${notif.time}</div>
+        </div>
+        <div class="tracker-notification-badge">
+          ${badgeHTML}
+        </div>
+      `;
+      
+      li.addEventListener('click', () => {
+        notif.element?.scrollIntoView({ behavior: 'smooth' });
+        notif.element?.classList.add('highlight');
+        setTimeout(() => notif.element?.classList.remove('highlight'), 2000);
+        this.closeModal();
+      });
+      
+      this.notificationsList.appendChild(li);
+    });
+  }
+
+  humanizeType(type) {
+    const types = {
+      'denuncia': 'Denúncia',
+      'mensagem': 'Mensagem RH',
+      'malote': 'Malote',
+      'chamado': 'Chamado',
+      'vaga': 'Vaga',
+      'evento': 'Evento',
+      'documento': 'Documento',
+      'geral': 'Geral'
+    };
+    return types[type] || type;
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  updateStats() {
+    const total = this.notifications.length;
+    const unread = this.notifications.filter(n => n.unread).length;
+    const pending = this.notifications.filter(n => n.status === 'pending').length;
+    
+    if (this.statTotal) this.statTotal.textContent = total;
+    if (this.statUnread) this.statUnread.textContent = unread;
+    if (this.statPending) this.statPending.textContent = pending;
+  }
+
+  markAllRead() {
+    this.notifications.forEach(notif => {
+      notif.unread = false;
+      notif.element?.classList.remove('unread');
+    });
+    this.renderNotifications();
+    this.updateStats();
+    this.showNotification('Todas as notificações marcadas como lidas');
+  }
+
+  clearAll() {
+    if (confirm('Tem certeza que deseja limpar todas as notificações?')) {
+      this.notifications = [];
+      this.filteredNotifications = [];
+      this.renderNotifications();
+      this.updateStats();
+      this.showNotification('Todas as notificações foram removidas');
+    }
+  }
+
+  showNotification(message) {
+    // Usar sistema de notificação existente se disponível
+    console.log(message);
+  }
+}
+
+// Inicializar quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', () => {
+  window.notificationTracker = new NotificationTracker();
+});
+
+// Manter compatibilidade com botões antigos
+document.addEventListener('DOMContentLoaded', () => {
+  const prevBtn = document.getElementById('dashboard-notifications-prev');
+  const nextBtn = document.getElementById('dashboard-notifications-next');
+  
+  if (prevBtn) prevBtn.style.display = 'none';
+  if (nextBtn) nextBtn.style.display = 'none';
+});
