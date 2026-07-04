@@ -6,12 +6,14 @@ const PUBLIC_CLIENT_ID_KEY = "hub-public-client-id";
 const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
+const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
 const SENSITIVE_CLIENT_CACHE_KEYS = [
   STORAGE_KEY,
   DOCUMENT_RECORDS_KEY,
   TEAM_USERS_KEY,
   TEAM_CREDENTIALS_KEY,
   READ_RH_MESSAGES_KEY,
+  READ_NOTIFICATIONS_KEY,
 ];
 const RH_CHANNEL = "rh";
 const USERS_TABLE = "hub_users";
@@ -149,8 +151,8 @@ const USER_SETTINGS_DEFAULTS = Object.freeze({
   messageSize: "normal",
   showEmojiButton: true,
   enterToSend: true,
-  notificationSound: false,
-  desktopNotifications: false,
+  notificationSound: true,
+  desktopNotifications: true,
   dashboardNotificationBadges: true,
   keyboardShortcuts: true,
 });
@@ -291,6 +293,7 @@ let refreshTimer = null;
 let refreshInProgress = false;
 let documentRecords = loadDocumentRecords();
 let readRhMessageIds = loadReadRhMessageIds();
+let readNotificationIds = loadReadNotificationIds();
 let currentAuthUser = null;
 let currentUserProfile = null;
 const privateAvatarUrlCache = new Map();
@@ -1112,6 +1115,51 @@ function loadReadRhMessageIds() {
 
 function saveReadRhMessageIds() {
   storageService.setSessionItem(READ_RH_MESSAGES_KEY, [...readRhMessageIds]);
+}
+
+function loadReadNotificationIds() {
+  return new Set(storageService.getSessionItem(READ_NOTIFICATIONS_KEY, []).map(String));
+}
+
+function saveReadNotificationIds() {
+  storageService.setSessionItem(READ_NOTIFICATIONS_KEY, [...readNotificationIds]);
+}
+
+function markNotificationsRead(notificationIds = [], messageIds = []) {
+  const normalizedNotificationIds = Array.isArray(notificationIds) ? notificationIds : [notificationIds];
+  const normalizedMessageIds = Array.isArray(messageIds) ? messageIds : [messageIds];
+  let changed = false;
+
+  normalizedNotificationIds
+    .filter((id) => id !== undefined && id !== null && String(id).trim())
+    .map(String)
+    .forEach((id) => {
+      if (!readNotificationIds.has(id)) {
+        readNotificationIds.add(id);
+        changed = true;
+      }
+    });
+
+  normalizedMessageIds
+    .filter((id) => id !== undefined && id !== null && String(id).trim())
+    .map(String)
+    .forEach((id) => {
+      if (!readRhMessageIds.has(id)) {
+        readRhMessageIds.add(id);
+        changed = true;
+      }
+    });
+
+  if (!changed) return false;
+
+  saveReadNotificationIds();
+  saveReadRhMessageIds();
+
+  try { lastUnreadNotificationCount = getUnreadRhMessages().length; } catch (_) {}
+  try { renderDashboard?.(); } catch (_) {}
+  try { renderChatChannels?.(); } catch (_) {}
+
+  return true;
 }
 
 function getUnreadRhMessages() {
@@ -5737,6 +5785,8 @@ async function registerHubNotificationServiceWorker() {
     });
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event?.data?.type === "HUB_OPEN_NOTIFICATIONS") {
+        const payload = event.data || {};
+        markNotificationsRead(payload.notificationId ? [payload.notificationId] : [], payload.messageIds || []);
         openNotificationTrackerFromPopout();
       }
     });
@@ -5756,31 +5806,111 @@ function requestDesktopNotificationPermission() {
     return;
   }
 
+  currentUserSettings.desktopNotifications = true;
+  currentUserSettings.notificationSound = true;
+  saveUserSettings(currentUserSettings);
+  syncUserSettingsControls();
   registerHubNotificationServiceWorker();
 
-  if (Notification.permission === "granted") return;
+  if (Notification.permission === "granted") {
+    removeDesktopNotificationPermissionPrompt();
+    return;
+  }
+
   Notification.requestPermission().then((permission) => {
-    if (permission !== "granted") {
-      currentUserSettings.desktopNotifications = false;
-      saveUserSettings();
-      syncUserSettingsControls();
-      showModal("Permissão negada", "As notificações do navegador não foram liberadas. Para aparecer fora da aba, habilite a permissão de notificações do navegador.", "error");
+    if (permission === "granted") {
+      removeDesktopNotificationPermissionPrompt();
+      showHubCrossPageNotification("Notificações ativadas", "Agora o HUB pode avisar mesmo quando você estiver em outra aba.", {
+        type: "geral",
+        icon: "🔔",
+        tag: "hub-rh-notificacoes-ativadas",
+      });
+      return;
     }
+
+    currentUserSettings.desktopNotifications = false;
+    saveUserSettings(currentUserSettings);
+    syncUserSettingsControls();
+    showDesktopNotificationPermissionPrompt(true);
   });
 }
 
-function playNotificationTone(audioContext, destination, frequency, startAt, duration, peakVolume) {
+const HUB_NOTIFICATION_PERMISSION_PROMPT_ID = "hub-notification-permission-prompt";
+let hubNotificationPermissionInteractionBound = false;
+
+function removeDesktopNotificationPermissionPrompt() {
+  document.getElementById(HUB_NOTIFICATION_PERMISSION_PROMPT_ID)?.remove();
+}
+
+function showDesktopNotificationPermissionPrompt(isBlocked = false) {
+  if (!isAuthenticated() || !isBrowserNotificationSupported()) return;
+  if (Notification.permission === "granted") {
+    removeDesktopNotificationPermissionPrompt();
+    return;
+  }
+
+  let prompt = document.getElementById(HUB_NOTIFICATION_PERMISSION_PROMPT_ID);
+  if (!prompt) {
+    prompt = document.createElement("div");
+    prompt.id = HUB_NOTIFICATION_PERMISSION_PROMPT_ID;
+    prompt.className = "hub-notification-permission-prompt";
+    prompt.setAttribute("role", "status");
+    prompt.innerHTML = `
+      <div class="hub-notification-permission-icon">🔔</div>
+      <div class="hub-notification-permission-text">
+        <strong>Ative as notificações do HUB</strong>
+        <p data-permission-message></p>
+      </div>
+      <button class="secondary-button" type="button" data-permission-dismiss>Depois</button>
+      <button class="primary-button" type="button" data-permission-enable>Permitir notificações</button>
+    `;
+    document.body.appendChild(prompt);
+    prompt.querySelector("[data-permission-enable]")?.addEventListener("click", requestDesktopNotificationPermission);
+    prompt.querySelector("[data-permission-dismiss]")?.addEventListener("click", () => prompt.remove());
+  }
+
+  const message = prompt.querySelector("[data-permission-message]");
+  if (message) {
+    message.textContent = isBlocked || Notification.permission === "denied"
+      ? "O navegador bloqueou a permissão. Libere notificações do site nas configurações do navegador para receber avisos fora do HUB."
+      : "Clique em Permitir para receber popout do navegador mesmo quando estiver em outra aba, como ChatGPT, e com som mais forte.";
+  }
+}
+
+function armDesktopNotificationPermissionRequest() {
+  if (!isAuthenticated() || !isBrowserNotificationSupported()) return;
+  if (Notification.permission === "granted") return;
+
+  currentUserSettings.desktopNotifications = true;
+  currentUserSettings.notificationSound = true;
+  saveUserSettings(currentUserSettings);
+  showDesktopNotificationPermissionPrompt(Notification.permission === "denied");
+
+  if (hubNotificationPermissionInteractionBound || Notification.permission === "denied") return;
+  hubNotificationPermissionInteractionBound = true;
+
+  const askOnce = () => {
+    if (!isAuthenticated() || Notification.permission !== "default") return;
+    requestDesktopNotificationPermission();
+  };
+
+  document.addEventListener("click", askOnce, { once: true, capture: true });
+  document.addEventListener("keydown", askOnce, { once: true, capture: true });
+  document.addEventListener("touchstart", askOnce, { once: true, capture: true });
+}
+
+function playNotificationTone(audioContext, destination, frequency, startAt, duration, peakVolume, waveType = "square") {
   const oscillator = audioContext.createOscillator();
   const gain = audioContext.createGain();
-  oscillator.type = "triangle";
+  oscillator.type = waveType;
   oscillator.frequency.setValueAtTime(frequency, startAt);
   gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peakVolume), startAt + 0.025);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peakVolume), startAt + 0.018);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
   oscillator.connect(gain);
   gain.connect(destination);
   oscillator.start(startAt);
-  oscillator.stop(startAt + duration + 0.03);
+  oscillator.stop(startAt + duration + 0.04);
 }
 
 function playUserNotificationSound() {
@@ -5788,17 +5918,18 @@ function playUserNotificationSound() {
   try {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const masterGain = audioContext.createGain();
-    masterGain.gain.setValueAtTime(0.95, audioContext.currentTime);
+    masterGain.gain.setValueAtTime(1.85, audioContext.currentTime);
     masterGain.connect(audioContext.destination);
 
     const now = audioContext.currentTime;
-    playNotificationTone(audioContext, masterGain, 880, now, 0.24, 0.42);
-    playNotificationTone(audioContext, masterGain, 1175, now + 0.22, 0.30, 0.55);
-    playNotificationTone(audioContext, masterGain, 988, now + 0.50, 0.26, 0.45);
+    playNotificationTone(audioContext, masterGain, 880, now, 0.30, 0.88, "square");
+    playNotificationTone(audioContext, masterGain, 1320, now + 0.25, 0.34, 0.95, "square");
+    playNotificationTone(audioContext, masterGain, 1046, now + 0.55, 0.32, 0.86, "sawtooth");
+    playNotificationTone(audioContext, masterGain, 1568, now + 0.82, 0.36, 0.92, "square");
 
     window.setTimeout(() => {
       try { audioContext.close?.(); } catch (_) {}
-    }, 1200);
+    }, 1700);
   } catch {
     // Sem som quando o navegador bloquear autoplay/audio context.
   }
@@ -5914,6 +6045,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
   // Se o usuário já liberou no navegador, mostramos mesmo que ele esteja em outra aba/página.
   // Se ainda não liberou, só pedimos permissão quando a configuração do HUB estiver ativa.
   if (Notification.permission !== "granted") {
+    showDesktopNotificationPermissionPrompt(Notification.permission === "denied");
     if (currentUserSettings.desktopNotifications && Notification.permission === "default") {
       try {
         const permission = await Notification.requestPermission();
@@ -5937,6 +6069,8 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
     data: {
       url: "index.html?open=acompanhamento",
       type: options.type || "geral",
+      notificationId: options.notificationId || "",
+      messageIds: Array.isArray(options.messageIds) ? options.messageIds : [],
     },
   };
 
@@ -5964,17 +6098,25 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
 
 function showHubCrossPageNotification(title, message, options = {}) {
   playUserNotificationSound();
+
+  const openAndMark = () => {
+    markNotificationsRead(options.notificationId ? [options.notificationId] : [], options.messageIds || []);
+    openNotificationTrackerFromPopout();
+  };
+
   showUserNotificationPopout(title, message, {
     type: options.type,
     icon: options.icon,
-    duration: options.duration || 12000,
-    hint: options.hint,
-    onClick: openNotificationTrackerFromPopout,
+    duration: options.duration || 15000,
+    hint: options.hint || "Clique para marcar como lida e abrir o acompanhamento",
+    onClick: openAndMark,
   });
   showBrowserDesktopNotification(title, message, {
     type: options.type,
     tag: options.tag,
     requireInteraction: options.requireInteraction,
+    notificationId: options.notificationId,
+    messageIds: options.messageIds || [],
   });
 }
 
@@ -6072,13 +6214,20 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
     icon: notification.icon,
     tag: notification.tag,
     requireInteraction: true,
+    notificationId: `${notification.type || collection}-${item.id || Date.now()}`,
+    messageIds: collection === "comunicados" && item.id ? [item.id] : [],
   });
 }
 
 function startAuthenticatedNotificationsOnAnyPage() {
   if (!isAuthenticated() || !supabaseClient) return;
+  currentUserSettings.desktopNotifications = true;
+  currentUserSettings.notificationSound = true;
+  saveUserSettings(currentUserSettings);
   registerHubNotificationServiceWorker();
+  armDesktopNotificationPermissionRequest();
   setupRealtime();
+  setupAutoRefresh();
 }
 
 function notifyUnreadRhMessages(count) {
@@ -6090,11 +6239,14 @@ function notifyUnreadRhMessages(count) {
   const newMessageCount = count - lastUnreadNotificationCount;
   const messageText = `${newMessageCount} nova(s) mensagem(ns) não lida(s).`;
 
+  const unreadIds = getUnreadRhMessages().map((item) => item.id).filter(Boolean);
   showHubCrossPageNotification("Comunicação RH", messageText, {
     type: "mensagem",
     icon: "💬",
     tag: "hub-rh-comunicacao",
     requireInteraction: true,
+    notificationId: `mensagem-rh-${unreadIds[0] || Date.now()}`,
+    messageIds: unreadIds,
   });
 
   lastUnreadNotificationCount = count;
@@ -8416,6 +8568,7 @@ function initializeAppData() {
   prefillChamadoRequester();
   renderAccountSettings();
   registerHubNotificationServiceWorker();
+  armDesktopNotificationPermissionRequest();
   loadFromSupabase({ setupLive: true });
 }
 
@@ -9264,23 +9417,29 @@ class NotificationTracker {
 
     const pushNotification = (item = {}) => {
       const type = item.type || "geral";
-      const status = item.status || "pending";
+      const originalStatus = item.status || "pending";
       const time = item.time || item.date || item.createdAt || "Recentemente";
       const rawDateTime = item.sortAt || item.updatedSortAt || item.updatedAt || item.createdSortAt || item.createdAt || item.dateTime || item.date || time;
+      const id = String(item.id || `${type}-${notifications.length}-${Date.now()}`);
+      const hasBeenRead = readNotificationIds.has(id);
+      const unread = Boolean(item.unread || originalStatus === "unread" || originalStatus === "urgent") && !hasBeenRead;
+      const status = hasBeenRead && originalStatus === "unread" ? "pending" : originalStatus;
+
       notifications.push({
-        id: item.id || `${type}-${notifications.length}-${Date.now()}`,
+        id,
         type,
         title: item.title || "Notificação",
         description: item.description || item.text || "",
         details: item.details || item.description || item.text || "",
         time,
         dateTime: this.getTimeValue(rawDateTime),
-        unread: Boolean(item.unread || status === "unread" || status === "urgent"),
+        unread,
         status,
         view: item.view || this.getViewForType(type),
         icon: item.icon || this.getIconForType(type),
-        badgeText: item.badgeText || this.getBadgeText(status),
+        badgeText: unread ? (item.badgeText || this.getBadgeText(status)) : (status === "urgent" ? this.getBadgeText(status) : ""),
         sequence: notifications.length,
+        messageIds: Array.isArray(item.messageIds) ? item.messageIds.map(String) : [],
       });
     };
 
@@ -9295,7 +9454,7 @@ class NotificationTracker {
     Object.entries(messagesByAuthor).forEach(([author, messages]) => {
       const sortedMessages = [...messages].sort((a, b) => this.getTimeValue(b.sortAt || b.createdAt) - this.getTimeValue(a.sortAt || a.createdAt));
       pushNotification({
-        id: `mensagem-${author}`,
+        id: `mensagem-${author}-${sortedMessages[0]?.id || sortedMessages[0]?.sortAt || sortedMessages[0]?.createdAt || messages.length}`,
         type: "mensagem",
         title: `Mensagem · ${author}`,
         description: messages.length === 1
@@ -9307,6 +9466,7 @@ class NotificationTracker {
         status: "unread",
         unread: true,
         view: "comunicacao",
+        messageIds: sortedMessages.map((message) => message.id).filter(Boolean),
       });
     });
 
@@ -9430,9 +9590,18 @@ class NotificationTracker {
   }
 
   getTimeValue(value) {
+    if (value instanceof Date) return value.getTime();
+    if (typeof value === "number" && Number.isFinite(value)) return value;
     if (!value) return 0;
+
     const text = String(value).trim();
     if (!text) return 0;
+
+    if (/^\d{10,13}$/.test(text)) {
+      const numericTime = Number(text);
+      return text.length === 10 ? numericTime * 1000 : numericTime;
+    }
+
     const normalized = text.toLowerCase();
     if (normalized === "hoje") return new Date().setHours(0, 0, 0, 0);
     if (normalized === "agora" || normalized === "recentemente") return Date.now();
@@ -9580,7 +9749,31 @@ class NotificationTracker {
   }
 
   openNotification(notif) {
-    this.showDetailView(notif);
+    const readNotif = this.markNotificationRead(notif);
+    this.showDetailView(readNotif || notif);
+  }
+
+  markNotificationRead(notif = {}) {
+    if (!notif?.id) return notif;
+
+    markNotificationsRead([notif.id], notif.messageIds || []);
+
+    const updateReadState = (item) => {
+      if (String(item.id) !== String(notif.id)) return item;
+      return {
+        ...item,
+        unread: false,
+        status: item.status === "unread" ? "pending" : item.status,
+        badgeText: item.status === "urgent" ? this.getBadgeText("urgent") : "",
+      };
+    };
+
+    this.notifications = this.notifications.map(updateReadState);
+    this.filteredNotifications = this.filteredNotifications.map(updateReadState);
+    this.updateStats();
+    this.renderNotifications();
+
+    return this.notifications.find((item) => String(item.id) === String(notif.id)) || { ...notif, unread: false };
   }
 
   showDetailView(notif = {}) {
@@ -9670,7 +9863,7 @@ class NotificationTracker {
 
   updateStats() {
     const total = this.notifications.length;
-    const unread = this.notifications.filter((notif) => notif.unread || notif.status === "unread" || notif.status === "urgent").length;
+    const unread = this.notifications.filter((notif) => notif.unread).length;
     const pending = this.notifications.filter((notif) => notif.status === "pending" || notif.status === "urgent").length;
 
     if (this.statTotal) this.statTotal.textContent = total;
@@ -9679,7 +9872,15 @@ class NotificationTracker {
   }
 
   markAllRead() {
-    this.notifications = this.notifications.map((notif) => ({ ...notif, unread: false, status: notif.status === "unread" ? "pending" : notif.status }));
+    this.notifications.forEach((notif) => {
+      markNotificationsRead([notif.id], notif.messageIds || []);
+    });
+    this.notifications = this.notifications.map((notif) => ({
+      ...notif,
+      unread: false,
+      status: notif.status === "unread" ? "pending" : notif.status,
+      badgeText: notif.status === "urgent" ? this.getBadgeText("urgent") : "",
+    }));
     this.applyFilters();
     this.updateStats();
     this.showNotification("Todas as notificações foram marcadas como lidas.");
@@ -9707,6 +9908,16 @@ class NotificationTracker {
 function maybeOpenNotificationTrackerFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search);
+    const notificationId = params.get("markNotification");
+    const messageIds = (params.get("markMessages") || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (notificationId || messageIds.length) {
+      markNotificationsRead(notificationId ? [notificationId] : [], messageIds);
+    }
+
     if (params.get("open") !== "acompanhamento") return;
     window.setTimeout(() => openNotificationTrackerFromPopout(), 350);
   } catch (_) {}
