@@ -307,6 +307,9 @@ let dashboardNotificationOffset = 0;
 let visibleDashboardActivityItems = [];
 let currentUserSettings = loadUserSettings();
 let lastUnreadNotificationCount = 0;
+let hubNotificationServiceWorkerRegistration = null;
+let lastRealtimeNotificationSignature = "";
+const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
 window.editingDocId = null;
@@ -3007,6 +3010,8 @@ function setupRealtime() {
         if (!row) return;
         if (collection === "comunicados" && !canAccessChatChannel(row.canal)) return;
 
+        const mappedRealtimeItem = mapRows(collection, [row])[0] || row;
+        notifyRealtimeItem(collection, mappedRealtimeItem, payload.eventType);
         mergeRealtimeRow(collection, row, payload.eventType);
         renderRealtimeUpdate(collection);
       }
@@ -5718,40 +5723,82 @@ function updateUserSetting(key, rawValue) {
   if (key === "desktopNotifications" && nextSettings.desktopNotifications) requestDesktopNotificationPermission();
 }
 
+function isBrowserNotificationSupported() {
+  return "Notification" in window;
+}
+
+async function registerHubNotificationServiceWorker() {
+  if (!("serviceWorker" in navigator)) return null;
+  if (hubNotificationServiceWorkerRegistration) return hubNotificationServiceWorkerRegistration;
+
+  try {
+    hubNotificationServiceWorkerRegistration = await navigator.serviceWorker.register(HUB_NOTIFICATION_SERVICE_WORKER_PATH, {
+      scope: "./",
+    });
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event?.data?.type === "HUB_OPEN_NOTIFICATIONS") {
+        openNotificationTrackerFromPopout();
+      }
+    });
+    return hubNotificationServiceWorkerRegistration;
+  } catch (error) {
+    console.warn("Service Worker de notificações não pôde ser registrado:", error);
+    return null;
+  }
+}
+
 function requestDesktopNotificationPermission() {
-  if (!("Notification" in window)) {
+  if (!isBrowserNotificationSupported()) {
     showModal("Notificações indisponíveis", "Este navegador não suporta notificações do sistema.", "error");
     currentUserSettings.desktopNotifications = false;
     saveUserSettings();
     syncUserSettingsControls();
     return;
   }
+
+  registerHubNotificationServiceWorker();
+
   if (Notification.permission === "granted") return;
   Notification.requestPermission().then((permission) => {
     if (permission !== "granted") {
       currentUserSettings.desktopNotifications = false;
       saveUserSettings();
       syncUserSettingsControls();
-      showModal("Permissão negada", "As notificações do navegador não foram liberadas.", "error");
+      showModal("Permissão negada", "As notificações do navegador não foram liberadas. Para aparecer fora da aba, habilite a permissão de notificações do navegador.", "error");
     }
   });
+}
+
+function playNotificationTone(audioContext, destination, frequency, startAt, duration, peakVolume) {
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  oscillator.type = "triangle";
+  oscillator.frequency.setValueAtTime(frequency, startAt);
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peakVolume), startAt + 0.025);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+  oscillator.connect(gain);
+  gain.connect(destination);
+  oscillator.start(startAt);
+  oscillator.stop(startAt + duration + 0.03);
 }
 
 function playUserNotificationSound() {
   if (!currentUserSettings.notificationSound) return;
   try {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    oscillator.type = "sine";
-    oscillator.frequency.value = 740;
-    gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.08, audioContext.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.18);
-    oscillator.connect(gain);
-    gain.connect(audioContext.destination);
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.2);
+    const masterGain = audioContext.createGain();
+    masterGain.gain.setValueAtTime(0.95, audioContext.currentTime);
+    masterGain.connect(audioContext.destination);
+
+    const now = audioContext.currentTime;
+    playNotificationTone(audioContext, masterGain, 880, now, 0.24, 0.42);
+    playNotificationTone(audioContext, masterGain, 1175, now + 0.22, 0.30, 0.55);
+    playNotificationTone(audioContext, masterGain, 988, now + 0.50, 0.26, 0.45);
+
+    window.setTimeout(() => {
+      try { audioContext.close?.(); } catch (_) {}
+    }, 1200);
   } catch {
     // Sem som quando o navegador bloquear autoplay/audio context.
   }
@@ -5816,7 +5863,7 @@ function showUserNotificationPopout(title, message, options = {}) {
     popout.append(icon, content, closeButton);
     container.prepend(popout);
 
-    const timer = window.setTimeout(() => removeUserNotificationPopout(popout), options.duration || 8000);
+    const timer = window.setTimeout(() => removeUserNotificationPopout(popout), options.duration || 12000);
 
     closeButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -5840,7 +5887,7 @@ function showUserNotificationPopout(title, message, options = {}) {
     });
 
     const popouts = [...container.querySelectorAll(".hub-notification-popout")];
-    popouts.slice(3).forEach(removeUserNotificationPopout);
+    popouts.slice(4).forEach(removeUserNotificationPopout);
   } catch (error) {
     console.warn("Não foi possível exibir o popout de notificação:", error);
   }
@@ -5853,43 +5900,185 @@ function openNotificationTrackerFromPopout() {
   }
 
   const trackerButton = document.getElementById("dashboard-notifications-tracker");
-  if (trackerButton) trackerButton.click();
-}
-
-function showBrowserDesktopNotification(title, body) {
-  if (!currentUserSettings.desktopNotifications || !("Notification" in window)) return;
-
-  const createNotification = () => {
-    try {
-      const notification = new Notification(title, {
-        body,
-        icon: "assets/logo.svg",
-        badge: "assets/logo.svg",
-        tag: "hub-rh-comunicacao",
-        renotify: true,
-      });
-      notification.onclick = () => {
-        window.focus?.();
-        openNotificationTrackerFromPopout();
-        notification.close?.();
-      };
-    } catch (error) {
-      console.warn("Notificação do navegador bloqueada:", error);
-    }
-  };
-
-  if (Notification.permission === "granted") {
-    createNotification();
+  if (trackerButton) {
+    trackerButton.click();
     return;
   }
 
-  if (Notification.permission === "default") {
-    Notification.requestPermission()
-      .then((permission) => {
-        if (permission === "granted") createNotification();
-      })
-      .catch((error) => console.warn("Permissão de notificação não pôde ser solicitada:", error));
+  window.location.href = "index.html?open=acompanhamento";
+}
+
+async function showBrowserDesktopNotification(title, body, options = {}) {
+  if (!isBrowserNotificationSupported()) return;
+
+  // Se o usuário já liberou no navegador, mostramos mesmo que ele esteja em outra aba/página.
+  // Se ainda não liberou, só pedimos permissão quando a configuração do HUB estiver ativa.
+  if (Notification.permission !== "granted") {
+    if (currentUserSettings.desktopNotifications && Notification.permission === "default") {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") return;
+      } catch (error) {
+        console.warn("Permissão de notificação não pôde ser solicitada:", error);
+        return;
+      }
+    } else {
+      return;
+    }
   }
+
+  const notificationOptions = {
+    body,
+    icon: "assets/logo.svg",
+    badge: "assets/logo.svg",
+    tag: options.tag || "hub-rh-notificacao",
+    renotify: true,
+    requireInteraction: Boolean(options.requireInteraction ?? true),
+    data: {
+      url: "index.html?open=acompanhamento",
+      type: options.type || "geral",
+    },
+  };
+
+  try {
+    const registration = await registerHubNotificationServiceWorker();
+    if (registration?.showNotification) {
+      await registration.showNotification(title, notificationOptions);
+      return;
+    }
+  } catch (error) {
+    console.warn("Notificação via Service Worker bloqueada:", error);
+  }
+
+  try {
+    const notification = new Notification(title, notificationOptions);
+    notification.onclick = () => {
+      window.focus?.();
+      openNotificationTrackerFromPopout();
+      notification.close?.();
+    };
+  } catch (error) {
+    console.warn("Notificação do navegador bloqueada:", error);
+  }
+}
+
+function showHubCrossPageNotification(title, message, options = {}) {
+  playUserNotificationSound();
+  showUserNotificationPopout(title, message, {
+    type: options.type,
+    icon: options.icon,
+    duration: options.duration || 12000,
+    hint: options.hint,
+    onClick: openNotificationTrackerFromPopout,
+  });
+  showBrowserDesktopNotification(title, message, {
+    type: options.type,
+    tag: options.tag,
+    requireInteraction: options.requireInteraction,
+  });
+}
+
+function getRealtimeNotificationText(collection, item = {}) {
+  if (collection === "comunicados") {
+    const author = item.autor || "Comunicação RH";
+    const text = item.mensagem || "Nova mensagem recebida.";
+    return {
+      title: `Comunicação RH · ${author}`,
+      message: text.length > 110 ? `${text.slice(0, 107)}...` : text,
+      icon: "💬",
+      type: "mensagem",
+      tag: `hub-rh-comunicacao-${item.id || Date.now()}`,
+    };
+  }
+
+  if (collection === "denuncias") {
+    return {
+      title: "Nova denúncia recebida",
+      message: item.descricao || "Uma nova denúncia foi registrada no HUB.",
+      icon: "🚨",
+      type: "denuncia",
+      tag: `hub-rh-denuncia-${item.id || Date.now()}`,
+    };
+  }
+
+  if (collection === "chamados") {
+    return {
+      title: "Novo chamado de EPI",
+      message: [item.solicitante, item.unidade, item.status].filter(Boolean).join(" · ") || "Um novo chamado foi registrado.",
+      icon: "🎫",
+      type: "chamado",
+      tag: `hub-rh-chamado-${item.id || Date.now()}`,
+    };
+  }
+
+  if (collection === "malotes") {
+    return {
+      title: "Atualização de malote",
+      message: [item.codigoSolicitacao, item.destino, item.status].filter(Boolean).join(" · ") || "Um malote foi atualizado.",
+      icon: "📦",
+      type: "malote",
+      tag: `hub-rh-malote-${item.id || Date.now()}`,
+    };
+  }
+
+  if (collection === "vagas") {
+    return {
+      title: "Atualização de vaga",
+      message: [item.cargo, item.unidade, item.status].filter(Boolean).join(" · ") || "Uma vaga foi atualizada.",
+      icon: "💼",
+      type: "vaga",
+      tag: `hub-rh-vaga-${item.id || Date.now()}`,
+    };
+  }
+
+  if (collection === "documentosContratados") {
+    return {
+      title: "Documentos recebidos",
+      message: [item.nome, item.empresa].filter(Boolean).join(" · ") || "Novos documentos foram enviados.",
+      icon: "📄",
+      type: "documento",
+      tag: `hub-rh-documento-${item.id || Date.now()}`,
+    };
+  }
+
+  return null;
+}
+
+function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
+  if (!isAuthenticated()) return false;
+  if (!item || action === "DELETE") return false;
+  if (!["INSERT", "UPDATE"].includes(action)) return false;
+  if (collection === "usuarios" || collection === "eventos" || collection === "vtRegistros") return false;
+
+  const signature = [collection, action, item.id || "", item.updatedAt || item.updated_at || item.createdAt || item.created_at || ""].join("|");
+  if (signature && signature === lastRealtimeNotificationSignature) return false;
+
+  const currentName = normalizeLoginName(getCurrentUserName());
+  const author = normalizeLoginName(item.autor || item.createdBy || item.updatedBy || item.solicitante || "");
+  if (collection === "comunicados" && author && author === currentName) return false;
+
+  lastRealtimeNotificationSignature = signature;
+  return true;
+}
+
+function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
+  if (!shouldNotifyRealtimeItem(collection, item, action)) return;
+  const notification = getRealtimeNotificationText(collection, item);
+  if (!notification) return;
+
+  const actionLabel = action === "UPDATE" ? "Atualização" : "Nova notificação";
+  showHubCrossPageNotification(notification.title, notification.message || actionLabel, {
+    type: notification.type,
+    icon: notification.icon,
+    tag: notification.tag,
+    requireInteraction: true,
+  });
+}
+
+function startAuthenticatedNotificationsOnAnyPage() {
+  if (!isAuthenticated() || !supabaseClient) return;
+  registerHubNotificationServiceWorker();
+  setupRealtime();
 }
 
 function notifyUnreadRhMessages(count) {
@@ -5901,13 +6090,12 @@ function notifyUnreadRhMessages(count) {
   const newMessageCount = count - lastUnreadNotificationCount;
   const messageText = `${newMessageCount} nova(s) mensagem(ns) não lida(s).`;
 
-  playUserNotificationSound();
-  showUserNotificationPopout("Comunicação RH", messageText, {
+  showHubCrossPageNotification("Comunicação RH", messageText, {
     type: "mensagem",
     icon: "💬",
-    onClick: openNotificationTrackerFromPopout,
+    tag: "hub-rh-comunicacao",
+    requireInteraction: true,
   });
-  showBrowserDesktopNotification("Comunicação RH", messageText);
 
   lastUnreadNotificationCount = count;
 }
@@ -8221,11 +8409,13 @@ function initializeAppData() {
   supabaseClient = getSupabaseClient();
   if (isPublicPage()) {
     loadPublicData();
+    startAuthenticatedNotificationsOnAnyPage();
     return;
   }
   applyRoleAccess();
   prefillChamadoRequester();
   renderAccountSettings();
+  registerHubNotificationServiceWorker();
   loadFromSupabase({ setupLive: true });
 }
 
@@ -9514,8 +9704,17 @@ class NotificationTracker {
 }
 
 // Inicializar quando o DOM estiver pronto
+function maybeOpenNotificationTrackerFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("open") !== "acompanhamento") return;
+    window.setTimeout(() => openNotificationTrackerFromPopout(), 350);
+  } catch (_) {}
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   window.notificationTracker = new NotificationTracker();
+  maybeOpenNotificationTrackerFromUrl();
 });
 
 // Manter compatibilidade com botões antigos
