@@ -1563,27 +1563,22 @@ textarea {
 .dashboard-activity-documento { background-color: var(--dashboard-documento-bg); border-color: var(--dashboard-documento-border); }
 .dashboard-activity.system-update { border-color: rgba(12, 98, 89, 0.28); }
 
-.dashboard-activity.is-read {
-  opacity: 0.82;
-  background-color: var(--surface);
+/* Leitura não altera a aparência do card; apenas altera a prioridade na lista. */
+.dashboard-activity[data-read="true"] {
+  opacity: 1;
 }
 
-.dashboard-activity.is-read .dashboard-activity-mark {
-  background: var(--line-strong);
+.dashboard-activity[data-read="true"] .item-title,
+.dashboard-activity[data-read="true"] .dashboard-activity-content > p:not(.item-meta) {
+  color: inherit;
 }
 
-.dashboard-activity.is-read .item-title,
-.dashboard-activity.is-read .dashboard-activity-content > p:not(.item-meta) {
-  color: var(--ink-secondary);
+.dashboard-activity[data-read="true"] .tag {
+  opacity: 1;
 }
 
-.dashboard-activity.is-read .tag {
-  background: var(--surface-soft);
-  color: var(--muted);
-  border-color: var(--line-strong);
-}
-
-.dashboard-activity.is-unread {
+.dashboard-activity.is-unread,
+.dashboard-activity[data-read="false"] {
   box-shadow: 0 0 0 1px rgba(12, 98, 89, 0.06), var(--shadow-xs);
 }
 
@@ -4479,6 +4474,60 @@ form.panel[data-public-chamados="true"].panel {
 
 .tracker-detail-body p:last-child {
   margin-bottom: 0;
+}
+
+
+.tracker-chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 62vh;
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-soft);
+}
+
+.tracker-chat-thread .chat-message {
+  width: fit-content;
+  min-width: min(360px, 100%);
+  max-width: min(78%, 760px);
+}
+
+.tracker-chat-thread .chat-message.own {
+  align-self: flex-end;
+}
+
+.tracker-chat-thread .chat-date-separator {
+  margin: 8px 0;
+}
+
+.tracker-chat-thread.compact {
+  max-height: 52vh;
+}
+
+/* Mensagens lidas mantêm a mesma aparência; leitura não muda cor. */
+.tracker-notification-item.mensagem,
+.tracker-notification-item.mensagem.unread {
+  background: var(--surface);
+}
+
+.tracker-notification-item.mensagem:hover,
+.tracker-notification-item.mensagem.unread:hover {
+  background: var(--surface-soft);
+}
+
+@media (max-width: 760px) {
+  .tracker-chat-thread {
+    padding: 10px;
+    max-height: 64vh;
+  }
+
+  .tracker-chat-thread .chat-message {
+    max-width: 92%;
+    min-width: 0;
+  }
 }
 
 .tracker-detail-actions {
