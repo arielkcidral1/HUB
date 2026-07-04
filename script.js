@@ -6979,14 +6979,72 @@ function openDashboardActivity(index) {
 
   markNotificationsRead(item.notificationId ? [item.notificationId] : [], item.messageIds || []);
 
+  const hasChatMessages = Array.isArray(item.chatMessages) && item.chatMessages.length;
+
+  // Mensagens abertas pelo acompanhamento principal devem usar exatamente
+  // o mesmo modal/detalhe do painel completo de notificações.
+  if (hasChatMessages && window.notificationTracker && typeof window.notificationTracker.openModal === "function") {
+    const tracker = window.notificationTracker;
+    tracker.openModal();
+
+    const trackerNotification = (tracker.notifications || []).find((notification) => (
+      String(notification.id) === "mensagens-rh"
+      || String(notification.id) === String(item.notificationId || "")
+      || notification.type === "mensagem"
+    ));
+
+    const fallbackNotification = {
+      id: "mensagens-rh",
+      type: "mensagem",
+      title: item.title || "Mensagens do RH",
+      description: item.text || "Mensagens no acompanhamento",
+      details: item.details || "",
+      time: item.date || item.createdAt || "Recentemente",
+      dateTime: typeof tracker.getTimeValue === "function"
+        ? tracker.getTimeValue(item.dateTime || item.date || item.createdAt || Date.now())
+        : Date.now(),
+      unread: Boolean(item.unread),
+      status: item.unread ? "unread" : "pending",
+      view: "comunicacao",
+      icon: "💬",
+      badgeText: item.unread ? "Não lido" : "",
+      messageIds: Array.isArray(item.messageIds) ? item.messageIds.map(String) : [],
+      chatMessages: item.chatMessages,
+    };
+
+    const notificationToOpen = trackerNotification || fallbackNotification;
+    const readNotification = typeof tracker.markNotificationRead === "function"
+      ? tracker.markNotificationRead(notificationToOpen)
+      : notificationToOpen;
+
+    if (typeof tracker.showDetailView === "function") {
+      tracker.showDetailView(readNotification || notificationToOpen);
+    }
+
+    renderDashboard();
+    return;
+  }
+
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
 
-  const hasChatMessages = Array.isArray(item.chatMessages) && item.chatMessages.length;
   let detailContent = "";
 
   if (hasChatMessages) {
-    detailContent = renderNotificationChatThread(item.chatMessages);
+    detailContent = `
+      <div class="tracker-notification-detail mensagem dashboard-message-detail-fallback">
+        <div class="tracker-detail-card">
+          <div class="tracker-detail-topline">
+            <div class="tracker-detail-icon">💬</div>
+            <div>
+              <span class="tracker-notification-type">Mensagem RH</span>
+              <h3>${escapeHtml(item.title || "Mensagens do RH")}</h3>
+              ${item.text ? `<p>${escapeHtml(item.text)}</p>` : ""}
+            </div>
+          </div>
+          <div class="tracker-detail-body">${renderNotificationChatThread(item.chatMessages)}</div>
+        </div>
+      </div>`;
   } else {
     const details = String(item.details || item.text || "Sem detalhes disponíveis.")
       .split("\n")
