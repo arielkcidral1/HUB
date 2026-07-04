@@ -4857,3 +4857,78 @@ form.panel[data-public-chamados="true"].panel {
   align-self: center;
   margin: 6px 0;
 }
+
+/* ==========================================================================
+   Ajuste v9 — modal de notificações/mensagens bem mais largo
+   ========================================================================== */
+
+.tracker-modal {
+  padding: 8px;
+}
+
+.tracker-modal-content {
+  width: calc(100vw - 16px);
+  max-width: none;
+  height: calc(100vh - 16px);
+  max-height: none;
+}
+
+.tracker-notification-detail {
+  padding: 30px 42px 38px;
+}
+
+.tracker-detail-card {
+  width: 100%;
+  max-width: none;
+}
+
+.tracker-chat-thread {
+  width: 100%;
+  max-height: min(76vh, 840px);
+  padding: 24px;
+}
+
+.tracker-chat-thread .chat-message {
+  width: min(100%, 1320px);
+  max-width: 1320px;
+}
+
+.tracker-chat-thread .chat-message:not(.own) {
+  align-self: flex-start;
+}
+
+.tracker-chat-thread .chat-message.own {
+  align-self: flex-end;
+}
+
+@media (min-width: 1400px) {
+  .tracker-chat-thread .chat-message {
+    width: min(100%, 1480px);
+    max-width: 1480px;
+  }
+}
+
+@media (max-width: 768px) {
+  .tracker-modal {
+    padding: 6px;
+  }
+
+  .tracker-modal-content {
+    width: calc(100vw - 12px);
+    height: calc(100dvh - 12px);
+  }
+
+  .tracker-notification-detail {
+    padding: 16px 12px 18px;
+  }
+
+  .tracker-chat-thread {
+    padding: 12px;
+    max-height: min(76vh, 720px);
+  }
+
+  .tracker-chat-thread .chat-message {
+    width: 100%;
+    max-width: 100%;
+  }
+}
