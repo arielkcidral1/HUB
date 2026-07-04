@@ -5326,10 +5326,15 @@ function renderDashboard() {
     return getDashboardItemSortValue(b, b._sortIndex) - getDashboardItemSortValue(a, a._sortIndex);
   });
 
-  const dashboardPageSize = 3;
-  dashboardNotificationOffset = 0;
-  const visibleDashboardItems = sortedDashboardItems.slice(0, dashboardPageSize);
-  visibleDashboardActivityItems = visibleDashboardItems;
+const dashboardPageSize = 3;
+dashboardNotificationOffset = 0;
+
+// Acompanhamento da tela principal deve exibir somente notificações não lidas.
+// Quando todas estiverem lidas, a lista fica vazia.
+const unreadDashboardItems = sortedDashboardItems.filter((item) => !isDashboardActivityReadForOrdering(item));
+const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
+
+visibleDashboardActivityItems = visibleDashboardItems;
   const previousDashboardButton = document.getElementById("dashboard-notifications-prev");
   const nextDashboardButton = document.getElementById("dashboard-notifications-next");
   if (previousDashboardButton) previousDashboardButton.hidden = true;
