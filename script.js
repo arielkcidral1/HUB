@@ -2975,10 +2975,11 @@ async function refreshFromSupabase() {
 function setupAutoRefresh() {
   if (refreshTimer) return;
 
+  // Atualiza mesmo com a aba em segundo plano/minimizada, para que notificacoes
+  // de novas mensagens continuem chegando. O navegador pode limitar a frequencia
+  // de setInterval em abas ocultas, mas o timer continua rodando.
   refreshTimer = window.setInterval(() => {
-    if (document.visibilityState === "visible") {
-      refreshFromSupabase();
-    }
+    refreshFromSupabase();
   }, 5000);
 }
 

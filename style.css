@@ -3899,12 +3899,28 @@ form.panel[data-public-chamados="true"].panel {
 
 .user-setting-message-small .chat-message,
 .user-setting-message-small .chat-message p {
-  font-size: 13px;
+  font-size: 12px !important;
+}
+
+.user-setting-message-small .chat-author span {
+  font-size: 12px !important;
+}
+
+.user-setting-message-small .chat-author time {
+  font-size: 10.5px !important;
 }
 
 .user-setting-message-large .chat-message,
 .user-setting-message-large .chat-message p {
-  font-size: 16px;
+  font-size: 18px !important;
+}
+
+.user-setting-message-large .chat-author span {
+  font-size: 15px !important;
+}
+
+.user-setting-message-large .chat-author time {
+  font-size: 13px !important;
 }
 
 .user-setting-blur-previews .chat-preview-image,
