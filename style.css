@@ -1828,6 +1828,8 @@ textarea {
   grid-template-columns: repeat(6, 34px);
   gap: 6px;
   padding: 10px;
+  max-height: 260px;
+  overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
