@@ -275,6 +275,34 @@ const UNIT_OPTIONS = [
   "28- ARA",
 ];
 
+// Normaliza texto para comparação: remove acentos, caixa e espaços extras.
+function normalizeUnitText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+// Vagas antigas podem ter sido gravadas com texto livre (ex: "JRG", "JGR").
+// Aqui mapeamos esses valores legados para a opção oficial correspondente.
+const UNIT_ALIASES = {
+  jrg: "13- JRG 1",
+  jgr: "13- JRG 1",
+};
+
+// Retorna o valor oficial da unidade (UNIT_OPTIONS) a partir de um valor
+// gravado, mesmo que tenha sido salvo com grafia diferente ou sem o prefixo.
+function getCanonicalUnit(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return raw;
+  const normalized = normalizeUnitText(raw);
+  const exactMatch = UNIT_OPTIONS.find((option) => normalizeUnitText(option) === normalized);
+  if (exactMatch) return exactMatch;
+  if (UNIT_ALIASES[normalized]) return UNIT_ALIASES[normalized];
+  return raw;
+}
+
 const EPI_OPTIONS = [
   "Luva PU",
   "Luva Pigmentada",
@@ -5257,12 +5285,12 @@ function renderPublicVagas() {
   const list = document.getElementById("public-vagas-list");
   if (!selectedInput && !selectedPanel && !list) return;
 
-  const cargoFilter = String(publicVagaCargoFilter || "").trim().toLowerCase();
-  const unidadeFilter = String(publicVagaUnidadeFilter || "").trim().toLowerCase();
+  const cargoFilter = normalizeUnitText(publicVagaCargoFilter);
+  const unidadeFilter = normalizeUnitText(publicVagaUnidadeFilter);
   const openVagas = data.vagas
     .filter(v => v.status === "Aberta")
-    .filter(v => !cargoFilter || String(v.cargo || "").toLowerCase().includes(cargoFilter))
-    .filter(v => !unidadeFilter || String(v.unidade || "").toLowerCase().includes(unidadeFilter));
+    .filter(v => !cargoFilter || normalizeUnitText(v.cargo).includes(cargoFilter))
+    .filter(v => !unidadeFilter || normalizeUnitText(getCanonicalUnit(v.unidade)).includes(unidadeFilter));
   const selectedVaga = new URLSearchParams(window.location.search).get("vaga");
 
   if (!openVagas.length) {
@@ -5281,7 +5309,7 @@ function renderPublicVagas() {
           <p class="item-title">${escapeHtml(v.cargo)}</p>
           <span class="tag">${escapeHtml(v.status)}</span>
         </div>
-        <p><strong>Unidade destinada:</strong> ${escapeHtml(v.unidade || "Nao informada.")}</p>
+        <p><strong>Unidade destinada:</strong> ${escapeHtml(getCanonicalUnit(v.unidade) || "Nao informada.")}</p>
         <p>${escapeHtml(v.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(v.requisitos || "Nao informado.")}</p>
         <a class="primary-button button-link" href="candidatura.html?vaga=${encodeURIComponent(v.id)}">Candidatar-se</a>
@@ -5306,7 +5334,7 @@ function renderPublicVagas() {
           <p class="item-title">${escapeHtml(job.cargo)}</p>
           <span class="tag">${escapeHtml(job.status)}</span>
         </div>
-        <p><strong>Unidade destinada:</strong> ${escapeHtml(job.unidade || "Nao informada.")}</p>
+        <p><strong>Unidade destinada:</strong> ${escapeHtml(getCanonicalUnit(job.unidade) || "Nao informada.")}</p>
         <p>${escapeHtml(job.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(job.requisitos || "Nao informado.")}</p>
       `;
@@ -5794,7 +5822,7 @@ function getVagaCandidaturas(vagaId, filters = null) {
 function filterVagasByCurrentFilters(items = []) {
   const filters = getVagasFilterValues();
   return items.filter((item) => {
-    if (filters.unidade && String(item.unidade || "") !== filters.unidade) return false;
+    if (filters.unidade && getCanonicalUnit(item.unidade) !== filters.unidade) return false;
     if ((filters.nome || filters.cpf) && !getVagaCandidaturas(item.id, filters).length) return false;
     return true;
   });
@@ -5990,7 +6018,7 @@ function renderAll() {
     return `
       <article class="item-card public-job-card">
         <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="tag">${escapeHtml(item.status)}</span></div>
-        <p><strong>Unidade destinada:</strong> ${escapeHtml(item.unidade || "Nao informada.")}</p>
+        <p><strong>Unidade destinada:</strong> ${escapeHtml(getCanonicalUnit(item.unidade) || "Nao informada.")}</p>
         <p>${escapeHtml(item.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(item.requisitos || "Nao informado.")}</p>
         <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</p>
@@ -7957,7 +7985,7 @@ function editarVaga(id) {
 
   form.elements.id.value = vaga.id;
   form.elements.cargo.value = vaga.cargo || "";
-  setFieldValue(form.elements.unidade, vaga.unidade || "");
+  setFieldValue(form.elements.unidade, getCanonicalUnit(vaga.unidade) || "");
   form.elements.descricao.value = vaga.descricao || "";
   form.elements.requisitos.value = vaga.requisitos || "";
   form.elements.status.value = vaga.status || "Aberta";
