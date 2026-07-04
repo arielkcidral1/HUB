@@ -10400,6 +10400,8 @@ document.addEventListener('DOMContentLoaded', () => {
       .hub-feedback-card .item-title { margin-bottom: 0; }
       .hub-feedback-card p { white-space: pre-wrap; }
       .hub-feedback-card.is-admin { border-left: 4px solid var(--teal); }
+      .hub-feedback-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+      .hub-feedback-delete-button { min-height: 34px; padding: 0 12px; }
       .hub-feedback-filter { max-width: 280px; }
       .hub-feedback-empty { padding: 16px; border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); color: var(--muted); background: var(--surface-soft); }
       .hub-feedback-admin-note { background: var(--teal-surface); border: 1px solid var(--teal-border); color: var(--teal-dark); border-radius: var(--radius-lg); padding: 12px 14px; }
@@ -10597,6 +10599,36 @@ document.addEventListener('DOMContentLoaded', () => {
     return { savedOnSupabase: false };
   }
 
+  function removeLocalFeedbackById(feedbackId) {
+    const normalizedId = String(feedbackId || "");
+    const nextItems = getLocalFeedbacks()
+      .map(mapFeedbackRow)
+      .filter((item) => String(item.id) !== normalizedId);
+    saveLocalFeedbacks(nextItems);
+  }
+
+  async function deleteFeedback(feedbackId) {
+    const normalizedId = String(feedbackId || "");
+    if (!normalizedId) return { deletedOnSupabase: false };
+
+    if (supabaseClient) {
+      try {
+        let query = supabaseClient.from(FEEDBACK_TABLE).delete().eq("id", normalizedId);
+        const currentEmail = getCurrentUserEmailSafe();
+        if (!isArielUser() && currentEmail) query = query.eq("autor_email", currentEmail);
+        const { error } = await query;
+        if (error) throw error;
+        removeLocalFeedbackById(normalizedId);
+        return { deletedOnSupabase: true };
+      } catch (error) {
+        console.warn("Não foi possível excluir feedback no Supabase; tentando remover somente do armazenamento local.", error);
+      }
+    }
+
+    removeLocalFeedbackById(normalizedId);
+    return { deletedOnSupabase: false };
+  }
+
   function renderFeedbackItems(target, items, options = {}) {
     if (!target) return;
     if (!items.length) {
@@ -10612,8 +10644,45 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <p>${escapeHtml(item.mensagem)}</p>
         <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")} | Enviado por ${escapeHtml(item.autorNome || "Usuário")}${item.autorEmail ? ` | ${escapeHtml(item.autorEmail)}` : ""}</p>
+        ${options.canDelete ? `
+          <div class="hub-feedback-actions">
+            <button class="danger-button hub-feedback-delete-button" type="button" data-feedback-delete-id="${escapeHtml(item.id)}">Excluir envio</button>
+          </div>
+        ` : ""}
       </article>
     `).join("");
+  }
+
+  function bindFeedbackDeleteButtons() {
+    document.querySelectorAll("[data-feedback-delete-id]").forEach((button) => {
+      if (button.dataset.feedbackDeleteReady === "true") return;
+      button.dataset.feedbackDeleteReady = "true";
+      button.addEventListener("click", async () => {
+        const feedbackId = button.dataset.feedbackDeleteId;
+        if (!feedbackId) return;
+
+        const confirmed = window.confirm("Deseja excluir este envio? Esta ação não poderá ser desfeita.");
+        if (!confirmed) return;
+
+        const originalText = button.textContent || "Excluir envio";
+        button.disabled = true;
+        button.textContent = "Excluindo...";
+
+        const result = await deleteFeedback(feedbackId);
+
+        showModal?.(
+          "Envio excluído",
+          result.deletedOnSupabase
+            ? "Seu envio foi excluído com sucesso."
+            : "O envio foi removido localmente. Se ele ainda aparecer em outro dispositivo, confirme a permissão DELETE no Supabase.",
+          result.deletedOnSupabase ? "success" : "info"
+        );
+
+        button.disabled = false;
+        button.textContent = originalText;
+        renderFeedbackPanel();
+      });
+    });
   }
 
   async function renderFeedbackPanel() {
@@ -10628,7 +10697,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Ariel somente visualiza os envios recebidos. Ele não envia por esta aba.
       renderFeedbackItems(document.getElementById("hub-feedback-admin-list"), filtered, { admin: true });
     } else {
-      renderFeedbackItems(document.getElementById("hub-feedback-user-list"), items);
+      renderFeedbackItems(document.getElementById("hub-feedback-user-list"), items, { canDelete: true });
+      bindFeedbackDeleteButtons();
     }
   }
 
