@@ -10417,12 +10417,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function createFeedbackDropdownButton() {
+    const subtitle = isArielUser()
+      ? "Visualizar feedbacks, reclamações e sugestões"
+      : "Enviar feedback, reclamação ou sugestão";
     return `
       <button type="button" class="user-menu-item" data-view="conta" data-settings-target="${FEEDBACK_PANEL_ID}" role="menuitem">
         <span class="user-menu-icon" aria-hidden="true">✉</span>
         <span class="user-menu-item-text">
           <strong>Feedbacks e Sugestões</strong>
-          <small>Enviar feedback, reclamação ou sugestão</small>
+          <small>${subtitle}</small>
         </span>
       </button>
     `;
@@ -10434,7 +10437,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="panel-header">
           <h2>Feedbacks, reclamações e sugestões</h2>
         </div>
-        <p class="item-meta">Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.</p>
+        <p class="item-meta" id="hub-feedback-panel-description">Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.</p>
 
         <form class="hub-feedback-form settings-section" id="hub-feedback-form">
           <h3>Novo envio</h3>
@@ -10478,7 +10481,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function bindFeedbackSettingsButton(button) {
     if (!button || button.dataset.feedbackReady === "true") return;
     button.dataset.feedbackReady = "true";
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Quando o botão vem do menu do usuário, precisa abrir a aba Conta antes
+      // de selecionar o painel interno de Feedbacks.
+      activateView?.("conta");
+      ensureFeedbackSettingsUi();
       showSettingsPanel?.(FEEDBACK_PANEL_ID);
       renderFeedbackPanel();
       closeUserMenuDropdown?.();
@@ -10615,19 +10625,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtered = filter === "todos" ? items : items.filter((item) => item.tipo === filter);
 
     if (isArielUser()) {
+      // Ariel somente visualiza os envios recebidos. Ele não envia por esta aba.
       renderFeedbackItems(document.getElementById("hub-feedback-admin-list"), filtered, { admin: true });
-      renderFeedbackItems(
-        document.getElementById("hub-feedback-user-list"),
-        items.filter((item) => normalizeAccessName(item.autorNome) === normalizeAccessName(getCurrentUserNameSafe()) || normalizeAccessName(item.autorEmail) === normalizeAccessName(getCurrentUserEmailSafe()))
-      );
     } else {
       renderFeedbackItems(document.getElementById("hub-feedback-user-list"), items);
     }
   }
 
   function updateFeedbackVisibility() {
+    const ariel = isArielUser();
     const adminArea = document.getElementById("hub-feedback-admin-area");
-    if (adminArea) adminArea.hidden = !isArielUser();
+    const form = document.getElementById("hub-feedback-form");
+    const userArea = document.getElementById("hub-feedback-user-area");
+    const description = document.getElementById("hub-feedback-panel-description");
+
+    if (adminArea) adminArea.hidden = !ariel;
+    if (form) form.hidden = ariel;
+    if (userArea) userArea.hidden = ariel;
+    if (description) {
+      description.textContent = ariel
+        ? "Área exclusiva para visualizar feedbacks, reclamações e sugestões enviados pelos usuários."
+        : "Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.";
+    }
+
+    document.querySelectorAll(`[data-settings-target="${FEEDBACK_PANEL_ID}"] small`).forEach((small) => {
+      small.textContent = ariel
+        ? "Visualizar feedbacks, reclamações e sugestões"
+        : "Enviar feedback, reclamação ou sugestão";
+    });
   }
 
   function bindFeedbackForm() {
@@ -10637,6 +10662,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (isArielUser()) {
+        showModal?.("Acesso somente leitura", "O usuário Ariel apenas visualiza os feedbacks enviados pelos demais usuários.", "info");
+        return;
+      }
       const tipo = document.getElementById("hub-feedback-type")?.value || "Feedback";
       const mensagem = document.getElementById("hub-feedback-message")?.value.trim() || "";
       if (!mensagem) {
