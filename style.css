@@ -780,6 +780,7 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   min-height: 34px;
   margin-bottom: 18px;
   padding-bottom: 14px;
@@ -1256,6 +1257,7 @@ textarea {
   gap: 6px;
   justify-items: end;
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 .chamados-filter-fields {
@@ -1263,6 +1265,25 @@ textarea {
   grid-template-columns: 120px 150px 86px 105px;
   gap: 8px;
   align-items: center;
+}
+
+.chamados-filter-fields.vaga-filter-fields {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  grid-template-columns: unset;
+}
+
+#vaga-filter-nome {
+  width: 150px;
+}
+
+#vaga-filter-cpf {
+  width: 105px;
+}
+
+#vaga-filter-unidade {
+  width: 130px;
 }
 
 .chamados-filter-fields input,
