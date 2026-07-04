@@ -5326,15 +5326,14 @@ function renderDashboard() {
     return getDashboardItemSortValue(b, b._sortIndex) - getDashboardItemSortValue(a, a._sortIndex);
   });
 
-const dashboardPageSize = 3;
-dashboardNotificationOffset = 0;
+  const dashboardPageSize = 3;
+  dashboardNotificationOffset = 0;
 
-// Acompanhamento da tela principal deve exibir somente notificações não lidas.
-// Quando todas estiverem lidas, a lista fica vazia.
-const unreadDashboardItems = sortedDashboardItems.filter((item) => !isDashboardActivityReadForOrdering(item));
-const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
-
-visibleDashboardActivityItems = visibleDashboardItems;
+  // Acompanhamento da tela principal deve exibir somente notificações não lidas.
+  // Quando todas estiverem lidas, a lista fica vazia.
+  const unreadDashboardItems = sortedDashboardItems.filter((item) => !isDashboardActivityReadForOrdering(item));
+  const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
+  visibleDashboardActivityItems = visibleDashboardItems;
   const previousDashboardButton = document.getElementById("dashboard-notifications-prev");
   const nextDashboardButton = document.getElementById("dashboard-notifications-next");
   if (previousDashboardButton) previousDashboardButton.hidden = true;
@@ -10280,3 +10279,436 @@ document.addEventListener('DOMContentLoaded', () => {
   if (prevBtn) prevBtn.style.display = 'none';
   if (nextBtn) nextBtn.style.display = 'none';
 });
+/* ==========================================================================
+   PERMISSÃO ARIEL + FEEDBACKS/RECLAMAÇÕES/SUGESTÕES
+   - Equipe visível somente para o usuário Ariel
+   - Nova aba em Conta > Configurações para envio de feedbacks
+   - Ariel visualiza todos os envios
+   ========================================================================== */
+(function setupArielAccessAndFeedbackModule() {
+  const FEEDBACK_TABLE = "hub_feedbacks";
+  const FEEDBACK_LOCAL_KEY = "hub-feedbacks-local-v1";
+  const FEEDBACK_PANEL_ID = "settings-feedback-panel";
+
+  function normalizeAccessName(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+  }
+
+  function getCurrentUserEmailSafe() {
+    return (
+      currentUserProfile?.email ||
+      currentAuthUser?.email ||
+      storageService.getSessionItem(`${SESSION_KEY}-email`) ||
+      ""
+    );
+  }
+
+  function getCurrentUserNameSafe() {
+    return currentUserProfile?.nome || getCurrentUserName?.() || currentAuthUser?.user_metadata?.nome || "Usuario";
+  }
+
+  function isArielUser() {
+    const user = getCurrentUserRecord?.() || {};
+    const email = getCurrentUserEmailSafe();
+    const candidates = [
+      getCurrentUserName?.(),
+      user.nome,
+      user.email,
+      user.email ? String(user.email).split("@")[0] : "",
+      email,
+      email ? String(email).split("@")[0] : "",
+      currentAuthUser?.user_metadata?.nome,
+      currentAuthUser?.user_metadata?.name,
+    ];
+    return candidates.some((candidate) => normalizeAccessName(candidate) === "ariel");
+  }
+
+  window.isArielUser = isArielUser;
+
+  function getFallbackViewForCurrentUser() {
+    if (isCashierUser?.()) return "comunicacao";
+    if (isManagerUser?.()) return "documentos";
+    return "dashboard";
+  }
+
+  function applyArielTeamAccess() {
+    if (isPublicPage?.()) return;
+    const canAccessTeam = isArielUser();
+
+    document.querySelectorAll('[data-view="equipe"]').forEach((button) => {
+      button.hidden = !canAccessTeam;
+      button.disabled = !canAccessTeam;
+      button.style.display = canAccessTeam ? "" : "none";
+      button.setAttribute("aria-hidden", canAccessTeam ? "false" : "true");
+    });
+
+    const equipeView = document.getElementById("equipe");
+    if (!canAccessTeam && equipeView?.classList.contains("active")) {
+      activateView?.(getFallbackViewForCurrentUser());
+    }
+  }
+
+  try {
+    const originalApplyRoleAccess = applyRoleAccess;
+    applyRoleAccess = function patchedApplyRoleAccess() {
+      originalApplyRoleAccess?.();
+      applyArielTeamAccess();
+    };
+  } catch (_) {}
+
+  try {
+    const originalActivateView = activateView;
+    activateView = function patchedActivateView(viewId) {
+      if (viewId === "equipe" && !isArielUser()) {
+        showModal?.("Acesso restrito", "A aba Equipe está disponível somente para o usuário Ariel.", "warning");
+        return originalActivateView?.(getFallbackViewForCurrentUser());
+      }
+      return originalActivateView?.(viewId);
+    };
+  } catch (_) {}
+
+  document.addEventListener("click", (event) => {
+    const equipeButton = event.target.closest?.('[data-view="equipe"]');
+    if (!equipeButton) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    if (!isArielUser()) {
+      showModal?.("Acesso restrito", "A aba Equipe está disponível somente para o usuário Ariel.", "warning");
+      activateView?.(getFallbackViewForCurrentUser());
+      return;
+    }
+
+    activateView?.("equipe");
+    closeMobileMenu?.();
+  }, true);
+
+  function ensureFeedbackStyles() {
+    if (document.getElementById("hub-feedback-module-styles")) return;
+    const style = document.createElement("style");
+    style.id = "hub-feedback-module-styles";
+    style.textContent = `
+      .hub-feedback-form textarea { min-height: 150px; resize: vertical; }
+      .hub-feedback-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+      .hub-feedback-list { display: grid; gap: 12px; margin-top: 14px; }
+      .hub-feedback-card .item-title { margin-bottom: 0; }
+      .hub-feedback-card p { white-space: pre-wrap; }
+      .hub-feedback-card.is-admin { border-left: 4px solid var(--teal); }
+      .hub-feedback-filter { max-width: 280px; }
+      .hub-feedback-empty { padding: 16px; border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); color: var(--muted); background: var(--surface-soft); }
+      .hub-feedback-admin-note { background: var(--teal-surface); border: 1px solid var(--teal-border); color: var(--teal-dark); border-radius: var(--radius-lg); padding: 12px 14px; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function createFeedbackSettingsButton() {
+    return `
+      <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclamações reclamação sugestao sugestões sugestoes melhoria usuario">
+        <span aria-hidden="true">✉</span>
+        <span><strong>Feedbacks e Sugestões</strong><small>Feedbacks, reclamações e sugestões</small></span>
+      </button>
+    `;
+  }
+
+  function createFeedbackDropdownButton() {
+    return `
+      <button type="button" class="user-menu-item" data-view="conta" data-settings-target="${FEEDBACK_PANEL_ID}" role="menuitem">
+        <span class="user-menu-icon" aria-hidden="true">✉</span>
+        <span class="user-menu-item-text">
+          <strong>Feedbacks e Sugestões</strong>
+          <small>Enviar feedback, reclamação ou sugestão</small>
+        </span>
+      </button>
+    `;
+  }
+
+  function createFeedbackPanel() {
+    return `
+      <section class="panel settings-detail-panel" data-settings-panel="${FEEDBACK_PANEL_ID}">
+        <div class="panel-header">
+          <h2>Feedbacks, reclamações e sugestões</h2>
+        </div>
+        <p class="item-meta">Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.</p>
+
+        <form class="hub-feedback-form settings-section" id="hub-feedback-form">
+          <h3>Novo envio</h3>
+          <label>Tipo
+            <select id="hub-feedback-type" required>
+              <option value="Feedback">Feedback</option>
+              <option value="Reclamação">Reclamação</option>
+              <option value="Sugestão">Sugestão</option>
+            </select>
+          </label>
+          <label>Mensagem
+            <textarea id="hub-feedback-message" placeholder="Descreva aqui seu feedback, reclamação ou sugestão..." required></textarea>
+          </label>
+          <button class="primary-button" type="submit">Enviar</button>
+        </form>
+
+        <div class="settings-section" id="hub-feedback-admin-area" hidden>
+          <div class="hub-feedback-admin-note">
+            <strong>Visualização do Ariel:</strong> aqui aparecem os feedbacks, reclamações e sugestões enviados pelos usuários.
+          </div>
+          <div class="hub-feedback-toolbar section-top">
+            <h3 class="flush-bottom">Envios recebidos</h3>
+            <select class="hub-feedback-filter" id="hub-feedback-filter">
+              <option value="todos">Todos</option>
+              <option value="Feedback">Feedback</option>
+              <option value="Reclamação">Reclamação</option>
+              <option value="Sugestão">Sugestão</option>
+            </select>
+          </div>
+          <div class="hub-feedback-list" id="hub-feedback-admin-list"></div>
+        </div>
+
+        <div class="settings-section" id="hub-feedback-user-area">
+          <h3>Meus envios</h3>
+          <div class="hub-feedback-list" id="hub-feedback-user-list"></div>
+        </div>
+      </section>
+    `;
+  }
+
+  function bindFeedbackSettingsButton(button) {
+    if (!button || button.dataset.feedbackReady === "true") return;
+    button.dataset.feedbackReady = "true";
+    button.addEventListener("click", () => {
+      showSettingsPanel?.(FEEDBACK_PANEL_ID);
+      renderFeedbackPanel();
+      closeUserMenuDropdown?.();
+    });
+  }
+
+  function ensureFeedbackSettingsUi() {
+    if (isPublicPage?.()) return;
+    ensureFeedbackStyles();
+
+    const settingsList = document.getElementById("settings-list");
+    if (settingsList && !settingsList.querySelector(`[data-settings-target="${FEEDBACK_PANEL_ID}"]`)) {
+      const shortcutsButton = settingsList.querySelector('[data-settings-target="settings-shortcuts-panel"]');
+      shortcutsButton?.insertAdjacentHTML("afterend", createFeedbackSettingsButton());
+    }
+
+    const dropdown = document.getElementById("user-menu-dropdown");
+    if (dropdown && !dropdown.querySelector(`[data-settings-target="${FEEDBACK_PANEL_ID}"]`)) {
+      const shortcutsMenuButton = dropdown.querySelector('[data-settings-target="settings-shortcuts-panel"]');
+      shortcutsMenuButton?.insertAdjacentHTML("afterend", createFeedbackDropdownButton());
+    }
+
+    const settingsDetail = document.querySelector(".settings-detail");
+    if (settingsDetail && !settingsDetail.querySelector(`[data-settings-panel="${FEEDBACK_PANEL_ID}"]`)) {
+      const shortcutsPanel = settingsDetail.querySelector('[data-settings-panel="settings-shortcuts-panel"]');
+      shortcutsPanel?.insertAdjacentHTML("afterend", createFeedbackPanel());
+    }
+
+    document.querySelectorAll(`[data-settings-target="${FEEDBACK_PANEL_ID}"]`).forEach(bindFeedbackSettingsButton);
+    bindFeedbackForm();
+    document.getElementById("hub-feedback-filter")?.addEventListener("change", renderFeedbackPanel);
+    updateFeedbackVisibility();
+  }
+
+  function getLocalFeedbacks() {
+    return storageService.getLocalItem(FEEDBACK_LOCAL_KEY, []);
+  }
+
+  function saveLocalFeedbacks(items) {
+    storageService.setLocalItem(FEEDBACK_LOCAL_KEY, items || []);
+  }
+
+  function mapFeedbackRow(row = {}) {
+    return {
+      id: row.id || generateUUID(),
+      tipo: row.tipo || "Feedback",
+      mensagem: row.mensagem || "",
+      autorNome: row.autor_nome || row.autorNome || row.created_by || "Usuário",
+      autorEmail: row.autor_email || row.autorEmail || "",
+      status: row.status || "Novo",
+      createdAt: row.created_at ? formatDateTime(row.created_at) : row.createdAt || todayLabel?.() || "Hoje",
+      sortAt: row.created_at || row.sortAt || new Date().toISOString(),
+    };
+  }
+
+  async function loadFeedbacks() {
+    const currentEmail = getCurrentUserEmailSafe();
+    const localItems = getLocalFeedbacks().map(mapFeedbackRow);
+
+    if (!supabaseClient) {
+      return isArielUser()
+        ? localItems.sort((a, b) => String(b.sortAt).localeCompare(String(a.sortAt)))
+        : localItems.filter((item) => !currentEmail || normalizeAccessName(item.autorEmail) === normalizeAccessName(currentEmail));
+    }
+
+    try {
+      let query = supabaseClient.from(FEEDBACK_TABLE).select("*").order("created_at", { ascending: false });
+      if (!isArielUser() && currentEmail) query = query.eq("autor_email", currentEmail);
+      const { data: rows, error } = await query;
+      if (error) throw error;
+      return (rows || []).map(mapFeedbackRow);
+    } catch (error) {
+      console.warn("Feedbacks carregados do armazenamento local. Verifique se a tabela hub_feedbacks existe no Supabase.", error);
+      return isArielUser()
+        ? localItems.sort((a, b) => String(b.sortAt).localeCompare(String(a.sortAt)))
+        : localItems.filter((item) => !currentEmail || normalizeAccessName(item.autorEmail) === normalizeAccessName(currentEmail));
+    }
+  }
+
+  async function saveFeedback(payload) {
+    const localItem = mapFeedbackRow({
+      ...payload,
+      id: generateUUID(),
+      created_at: new Date().toISOString(),
+    });
+
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient.from(FEEDBACK_TABLE).insert({
+          tipo: payload.tipo,
+          mensagem: payload.mensagem,
+          autor_nome: payload.autorNome,
+          autor_email: payload.autorEmail || null,
+          status: "Novo",
+          created_by: payload.autorNome,
+        });
+        if (error) throw error;
+        return { savedOnSupabase: true };
+      } catch (error) {
+        console.warn("Não foi possível salvar feedback no Supabase; salvando localmente.", error);
+      }
+    }
+
+    const items = [localItem, ...getLocalFeedbacks().map(mapFeedbackRow)];
+    saveLocalFeedbacks(items);
+    return { savedOnSupabase: false };
+  }
+
+  function renderFeedbackItems(target, items, options = {}) {
+    if (!target) return;
+    if (!items.length) {
+      target.innerHTML = `<div class="hub-feedback-empty">Nenhum envio registrado ainda.</div>`;
+      return;
+    }
+
+    target.innerHTML = items.map((item) => `
+      <article class="item-card hub-feedback-card${options.admin ? " is-admin" : ""}">
+        <div class="item-topline">
+          <p class="item-title">${escapeHtml(item.tipo)}</p>
+          <span class="tag">${escapeHtml(item.status || "Novo")}</span>
+        </div>
+        <p>${escapeHtml(item.mensagem)}</p>
+        <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")} | Enviado por ${escapeHtml(item.autorNome || "Usuário")}${item.autorEmail ? ` | ${escapeHtml(item.autorEmail)}` : ""}</p>
+      </article>
+    `).join("");
+  }
+
+  async function renderFeedbackPanel() {
+    ensureFeedbackSettingsUi();
+    updateFeedbackVisibility();
+
+    const items = await loadFeedbacks();
+    const filter = document.getElementById("hub-feedback-filter")?.value || "todos";
+    const filtered = filter === "todos" ? items : items.filter((item) => item.tipo === filter);
+
+    if (isArielUser()) {
+      renderFeedbackItems(document.getElementById("hub-feedback-admin-list"), filtered, { admin: true });
+      renderFeedbackItems(
+        document.getElementById("hub-feedback-user-list"),
+        items.filter((item) => normalizeAccessName(item.autorNome) === normalizeAccessName(getCurrentUserNameSafe()) || normalizeAccessName(item.autorEmail) === normalizeAccessName(getCurrentUserEmailSafe()))
+      );
+    } else {
+      renderFeedbackItems(document.getElementById("hub-feedback-user-list"), items);
+    }
+  }
+
+  function updateFeedbackVisibility() {
+    const adminArea = document.getElementById("hub-feedback-admin-area");
+    if (adminArea) adminArea.hidden = !isArielUser();
+  }
+
+  function bindFeedbackForm() {
+    const form = document.getElementById("hub-feedback-form");
+    if (!form || form.dataset.feedbackReady === "true") return;
+    form.dataset.feedbackReady = "true";
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const tipo = document.getElementById("hub-feedback-type")?.value || "Feedback";
+      const mensagem = document.getElementById("hub-feedback-message")?.value.trim() || "";
+      if (!mensagem) {
+        showModal?.("Mensagem obrigatória", "Preencha o campo de mensagem antes de enviar.", "warning");
+        return;
+      }
+
+      const submitButton = form.querySelector('button[type="submit"]');
+      const originalText = submitButton?.textContent || "Enviar";
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Enviando...";
+      }
+
+      const result = await saveFeedback({
+        tipo,
+        mensagem,
+        autorNome: getCurrentUserNameSafe(),
+        autorEmail: getCurrentUserEmailSafe(),
+      });
+
+      form.reset();
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+      }
+
+      showModal?.(
+        "Envio registrado",
+        result.savedOnSupabase
+          ? "Seu feedback foi enviado com sucesso."
+          : "Seu feedback foi salvo localmente. Para o Ariel visualizar envios de todos os usuários, confirme se a tabela hub_feedbacks foi criada no Supabase.",
+        result.savedOnSupabase ? "success" : "info"
+      );
+      renderFeedbackPanel();
+    });
+  }
+
+  try {
+    const originalShowSettingsPanel = showSettingsPanel;
+    showSettingsPanel = function patchedShowSettingsPanel(panelId) {
+      ensureFeedbackSettingsUi();
+      const result = originalShowSettingsPanel?.(panelId);
+      if (panelId === FEEDBACK_PANEL_ID) renderFeedbackPanel();
+      return result;
+    };
+  } catch (_) {}
+
+  try {
+    const originalRenderAccountSettings = renderAccountSettings;
+    renderAccountSettings = function patchedRenderAccountSettings() {
+      const result = originalRenderAccountSettings?.();
+      ensureFeedbackSettingsUi();
+      updateFeedbackVisibility();
+      return result;
+    };
+  } catch (_) {}
+
+  function initializeArielFeedbackModule() {
+    ensureFeedbackSettingsUi();
+    applyArielTeamAccess();
+    if (document.querySelector(`[data-settings-panel="${FEEDBACK_PANEL_ID}"]`)?.classList.contains("active")) {
+      renderFeedbackPanel();
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", initializeArielFeedbackModule);
+  if (document.readyState === "interactive" || document.readyState === "complete") {
+    initializeArielFeedbackModule();
+  }
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === FEEDBACK_LOCAL_KEY) renderFeedbackPanel();
+  });
+})();
