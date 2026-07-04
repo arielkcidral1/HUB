@@ -1,4 +1,4 @@
-﻿const STORAGE_KEY = "hub-rh-data";
+const STORAGE_KEY = "hub-rh-data";
 const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const CONTRACTOR_PENDING_DOCUMENTS_KEY = "hub-contractor-pending-documents";
 const SESSION_KEY = "hub-rh-session";
@@ -5019,6 +5019,31 @@ function getDashboardSystemUpdateMeta(item = {}) {
   return "";
 }
 
+function getDashboardActivityTimeValue(value) {
+  if (!value) return 0;
+  const text = String(value).trim();
+  if (!text) return 0;
+  const normalized = text.toLowerCase();
+  if (["hoje", "agora", "recentemente"].includes(normalized)) return Date.now();
+
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
+
+  const brDateTime = text.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,?\s*(\d{1,2}):(\d{2}))?/);
+  if (brDateTime) {
+    const [, day, month, year, hour = "0", minute = "0"] = brDateTime;
+    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)).getTime();
+  }
+
+  const isoDateTime = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (isoDateTime) {
+    const [, year, month, day, hour = "0", minute = "0"] = isoDateTime;
+    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)).getTime();
+  }
+
+  return 0;
+}
+
 function renderDashboard() {
   if (!document.getElementById("metric-denuncias")) return;
 
@@ -5055,11 +5080,7 @@ function renderDashboard() {
   // Convert grouped messages to dashboard items
   const groupedMessages = Object.entries(messagesByAuthor).map(([author, messages]) => {
     // Sort messages by date (most recent first)
-    const sortedMessages = [...messages].sort((a, b) => {
-      const dateA = new Date(a.createdAt || 0).getTime();
-      const dateB = new Date(b.createdAt || 0).getTime();
-      return dateB - dateA;
-    });
+    const sortedMessages = [...messages].sort((a, b) => getDashboardActivityTimeValue(b.createdAt) - getDashboardActivityTimeValue(a.createdAt));
     
     return {
       kind: "notificacao",
@@ -5153,15 +5174,17 @@ function renderDashboard() {
       }))
   ];
 
+  dashboardItems.sort((a, b) => getDashboardActivityTimeValue(b.date) - getDashboardActivityTimeValue(a.date));
+
   const dashboardPageSize = 3;
-  if (dashboardNotificationOffset >= dashboardItems.length) dashboardNotificationOffset = 0;
-  const visibleDashboardItems = dashboardItems.slice(dashboardNotificationOffset, dashboardNotificationOffset + dashboardPageSize);
+  dashboardNotificationOffset = 0;
+  const visibleDashboardItems = dashboardItems.slice(0, dashboardPageSize);
   visibleDashboardActivityItems = visibleDashboardItems;
   const previousDashboardButton = document.getElementById("dashboard-notifications-prev");
   const nextDashboardButton = document.getElementById("dashboard-notifications-next");
-  if (previousDashboardButton) previousDashboardButton.hidden = dashboardNotificationOffset === 0;
+  if (previousDashboardButton) previousDashboardButton.hidden = true;
   if (nextDashboardButton) {
-    nextDashboardButton.hidden = dashboardNotificationOffset + dashboardPageSize >= dashboardItems.length;
+    nextDashboardButton.hidden = true;
     nextDashboardButton.textContent = "Ver próximas";
   }
 
@@ -8779,6 +8802,14 @@ class NotificationTracker {
     this.openBtn = document.getElementById("dashboard-notifications-tracker");
     this.notificationsList = document.getElementById("tracker-notifications-list");
     this.emptyState = document.getElementById("tracker-empty");
+    this.modalContent = this.modal?.querySelector(".tracker-modal-content");
+    this.modalTitle = document.getElementById("tracker-modal-title");
+    this.modalSubtitle = this.modal?.querySelector(".tracker-modal-header .item-meta");
+    this.filtersArea = this.modal?.querySelector(".tracker-modal-filters");
+    this.statsArea = this.modal?.querySelector(".tracker-modal-stats");
+    this.listArea = this.modal?.querySelector(".tracker-modal-list");
+    this.footerArea = this.modal?.querySelector(".tracker-modal-footer");
+    this.detailArea = null;
 
     this.filterType = document.getElementById("tracker-filter-type");
     this.searchInput = document.getElementById("tracker-search");
@@ -8816,6 +8847,7 @@ class NotificationTracker {
 
   openModal() {
     if (!this.modal) return;
+    this.showListView();
     this.loadNotifications();
     this.modal.removeAttribute("hidden");
     document.body.style.overflow = "hidden";
@@ -9146,13 +9178,72 @@ class NotificationTracker {
   }
 
   openNotification(notif) {
-    this.closeModal();
-    if (notif.view && typeof activateView === "function") {
-      activateView(notif.view);
+    this.showDetailView(notif);
+  }
+
+  showDetailView(notif = {}) {
+    if (!this.modalContent) return;
+
+    this.filtersArea?.setAttribute("hidden", "");
+    this.statsArea?.setAttribute("hidden", "");
+    this.listArea?.setAttribute("hidden", "");
+    this.footerArea?.setAttribute("hidden", "");
+    this.emptyState?.setAttribute("hidden", "");
+
+    if (this.modalTitle) this.modalTitle.textContent = notif.title || "Notificação";
+    if (this.modalSubtitle) {
+      this.modalSubtitle.textContent = [this.humanizeType(notif.type), notif.time].filter(Boolean).join(" · ") || "Detalhe da notificação";
     }
-    if (typeof showModal === "function" && notif.details) {
-      setTimeout(() => showModal(notif.title, notif.details, notif.status === "urgent" ? "error" : "info"), 80);
-    }
+
+    this.detailArea?.remove();
+    const detail = document.createElement("div");
+    detail.className = `tracker-notification-detail ${notif.type || "geral"}`;
+    detail.innerHTML = `
+      <div class="tracker-detail-card">
+        <div class="tracker-detail-topline">
+          <div class="tracker-detail-icon">${notif.icon || this.getIconForType(notif.type)}</div>
+          <div>
+            <span class="tracker-notification-type">${this.escapeHtml(this.humanizeType(notif.type))}</span>
+            <h3>${this.escapeHtml(notif.title || "Notificação")}</h3>
+            ${notif.description ? `<p>${this.escapeHtml(notif.description)}</p>` : ""}
+          </div>
+        </div>
+        <div class="tracker-detail-meta">
+          ${notif.badgeText ? `<span class="tracker-badge ${notif.status === "urgent" ? "pending" : notif.status}">${this.escapeHtml(notif.badgeText)}</span>` : ""}
+          ${notif.time ? `<span>${this.escapeHtml(notif.time)}</span>` : ""}
+        </div>
+        <div class="tracker-detail-body">${this.formatDetailText(notif.details || notif.description || "Sem detalhes adicionais.")}</div>
+      </div>
+      <div class="tracker-detail-actions">
+        <button class="primary-button" type="button" data-tracker-back>Entendi</button>
+      </div>
+    `;
+
+    this.footerArea?.after(detail);
+    this.detailArea = detail;
+    detail.querySelector("[data-tracker-back]")?.addEventListener("click", () => this.showListView());
+    detail.querySelector("[data-tracker-back]")?.focus();
+  }
+
+  showListView() {
+    this.detailArea?.remove();
+    this.detailArea = null;
+    this.filtersArea?.removeAttribute("hidden");
+    this.statsArea?.removeAttribute("hidden");
+    this.listArea?.removeAttribute("hidden");
+    this.footerArea?.removeAttribute("hidden");
+
+    if (this.modalTitle) this.modalTitle.textContent = "Acompanhamento Completo";
+    if (this.modalSubtitle) this.modalSubtitle.textContent = "Todas as notificações e pendências";
+    this.renderNotifications();
+  }
+
+  formatDetailText(text) {
+    return String(text ?? "")
+      .split("\n")
+      .map((line) => line.trim())
+      .map((line) => line ? `<p>${this.escapeHtml(line)}</p>` : `<br />`)
+      .join("");
   }
 
   humanizeType(type) {
