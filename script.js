@@ -3521,6 +3521,18 @@ function isValidCpf(value) {
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
 }
 
+function matchesContractorAccessPassword(password, expectedPassword) {
+  const typedPassword = String(password || "").trim();
+  const targetPassword = String(expectedPassword || "").trim();
+
+  if (typedPassword === targetPassword) return true;
+  if (!typedPassword || !targetPassword) return false;
+  if (typedPassword.length !== targetPassword.length) return false;
+
+  return typedPassword.charAt(0).toLocaleLowerCase("pt-BR") === targetPassword.charAt(0).toLocaleLowerCase("pt-BR")
+    && typedPassword.slice(1) === targetPassword.slice(1);
+}
+
 function validatePublicFormSubmission(formElement) {
   const honeypot = String(formElement?.elements?.website?.value || "").trim();
 
@@ -7854,11 +7866,11 @@ if (contratadoDocForm) {
     const form = new FormData(event.currentTarget);
     const password = String(form.get("senha_acesso") || "");
     const expectedPassword = String(contractorLayout?.dataset.contractorPassword || "");
-    if (password !== expectedPassword) {
+    if (!matchesContractorAccessPassword(password, expectedPassword)) {
       showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
       return;
     }
-    contractorAccessPassword = password;
+    contractorAccessPassword = expectedPassword;
     contractorPasswordForm.hidden = true;
     contratadoDocForm.hidden = false;
   });
