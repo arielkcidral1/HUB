@@ -140,12 +140,81 @@
                 <p class="item-meta">Notificações e pendências recentes</p>
               </div>
               <div class="job-actions flush-top">
-                <button class="secondary-link" id="dashboard-notifications-prev" type="button" hidden>Anterior</button>
-                <button class="secondary-link" id="dashboard-notifications-next" type="button" hidden>Ver próximas</button>
+                <button class="primary-button" id="dashboard-notifications-tracker" type="button">Acompanhar</button>
               </div>
             </div>
             <ul class="activity-list" id="dashboard-list"></ul>
           </article>
+
+          <!-- Modal de Acompanhamento -->
+          <div class="tracker-modal" id="tracker-modal" hidden aria-modal="true" aria-labelledby="tracker-modal-title">
+            <div class="tracker-modal-overlay" id="tracker-modal-overlay"></div>
+            <div class="tracker-modal-content">
+              <div class="tracker-modal-header">
+                <h2 id="tracker-modal-title">Acompanhamento Completo</h2>
+                <p class="item-meta">Todas as notificações e pendências</p>
+                <button class="tracker-modal-close" id="tracker-modal-close" type="button" aria-label="Fechar" title="Fechar (Esc)">✕</button>
+              </div>
+              
+              <div class="tracker-modal-filters">
+                <div class="tracker-filter-group">
+                  <label for="tracker-filter-type">Filtrar por tipo:</label>
+                  <select id="tracker-filter-type" class="tracker-filter-select">
+                    <option value="">Todos os tipos</option>
+                    <option value="denuncia">Denúncias</option>
+                    <option value="mensagem">Mensagens RH</option>
+                    <option value="malote">Malotes de EPI</option>
+                    <option value="chamado">Chamados</option>
+                    <option value="vaga">Vagas</option>
+                    <option value="evento">Eventos</option>
+                    <option value="documento">Documentos</option>
+                  </select>
+                </div>
+                
+                <div class="tracker-filter-group">
+                  <label for="tracker-search">Buscar:</label>
+                  <input type="search" id="tracker-search" class="tracker-search-input" placeholder="Buscar notificações..." />
+                </div>
+
+                <div class="tracker-filter-group">
+                  <label for="tracker-sort">Ordenar por:</label>
+                  <select id="tracker-sort" class="tracker-filter-select">
+                    <option value="recente">Mais recente</option>
+                    <option value="antigo">Mais antigo</option>
+                    <option value="tipo">Tipo</option>
+                    <option value="prioridade">Prioridade</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="tracker-modal-stats">
+                <div class="stat-item">
+                  <span class="stat-label">Total</span>
+                  <strong class="stat-value" id="tracker-stat-total">0</strong>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Não lidas</span>
+                  <strong class="stat-value unread" id="tracker-stat-unread">0</strong>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Pendentes</span>
+                  <strong class="stat-value pending" id="tracker-stat-pending">0</strong>
+                </div>
+              </div>
+
+              <div class="tracker-modal-list">
+                <ul class="tracker-notifications" id="tracker-notifications-list"></ul>
+                <div class="tracker-empty" id="tracker-empty" hidden>
+                  <p>Nenhuma notificação encontrada</p>
+                </div>
+              </div>
+
+              <div class="tracker-modal-footer">
+                <button class="secondary-link" id="tracker-mark-all-read" type="button">Marcar todos como lidos</button>
+                <button class="danger-button" id="tracker-clear-all" type="button">Limpar</button>
+              </div>
+            </div>
+          </div>
 
           <article class="panel calendar-preview-panel">
             <div class="panel-header">
