@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
@@ -7,6 +7,8 @@
     <title>HUB | RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="vagas-format.css" />
+    <link rel="stylesheet" href="vagas-admin-enhance.css" />
   </head>
   <body>
     <div class="app-shell" id="app-shell">
@@ -414,8 +416,16 @@
               <button class="secondary-link full-width-action" id="cancelar-edicao-vaga" type="button" hidden>Cancelar edicao</button>
             </form>
             <div class="panel">
-              <div class="panel-header">
+              <div class="panel-header chamados-records-header">
                 <h2>Vagas cadastradas</h2>
+                <div class="chamados-filter-bar" aria-label="Filtros de vagas">
+                  <div class="chamados-filter-fields">
+                    <select id="vaga-filter-unidade" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar vagas por unidade"></select>
+                    <input id="vaga-filter-nome" type="search" placeholder="Nome do candidato" autocomplete="off" aria-label="Filtrar vagas por nome do candidato" />
+                    <input id="vaga-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF do candidato" autocomplete="off" aria-label="Filtrar vagas por CPF do candidato" />
+                  </div>
+                  <button class="secondary-link compact-filter-button" id="limpar-filtros-vagas" type="button" hidden>Limpar</button>
+                </div>
               </div>
               <div class="card-list" id="vagas-list"></div>
             </div>
@@ -1232,7 +1242,7 @@
                     <span class="shortcut-desc">Sublinhado</span>
                   </div>
                 </div>
-              </div>
+              </div>  
             </section>
             </div>
           </div>
@@ -1242,5 +1252,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
     <script src="script.js"></script>
+    <script src="vagas-admin-filters.js"></script>
   </body>
 </html>
