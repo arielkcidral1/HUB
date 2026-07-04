@@ -1825,10 +1825,10 @@ textarea {
   bottom: calc(100% + 10px);
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(8, 34px);
+  grid-template-columns: repeat(12, 34px);
   gap: 6px;
   padding: 12px;
-  width: min(90vw, 320px);
+  width: min(90vw, 480px);
   max-height: 380px;
   overflow-y: auto;
   border: 1px solid var(--line);
