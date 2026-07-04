@@ -2405,6 +2405,7 @@ function mapRows(collection, rows) {
       status: row.status || "Aberta", // Garante o mapeamento do status
       createdBy: row.created_by || "Sistema",
       createdAt: formatDateTime(row.created_at),
+      sortAt: row.created_at || "",
     }));
   }
 
@@ -2426,6 +2427,7 @@ function mapRows(collection, rows) {
             }
           : null,
         createdAt: formatDateTime(row.created_at),
+        sortAt: row.created_at || "",
       };
     });
   }
@@ -2443,6 +2445,7 @@ if (collection === "malotes") {
     createdBy: row.created_by || getSystemFallbackAuthor(),
     updatedBy: row.updated_by || "",
     createdAt: formatDate(row.created_at),
+    sortAt: row.created_at || "",
   }));
 }
 
@@ -2457,6 +2460,7 @@ if (collection === "malotes") {
       observacoes: row.observacoes || "",
       status: row.status || "Aberto",
       createdAt: formatDateTime(row.created_at),
+      sortAt: row.created_at || "",
     }));
   }
 
@@ -2470,6 +2474,7 @@ if (collection === "malotes") {
       curriculo_url: row.curriculo_url,
       createdBy: row.created_by || row.nome,
       createdAt: formatDate(row.created_at),
+      sortAt: row.created_at || "",
     }));
   }
 
@@ -2485,6 +2490,7 @@ if (collection === "malotes") {
       createdBy: row.created_by || getSystemFallbackAuthor(),
       updatedBy: row.updated_by || "",
       createdAt: formatDate(row.created_at),
+      sortAt: row.created_at || "",
     }));
   }
 
@@ -2500,6 +2506,7 @@ if (collection === "malotes") {
       valorNecessario: Number(row.valor_necessario) || 0,
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
+      sortAt: row.created_at || "",
     }));
   }
 
@@ -2517,6 +2524,7 @@ if (collection === "malotes") {
       foto_perfil: row.foto_perfil || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
+      sortAt: row.created_at || "",
     }));
   }
 
@@ -2532,6 +2540,7 @@ if (collection === "malotes") {
       status: row.status,
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
+      sortAt: row.created_at || "",
     };
   });
 }
@@ -2580,6 +2589,7 @@ function mapContractorDocumentRow(row = {}) {
     documentos: parseContractorDocumentsValue(row.documentos),
     createdBy: row.created_by || row.createdBy || "Publico",
     createdAt: formatDateTime(row.created_at || row.createdAt),
+    sortAt: row.created_at || row.sortAt || row.createdAt || "",
     pendingSync: Boolean(row.pendingSync),
   };
 }
@@ -3745,6 +3755,7 @@ function appendLocalInsertedItem(collection, values) {
   data[collection].unshift({
     id: generateUUID(),
     createdAt: todayLabel(),
+    sortAt: new Date().toISOString(),
     createdBy: values.createdBy || getCurrentUserName(),
     ...values,
   });
@@ -3770,6 +3781,7 @@ async function addItem(collection, values) {
       data[collection].unshift(inserted ? mapRows(collection, [inserted])[0] : {
         id: generateUUID(),
         createdAt: todayLabel(),
+        sortAt: new Date().toISOString(),
         createdBy: values.createdBy || getCurrentUserName(),
         ...values,
       });
@@ -3882,6 +3894,7 @@ async function addItem(collection, values) {
       data[collection].unshift({
         id: generateUUID(),
         createdAt: todayLabel(),
+        sortAt: new Date().toISOString(),
         createdBy: values.createdBy || getCurrentUserName(),
         ...values,
       });
@@ -5036,7 +5049,8 @@ function getDashboardActivityTimeValue(value) {
   const text = String(value).trim();
   if (!text) return 0;
   const normalized = text.toLowerCase();
-  if (["hoje", "agora", "recentemente"].includes(normalized)) return Date.now();
+  if (normalized === "hoje") return new Date().setHours(0, 0, 0, 0);
+  if (["agora", "recentemente"].includes(normalized)) return Date.now();
 
   const parsed = new Date(text);
   if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
@@ -5054,6 +5068,30 @@ function getDashboardActivityTimeValue(value) {
   }
 
   return 0;
+}
+
+function getDashboardRecordSortValue(item = {}, fallbackIndex = 0) {
+  const candidates = [
+    item.sortAt,
+    item.updatedSortAt,
+    item.updatedAt,
+    item.createdSortAt,
+    item.createdAt,
+    item.dateTime,
+    item.date,
+  ];
+
+  for (const candidate of candidates) {
+    const time = getDashboardActivityTimeValue(candidate);
+    if (time) return time;
+  }
+
+  return 0 - fallbackIndex;
+}
+
+function getDashboardItemSortValue(item = {}, fallbackIndex = 0) {
+  const time = getDashboardRecordSortValue(item, fallbackIndex);
+  return time || (0 - fallbackIndex);
 }
 
 function renderDashboard() {
@@ -5092,7 +5130,7 @@ function renderDashboard() {
   // Convert grouped messages to dashboard items
   const groupedMessages = Object.entries(messagesByAuthor).map(([author, messages]) => {
     // Sort messages by date (most recent first)
-    const sortedMessages = [...messages].sort((a, b) => getDashboardActivityTimeValue(b.createdAt) - getDashboardActivityTimeValue(a.createdAt));
+    const sortedMessages = [...messages].sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
     
     return {
       kind: "notificacao",
@@ -5105,7 +5143,8 @@ function renderDashboard() {
         .join("\n\n"),
       detailsHeader: `Autor: ${author}\nTotal de mensagens: ${messages.length}`,
       tag: "Nova",
-      date: sortedMessages[0].createdAt,
+      date: sortedMessages[0]?.createdAt,
+      dateTime: sortedMessages[0]?.sortAt || sortedMessages[0]?.createdAt,
       messageCount: messages.length,
     };
   });
@@ -5121,6 +5160,7 @@ function renderDashboard() {
         details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "Não informado"}\n\n${item.descricao || "Sem descrição."}`,
         tag: item.status,
         date: item.createdAt,
+        dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
         systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
         meta: getDashboardSystemUpdateMeta(item),
       })),
@@ -5138,6 +5178,7 @@ function renderDashboard() {
           details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nSetor: ${item.setor || "Não informado"}\nItens solicitados:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "Não informada"}`,
           tag: item.status,
           date: item.createdAt,
+          dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
           systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
           meta: getDashboardSystemUpdateMeta(item),
         };
@@ -5156,6 +5197,7 @@ function renderDashboard() {
           details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
           tag: item.status,
           date: item.createdAt,
+          dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
           systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
           meta: getDashboardSystemUpdateMeta(item),
         };
@@ -5169,6 +5211,7 @@ function renderDashboard() {
         details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
         tag: item.status,
         date: item.createdAt,
+        dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
         systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
         meta: getDashboardSystemUpdateMeta(item),
       })),
@@ -5181,12 +5224,14 @@ function renderDashboard() {
         details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${documentLabels[item.type] || item.type}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
         tag: "Registro",
         date: item.createdAt,
+        dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
         systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
         meta: getDashboardSystemUpdateMeta(item),
       }))
   ];
 
-  dashboardItems.sort((a, b) => getDashboardActivityTimeValue(b.date) - getDashboardActivityTimeValue(a.date));
+  dashboardItems.forEach((item, index) => { item._sortIndex = index; });
+  dashboardItems.sort((a, b) => getDashboardItemSortValue(b, b._sortIndex) - getDashboardItemSortValue(a, a._sortIndex));
 
   const dashboardPageSize = 3;
   dashboardNotificationOffset = 0;
@@ -6982,6 +7027,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
           formData: Object.fromEntries(entries),
           updatedBy: getCurrentUserName(),
           updatedAt: todayLabel(),
+          updatedSortAt: new Date().toISOString(),
         };
       }
       window.editingDocId = null;
@@ -6998,6 +7044,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
         formData: Object.fromEntries(entries),
         createdBy: getCurrentUserName(),
         createdAt: todayLabel(),
+        sortAt: new Date().toISOString(),
       });
     }
 
@@ -8885,7 +8932,8 @@ class NotificationTracker {
     const pushNotification = (item = {}) => {
       const type = item.type || "geral";
       const status = item.status || "pending";
-      const time = item.time || item.date || "Recentemente";
+      const time = item.time || item.date || item.createdAt || "Recentemente";
+      const rawDateTime = item.sortAt || item.updatedSortAt || item.updatedAt || item.createdSortAt || item.createdAt || item.dateTime || item.date || time;
       notifications.push({
         id: item.id || `${type}-${notifications.length}-${Date.now()}`,
         type,
@@ -8893,12 +8941,13 @@ class NotificationTracker {
         description: item.description || item.text || "",
         details: item.details || item.description || item.text || "",
         time,
-        dateTime: this.getTimeValue(item.dateTime || time),
+        dateTime: this.getTimeValue(rawDateTime),
         unread: Boolean(item.unread || status === "unread" || status === "urgent"),
         status,
         view: item.view || this.getViewForType(type),
         icon: item.icon || this.getIconForType(type),
         badgeText: item.badgeText || this.getBadgeText(status),
+        sequence: notifications.length,
       });
     };
 
@@ -8911,7 +8960,7 @@ class NotificationTracker {
     }, {});
 
     Object.entries(messagesByAuthor).forEach(([author, messages]) => {
-      const sortedMessages = [...messages].sort((a, b) => this.getTimeValue(b.createdAt) - this.getTimeValue(a.createdAt));
+      const sortedMessages = [...messages].sort((a, b) => this.getTimeValue(b.sortAt || b.createdAt) - this.getTimeValue(a.sortAt || a.createdAt));
       pushNotification({
         id: `mensagem-${author}`,
         type: "mensagem",
@@ -8921,6 +8970,7 @@ class NotificationTracker {
           : `${messages.length} mensagens de ${author}`,
         details: sortedMessages.map((message) => message.mensagem || "Nova notificação recebida.").join("\n\n"),
         time: sortedMessages[0]?.createdAt || "Agora",
+        dateTime: sortedMessages[0]?.sortAt || sortedMessages[0]?.createdAt || "Agora",
         status: "unread",
         unread: true,
         view: "comunicacao",
@@ -8936,6 +8986,7 @@ class NotificationTracker {
         description: item.descricao || "Nova denúncia recebida.",
         details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "Não informado"}\n\n${item.descricao || "Sem descrição."}`,
         time: item.createdAt || "Recentemente",
+        dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
         status: item.status === "Urgente" ? "urgent" : "pending",
         unread: true,
         view: "denuncias",
@@ -8955,6 +9006,7 @@ class NotificationTracker {
           description: item.epis || "Itens não informados.",
           details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nSetor: ${item.setor || "Não informado"}\nItens solicitados:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "Não informada"}`,
           time: item.createdAt || "Recentemente",
+          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: "pending",
           unread: true,
           view: "chamados",
@@ -8977,6 +9029,7 @@ class NotificationTracker {
           description: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
           details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
           time: item.createdAt || "Recentemente",
+          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: isResolved ? "resolved" : "pending",
           unread: !isResolved,
           view: "malotes",
@@ -8994,6 +9047,7 @@ class NotificationTracker {
           description: item.descricao || "Vaga atualizada.",
           details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
           time: item.createdAt || "Recentemente",
+          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: isClosed ? "resolved" : "pending",
           unread: !isClosed,
           view: "vagas",
@@ -9012,6 +9066,7 @@ class NotificationTracker {
           description: item.summary || "Documento registrado.",
           details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${label || "Registro"}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
           time: item.createdAt || "Recentemente",
+          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: "pending",
           unread: true,
           view: "documentos",
@@ -9031,21 +9086,23 @@ class NotificationTracker {
         description: item.descricao || [formattedDate, formattedTime].filter(Boolean).join(" · "),
         details: `Título: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "Não informada"}\nHorário: ${formattedTime || "Não informado"}\nResponsável: ${item.responsavel || "Não informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descrição."}`,
         time: [formattedDate, formattedTime].filter(Boolean).join(" · ") || "Recentemente",
-        dateTime: `${eventDate || ""}T${eventTime || "00:00"}`,
+        dateTime: item.sortAt || item.updatedSortAt || item.createdAt || `${eventDate || ""}T${eventTime || "00:00"}`,
         status: "pending",
         unread: false,
         view: "calendario",
       });
     });
 
-    return notifications.sort((a, b) => b.dateTime - a.dateTime);
+    return notifications.sort((a, b) => (b.dateTime - a.dateTime) || (a.sequence - b.sequence));
   }
 
   getTimeValue(value) {
     if (!value) return 0;
     const text = String(value).trim();
     if (!text) return 0;
-    if (text.toLowerCase() === "hoje" || text.toLowerCase() === "agora") return Date.now();
+    const normalized = text.toLowerCase();
+    if (normalized === "hoje") return new Date().setHours(0, 0, 0, 0);
+    if (normalized === "agora" || normalized === "recentemente") return Date.now();
 
     const parsed = new Date(text);
     if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
