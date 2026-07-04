@@ -5166,6 +5166,13 @@ function isDashboardNotificationRead(item = {}) {
   return readNotificationIds.has(String(item.notificationId));
 }
 
+function isDashboardActivityReadForOrdering(item = {}) {
+  if (Array.isArray(item.messageIds) && item.messageIds.length) {
+    return item.messageIds.every((id) => readRhMessageIds.has(String(id)));
+  }
+  return isDashboardNotificationRead(item);
+}
+
 function renderDashboard() {
   if (!document.getElementById("metric-denuncias")) return;
 
@@ -5189,49 +5196,44 @@ function renderDashboard() {
     document.getElementById("metric-documentos").textContent = documentRecords.filter((item) => !isArchivedRecord(item)).length;
   }
 
-  // Group messages by author. O acompanhamento mostra as mensagens recentes mesmo após leitura;
-  // a leitura só muda o estado visual/contador, não remove o item da lista.
-  const messagesByAuthor = {};
+  // Mensagens do RH aparecem como um único bloco no acompanhamento.
+  // A leitura marca o bloco como lido, mas não remove a visualização; apenas reduz sua prioridade.
   const accessibleRhMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
-  accessibleRhMessages.forEach((item) => {
-    const author = item.autor || "Equipe";
-    if (!messagesByAuthor[author]) {
-      messagesByAuthor[author] = [];
-    }
-    messagesByAuthor[author].push(item);
-  });
+  const sortedRhMessagesNewestFirst = [...accessibleRhMessages]
+    .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
+  const sortedRhMessagesOldestFirst = [...accessibleRhMessages]
+    .sort((a, b) => getDashboardRecordSortValue(a) - getDashboardRecordSortValue(b));
+  const groupedMessages = [];
 
-  // Convert grouped messages to dashboard items
-  const groupedMessages = Object.entries(messagesByAuthor).map(([author, messages]) => {
-    // Sort messages by date (most recent first)
-    const sortedMessages = [...messages].sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
-    const messageIds = sortedMessages.map((msg) => msg.id).filter(Boolean).map(String);
+  if (sortedRhMessagesNewestFirst.length) {
+    const messageIds = sortedRhMessagesNewestFirst.map((msg) => msg.id).filter(Boolean).map(String);
     const unreadMessageIds = messageIds.filter((id) => !readRhMessageIds.has(String(id)));
-    const latestMessage = sortedMessages[0] || {};
+    const latestMessage = sortedRhMessagesNewestFirst[0] || {};
     const hasUnread = unreadMessageIds.length > 0;
-    return {
+    const authors = [...new Set(sortedRhMessagesNewestFirst.map((msg) => msg.autor || "Equipe"))];
+    const authorLabel = authors.length === 1 ? authors[0] : `${authors.length} autores`;
+
+    groupedMessages.push({
       kind: "notificacao",
-      notificationId: `mensagem-${author}-${latestMessage.id || latestMessage.sortAt || latestMessage.createdAt || messages.length}`,
+      notificationId: "mensagens-rh",
       messageIds,
-      title: `Mensagem · ${author}`,
-      text: messages.length === 1
-        ? latestMessage.mensagem || "Nova notificação recebida."
-        : hasUnread
-          ? `${unreadMessageIds.length} nova(s) de ${messages.length} mensagem(ns) de ${author}`
-          : `${messages.length} mensagem(ns) de ${author}`,
-      details: [...sortedMessages]
-        .reverse()
-        .slice(-12)
-        .map((msg) => `${msg.createdAt || "Sem data"} · ${msg.mensagem || "Nova notificação recebida."}`)
+      chatMessages: sortedRhMessagesOldestFirst,
+      title: "Mensagens do RH",
+      text: hasUnread
+        ? `${unreadMessageIds.length} nova(s) de ${messageIds.length} mensagem(ns)`
+        : `${messageIds.length} mensagem(ns) no acompanhamento`,
+      details: sortedRhMessagesOldestFirst
+        .slice(-20)
+        .map((msg) => `${msg.createdAt || "Sem data"} · ${msg.autor || "Equipe"}: ${msg.mensagem || "Nova notificação recebida."}`)
         .join("\n\n"),
-      detailsHeader: `Autor: ${author}\nTotal de mensagens: ${messages.length}`,
+      detailsHeader: `Comunicação RH\n${authorLabel}`,
       tag: hasUnread ? "Nova" : "Lida",
       date: latestMessage.createdAt,
       dateTime: latestMessage.sortAt || latestMessage.createdAt,
-      messageCount: messages.length,
+      messageCount: messageIds.length,
       unread: hasUnread,
-    };
-  });
+    });
+  }
 
   const dashboardItems = [
     ...groupedMessages,
@@ -5320,7 +5322,12 @@ function renderDashboard() {
   ];
 
   const sortedDashboardItems = dashboardItems.map((item, index) => ({ ...item, _sortIndex: index }));
-  sortedDashboardItems.sort((a, b) => getDashboardItemSortValue(b, b._sortIndex) - getDashboardItemSortValue(a, a._sortIndex));
+  sortedDashboardItems.sort((a, b) => {
+    const aRead = isDashboardActivityReadForOrdering(a);
+    const bRead = isDashboardActivityReadForOrdering(b);
+    if (aRead !== bRead) return aRead ? 1 : -1;
+    return getDashboardItemSortValue(b, b._sortIndex) - getDashboardItemSortValue(a, a._sortIndex);
+  });
 
   const dashboardPageSize = 3;
   dashboardNotificationOffset = 0;
@@ -5349,9 +5356,10 @@ function renderDashboard() {
     } else {
       dashboardTarget.innerHTML = visibleDashboardItems
         .map((item, index) => {
-          const itemRead = isDashboardNotificationRead(item) || (Array.isArray(item.messageIds) && item.messageIds.length && item.messageIds.every((id) => readRhMessageIds.has(String(id))));
+          const itemRead = isDashboardActivityReadForOrdering(item);
           const visualTag = itemRead && !item.systemUpdate ? "Lida" : item.tag;
-          return `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}${itemRead ? " is-read" : " is-unread"}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${itemRead ? "tag" : (item.systemUpdate ? "tag" : badgeClass(item.tag))}">${escapeHtml(item.systemUpdate ? "Sistema" : visualTag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "…" : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`;
+          const visualBadgeClass = item.systemUpdate ? "tag" : badgeClass(item.tag || visualTag);
+          return `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}" data-read="${itemRead ? "true" : "false"}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${visualBadgeClass}">${escapeHtml(item.systemUpdate ? "Sistema" : visualTag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "…" : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`;
         })
         .join("");
     }
@@ -6897,6 +6905,55 @@ function getAuthorAvatar(authorName, knownAvatarPath = "") {
   return `<div class="chat-avatar-fallback">${initial}</div>`;
 }
 
+
+function renderNotificationChatThread(messages = [], options = {}) {
+  const normalizedMessages = Array.isArray(messages) ? [...messages] : [];
+  normalizedMessages.sort((a, b) => {
+    const aTime = typeof getDashboardRecordSortValue === "function" ? getDashboardRecordSortValue(a) : new Date(a?.createdAt || 0).getTime();
+    const bTime = typeof getDashboardRecordSortValue === "function" ? getDashboardRecordSortValue(b) : new Date(b?.createdAt || 0).getTime();
+    return aTime - bTime;
+  });
+
+  if (!normalizedMessages.length) {
+    return `<p class="empty-state">Nenhuma mensagem disponível para exibição.</p>`;
+  }
+
+  const currentUser = typeof getCurrentUserName === "function" ? getCurrentUserName() : "";
+  let previousDate = "";
+  const html = normalizedMessages.map((item) => {
+    const messageDate = typeof getChatMessageDate === "function" ? getChatMessageDate(item.createdAt) : "";
+    const messageTime = typeof getChatMessageTimeLabel === "function" ? getChatMessageTimeLabel(item.createdAt) : (item.createdAt || "");
+    const separator = messageDate && messageDate !== previousDate
+      ? `<div class="chat-date-separator">${escapeHtml(messageDate)}</div>`
+      : "";
+    previousDate = messageDate || previousDate;
+
+    const authorName = item.autor || "Equipe";
+    const avatar = typeof getAuthorAvatar === "function"
+      ? getAuthorAvatar(authorName)
+      : `<div class="chat-avatar-fallback">${escapeHtml(String(authorName).charAt(0).toUpperCase() || "?")}</div>`;
+    const formattedMessage = item.mensagem
+      ? (typeof renderFormattedChatText === "function" ? renderFormattedChatText(item.mensagem) : escapeHtml(item.mensagem))
+      : "";
+    const attachment = item.arquivo && typeof renderChatAttachment === "function" ? renderChatAttachment(item.arquivo) : "";
+
+    return `${separator}
+      <article class="chat-message ${authorName === currentUser ? "own" : ""}">
+        <div class="chat-message-header">
+          ${avatar}
+          <div class="chat-author">
+            <span>${escapeHtml(authorName)}</span>
+            <time>${escapeHtml(messageTime)}</time>
+          </div>
+        </div>
+        ${formattedMessage ? `<p>${formattedMessage}</p>` : ""}
+        ${attachment}
+      </article>`;
+  }).join("");
+
+  return `<div class="tracker-chat-thread${options.compact ? " compact" : ""}">${html}</div>`;
+}
+
 function openDashboardActivity(index) {
   const item = visibleDashboardActivityItems[Number(index)];
   if (!item) return;
@@ -6906,23 +6963,32 @@ function openDashboardActivity(index) {
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
 
-  const details = String(item.details || item.text || "Sem detalhes disponíveis.")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const detailMarkup = [];
-  for (let detailIndex = 0; detailIndex < details.length; detailIndex += 1) {
-    const detail = details[detailIndex];
-    if (/^Itens (do malote|solicitados):$/i.test(detail)) {
-      const itemLines = [];
-      while (details[detailIndex + 1] && !/^(Observações|Status|Data):/i.test(details[detailIndex + 1])) {
-        detailIndex += 1;
-        itemLines.push(details[detailIndex]);
+  const hasChatMessages = Array.isArray(item.chatMessages) && item.chatMessages.length;
+  let detailContent = "";
+
+  if (hasChatMessages) {
+    detailContent = renderNotificationChatThread(item.chatMessages);
+  } else {
+    const details = String(item.details || item.text || "Sem detalhes disponíveis.")
+      .split("
+")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const detailMarkup = [];
+    for (let detailIndex = 0; detailIndex < details.length; detailIndex += 1) {
+      const detail = details[detailIndex];
+      if (/^Itens (do malote|solicitados):$/i.test(detail)) {
+        const itemLines = [];
+        while (details[detailIndex + 1] && !/^(Observações|Status|Data):/i.test(details[detailIndex + 1])) {
+          detailIndex += 1;
+          itemLines.push(details[detailIndex]);
+        }
+        detailMarkup.push(`<li class="dashboard-detail-section"><strong>${escapeHtml(detail)}</strong><ul>${itemLines.map((itemLine) => `<li>${escapeHtml(itemLine)}</li>`).join("")}</ul></li>`);
+        continue;
       }
-      detailMarkup.push(`<li class="dashboard-detail-section"><strong>${escapeHtml(detail)}</strong><ul>${itemLines.map((itemLine) => `<li>${escapeHtml(itemLine)}</li>`).join("")}</ul></li>`);
-      continue;
+      detailMarkup.push(`<li>${escapeHtml(detail)}</li>`);
     }
-    detailMarkup.push(`<li>${escapeHtml(detail)}</li>`);
+    detailContent = `<ul class="dashboard-detail-list">${detailMarkup.join("")}</ul>`;
   }
   const overlay = document.createElement("div");
   overlay.id = "custom-modal";
@@ -6930,7 +6996,7 @@ function openDashboardActivity(index) {
   overlay.innerHTML = `
     <div class="modal-card">
       <div class="modal-header info">${escapeHtml(item.title)}</div>
-      <div class="modal-body"><ul class="dashboard-detail-list">${detailMarkup.join("")}</ul></div>
+      <div class="modal-body">${detailContent}</div>
       <div class="modal-footer"><button class="primary-button" data-action="close-modal">Entendi</button></div>
     </div>
   `;
@@ -9619,41 +9685,43 @@ class NotificationTracker {
         badgeText: unread ? (item.badgeText || this.getBadgeText(status)) : (status === "urgent" ? this.getBadgeText(status) : ""),
         sequence: notifications.length,
         messageIds: Array.isArray(item.messageIds) ? item.messageIds.map(String) : [],
+        chatMessages: Array.isArray(item.chatMessages) ? item.chatMessages : [],
       });
     };
 
     const accessibleMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
-    const messagesByAuthor = accessibleMessages.reduce((acc, message) => {
-      const author = message.autor || "Equipe";
-      acc[author] = acc[author] || [];
-      acc[author].push(message);
-      return acc;
-    }, {});
+    const sortedMessagesNewestFirst = [...accessibleMessages]
+      .sort((a, b) => this.getTimeValue(b.sortAt || b.createdAt) - this.getTimeValue(a.sortAt || a.createdAt));
+    const sortedMessagesOldestFirst = [...accessibleMessages]
+      .sort((a, b) => this.getTimeValue(a.sortAt || a.createdAt) - this.getTimeValue(b.sortAt || b.createdAt));
 
-    Object.entries(messagesByAuthor).forEach(([author, messages]) => {
-      const sortedMessages = [...messages].sort((a, b) => this.getTimeValue(b.sortAt || b.createdAt) - this.getTimeValue(a.sortAt || a.createdAt));
-      const messageIds = sortedMessages.map((message) => message.id).filter(Boolean).map(String);
+    if (sortedMessagesNewestFirst.length) {
+      const messageIds = sortedMessagesNewestFirst.map((message) => message.id).filter(Boolean).map(String);
       const unreadMessageIds = messageIds.filter((id) => !readRhMessageIds.has(String(id)));
-      const latestMessage = sortedMessages[0] || {};
+      const latestMessage = sortedMessagesNewestFirst[0] || {};
       const hasUnread = unreadMessageIds.length > 0;
+      const authors = [...new Set(sortedMessagesNewestFirst.map((message) => message.autor || "Equipe"))];
+      const authorLabel = authors.length === 1 ? authors[0] : `${authors.length} autores`;
+
       pushNotification({
-        id: `mensagem-${author}-${latestMessage.id || latestMessage.sortAt || latestMessage.createdAt || messages.length}`,
+        id: "mensagens-rh",
         type: "mensagem",
-        title: `Mensagem · ${author}`,
-        description: messages.length === 1
-          ? latestMessage.mensagem || "Nova notificação recebida."
-          : hasUnread
-            ? `${unreadMessageIds.length} nova(s) de ${messages.length} mensagem(ns) de ${author}`
-            : `${messages.length} mensagem(ns) de ${author}`,
-        details: [...sortedMessages].reverse().slice(-20).map((message) => `${message.createdAt || "Sem data"} · ${message.mensagem || "Nova notificação recebida."}`).join("\n\n"),
+        title: "Mensagens do RH",
+        description: hasUnread
+          ? `${unreadMessageIds.length} nova(s) de ${messageIds.length} mensagem(ns)`
+          : `${messageIds.length} mensagem(ns) no acompanhamento`,
+        details: sortedMessagesOldestFirst.slice(-20).map((message) => `${message.createdAt || "Sem data"} · ${message.autor || "Equipe"}: ${message.mensagem || "Nova notificação recebida."}`).join("\n\n"),
         time: latestMessage.createdAt || "Agora",
         dateTime: latestMessage.sortAt || latestMessage.createdAt || "Agora",
         status: hasUnread ? "unread" : "pending",
         unread: hasUnread,
         view: "comunicacao",
         messageIds,
+        chatMessages: sortedMessagesOldestFirst,
+        badgeText: hasUnread ? "Não lido" : "Lida",
+        authorLabel,
       });
-    });
+    }
 
     (sourceData.denuncias || [])
       .filter((item) => item.status === "Aberta" || item.status === "Urgente")
@@ -9866,7 +9934,7 @@ class NotificationTracker {
 
   applySorting() {
     const sortValue = this.sortSelect?.value || "recente";
-    const priorityOrder = { urgent: 0, pending: 1, unread: 2, resolved: 3 };
+    const priorityOrder = { urgent: 0, unread: 1, pending: 2, resolved: 3 };
 
     this.filteredNotifications.sort((a, b) => {
       if (sortValue === "antigo") return a.dateTime - b.dateTime;
@@ -9992,7 +10060,7 @@ class NotificationTracker {
           ${notif.badgeText ? `<span class="tracker-badge ${notif.status === "urgent" ? "pending" : notif.status}">${this.escapeHtml(notif.badgeText)}</span>` : ""}
           ${notif.time ? `<span>${this.escapeHtml(notif.time)}</span>` : ""}
         </div>
-        <div class="tracker-detail-body">${this.formatDetailText(notif.details || notif.description || "Sem detalhes adicionais.")}</div>
+        <div class="tracker-detail-body">${notif.type === "mensagem" && Array.isArray(notif.chatMessages) && notif.chatMessages.length ? renderNotificationChatThread(notif.chatMessages) : this.formatDetailText(notif.details || notif.description || "Sem detalhes adicionais.")}</div>
       </div>
       <div class="tracker-detail-actions">
         <button class="primary-button" type="button" data-tracker-back>Entendi</button>
