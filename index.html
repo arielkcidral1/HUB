@@ -931,6 +931,14 @@
                 <h2>Recebidos</h2>
                 <p class="item-meta">Arquivos privados, acessíveis apenas por usuários autorizados do HUB</p>
               </div>
+              <div class="vt-filter-bar" aria-label="Filtros de Documentos de Contratados">
+                <div class="vt-filter-fields">
+                  <input id="contratado-filter-nome" type="search" placeholder="Nome" autocomplete="off" aria-label="Filtrar por nome" />
+                  <input id="contratado-filter-telefone" type="search" inputmode="numeric" placeholder="Telefone" autocomplete="off" aria-label="Filtrar por telefone" />
+                  <input id="contratado-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF" autocomplete="off" aria-label="Filtrar por CPF" />
+                </div>
+                <button class="secondary-link compact-filter-button" id="clear-contratado-filters" type="button" hidden>Limpar</button>
+              </div>
             </div>
             <div class="card-list" id="documentos-contratados-list"></div>
           </div>

@@ -4900,9 +4900,36 @@ function formatContractorDocumentList(documentos = []) {
   }).join("");
 }
 
+function getContratadoFilterValues() {
+  return {
+    nome: String(document.getElementById("contratado-filter-nome")?.value || "").trim().toLowerCase(),
+    telefone: String(document.getElementById("contratado-filter-telefone")?.value || "").replace(/\D/g, ""),
+    cpf: String(document.getElementById("contratado-filter-cpf")?.value || "").replace(/\D/g, ""),
+  };
+}
+
+function updateContratadoFilterClearButton() {
+  const clearButton = document.getElementById("clear-contratado-filters");
+  if (!clearButton) return;
+  const filters = getContratadoFilterValues();
+  clearButton.hidden = !Boolean(filters.nome || filters.telefone || filters.cpf);
+}
+
+function filterContratadoRecords(items = []) {
+  const filters = getContratadoFilterValues();
+  return items.filter((item) => {
+    if (filters.nome && !String(item.nome || "").toLowerCase().includes(filters.nome)) return false;
+    if (filters.telefone && !String(item.telefone || "").replace(/\D/g, "").includes(filters.telefone)) return false;
+    if (filters.cpf && !String(item.cpf || "").replace(/\D/g, "").includes(filters.cpf)) return false;
+    return true;
+  });
+}
+
 function renderDocumentosContratados() {
   const syncedItems = (data.documentosContratados || []).filter((item) => !String(item.id || "").startsWith("local-") && !item.pendingSync);
-  renderCards("documentos-contratados-list", syncedItems, (item) => `
+  const filteredItems = filterContratadoRecords(syncedItems);
+  updateContratadoFilterClearButton();
+  renderCards("documentos-contratados-list", filteredItems, (item) => `
     <article class="item-card">
       <div class="item-topline">
         <p class="item-title">${escapeHtml(item.nome || "Contratado não informado")}</p>
@@ -6733,6 +6760,25 @@ document.getElementById("clear-document-filters")?.addEventListener("click", () 
   });
   renderDocumentRecords();
   updateDocumentFilterClearButton();
+});
+
+document.getElementById("contratado-filter-nome")?.addEventListener("input", () => {
+  renderDocumentosContratados();
+});
+document.getElementById("contratado-filter-telefone")?.addEventListener("input", (event) => {
+  event.currentTarget.value = String(event.currentTarget.value || "").replace(/\D/g, "");
+  renderDocumentosContratados();
+});
+document.getElementById("contratado-filter-cpf")?.addEventListener("input", (event) => {
+  event.currentTarget.value = String(event.currentTarget.value || "").replace(/\D/g, "").slice(0, 11);
+  renderDocumentosContratados();
+});
+document.getElementById("clear-contratado-filters")?.addEventListener("click", () => {
+  ["contratado-filter-nome", "contratado-filter-telefone", "contratado-filter-cpf"].forEach((id) => {
+    const field = document.getElementById(id);
+    if (field) field.value = "";
+  });
+  renderDocumentosContratados();
 });
 
 document.getElementById("open-vaga-filters")?.addEventListener("click", () => {
