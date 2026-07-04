@@ -1162,11 +1162,15 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
   return true;
 }
 
-function getUnreadRhMessages() {
+function getAccessibleRhMessages() {
   const currentUser = getCurrentUserName();
-  return data.comunicados.filter(
-    (item) => canAccessChatChannel(normalizeChatChannel(item.canal)) && item.autor !== currentUser && !readRhMessageIds.has(String(item.id))
+  return (data.comunicados || []).filter(
+    (item) => canAccessChatChannel(normalizeChatChannel(item.canal)) && item.autor !== currentUser
   );
+}
+
+function getUnreadRhMessages() {
+  return getAccessibleRhMessages().filter((item) => !readRhMessageIds.has(String(item.id)));
 }
 
 function markRhMessagesRead() {
@@ -5181,9 +5185,11 @@ function renderDashboard() {
     document.getElementById("metric-documentos").textContent = documentRecords.filter((item) => !isArchivedRecord(item)).length;
   }
 
-  // Group messages by author
+  // Group messages by author. O acompanhamento mostra as mensagens recentes mesmo após leitura;
+  // a leitura só muda o estado visual/contador, não remove o item da lista.
   const messagesByAuthor = {};
-  unreadRhMessages.forEach((item) => {
+  const accessibleRhMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
+  accessibleRhMessages.forEach((item) => {
     const author = item.autor || "Equipe";
     if (!messagesByAuthor[author]) {
       messagesByAuthor[author] = [];
@@ -5195,24 +5201,30 @@ function renderDashboard() {
   const groupedMessages = Object.entries(messagesByAuthor).map(([author, messages]) => {
     // Sort messages by date (most recent first)
     const sortedMessages = [...messages].sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
-    
     const messageIds = sortedMessages.map((msg) => msg.id).filter(Boolean).map(String);
+    const unreadMessageIds = messageIds.filter((id) => !readRhMessageIds.has(String(id)));
+    const latestMessage = sortedMessages[0] || {};
+    const hasUnread = unreadMessageIds.length > 0;
     return {
       kind: "notificacao",
-      notificationId: `mensagem-${author}-${sortedMessages[0]?.id || sortedMessages[0]?.sortAt || sortedMessages[0]?.createdAt || messages.length}`,
+      notificationId: `mensagem-${author}-${latestMessage.id || latestMessage.sortAt || latestMessage.createdAt || messages.length}`,
       messageIds,
       title: `Mensagem · ${author}`,
-      text: messages.length === 1 
-        ? messages[0].mensagem || "Nova notificação recebida."
-        : `${messages.length} mensagens de ${author}`,
+      text: messages.length === 1
+        ? latestMessage.mensagem || "Nova notificação recebida."
+        : hasUnread
+          ? `${unreadMessageIds.length} nova(s) de ${messages.length} mensagem(ns) de ${author}`
+          : `${messages.length} mensagem(ns) de ${author}`,
       details: sortedMessages
-        .map((msg) => msg.mensagem || "Nova notificação recebida.")
+        .slice(0, 12)
+        .map((msg) => `${msg.createdAt || "Sem data"} · ${msg.mensagem || "Nova notificação recebida."}`)
         .join("\n\n"),
       detailsHeader: `Autor: ${author}\nTotal de mensagens: ${messages.length}`,
-      tag: "Nova",
-      date: sortedMessages[0]?.createdAt,
-      dateTime: sortedMessages[0]?.sortAt || sortedMessages[0]?.createdAt,
+      tag: hasUnread ? "Nova" : "Lida",
+      date: latestMessage.createdAt,
+      dateTime: latestMessage.sortAt || latestMessage.createdAt,
       messageCount: messages.length,
+      unread: hasUnread,
     };
   });
 
@@ -5302,13 +5314,12 @@ function renderDashboard() {
       }))
   ];
 
-  const unreadDashboardItems = dashboardItems.filter((item) => !isDashboardNotificationRead(item));
-  unreadDashboardItems.forEach((item, index) => { item._sortIndex = index; });
-  unreadDashboardItems.sort((a, b) => getDashboardItemSortValue(b, b._sortIndex) - getDashboardItemSortValue(a, a._sortIndex));
+  const sortedDashboardItems = dashboardItems.map((item, index) => ({ ...item, _sortIndex: index }));
+  sortedDashboardItems.sort((a, b) => getDashboardItemSortValue(b, b._sortIndex) - getDashboardItemSortValue(a, a._sortIndex));
 
   const dashboardPageSize = 3;
   dashboardNotificationOffset = 0;
-  const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
+  const visibleDashboardItems = sortedDashboardItems.slice(0, dashboardPageSize);
   visibleDashboardActivityItems = visibleDashboardItems;
   const previousDashboardButton = document.getElementById("dashboard-notifications-prev");
   const nextDashboardButton = document.getElementById("dashboard-notifications-next");
@@ -5332,7 +5343,11 @@ function renderDashboard() {
       dashboardTarget.innerHTML = '<p class="empty-state">Nenhuma pendência para acompanhar no momento.</p>';
     } else {
       dashboardTarget.innerHTML = visibleDashboardItems
-        .map((item, index) => `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${item.systemUpdate ? "tag" : badgeClass(item.tag)}">${escapeHtml(item.systemUpdate ? "Sistema" : item.tag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "…" : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`)
+        .map((item, index) => {
+          const itemRead = isDashboardNotificationRead(item) || (Array.isArray(item.messageIds) && item.messageIds.length && item.messageIds.every((id) => readRhMessageIds.has(String(id))));
+          const visualTag = itemRead && !item.systemUpdate ? "Lida" : item.tag;
+          return `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}${itemRead ? " is-read" : " is-unread"}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${itemRead ? "tag" : (item.systemUpdate ? "tag" : badgeClass(item.tag))}">${escapeHtml(item.systemUpdate ? "Sistema" : visualTag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "…" : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`;
+        })
         .join("");
     }
   }
@@ -5882,10 +5897,23 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
         <p data-permission-message></p>
       </div>
       <button class="secondary-button" type="button" data-permission-dismiss>Depois</button>
+      <button class="secondary-button" type="button" data-permission-test>Testar aviso</button>
       <button class="primary-button" type="button" data-permission-enable>Permitir notificações</button>
     `;
     document.body.appendChild(prompt);
     prompt.querySelector("[data-permission-enable]")?.addEventListener("click", requestDesktopNotificationPermission);
+    prompt.querySelector("[data-permission-test]")?.addEventListener("click", () => {
+      if (Notification.permission !== "granted") {
+        requestDesktopNotificationPermission();
+        return;
+      }
+      showHubCrossPageNotification("Teste de notificação HUB", "Se este aviso apareceu, as notificações fora da aba estão ativas.", {
+        type: "geral",
+        icon: "🔔",
+        tag: `hub-rh-teste-${Date.now()}`,
+        requireInteraction: true,
+      });
+    });
     prompt.querySelector("[data-permission-dismiss]")?.addEventListener("click", () => prompt.remove());
   }
 
@@ -6073,13 +6101,15 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
   if (messageIds.length) targetUrl.searchParams.set("markMessages", messageIds.join(","));
 
   const notificationOptions = {
-    body,
+    body: body || "Você tem uma nova notificação no HUB.",
     icon: "assets/logo.svg",
     badge: "assets/logo.svg",
     tag: options.tag || `hub-rh-notificacao-${Date.now()}`,
     renotify: true,
     requireInteraction: Boolean(options.requireInteraction ?? true),
     silent: false,
+    timestamp: Date.now(),
+    vibrate: [180, 80, 180, 80, 240],
     data: {
       url: targetUrl.href,
       type: options.type || "geral",
@@ -6088,8 +6118,20 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
     },
   };
 
-  // Preferimos a Notification API direta porque é a notificação nativa do navegador
-  // que aparece mesmo quando o usuário está em outra aba, página ou aplicativo.
+  // A notificação via Service Worker é a forma mais estável para aparecer fora da aba do HUB.
+  // Ela aparece como notificação nativa do navegador/Chrome quando a permissão está liberada.
+  try {
+    const registration = await registerHubNotificationServiceWorker();
+    const readyRegistration = await navigator.serviceWorker?.ready?.catch?.(() => registration) || registration;
+    if (readyRegistration?.showNotification) {
+      await readyRegistration.showNotification(title || "HUB RH", notificationOptions);
+      return true;
+    }
+  } catch (swError) {
+    console.warn("Notificação via Service Worker bloqueada:", swError);
+  }
+
+  // Fallback direto para navegadores sem Service Worker disponível.
   try {
     const notification = new Notification(title || "HUB RH", notificationOptions);
     notification.onclick = () => {
@@ -6103,23 +6145,36 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
     console.warn("Notificação direta do navegador bloqueada:", directError);
   }
 
-  // Fallback por Service Worker para navegadores que exigem SW.
-  try {
-    const registration = await registerHubNotificationServiceWorker();
-    const readyRegistration = await navigator.serviceWorker?.ready?.catch?.(() => registration) || registration;
-    if (readyRegistration?.showNotification) {
-      await readyRegistration.showNotification(title || "HUB RH", notificationOptions);
-      return true;
-    }
-  } catch (swError) {
-    console.warn("Notificação via Service Worker bloqueada:", swError);
-  }
-
   return false;
+}
+
+let hubOriginalDocumentTitle = document.title;
+let hubNotificationTitleTimer = null;
+
+function flashHubDocumentTitle(title = "Nova notificação") {
+  try {
+    hubOriginalDocumentTitle = hubOriginalDocumentTitle || document.title;
+    if (hubNotificationTitleTimer) window.clearInterval(hubNotificationTitleTimer);
+    let visible = false;
+    let ticks = 0;
+    hubNotificationTitleTimer = window.setInterval(() => {
+      ticks += 1;
+      visible = !visible;
+      document.title = visible ? `🔔 ${title}` : hubOriginalDocumentTitle;
+      if (ticks >= 20 || document.visibilityState === "visible") {
+        window.clearInterval(hubNotificationTitleTimer);
+        hubNotificationTitleTimer = null;
+        document.title = hubOriginalDocumentTitle;
+      }
+    }, 900);
+  } catch (_) {}
 }
 
 function showHubCrossPageNotification(title, message, options = {}) {
   playUserNotificationSound();
+  if (document.visibilityState === "hidden" || !document.hasFocus?.()) {
+    flashHubDocumentTitle(title || "Nova notificação");
+  }
 
   const openAndMark = () => {
     markNotificationsRead(options.notificationId ? [options.notificationId] : [], options.messageIds || []);
@@ -9473,8 +9528,8 @@ class NotificationTracker {
       });
     };
 
-    const unreadMessages = typeof getUnreadRhMessages === "function" ? getUnreadRhMessages() : [];
-    const messagesByAuthor = unreadMessages.reduce((acc, message) => {
+    const accessibleMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
+    const messagesByAuthor = accessibleMessages.reduce((acc, message) => {
       const author = message.autor || "Equipe";
       acc[author] = acc[author] || [];
       acc[author].push(message);
@@ -9483,20 +9538,26 @@ class NotificationTracker {
 
     Object.entries(messagesByAuthor).forEach(([author, messages]) => {
       const sortedMessages = [...messages].sort((a, b) => this.getTimeValue(b.sortAt || b.createdAt) - this.getTimeValue(a.sortAt || a.createdAt));
+      const messageIds = sortedMessages.map((message) => message.id).filter(Boolean).map(String);
+      const unreadMessageIds = messageIds.filter((id) => !readRhMessageIds.has(String(id)));
+      const latestMessage = sortedMessages[0] || {};
+      const hasUnread = unreadMessageIds.length > 0;
       pushNotification({
-        id: `mensagem-${author}-${sortedMessages[0]?.id || sortedMessages[0]?.sortAt || sortedMessages[0]?.createdAt || messages.length}`,
+        id: `mensagem-${author}-${latestMessage.id || latestMessage.sortAt || latestMessage.createdAt || messages.length}`,
         type: "mensagem",
         title: `Mensagem · ${author}`,
         description: messages.length === 1
-          ? messages[0].mensagem || "Nova notificação recebida."
-          : `${messages.length} mensagens de ${author}`,
-        details: sortedMessages.map((message) => message.mensagem || "Nova notificação recebida.").join("\n\n"),
-        time: sortedMessages[0]?.createdAt || "Agora",
-        dateTime: sortedMessages[0]?.sortAt || sortedMessages[0]?.createdAt || "Agora",
-        status: "unread",
-        unread: true,
+          ? latestMessage.mensagem || "Nova notificação recebida."
+          : hasUnread
+            ? `${unreadMessageIds.length} nova(s) de ${messages.length} mensagem(ns) de ${author}`
+            : `${messages.length} mensagem(ns) de ${author}`,
+        details: sortedMessages.slice(0, 20).map((message) => `${message.createdAt || "Sem data"} · ${message.mensagem || "Nova notificação recebida."}`).join("\n\n"),
+        time: latestMessage.createdAt || "Agora",
+        dateTime: latestMessage.sortAt || latestMessage.createdAt || "Agora",
+        status: hasUnread ? "unread" : "pending",
+        unread: hasUnread,
         view: "comunicacao",
-        messageIds: sortedMessages.map((message) => message.id).filter(Boolean),
+        messageIds,
       });
     });
 
