@@ -2570,7 +2570,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-soft);
-  padding: 16px;
+  padding: 18px;
 }
 
 .day-event-card p {
@@ -4574,11 +4574,11 @@ form.panel[data-public-chamados="true"].panel {
   position: fixed;
   top: 22px;
   right: 22px;
-  z-index: 9999;
+  z-index: 2147483647;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: min(430px, calc(100vw - 32px));
+  width: min(480px, calc(100vw - 32px));
   pointer-events: none;
 }
 
