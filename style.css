@@ -1365,6 +1365,13 @@ textarea {
   font-size: 14px;
 }
 
+.chat-message-filter input::-webkit-search-cancel-button,
+.chat-message-filter input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
 .chat-message-filter:focus-within {
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgba(12, 98, 89, 0.1);
