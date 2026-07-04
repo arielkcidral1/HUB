@@ -4041,7 +4041,7 @@ form.panel[data-public-chamados="true"].panel {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  padding: 6px;
 }
 
 .tracker-modal[hidden] {
@@ -4062,12 +4062,12 @@ form.panel[data-public-chamados="true"].panel {
   position: relative;
   z-index: 1001;
   background: var(--surface);
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  width: min(98vw, 1520px);
-  max-width: 1520px;
-  height: min(94vh, 940px);
-  max-height: 96vh;
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+  width: calc(100vw - 12px);
+  max-width: none;
+  height: calc(100vh - 12px);
+  max-height: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -4469,13 +4469,13 @@ form.panel[data-public-chamados="true"].panel {
 
 @media (max-width: 768px) {
   .tracker-modal {
-    padding: 10px;
+    padding: 4px;
   }
 
   .tracker-modal-content {
-    width: min(98vw, 100%);
-    height: 95vh;
-    max-height: 95vh;
+    width: calc(100vw - 8px);
+    height: calc(100dvh - 8px);
+    max-height: none;
   }
 
   .tracker-modal-filters {
@@ -4530,7 +4530,9 @@ form.panel[data-public-chamados="true"].panel {
 
 @media (max-width: 480px) {
   .tracker-modal-content {
-    border-radius: 8px;
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
   }
 
   .tracker-modal-filters {
