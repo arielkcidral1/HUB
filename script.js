@@ -5197,7 +5197,7 @@ function renderDashboard() {
   }
 
   // Mensagens do RH aparecem como um único bloco no acompanhamento.
-  // A leitura marca o bloco como lido, mas não remove a visualização; apenas reduz sua prioridade.
+  // Quando ficam lidas, não mudam de cor; apenas perdem prioridade para itens novos.
   const accessibleRhMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
   const sortedRhMessagesNewestFirst = [...accessibleRhMessages]
     .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
@@ -5210,9 +5210,6 @@ function renderDashboard() {
     const unreadMessageIds = messageIds.filter((id) => !readRhMessageIds.has(String(id)));
     const latestMessage = sortedRhMessagesNewestFirst[0] || {};
     const hasUnread = unreadMessageIds.length > 0;
-    const authors = [...new Set(sortedRhMessagesNewestFirst.map((msg) => msg.autor || "Equipe"))];
-    const authorLabel = authors.length === 1 ? authors[0] : `${authors.length} autores`;
-
     groupedMessages.push({
       kind: "notificacao",
       notificationId: "mensagens-rh",
@@ -5226,7 +5223,7 @@ function renderDashboard() {
         .slice(-20)
         .map((msg) => `${msg.createdAt || "Sem data"} · ${msg.autor || "Equipe"}: ${msg.mensagem || "Nova notificação recebida."}`)
         .join("\n\n"),
-      detailsHeader: `Comunicação RH\n${authorLabel}`,
+      detailsHeader: "Comunicação RH",
       tag: hasUnread ? "Nova" : "Lida",
       date: latestMessage.createdAt,
       dateTime: latestMessage.sortAt || latestMessage.createdAt,
@@ -6164,36 +6161,46 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
     },
   };
 
-  // Primeiro tenta a notificação direta do navegador. No Chrome/Edge desktop,
-  // esta é a forma que normalmente aparece como aviso visual fora da aba/app.
-  try {
-    const notification = new Notification(title || "HUB RH", notificationOptions);
-    notification.onclick = () => {
-      try { markNotificationsRead(options.notificationId ? [options.notificationId] : [], messageIds); } catch (_) {}
-      window.focus?.();
-      openNotificationTrackerFromPopout();
-      notification.close?.();
-    };
-    return true;
-  } catch (directError) {
-    console.warn("Notificação direta do navegador bloqueada:", directError);
-  }
-
-  // Fallback via Service Worker. Mantém compatibilidade e melhora o clique
-  // quando a aba do HUB está em segundo plano.
-  try {
-    const registration = await registerHubNotificationServiceWorker();
-    const readyPromise = navigator.serviceWorker?.ready?.catch?.(() => registration) || Promise.resolve(registration);
-    const readyRegistration = await Promise.race([
-      readyPromise,
-      new Promise((resolve) => window.setTimeout(() => resolve(registration), 1800)),
-    ]);
-    if (readyRegistration?.showNotification) {
-      await readyRegistration.showNotification(title || "HUB RH", notificationOptions);
-      return true;
+  const showViaServiceWorker = async () => {
+    try {
+      const registration = await registerHubNotificationServiceWorker();
+      const readyPromise = navigator.serviceWorker?.ready?.catch?.(() => registration) || Promise.resolve(registration);
+      const readyRegistration = await Promise.race([
+        readyPromise,
+        new Promise((resolve) => window.setTimeout(() => resolve(registration), 1600)),
+      ]);
+      if (readyRegistration?.showNotification) {
+        await readyRegistration.showNotification(title || "HUB RH", notificationOptions);
+        return true;
+      }
+    } catch (swError) {
+      console.warn("Notificação via Service Worker bloqueada:", swError);
     }
-  } catch (swError) {
-    console.warn("Notificação via Service Worker bloqueada:", swError);
+    return false;
+  };
+
+  const showDirect = () => {
+    try {
+      const notification = new Notification(title || "HUB RH", notificationOptions);
+      notification.onclick = () => {
+        try { markNotificationsRead(options.notificationId ? [options.notificationId] : [], messageIds); } catch (_) {}
+        window.focus?.();
+        openNotificationTrackerFromPopout();
+        notification.close?.();
+      };
+      return true;
+    } catch (directError) {
+      console.warn("Notificação direta do navegador bloqueada:", directError);
+      return false;
+    }
+  };
+
+  if (document.visibilityState === "hidden" || !document.hasFocus?.()) {
+    if (await showViaServiceWorker()) return true;
+    if (showDirect()) return true;
+  } else {
+    if (showDirect()) return true;
+    if (await showViaServiceWorker()) return true;
   }
 
   return false;
@@ -6221,8 +6228,20 @@ function flashHubDocumentTitle(title = "Nova notificação") {
   } catch (_) {}
 }
 
+
+function updateHubAppBadge(count = 0) {
+  try {
+    if (navigator.setAppBadge && count > 0) {
+      navigator.setAppBadge(count);
+    } else if (navigator.clearAppBadge && count <= 0) {
+      navigator.clearAppBadge();
+    }
+  } catch (_) {}
+}
+
 function showHubCrossPageNotification(title, message, options = {}) {
   playUserNotificationSound();
+  updateHubAppBadge(1);
   if (document.visibilityState === "hidden" || !document.hasFocus?.()) {
     flashHubDocumentTitle(title || "Nova notificação");
   }
@@ -6920,6 +6939,7 @@ function renderNotificationChatThread(messages = [], options = {}) {
 
   const currentUser = typeof getCurrentUserName === "function" ? getCurrentUserName() : "";
   let previousDate = "";
+
   const html = normalizedMessages.map((item) => {
     const messageDate = typeof getChatMessageDate === "function" ? getChatMessageDate(item.createdAt) : "";
     const messageTime = typeof getChatMessageTimeLabel === "function" ? getChatMessageTimeLabel(item.createdAt) : (item.createdAt || "");
@@ -6929,9 +6949,8 @@ function renderNotificationChatThread(messages = [], options = {}) {
     previousDate = messageDate || previousDate;
 
     const authorName = item.autor || "Equipe";
-    const avatar = typeof getAuthorAvatar === "function"
-      ? getAuthorAvatar(authorName)
-      : `<div class="chat-avatar-fallback">${escapeHtml(String(authorName).charAt(0).toUpperCase() || "?")}</div>`;
+    const initial = escapeHtml(String(authorName).trim().charAt(0).toUpperCase() || "?");
+    const avatar = `<div class="chat-avatar-fallback">${initial}</div>`;
     const formattedMessage = item.mensagem
       ? (typeof renderFormattedChatText === "function" ? renderFormattedChatText(item.mensagem) : escapeHtml(item.mensagem))
       : "";
@@ -6970,8 +6989,7 @@ function openDashboardActivity(index) {
     detailContent = renderNotificationChatThread(item.chatMessages);
   } else {
     const details = String(item.details || item.text || "Sem detalhes disponíveis.")
-      .split("
-")
+      .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
     const detailMarkup = [];
@@ -6990,6 +7008,7 @@ function openDashboardActivity(index) {
     }
     detailContent = `<ul class="dashboard-detail-list">${detailMarkup.join("")}</ul>`;
   }
+
   const overlay = document.createElement("div");
   overlay.id = "custom-modal";
   overlay.className = "modal-overlay";
@@ -9700,8 +9719,6 @@ class NotificationTracker {
       const unreadMessageIds = messageIds.filter((id) => !readRhMessageIds.has(String(id)));
       const latestMessage = sortedMessagesNewestFirst[0] || {};
       const hasUnread = unreadMessageIds.length > 0;
-      const authors = [...new Set(sortedMessagesNewestFirst.map((message) => message.autor || "Equipe"))];
-      const authorLabel = authors.length === 1 ? authors[0] : `${authors.length} autores`;
 
       pushNotification({
         id: "mensagens-rh",
@@ -9710,7 +9727,10 @@ class NotificationTracker {
         description: hasUnread
           ? `${unreadMessageIds.length} nova(s) de ${messageIds.length} mensagem(ns)`
           : `${messageIds.length} mensagem(ns) no acompanhamento`,
-        details: sortedMessagesOldestFirst.slice(-20).map((message) => `${message.createdAt || "Sem data"} · ${message.autor || "Equipe"}: ${message.mensagem || "Nova notificação recebida."}`).join("\n\n"),
+        details: sortedMessagesOldestFirst
+          .slice(-20)
+          .map((message) => `${message.createdAt || "Sem data"} · ${message.autor || "Equipe"}: ${message.mensagem || "Nova mensagem."}`)
+          .join("\n\n"),
         time: latestMessage.createdAt || "Agora",
         dateTime: latestMessage.sortAt || latestMessage.createdAt || "Agora",
         status: hasUnread ? "unread" : "pending",
@@ -9719,7 +9739,6 @@ class NotificationTracker {
         messageIds,
         chatMessages: sortedMessagesOldestFirst,
         badgeText: hasUnread ? "Não lido" : "Lida",
-        authorLabel,
       });
     }
 
