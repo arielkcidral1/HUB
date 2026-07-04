@@ -1666,7 +1666,8 @@ textarea {
   width: auto;
   min-height: 40px;
   max-height: 132px;
-  resize: vertical;
+  overflow-y: auto;
+  resize: none;
   line-height: 1.45;
 }
 
@@ -2251,11 +2252,6 @@ textarea {
   cursor: pointer;
 }
 
-.chat-preview-chip:hover {
-  border-color: var(--teal);
-  transform: translateY(-1px);
-}
-
 .chat-preview-chip.is-active {
   border: 4px solid #22c55e;
   background: var(--surface);
@@ -2285,6 +2281,11 @@ textarea {
   color: var(--danger);
   border-color: rgba(192, 57, 43, 0.35);
   background: var(--danger-surface);
+}
+
+.chat-preview-chip:hover {
+  border-color: var(--teal);
+  transform: translateY(-1px);
 }
 
 .chat-preview-chip-image {
@@ -3226,20 +3227,23 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer {
-    align-items: stretch;
+    align-items: flex-end;
+    gap: 8px;
   }
 
   .chat-composer textarea[name="mensagem"] {
-    flex-basis: 100%;
+    flex: 1 1 100%;
     order: 2;
   }
 
   .chat-attachment-preview {
     order: 1;
+    flex-basis: 100%;
   }
 
   .chat-attach-menu-wrap,
   .chat-emoji-menu-wrap,
+  .poll-button,
   .record-audio-button,
   .send-button {
     order: 3;
@@ -3264,10 +3268,6 @@ form.panel[data-public-chamados="true"].panel {
 
   .hero-copy p {
     font-size: 20px;
-  }
-
-  .chat-composer {
-    gap: 8px;
   }
 
   .chat-workspace {
