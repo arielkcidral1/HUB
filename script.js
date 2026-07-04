@@ -1,4 +1,4 @@
-﻿﻿const STORAGE_KEY = "hub-rh-data";
+﻿const STORAGE_KEY = "hub-rh-data";
 const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const CONTRACTOR_PENDING_DOCUMENTS_KEY = "hub-contractor-pending-documents";
 const SESSION_KEY = "hub-rh-session";
@@ -8773,279 +8773,439 @@ document.addEventListener('click', (event) => {
 // Classe para gerenciar o modal de acompanhamento
 class NotificationTracker {
   constructor() {
-    this.modal = document.getElementById('tracker-modal');
-    this.modalOverlay = document.getElementById('tracker-modal-overlay');
-    this.modalClose = document.getElementById('tracker-modal-close');
-    this.openBtn = document.getElementById('dashboard-notifications-tracker');
-    this.notificationsList = document.getElementById('tracker-notifications-list');
-    this.emptyState = document.getElementById('tracker-empty');
-    
-    // Filtros e busca
-    this.filterType = document.getElementById('tracker-filter-type');
-    this.searchInput = document.getElementById('tracker-search');
-    this.sortSelect = document.getElementById('tracker-sort');
-    
-    // Estatísticas
-    this.statTotal = document.getElementById('tracker-stat-total');
-    this.statUnread = document.getElementById('tracker-stat-unread');
-    this.statPending = document.getElementById('tracker-stat-pending');
-    
-    // Botões de ação
-    this.markAllReadBtn = document.getElementById('tracker-mark-all-read');
-    this.clearAllBtn = document.getElementById('tracker-clear-all');
-    
+    this.modal = document.getElementById("tracker-modal");
+    this.modalOverlay = document.getElementById("tracker-modal-overlay");
+    this.modalClose = document.getElementById("tracker-modal-close");
+    this.openBtn = document.getElementById("dashboard-notifications-tracker");
+    this.notificationsList = document.getElementById("tracker-notifications-list");
+    this.emptyState = document.getElementById("tracker-empty");
+
+    this.filterType = document.getElementById("tracker-filter-type");
+    this.searchInput = document.getElementById("tracker-search");
+    this.sortSelect = document.getElementById("tracker-sort");
+
+    this.statTotal = document.getElementById("tracker-stat-total");
+    this.statUnread = document.getElementById("tracker-stat-unread");
+    this.statPending = document.getElementById("tracker-stat-pending");
+
+    this.markAllReadBtn = document.getElementById("tracker-mark-all-read");
+    this.clearAllBtn = document.getElementById("tracker-clear-all");
+
     this.notifications = [];
     this.filteredNotifications = [];
-    
+
     this.init();
   }
 
   init() {
-    // Event listeners
-    this.openBtn?.addEventListener('click', () => this.openModal());
-    this.modalClose?.addEventListener('click', () => this.closeModal());
-    this.modalOverlay?.addEventListener('click', () => this.closeModal());
-    this.filterType?.addEventListener('change', () => this.applyFilters());
-    this.searchInput?.addEventListener('input', () => this.applyFilters());
-    this.sortSelect?.addEventListener('change', () => this.applySorting());
-    this.markAllReadBtn?.addEventListener('click', () => this.markAllRead());
-    this.clearAllBtn?.addEventListener('click', () => this.clearAll());
-    
-    // Fechar com ESC
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !this.modal?.hidden) {
-        this.closeModal();
-      }
+    this.openBtn?.addEventListener("click", () => this.openModal());
+    this.modalClose?.addEventListener("click", () => this.closeModal());
+    this.modalOverlay?.addEventListener("click", () => this.closeModal());
+    this.filterType?.addEventListener("change", () => this.applyFilters());
+    this.searchInput?.addEventListener("input", () => this.applyFilters());
+    this.sortSelect?.addEventListener("change", () => this.applySorting());
+    this.markAllReadBtn?.addEventListener("click", () => this.markAllRead());
+    this.clearAllBtn?.addEventListener("click", () => this.clearAll());
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !this.modal?.hidden) this.closeModal();
     });
-    
-    // Carregar notificações iniciais
+
     this.loadNotifications();
   }
 
   openModal() {
-    if (this.modal) {
-      this.modal.removeAttribute('hidden');
-      document.body.style.overflow = 'hidden';
-      this.loadNotifications();
-    }
+    if (!this.modal) return;
+    this.loadNotifications();
+    this.modal.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+    this.searchInput?.focus();
   }
 
   closeModal() {
-    if (this.modal) {
-      this.modal.setAttribute('hidden', '');
-      document.body.style.overflow = '';
-    }
+    if (!this.modal) return;
+    this.modal.setAttribute("hidden", "");
+    document.body.style.overflow = "";
   }
 
   loadNotifications() {
-    // Coletar notificações de todos os dashboards
-    this.notifications = [];
-    
-    const dashboardList = document.getElementById('dashboard-list');
-    if (dashboardList) {
-      const items = dashboardList.querySelectorAll('[data-notification-type]');
-      items.forEach((item) => {
-        this.notifications.push(this.parseNotificationItem(item));
-      });
-    }
-    
-    // Ordenar por padrão
-    this.sortNotifications('recente');
+    this.notifications = this.collectNotifications();
     this.applyFilters();
     this.updateStats();
   }
 
-  parseNotificationItem(element) {
-    const type = element.getAttribute('data-notification-type') || 'geral';
-    const title = element.querySelector('.activity-item-title')?.textContent || 'Notificação';
-    const description = element.querySelector('.activity-item-meta')?.textContent || '';
-    const time = element.querySelector('.activity-item-time')?.textContent || 'Recentemente';
-    const isUnread = element.classList.contains('unread');
-    const status = element.getAttribute('data-status') || 'pending';
-    
-    return {
-      id: Math.random().toString(36).substr(2, 9),
-      type,
-      title,
-      description,
-      time,
-      unread: isUnread,
-      status,
-      element,
-      icon: this.getIconForType(type),
-      badgeText: this.getBadgeText(status)
+  collectNotifications() {
+    const notifications = [];
+    const sourceData = typeof data === "object" && data ? data : {};
+
+    const pushNotification = (item = {}) => {
+      const type = item.type || "geral";
+      const status = item.status || "pending";
+      const time = item.time || item.date || "Recentemente";
+      notifications.push({
+        id: item.id || `${type}-${notifications.length}-${Date.now()}`,
+        type,
+        title: item.title || "Notificação",
+        description: item.description || item.text || "",
+        details: item.details || item.description || item.text || "",
+        time,
+        dateTime: this.getTimeValue(item.dateTime || time),
+        unread: Boolean(item.unread || status === "unread" || status === "urgent"),
+        status,
+        view: item.view || this.getViewForType(type),
+        icon: item.icon || this.getIconForType(type),
+        badgeText: item.badgeText || this.getBadgeText(status),
+      });
     };
+
+    const unreadMessages = typeof getUnreadRhMessages === "function" ? getUnreadRhMessages() : [];
+    const messagesByAuthor = unreadMessages.reduce((acc, message) => {
+      const author = message.autor || "Equipe";
+      acc[author] = acc[author] || [];
+      acc[author].push(message);
+      return acc;
+    }, {});
+
+    Object.entries(messagesByAuthor).forEach(([author, messages]) => {
+      const sortedMessages = [...messages].sort((a, b) => this.getTimeValue(b.createdAt) - this.getTimeValue(a.createdAt));
+      pushNotification({
+        id: `mensagem-${author}`,
+        type: "mensagem",
+        title: `Mensagem · ${author}`,
+        description: messages.length === 1
+          ? messages[0].mensagem || "Nova notificação recebida."
+          : `${messages.length} mensagens de ${author}`,
+        details: sortedMessages.map((message) => message.mensagem || "Nova notificação recebida.").join("\n\n"),
+        time: sortedMessages[0]?.createdAt || "Agora",
+        status: "unread",
+        unread: true,
+        view: "comunicacao",
+      });
+    });
+
+    (sourceData.denuncias || [])
+      .filter((item) => item.status === "Aberta" || item.status === "Urgente")
+      .forEach((item) => pushNotification({
+        id: `denuncia-${item.id}`,
+        type: "denuncia",
+        title: "Denúncia anônima",
+        description: item.descricao || "Nova denúncia recebida.",
+        details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "Não informado"}\n\n${item.descricao || "Sem descrição."}`,
+        time: item.createdAt || "Recentemente",
+        status: item.status === "Urgente" ? "urgent" : "pending",
+        unread: true,
+        view: "denuncias",
+      }));
+
+    (sourceData.chamados || [])
+      .filter((item) => item.status === "Aberto")
+      .forEach((item) => {
+        const items = typeof parseEpiItems === "function" ? parseEpiItems(item.epis) : [];
+        const itemDetails = items.length
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "Não informados";
+        pushNotification({
+          id: `chamado-${item.id}`,
+          type: "chamado",
+          title: `Chamado · ${item.unidade || "Unidade não informada"}`,
+          description: item.epis || "Itens não informados.",
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nSetor: ${item.setor || "Não informado"}\nItens solicitados:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "Não informada"}`,
+          time: item.createdAt || "Recentemente",
+          status: "pending",
+          unread: true,
+          view: "chamados",
+        });
+      });
+
+    (sourceData.malotes || [])
+      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
+      .forEach((item) => {
+        const items = typeof parseEpiItems === "function" ? parseEpiItems(item.epis) : [];
+        const itemDetails = items.length
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "Não informados";
+        const statusText = String(item.status || "").toLowerCase();
+        const isResolved = statusText.includes("entreg") || statusText.includes("conclu") || statusText.includes("finaliz");
+        pushNotification({
+          id: `malote-${item.id}`,
+          type: "malote",
+          title: `Malote · ${item.destino || "Destino não informado"}`,
+          description: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
+          time: item.createdAt || "Recentemente",
+          status: isResolved ? "resolved" : "pending",
+          unread: !isResolved,
+          view: "malotes",
+        });
+      });
+
+    (sourceData.vagas || [])
+      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
+      .forEach((item) => {
+        const isClosed = String(item.status || "").toLowerCase() === "fechada";
+        pushNotification({
+          id: `vaga-${item.id}`,
+          type: "vaga",
+          title: `Vaga · ${item.cargo || "Cargo não informado"}`,
+          description: item.descricao || "Vaga atualizada.",
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
+          time: item.createdAt || "Recentemente",
+          status: isClosed ? "resolved" : "pending",
+          unread: !isClosed,
+          view: "vagas",
+        });
+      });
+
+    const docs = typeof documentRecords !== "undefined" && Array.isArray(documentRecords) ? documentRecords : [];
+    docs
+      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
+      .forEach((item) => {
+        const label = typeof documentLabels === "object" && documentLabels ? documentLabels[item.type] || item.type : item.type;
+        pushNotification({
+          id: `documento-${item.id}`,
+          type: "documento",
+          title: `Documento · ${label || "Registro"}`,
+          description: item.summary || "Documento registrado.",
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${label || "Registro"}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
+          time: item.createdAt || "Recentemente",
+          status: "pending",
+          unread: true,
+          view: "documentos",
+        });
+      });
+
+    const upcoming = typeof getUpcomingEvents === "function" ? getUpcomingEvents() : [];
+    upcoming.forEach((item) => {
+      const eventDate = item.data || "";
+      const eventTime = item.horario || "";
+      const formattedDate = typeof formatEventDate === "function" ? formatEventDate(eventDate) : eventDate;
+      const formattedTime = typeof formatEventTime === "function" ? formatEventTime(eventTime) : eventTime;
+      pushNotification({
+        id: `evento-${item.id}`,
+        type: "evento",
+        title: `Evento · ${item.titulo || "Compromisso"}`,
+        description: item.descricao || [formattedDate, formattedTime].filter(Boolean).join(" · "),
+        details: `Título: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "Não informada"}\nHorário: ${formattedTime || "Não informado"}\nResponsável: ${item.responsavel || "Não informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descrição."}`,
+        time: [formattedDate, formattedTime].filter(Boolean).join(" · ") || "Recentemente",
+        dateTime: `${eventDate || ""}T${eventTime || "00:00"}`,
+        status: "pending",
+        unread: false,
+        view: "calendario",
+      });
+    });
+
+    return notifications.sort((a, b) => b.dateTime - a.dateTime);
+  }
+
+  getTimeValue(value) {
+    if (!value) return 0;
+    const text = String(value).trim();
+    if (!text) return 0;
+    if (text.toLowerCase() === "hoje" || text.toLowerCase() === "agora") return Date.now();
+
+    const parsed = new Date(text);
+    if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
+
+    const brDateTime = text.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,?\s*(\d{1,2}):(\d{2}))?/);
+    if (brDateTime) {
+      const [, day, month, year, hour = "0", minute = "0"] = brDateTime;
+      return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)).getTime();
+    }
+
+    const isoDateTime = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+    if (isoDateTime) {
+      const [, year, month, day, hour = "0", minute = "0"] = isoDateTime;
+      return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)).getTime();
+    }
+
+    return 0;
+  }
+
+  getViewForType(type) {
+    const views = {
+      denuncia: "denuncias",
+      mensagem: "comunicacao",
+      malote: "malotes",
+      chamado: "chamados",
+      vaga: "vagas",
+      evento: "calendario",
+      documento: "documentos",
+    };
+    return views[type] || "dashboard";
   }
 
   getIconForType(type) {
     const icons = {
-      'denuncia': '🚨',
-      'mensagem': '💬',
-      'malote': '📦',
-      'chamado': '🎫',
-      'vaga': '💼',
-      'evento': '📅',
-      'documento': '📄',
-      'geral': '📢'
+      denuncia: "🚨",
+      mensagem: "💬",
+      malote: "📦",
+      chamado: "🎫",
+      vaga: "💼",
+      evento: "📅",
+      documento: "📄",
+      geral: "📢",
     };
-    return icons[type] || '📢';
+    return icons[type] || "📢";
   }
 
   getBadgeText(status) {
     const badges = {
-      'unread': 'Não lido',
-      'pending': 'Pendente',
-      'resolved': 'Resolvido',
-      'urgent': 'Urgente'
+      unread: "Não lido",
+      pending: "Pendente",
+      resolved: "Resolvido",
+      urgent: "Urgente",
     };
-    return badges[status] || '';
+    return badges[status] || "";
   }
 
   applyFilters() {
-    const filterValue = this.filterType?.value || '';
-    const searchValue = this.searchInput?.value.toLowerCase() || '';
-    
+    const filterValue = this.filterType?.value || "";
+    const searchValue = (this.searchInput?.value || "").trim().toLowerCase();
+
     this.filteredNotifications = this.notifications.filter((notif) => {
       const typeMatch = !filterValue || notif.type === filterValue;
-      const searchMatch = !searchValue || 
-        notif.title.toLowerCase().includes(searchValue) ||
-        notif.description.toLowerCase().includes(searchValue);
-      
+      const searchText = [notif.title, notif.description, notif.details, notif.time, this.humanizeType(notif.type)]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      const searchMatch = !searchValue || searchText.includes(searchValue);
       return typeMatch && searchMatch;
     });
-    
+
     this.applySorting();
+    this.updateStats();
   }
 
   applySorting() {
-    const sortValue = this.sortSelect?.value || 'recente';
-    
-    switch(sortValue) {
-      case 'antigo':
-        this.filteredNotifications.reverse();
-        break;
-      case 'tipo':
-        this.filteredNotifications.sort((a, b) => a.type.localeCompare(b.type));
-        break;
-      case 'prioridade':
-        const priorityOrder = { urgent: 0, pending: 1, unread: 2, resolved: 3 };
-        this.filteredNotifications.sort((a, b) => 
-          (priorityOrder[a.status] || 999) - (priorityOrder[b.status] || 999)
-        );
-        break;
-      case 'recente':
-      default:
-        // Já vem em ordem recente por padrão
-        break;
-    }
-    
+    const sortValue = this.sortSelect?.value || "recente";
+    const priorityOrder = { urgent: 0, pending: 1, unread: 2, resolved: 3 };
+
+    this.filteredNotifications.sort((a, b) => {
+      if (sortValue === "antigo") return a.dateTime - b.dateTime;
+      if (sortValue === "tipo") return this.humanizeType(a.type).localeCompare(this.humanizeType(b.type), "pt-BR");
+      if (sortValue === "prioridade") {
+        const priorityDiff = (priorityOrder[a.status] ?? 999) - (priorityOrder[b.status] ?? 999);
+        return priorityDiff || b.dateTime - a.dateTime;
+      }
+      return b.dateTime - a.dateTime;
+    });
+
     this.renderNotifications();
   }
 
   sortNotifications(order) {
-    this.sortSelect && (this.sortSelect.value = order);
+    if (this.sortSelect) this.sortSelect.value = order;
     this.applySorting();
   }
 
   renderNotifications() {
     if (!this.notificationsList) return;
-    
-    this.notificationsList.innerHTML = '';
-    
-    if (this.filteredNotifications.length === 0) {
-      this.emptyState?.removeAttribute('hidden');
+
+    this.notificationsList.innerHTML = "";
+
+    if (!this.filteredNotifications.length) {
+      this.emptyState?.removeAttribute("hidden");
       return;
     }
-    
-    this.emptyState?.setAttribute('hidden', '');
-    
+
+    this.emptyState?.setAttribute("hidden", "");
+
     this.filteredNotifications.forEach((notif) => {
-      const li = document.createElement('li');
+      const li = document.createElement("li");
       li.className = `tracker-notification-item ${notif.type}`;
-      if (notif.unread) li.classList.add('unread');
-      
-      let badgeHTML = '';
-      if (notif.badgeText) {
-        const badgeClass = notif.unread ? 'unread' : (notif.status === 'pending' ? 'pending' : 'resolved');
-        badgeHTML = `<span class="tracker-badge ${badgeClass}">${notif.badgeText}</span>`;
-      }
-      
+      if (notif.unread) li.classList.add("unread");
+      li.tabIndex = 0;
+      li.setAttribute("role", "button");
+      li.setAttribute("aria-label", `Abrir ${this.humanizeType(notif.type)}: ${notif.title}`);
+
+      const badgeClass = notif.status === "urgent" ? "pending" : notif.status;
+      const badgeHTML = notif.badgeText ? `<span class="tracker-badge ${badgeClass}">${this.escapeHtml(notif.badgeText)}</span>` : "";
+
       li.innerHTML = `
         <div class="tracker-notification-icon">${notif.icon}</div>
         <div class="tracker-notification-content">
           <div class="tracker-notification-type">${this.humanizeType(notif.type)}</div>
           <h3 class="tracker-notification-title">${this.escapeHtml(notif.title)}</h3>
-          ${notif.description ? `<p class="tracker-notification-description">${this.escapeHtml(notif.description)}</p>` : ''}
-          <div class="tracker-notification-time">${notif.time}</div>
+          ${notif.description ? `<p class="tracker-notification-description">${this.escapeHtml(notif.description)}</p>` : ""}
+          <div class="tracker-notification-time">${this.escapeHtml(notif.time)}</div>
         </div>
-        <div class="tracker-notification-badge">
-          ${badgeHTML}
-        </div>
+        <div class="tracker-notification-badge">${badgeHTML}</div>
       `;
-      
-      li.addEventListener('click', () => {
-        notif.element?.scrollIntoView({ behavior: 'smooth' });
-        notif.element?.classList.add('highlight');
-        setTimeout(() => notif.element?.classList.remove('highlight'), 2000);
-        this.closeModal();
+
+      const openNotification = () => this.openNotification(notif);
+      li.addEventListener("click", openNotification);
+      li.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openNotification();
+        }
       });
-      
+
       this.notificationsList.appendChild(li);
     });
   }
 
+  openNotification(notif) {
+    this.closeModal();
+    if (notif.view && typeof activateView === "function") {
+      activateView(notif.view);
+    }
+    if (typeof showModal === "function" && notif.details) {
+      setTimeout(() => showModal(notif.title, notif.details, notif.status === "urgent" ? "error" : "info"), 80);
+    }
+  }
+
   humanizeType(type) {
     const types = {
-      'denuncia': 'Denúncia',
-      'mensagem': 'Mensagem RH',
-      'malote': 'Malote',
-      'chamado': 'Chamado',
-      'vaga': 'Vaga',
-      'evento': 'Evento',
-      'documento': 'Documento',
-      'geral': 'Geral'
+      denuncia: "Denúncia",
+      mensagem: "Mensagem RH",
+      malote: "Malote",
+      chamado: "Chamado",
+      vaga: "Vaga",
+      evento: "Evento",
+      documento: "Documento",
+      geral: "Geral",
     };
     return types[type] || type;
   }
 
   escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
+    const div = document.createElement("div");
+    div.textContent = String(text ?? "");
     return div.innerHTML;
   }
 
   updateStats() {
     const total = this.notifications.length;
-    const unread = this.notifications.filter(n => n.unread).length;
-    const pending = this.notifications.filter(n => n.status === 'pending').length;
-    
+    const unread = this.notifications.filter((notif) => notif.unread || notif.status === "unread" || notif.status === "urgent").length;
+    const pending = this.notifications.filter((notif) => notif.status === "pending" || notif.status === "urgent").length;
+
     if (this.statTotal) this.statTotal.textContent = total;
     if (this.statUnread) this.statUnread.textContent = unread;
     if (this.statPending) this.statPending.textContent = pending;
   }
 
   markAllRead() {
-    this.notifications.forEach(notif => {
-      notif.unread = false;
-      notif.element?.classList.remove('unread');
-    });
-    this.renderNotifications();
+    this.notifications = this.notifications.map((notif) => ({ ...notif, unread: false, status: notif.status === "unread" ? "pending" : notif.status }));
+    this.applyFilters();
     this.updateStats();
-    this.showNotification('Todas as notificações marcadas como lidas');
+    this.showNotification("Todas as notificações foram marcadas como lidas.");
   }
 
   clearAll() {
-    if (confirm('Tem certeza que deseja limpar todas as notificações?')) {
-      this.notifications = [];
-      this.filteredNotifications = [];
-      this.renderNotifications();
-      this.updateStats();
-      this.showNotification('Todas as notificações foram removidas');
-    }
+    if (!confirm("Tem certeza que deseja limpar a visualização das notificações?")) return;
+    this.notifications = [];
+    this.filteredNotifications = [];
+    this.renderNotifications();
+    this.updateStats();
+    this.showNotification("Visualização de notificações limpa.");
   }
 
   showNotification(message) {
-    // Usar sistema de notificação existente se disponível
+    if (typeof showModal === "function") {
+      showModal("Acompanhamento", message, "info");
+      return;
+    }
     console.log(message);
   }
 }
