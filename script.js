@@ -1110,19 +1110,19 @@ function mergeUsersByName(currentUsers = [], incomingUsers = []) {
 }
 
 function loadReadRhMessageIds() {
-  return new Set(storageService.getSessionItem(READ_RH_MESSAGES_KEY, []).map(String));
+  return new Set(storageService.getLocalItem(READ_RH_MESSAGES_KEY, []).map(String));
 }
 
 function saveReadRhMessageIds() {
-  storageService.setSessionItem(READ_RH_MESSAGES_KEY, [...readRhMessageIds]);
+  storageService.setLocalItem(READ_RH_MESSAGES_KEY, [...readRhMessageIds]);
 }
 
 function loadReadNotificationIds() {
-  return new Set(storageService.getSessionItem(READ_NOTIFICATIONS_KEY, []).map(String));
+  return new Set(storageService.getLocalItem(READ_NOTIFICATIONS_KEY, []).map(String));
 }
 
 function saveReadNotificationIds() {
-  storageService.setSessionItem(READ_NOTIFICATIONS_KEY, [...readNotificationIds]);
+  storageService.setLocalItem(READ_NOTIFICATIONS_KEY, [...readNotificationIds]);
 }
 
 function markNotificationsRead(notificationIds = [], messageIds = []) {
@@ -5147,6 +5147,17 @@ function getDashboardItemSortValue(item = {}, fallbackIndex = 0) {
   return time || (0 - fallbackIndex);
 }
 
+function getDashboardNotificationId(kind, item = {}) {
+  const id = item.id ?? item.notificationId ?? item.codigoSolicitacao ?? item.createdAt ?? item.sortAt;
+  if (!id) return `${kind || "geral"}-${Date.now()}`;
+  return `${kind || "geral"}-${id}`;
+}
+
+function isDashboardNotificationRead(item = {}) {
+  if (!item.notificationId) return false;
+  return readNotificationIds.has(String(item.notificationId));
+}
+
 function renderDashboard() {
   if (!document.getElementById("metric-denuncias")) return;
 
@@ -5185,8 +5196,11 @@ function renderDashboard() {
     // Sort messages by date (most recent first)
     const sortedMessages = [...messages].sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
     
+    const messageIds = sortedMessages.map((msg) => msg.id).filter(Boolean).map(String);
     return {
       kind: "notificacao",
+      notificationId: `mensagem-${author}-${sortedMessages[0]?.id || sortedMessages[0]?.sortAt || sortedMessages[0]?.createdAt || messages.length}`,
+      messageIds,
       title: `Mensagem · ${author}`,
       text: messages.length === 1 
         ? messages[0].mensagem || "Nova notificação recebida."
@@ -5208,6 +5222,7 @@ function renderDashboard() {
       .filter(item => item.status === "Aberta" || item.status === "Urgente")
       .map((item) => ({
         kind: "denuncia",
+        notificationId: getDashboardNotificationId("denuncia", item),
         title: "Denúncia anônima",
         text: item.descricao || "Nova denúncia recebida.",
         details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "Não informado"}\n\n${item.descricao || "Sem descrição."}`,
@@ -5226,6 +5241,7 @@ function renderDashboard() {
           : item.epis || "Não informados";
         return {
           kind: "chamado",
+          notificationId: getDashboardNotificationId("chamado", item),
           title: `Chamado · ${item.unidade}`,
           text: item.epis || "Itens não informados.",
           details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nSetor: ${item.setor || "Não informado"}\nItens solicitados:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "Não informada"}`,
@@ -5245,6 +5261,7 @@ function renderDashboard() {
           : item.epis || "Não informados";
         return {
           kind: "malote",
+          notificationId: getDashboardNotificationId("malote", item),
           title: `Malote · ${item.destino}`,
           text: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
           details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
@@ -5259,6 +5276,7 @@ function renderDashboard() {
       .filter((item) => !isArchivedRecord(item))
       .map((item) => ({
         kind: "vaga",
+        notificationId: getDashboardNotificationId("vaga", item),
         title: `Vaga · ${item.cargo}`,
         text: item.descricao || "Vaga atualizada.",
         details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
@@ -5272,6 +5290,7 @@ function renderDashboard() {
       .filter((item) => !isArchivedRecord(item))
       .map((item) => ({
         kind: "documento",
+        notificationId: getDashboardNotificationId("documento", item),
         title: `Documento · ${documentLabels[item.type] || item.type}`,
         text: item.summary || "Documento registrado.",
         details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${documentLabels[item.type] || item.type}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
@@ -5283,12 +5302,13 @@ function renderDashboard() {
       }))
   ];
 
-  dashboardItems.forEach((item, index) => { item._sortIndex = index; });
-  dashboardItems.sort((a, b) => getDashboardItemSortValue(b, b._sortIndex) - getDashboardItemSortValue(a, a._sortIndex));
+  const unreadDashboardItems = dashboardItems.filter((item) => !isDashboardNotificationRead(item));
+  unreadDashboardItems.forEach((item, index) => { item._sortIndex = index; });
+  unreadDashboardItems.sort((a, b) => getDashboardItemSortValue(b, b._sortIndex) - getDashboardItemSortValue(a, a._sortIndex));
 
   const dashboardPageSize = 3;
   dashboardNotificationOffset = 0;
-  const visibleDashboardItems = dashboardItems.slice(0, dashboardPageSize);
+  const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
   visibleDashboardActivityItems = visibleDashboardItems;
   const previousDashboardButton = document.getElementById("dashboard-notifications-prev");
   const nextDashboardButton = document.getElementById("dashboard-notifications-next");
@@ -6040,60 +6060,62 @@ function openNotificationTrackerFromPopout() {
 }
 
 async function showBrowserDesktopNotification(title, body, options = {}) {
-  if (!isBrowserNotificationSupported()) return;
+  if (!isBrowserNotificationSupported()) return false;
 
-  // Se o usuário já liberou no navegador, mostramos mesmo que ele esteja em outra aba/página.
-  // Se ainda não liberou, só pedimos permissão quando a configuração do HUB estiver ativa.
   if (Notification.permission !== "granted") {
     showDesktopNotificationPermissionPrompt(Notification.permission === "denied");
-    if (currentUserSettings.desktopNotifications && Notification.permission === "default") {
-      try {
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") return;
-      } catch (error) {
-        console.warn("Permissão de notificação não pôde ser solicitada:", error);
-        return;
-      }
-    } else {
-      return;
-    }
+    return false;
   }
+
+  const targetUrl = new URL("index.html?open=acompanhamento", window.location.origin);
+  if (options.notificationId) targetUrl.searchParams.set("markNotification", options.notificationId);
+  const messageIds = Array.isArray(options.messageIds) ? options.messageIds.map(String).filter(Boolean) : [];
+  if (messageIds.length) targetUrl.searchParams.set("markMessages", messageIds.join(","));
 
   const notificationOptions = {
     body,
     icon: "assets/logo.svg",
     badge: "assets/logo.svg",
-    tag: options.tag || "hub-rh-notificacao",
+    tag: options.tag || `hub-rh-notificacao-${Date.now()}`,
     renotify: true,
     requireInteraction: Boolean(options.requireInteraction ?? true),
+    silent: false,
     data: {
-      url: "index.html?open=acompanhamento",
+      url: targetUrl.href,
       type: options.type || "geral",
       notificationId: options.notificationId || "",
-      messageIds: Array.isArray(options.messageIds) ? options.messageIds : [],
+      messageIds,
     },
   };
 
+  // Preferimos a Notification API direta porque é a notificação nativa do navegador
+  // que aparece mesmo quando o usuário está em outra aba, página ou aplicativo.
   try {
-    const registration = await registerHubNotificationServiceWorker();
-    if (registration?.showNotification) {
-      await registration.showNotification(title, notificationOptions);
-      return;
-    }
-  } catch (error) {
-    console.warn("Notificação via Service Worker bloqueada:", error);
-  }
-
-  try {
-    const notification = new Notification(title, notificationOptions);
+    const notification = new Notification(title || "HUB RH", notificationOptions);
     notification.onclick = () => {
+      try { markNotificationsRead(options.notificationId ? [options.notificationId] : [], messageIds); } catch (_) {}
       window.focus?.();
       openNotificationTrackerFromPopout();
       notification.close?.();
     };
-  } catch (error) {
-    console.warn("Notificação do navegador bloqueada:", error);
+    return true;
+  } catch (directError) {
+    console.warn("Notificação direta do navegador bloqueada:", directError);
   }
+
+  // Fallback por Service Worker para navegadores que exigem SW.
+  try {
+    const registration = await registerHubNotificationServiceWorker();
+    const readyRegistration = await navigator.serviceWorker?.ready?.catch?.(() => registration) || registration;
+    if (readyRegistration?.showNotification) {
+      await readyRegistration.showNotification(title || "HUB RH", notificationOptions);
+      return true;
+    }
+  } catch (swError) {
+    console.warn("Notificação via Service Worker bloqueada:", swError);
+  }
+
+  return false;
 }
 
 function showHubCrossPageNotification(title, message, options = {}) {
@@ -6197,7 +6219,8 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
 
   const currentName = normalizeLoginName(getCurrentUserName());
   const author = normalizeLoginName(item.autor || item.createdBy || item.updatedBy || item.solicitante || "");
-  if (collection === "comunicados" && author && author === currentName) return false;
+  const pageIsVisible = document.visibilityState === "visible" && document.hasFocus?.();
+  if (collection === "comunicados" && author && author === currentName && pageIsVisible) return false;
 
   lastRealtimeNotificationSignature = signature;
   return true;
@@ -6728,6 +6751,9 @@ function getAuthorAvatar(authorName, knownAvatarPath = "") {
 function openDashboardActivity(index) {
   const item = visibleDashboardActivityItems[Number(index)];
   if (!item) return;
+
+  markNotificationsRead(item.notificationId ? [item.notificationId] : [], item.messageIds || []);
+
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
 
@@ -6759,7 +6785,11 @@ function openDashboardActivity(index) {
       <div class="modal-footer"><button class="primary-button" data-action="close-modal">Entendi</button></div>
     </div>
   `;
-  overlay.querySelector('[data-action="close-modal"]')?.addEventListener("click", () => overlay.remove());
+  overlay.querySelector('[data-action="close-modal"]')?.addEventListener("click", () => {
+    overlay.remove();
+    renderDashboard();
+    window.notificationTracker?.loadNotifications?.();
+  });
   document.body.appendChild(overlay);
 }
 
@@ -9926,6 +9956,15 @@ function maybeOpenNotificationTrackerFromUrl() {
 document.addEventListener('DOMContentLoaded', () => {
   window.notificationTracker = new NotificationTracker();
   maybeOpenNotificationTrackerFromUrl();
+});
+
+window.addEventListener("storage", (event) => {
+  if (![READ_NOTIFICATIONS_KEY, READ_RH_MESSAGES_KEY].includes(event.key)) return;
+  readNotificationIds = loadReadNotificationIds();
+  readRhMessageIds = loadReadRhMessageIds();
+  try { renderDashboard?.(); } catch (_) {}
+  try { renderChatChannels?.(); } catch (_) {}
+  try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
 });
 
 // Manter compatibilidade com botões antigos
