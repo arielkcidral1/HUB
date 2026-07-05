@@ -10964,7 +10964,6 @@ document.addEventListener('DOMContentLoaded', () => {
       nome: String(document.getElementById("atestado-filter-nome")?.value || "").trim().toLowerCase(),
       cpf: normalizeCpf(document.getElementById("atestado-filter-cpf")?.value || ""),
       unidade: String(document.getElementById("atestado-filter-unidade")?.value || "").trim(),
-      status: String(document.getElementById("atestado-filter-status")?.value || "").trim(),
     };
   }
 
@@ -10975,11 +10974,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const nome = String(item.nome || "").toLowerCase();
         const cpf = normalizeCpf(item.cpf || "");
         const unidade = String(item.unidade || "").trim();
-        const status = String(item.status || "").trim();
         if (filters.nome && !nome.includes(filters.nome)) return false;
         if (filters.cpf && !cpf.includes(filters.cpf)) return false;
         if (filters.unidade && unidade !== filters.unidade) return false;
-        if (filters.status && status !== filters.status) return false;
         return true;
       })
       .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
@@ -11015,7 +11012,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearButton = document.getElementById("clear-atestado-filters");
     if (!clearButton) return;
     const filters = getAtestadoFilterValues();
-    clearButton.hidden = !(filters.nome || filters.cpf || filters.unidade || filters.status);
+    clearButton.hidden = !(filters.nome || filters.cpf || filters.unidade);
   }
 
   function renderAtestadoCards(items = []) {
@@ -11199,7 +11196,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setupAtestadosInternalView() {
     if (!document.getElementById("atestados-list")) return;
-    ["atestado-filter-nome", "atestado-filter-cpf", "atestado-filter-unidade", "atestado-filter-status"].forEach((id) => {
+    ["atestado-filter-nome", "atestado-filter-cpf", "atestado-filter-unidade"].forEach((id) => {
       const field = document.getElementById(id);
       if (!field || field.dataset.atestadoFilterReady === "true") return;
       field.dataset.atestadoFilterReady = "true";
@@ -11212,7 +11209,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById("clear-atestado-filters")?.addEventListener("click", () => {
-      ["atestado-filter-nome", "atestado-filter-cpf", "atestado-filter-unidade", "atestado-filter-status"].forEach((id) => {
+      ["atestado-filter-nome", "atestado-filter-cpf", "atestado-filter-unidade"].forEach((id) => {
         const field = document.getElementById(id);
         if (field) field.value = "";
       });
