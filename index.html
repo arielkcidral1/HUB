@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://nblfwesptlpetbwfmdqf.supabase.co; media-src 'self' blob: https://nblfwesptlpetbwfmdqf.supabase.co; connect-src 'self' https://nblfwesptlpetbwfmdqf.supabase.co wss://nblfwesptlpetbwfmdqf.supabase.co https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
     <title>HUB | RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
-    <link rel="stylesheet" href="style.css?v=restauracao-v8" />
+    <link rel="stylesheet" href="style.css" />
        <link rel="stylesheet" href="message-size-enhancement.css" />
     <link rel="stylesheet" href="vagas-format.css" />
     <link rel="stylesheet" href="vagas-admin-enhance.css" />
@@ -32,6 +32,7 @@
           <button class="nav-item" data-view="calendario" type="button">Calendario</button>
           <button class="nav-item" data-view="documentos" type="button">Documentos RH</button>
           <button class="nav-item" data-view="documentos-contratados" type="button">Documentos de Contratados</button>
+          <button class="nav-item" data-view="atestados" type="button">Atestados</button>
           <button class="nav-item" data-view="gerenciamento-vt" type="button">Gerenciamento VT</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/chamados.html" type="button">Solicitar EPIs</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/denuncia.html" type="button">Canal de Denúncia</button>
@@ -136,11 +137,11 @@
           <article class="panel">
             <div class="panel-header">
               <div>
-                <h2>Notificações</h2>
+                <h2>Acompanhamento</h2>
                 <p class="item-meta">Notificações e pendências recentes</p>
               </div>
               <div class="job-actions flush-top">
-                <button class="primary-button" id="dashboard-notifications-tracker" type="button">Abrir Notificações</button>
+                <button class="primary-button" id="dashboard-notifications-tracker" type="button">Acompanhar</button>
               </div>
             </div>
             <ul class="activity-list" id="dashboard-list"></ul>
@@ -491,7 +492,7 @@
                 <div class="chamados-filter-bar" aria-label="Filtros de vagas">
                   <div class="chamados-filter-fields vaga-filter-fields">
                     <input id="vaga-filter-nome" type="search" placeholder="Nome do candidato" autocomplete="off" aria-label="Filtrar vagas por nome do candidato" />
-                    <input id="vaga-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF" autocomplete="off" aria-label="Filtrar vagas por CPF do candidato" />
+                    <input id="vaga-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF do candidato" autocomplete="off" aria-label="Filtrar vagas por CPF do candidato" />
                     <select id="vaga-filter-unidade" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar vagas por unidade"></select>
                   </div>
                   <button class="secondary-link compact-filter-button" id="limpar-filtros-vagas" type="button" hidden>Limpar</button>
@@ -1014,6 +1015,64 @@
           </div>
         </section>
 
+
+        <section class="view" id="atestados">
+          <div class="panel panel-spaced">
+            <div class="panel-header split-header">
+              <div>
+                <h2>Atestados recebidos</h2>
+                <p class="item-meta">Visualização dos atestados enviados pelos colaboradores no formulário público.</p>
+              </div>
+              <div class="job-actions flush-top">
+                <a class="secondary-link" href="atestados.html" target="_blank" rel="noreferrer">Abrir envio de atestado</a>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Recebidos</h2>
+                <p class="item-meta">Arquivos privados, acessíveis apenas por usuários autorizados do HUB.</p>
+              </div>
+              <div class="vt-filter-bar" aria-label="Filtros de Atestados">
+                <div class="vt-filter-fields">
+                  <input id="atestado-filter-nome" type="search" placeholder="Nome do colaborador" autocomplete="off" aria-label="Filtrar por nome" />
+                  <input id="atestado-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF" autocomplete="off" aria-label="Filtrar por CPF" />
+                  <select id="atestado-filter-unidade" aria-label="Filtrar por unidade">
+                    <option value="">Todas as unidades</option>
+                    <option>Joinville Matriz</option>
+                    <option>Joinville João Colin</option>
+                    <option>Joinville Iririú</option>
+                    <option>Joinville Guanabara</option>
+                    <option>São Bento do Sul</option>
+                    <option>Jaraguá do Sul</option>
+                    <option>Brusque</option>
+                    <option>Itajaí</option>
+                    <option>Balneário Camboriú</option>
+                    <option>Blumenau</option>
+                    <option>Palhoça</option>
+                    <option>Araranguá</option>
+                    <option>Florianópolis</option>
+                    <option>Araquari</option>
+                    <option>Achei Pneus</option>
+                    <option>Besten Pneus</option>
+                    <option>Trinca Mkt</option>
+                  </select>
+                  <select id="atestado-filter-status" aria-label="Filtrar por status">
+                    <option value="">Todos os status</option>
+                    <option>Recebido</option>
+                    <option>Em análise</option>
+                    <option>Lançado</option>
+                    <option>Recusado</option>
+                  </select>
+                </div>
+                <button class="secondary-link compact-filter-button" id="clear-atestado-filters" type="button" hidden>Limpar</button>
+              </div>
+            </div>
+            <div class="card-list" id="atestados-list"></div>
+          </div>
+        </section>
+
         <section class="view" id="gerenciamento-vt">
           <div class="single-workspace">
             <form class="panel form-panel" id="vt-form">
@@ -1329,7 +1388,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
-    <script src="script.js?v=restauracao-v8"></script>
+    <script src="script.js"></script>
     <script src="vagas-admin-filters.js"></script>
   </body>
 </html>

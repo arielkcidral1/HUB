@@ -4932,3 +4932,34 @@ form.panel[data-public-chamados="true"].panel {
     max-width: 100%;
   }
 }
+
+
+/* ========================================================================
+   Atestados — envio público e painel interno
+   ======================================================================== */
+.atestado-card .compact-status-label {
+  min-width: 180px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.atestado-card .compact-status-label select {
+  margin-top: 4px;
+  min-width: 160px;
+}
+
+.atestado-actions {
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .atestado-actions {
+    align-items: stretch;
+  }
+  .atestado-card .compact-status-label,
+  .atestado-card .compact-status-label select {
+    width: 100%;
+  }
+}
