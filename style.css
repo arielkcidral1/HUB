@@ -4963,3 +4963,57 @@ form.panel[data-public-chamados="true"].panel {
     width: 100%;
   }
 }
+
+/* ========================================================================
+   Ajuste v18 — Atestados: ações alinhadas e exclusão
+   ======================================================================== */
+.atestado-actions {
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.atestado-action-buttons {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.atestado-action-button,
+.atestado-card .compact-status-label select {
+  min-height: 38px;
+}
+
+.atestado-action-button {
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+}
+
+.atestado-card .compact-status-label {
+  display: grid;
+  gap: 4px;
+  min-width: 190px;
+}
+
+.atestado-card .compact-status-label select {
+  margin-top: 0;
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .atestado-actions,
+  .atestado-action-buttons {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .atestado-action-button,
+  .atestado-card .compact-status-label,
+  .atestado-card .compact-status-label select {
+    width: 100%;
+  }
+}

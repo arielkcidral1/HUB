@@ -5396,6 +5396,17 @@ function renderDashboard() {
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
         systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
         meta: getDashboardSystemUpdateMeta(item),
+      })),
+    ...(data.atestados || [])
+      .map((item) => ({
+        kind: "atestado",
+        notificationId: getDashboardNotificationId("atestado", item),
+        title: `Atestado · ${item.nome || "Colaborador"}`,
+        text: `${item.unidade || "Unidade não informada"} · ${item.arquivoNome || "Atestado anexado"}`,
+        details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${formatCpf(item.cpf || "") || "Não informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
+        tag: "Atestado",
+        date: item.createdAt,
+        dateTime: item.sortAt || item.createdAt,
       }))
   ];
 
@@ -9996,6 +10007,22 @@ class NotificationTracker {
         });
       });
 
+    (sourceData.atestados || [])
+      .forEach((item) => {
+        pushNotification({
+          id: `atestado-${item.id}`,
+          type: "atestado",
+          title: `Atestado · ${item.nome || "Colaborador"}`,
+          description: `${item.unidade || "Unidade não informada"} · ${item.arquivoNome || "Atestado anexado"}`,
+          details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Não informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
+          time: item.createdAt || "Recentemente",
+          dateTime: item.sortAt || item.createdAt || "Recentemente",
+          status: "pending",
+          unread: true,
+          view: "atestados",
+        });
+      });
+
     const upcoming = typeof getUpcomingEvents === "function" ? getUpcomingEvents() : [];
     upcoming.forEach((item) => {
       const eventDate = item.data || "";
@@ -10063,6 +10090,7 @@ class NotificationTracker {
       vaga: "vagas",
       evento: "calendario",
       documento: "documentos",
+      atestado: "atestados",
     };
     return views[type] || "dashboard";
   }
@@ -10076,6 +10104,7 @@ class NotificationTracker {
       vaga: "💼",
       evento: "📅",
       documento: "📄",
+      atestado: "🩺",
       geral: "📢",
     };
     return icons[type] || "📢";
@@ -10280,6 +10309,7 @@ class NotificationTracker {
       vaga: "Vaga",
       evento: "Evento",
       documento: "Documento",
+      atestado: "Atestado",
       geral: "Geral",
     };
     return types[type] || type;
@@ -11041,7 +11071,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Não informada")}</p>
           <p class="item-meta">Recebido em ${escapeHtml(item.createdAt || "Não informado")} | ${escapeHtml(fileMeta || "Arquivo anexado")}</p>
           <div class="job-actions section-top atestado-actions">
-            ${item.arquivoUrl ? `<button type="button" class="secondary-link private-file-button" data-private-storage-bucket="${escapeHtml(getAtestadosBucket())}" data-private-storage-path="${escapeHtml(item.arquivoUrl)}">Ver atestado</button>` : ""}
+            <div class="atestado-action-buttons">
+              ${item.arquivoUrl ? `<button type="button" class="secondary-link private-file-button atestado-action-button" data-private-storage-bucket="${escapeHtml(getAtestadosBucket())}" data-private-storage-path="${escapeHtml(item.arquivoUrl)}">Ver atestado</button>` : ""}
+              <button type="button" class="danger-button atestado-action-button" data-delete-atestado-id="${escapeHtml(item.id)}" data-delete-atestado-path="${escapeHtml(item.arquivoUrl || "")}">Apagar atestado</button>
+            </div>
             <label class="compact-status-label">Status
               <select data-atestado-status-id="${escapeHtml(item.id)}">
                 ${["Recebido", "Em análise", "Lançado", "Recusado"].map((option) => `<option${option === status ? " selected" : ""}>${option}</option>`).join("")}
@@ -11057,6 +11090,52 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!document.getElementById("atestados-list")) return;
     const items = await fetchAtestadosFromSupabase();
     renderAtestadoCards(items);
+    try { renderDashboard?.(); } catch (_) {}
+    try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
+  }
+
+  async function deleteAtestado(id, filePath = "") {
+    if (!id) return;
+    const item = (data.atestados || []).find((record) => String(record.id) === String(id));
+    const label = item?.nome ? ` de ${item.nome}` : "";
+    if (!confirm(`Tem certeza que deseja apagar o atestado${label}? Essa ação não poderá ser desfeita.`)) return;
+
+    const applyLocalDelete = () => {
+      data.atestados = (data.atestados || []).filter((record) => String(record.id) !== String(id));
+      saveLocalAtestados(data.atestados || []);
+      renderAtestadoCards(data.atestados || []);
+      try { renderDashboard?.(); } catch (_) {}
+      try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
+    };
+
+    if (supabaseClient) {
+      try {
+        const pathToRemove = filePath || item?.arquivoUrl || "";
+        if (pathToRemove) {
+          const { error: storageError } = await supabaseClient.storage
+            .from(getAtestadosBucket())
+            .remove([pathToRemove]);
+          if (storageError) console.warn("Não foi possível remover o arquivo do storage:", storageError);
+        }
+
+        const { error } = await supabaseClient
+          .from(ATESTADOS_TABLE)
+          .delete()
+          .eq("id", id);
+        if (error) throw error;
+
+        applyLocalDelete();
+        showModal?.("Atestado apagado", "O atestado foi removido com sucesso.", "success");
+        return;
+      } catch (error) {
+        console.error("Erro ao apagar atestado:", error);
+        showModal?.("Erro", "Não foi possível apagar o atestado. Verifique a permissão DELETE da tabela hub_atestados e do bucket hub-atestados.", "error");
+        return;
+      }
+    }
+
+    applyLocalDelete();
+    showModal?.("Atestado apagado localmente", "Sem Supabase ativo, a exclusão foi feita apenas neste navegador.", "info");
   }
 
   async function updateAtestadoStatus(id, status) {
@@ -11222,6 +11301,16 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       renderAtestadoCards(data.atestados || []);
     });
+
+    if (!document.documentElement.dataset.atestadoDeleteReady) {
+      document.documentElement.dataset.atestadoDeleteReady = "true";
+      document.addEventListener("click", (event) => {
+        const deleteButton = event.target.closest?.("[data-delete-atestado-id]");
+        if (!deleteButton) return;
+        event.preventDefault();
+        deleteAtestado(deleteButton.dataset.deleteAtestadoId, deleteButton.dataset.deleteAtestadoPath || "");
+      });
+    }
 
     document.addEventListener("change", (event) => {
       const select = event.target.closest?.("[data-atestado-status-id]");
