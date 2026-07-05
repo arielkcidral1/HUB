@@ -11110,14 +11110,21 @@ document.addEventListener('DOMContentLoaded', () => {
       created_by: "Publico",
     };
 
-    const { data: inserted, error: insertError } = await supabaseClient
+    // IMPORTANTE:
+    // Não usar .select().single() no envio público.
+    // O visitante/anon tem permissão apenas para INSERIR, não para LER a tabela.
+    // Quando o INSERT pede retorno com .select(), o Supabase tenta aplicar SELECT
+    // e pode retornar erro de RLS mesmo com a policy de INSERT correta.
+    const { error: insertError } = await supabaseClient
       .from(ATESTADOS_TABLE)
-      .insert(payload)
-      .select("*")
-      .single();
+      .insert(payload);
     if (insertError) throw insertError;
 
-    return mapAtestadoRow(inserted || payload);
+    return mapAtestadoRow({
+      id: generateUUID(),
+      ...payload,
+      created_at: new Date().toISOString(),
+    });
   }
 
   function setupPublicAtestadoForm() {
