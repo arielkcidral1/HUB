@@ -7,13 +7,14 @@ const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
+// IMPORTANTE: os IDs lidos não entram no cache sensível.
+// Assim, ao fechar/abrir o site ou perder a sessão, as notificações já visualizadas
+// não voltam como não lidas.
 const SENSITIVE_CLIENT_CACHE_KEYS = [
   STORAGE_KEY,
   DOCUMENT_RECORDS_KEY,
   TEAM_USERS_KEY,
   TEAM_CREDENTIALS_KEY,
-  READ_RH_MESSAGES_KEY,
-  READ_NOTIFICATIONS_KEY,
 ];
 const RH_CHANNEL = "rh";
 const USERS_TABLE = "hub_users";
@@ -24,6 +25,8 @@ const CHAT_POLL_PREFIX = "__HUB_POLL__:";
 const RESUME_BUCKET = "hub-curriculos";
 const RESUME_PUBLIC_PREFIX = "candidaturas";
 const CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos";
+const ATESTADOS_BUCKET = "hub-atestados";
+const ATESTADO_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 const CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 const RESUME_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const RESUME_ALLOWED_MIME_TYPES = new Set([
@@ -172,6 +175,7 @@ const TABLES = {
   vtRegistros: "hub_vt_registros",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
+  atestados: "hub_atestados",
   usuarios: USERS_TABLE,
 };
 let publicVagaCargoFilter = "";
@@ -282,6 +286,7 @@ const defaultData = {
   vtRegistros: [],
   documentosContratados: [],
   candidaturas: [],
+  atestados: [],
   usuarios: [],
 };
 
@@ -905,7 +910,8 @@ function isPublicPage() {
   return Boolean(
     document.querySelector("[data-public-denuncia]") ||
     document.querySelector("[data-public-vagas]") ||
-    document.querySelector("[data-public-contratados]")
+    document.querySelector("[data-public-contratados]") ||
+    document.querySelector("[data-public-atestados]")
   );
 }
 
@@ -914,7 +920,8 @@ function isPublicSubmissionFormPage() {
     document.querySelector("[data-public-denuncia]") ||
     document.querySelector("[data-public-vagas]") ||
     document.querySelector("[data-public-chamados]") ||
-    document.querySelector("[data-public-contratados]")
+    document.querySelector("[data-public-contratados]") ||
+    document.querySelector("[data-public-atestados]")
   );
 }
 
@@ -929,7 +936,7 @@ function isLoginPage() {
 function getLoginRedirectTarget() {
   const params = new URLSearchParams(window.location.search);
   const next = params.get("next");
-  const allowedTargets = new Set(["index.html", "denuncia.html", "chamados.html", "vagas.html", "candidatura.html"]);
+  const allowedTargets = new Set(["index.html", "denuncia.html", "chamados.html", "vagas.html", "candidatura.html", "atestados.html"]);
   if (!next) return "index.html";
   if (/^https?:\/\//i.test(next)) return "index.html";
   const target = next.startsWith("/") ? next.slice(1) : next;
@@ -1045,6 +1052,7 @@ function loadLocalData() {
       .filter((item) => !String(item.id || "").startsWith("local-") && !item.pendingSync)
       .map(mapContractorDocumentRow),
     candidaturas: parsed.candidaturas || [],
+    atestados: (parsed.atestados || []).map(mapAtestadoRow),
     usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
   };
 }
@@ -2452,6 +2460,25 @@ function renderChatPoll(item, poll) {
   `;
 }
 
+
+function mapAtestadoRow(row = {}) {
+  return {
+    id: row.id || generateUUID(),
+    nome: row.nome || row.nome_completo || "",
+    cpf: row.cpf || "",
+    telefone: row.telefone || "",
+    unidade: row.unidade || "",
+    arquivoNome: row.arquivo_nome || row.arquivoNome || row.file_name || "Atestado",
+    arquivoTamanho: Number(row.arquivo_tamanho || row.arquivoTamanho || 0),
+    arquivoTipo: row.arquivo_tipo || row.arquivoTipo || "application/octet-stream",
+    arquivoUrl: row.arquivo_url || row.arquivoUrl || row.storage_path || "",
+    status: row.status || "Recebido",
+    createdBy: row.created_by || "Publico",
+    createdAt: row.created_at ? formatDateTime(row.created_at) : row.createdAt || todayLabel(),
+    sortAt: row.created_at || row.sortAt || new Date().toISOString(),
+  };
+}
+
 function mapRows(collection, rows) {
   if (collection === "denuncias") {
     return rows.map((row) => ({
@@ -2535,6 +2562,10 @@ if (collection === "malotes") {
     }));
   }
 
+  if (collection === "atestados") {
+    return rows.map(mapAtestadoRow);
+  }
+
   if (collection === "eventos") {
     return rows.map((row) => ({
       id: row.id,
@@ -2565,6 +2596,21 @@ if (collection === "malotes") {
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
     }));
+  }
+
+  if (collection === "atestados") {
+    return {
+      nome: values.nome || "",
+      cpf: values.cpf || "",
+      telefone: values.telefone || "",
+      unidade: values.unidade || "",
+      arquivo_nome: values.arquivoNome || "Atestado",
+      arquivo_tamanho: values.arquivoTamanho || 0,
+      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
+      arquivo_url: values.arquivoUrl || "",
+      status: values.status || "Recebido",
+      created_by: values.createdBy || "Publico",
+    };
   }
 
   if (collection === "documentosContratados") {
@@ -2865,6 +2911,10 @@ function toDbPayload(collection, values) {
     return payload;
   }
 
+  if (collection === "atestados") {
+    return rows.map(mapAtestadoRow);
+  }
+
   if (collection === "eventos") {
     return {
       titulo: values.titulo,
@@ -2888,6 +2938,21 @@ function toDbPayload(collection, values) {
       saldo_atual: values.saldoAtual,
       valor_necessario: values.valorNecessario,
       created_by: values.createdBy || getCurrentUserName(),
+    };
+  }
+
+  if (collection === "atestados") {
+    return {
+      nome: values.nome || "",
+      cpf: values.cpf || "",
+      telefone: values.telefone || "",
+      unidade: values.unidade || "",
+      arquivo_nome: values.arquivoNome || "Atestado",
+      arquivo_tamanho: values.arquivoTamanho || 0,
+      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
+      arquivo_url: values.arquivoUrl || "",
+      status: values.status || "Recebido",
+      created_by: values.createdBy || "Publico",
     };
   }
 
@@ -3951,7 +4016,11 @@ async function addItem(collection, values) {
     return true;
   } catch (error) {
     console.error("Erro ao salvar no Supabase:", error);
-    if (collection === "eventos") {
+    if (collection === "atestados") {
+    return rows.map(mapAtestadoRow);
+  }
+
+  if (collection === "eventos") {
       data[collection].unshift({
         id: generateUUID(),
         createdAt: todayLabel(),
@@ -4007,7 +4076,11 @@ async function updateItem(collection, id, values) {
       delete payload.created_by;
       payload.updated_by = values.updatedBy || getCurrentUserName();
     }
-    if (collection === "eventos") {
+    if (collection === "atestados") {
+    return rows.map(mapAtestadoRow);
+  }
+
+  if (collection === "eventos") {
       delete payload.created_by;
       payload.updated_by = values.updatedBy || getCurrentUserName();
     }
@@ -4087,7 +4160,11 @@ async function updateItem(collection, id, values) {
     return true;
   } catch (error) {
     console.error("Erro ao atualizar no Supabase:", error);
-    if (collection === "eventos") {
+    if (collection === "atestados") {
+    return rows.map(mapAtestadoRow);
+  }
+
+  if (collection === "eventos") {
       data[collection] = (data[collection] || []).map((item) =>
         String(item.id) === String(id)
           ? { ...item, ...values, createdBy: item.createdBy || values.createdBy || getCurrentUserName(), updatedBy: values.updatedBy || getCurrentUserName() }
@@ -4161,7 +4238,11 @@ async function deleteItem(collection, id) {
     return true;
   } catch (error) {
     console.error("Erro ao deletar no Supabase:", error);
-    if (collection === "eventos") {
+    if (collection === "atestados") {
+    return rows.map(mapAtestadoRow);
+  }
+
+  if (collection === "eventos") {
       data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
       saveLocalData();
       renderAll();
@@ -5065,7 +5146,7 @@ function applyRoleAccess() {
     ? new Set(["comunicacao", "conta"])
     : isManagerUser()
     ? new Set(["comunicacao", "documentos", "conta"])
-    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "calendario", "documentos", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
+    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "calendario", "documentos", "documentos-contratados", "atestados", "gerenciamento-vt", "equipe", "conta"]);
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : isManagerUser()
@@ -6321,6 +6402,21 @@ function getRealtimeNotificationText(collection, item = {}) {
       icon: "💼",
       type: "vaga",
       tag: `hub-rh-vaga-${item.id || Date.now()}`,
+    };
+  }
+
+  if (collection === "atestados") {
+    return {
+      nome: values.nome || "",
+      cpf: values.cpf || "",
+      telefone: values.telefone || "",
+      unidade: values.unidade || "",
+      arquivo_nome: values.arquivoNome || "Atestado",
+      arquivo_tamanho: values.arquivoTamanho || 0,
+      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
+      arquivo_url: values.arquivoUrl || "",
+      status: values.status || "Recebido",
+      created_by: values.createdBy || "Publico",
     };
   }
 
@@ -10810,4 +10906,339 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener("storage", (event) => {
     if (event.key === FEEDBACK_LOCAL_KEY) renderFeedbackPanel();
   });
+})();
+
+
+/* ========================================================================
+   ATESTADOS PUBLICOS + ABA INTERNA DE VISUALIZAÇÃO
+   ======================================================================== */
+(function setupAtestadosModule() {
+  const ATESTADOS_TABLE = "hub_atestados";
+  const ATESTADOS_LOCAL_KEY = "hub-atestados-local-v1";
+  const ATESTADO_ALLOWED_MIME_TYPES = new Set([
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ]);
+  const ATESTADO_ALLOWED_EXTENSIONS = new Set(["pdf", "jpg", "jpeg", "png", "webp", "doc", "docx"]);
+
+  function getAtestadosBucket() {
+    return typeof ATESTADOS_BUCKET !== "undefined" ? ATESTADOS_BUCKET : "hub-atestados";
+  }
+
+  function getAtestadoMaxSize() {
+    return typeof ATESTADO_MAX_SIZE_BYTES !== "undefined" ? ATESTADO_MAX_SIZE_BYTES : 10 * 1024 * 1024;
+  }
+
+  function getFileExtension(fileName = "") {
+    const parts = String(fileName || "").split(".");
+    return parts.length > 1 ? parts.pop().toLowerCase() : "";
+  }
+
+  function validateAtestadoFile(file) {
+    if (!file || !file.name) return "Anexe o atestado antes de enviar.";
+    if (file.size > getAtestadoMaxSize()) return "O arquivo deve ter no máximo 10 MB.";
+
+    const extension = getFileExtension(file.name);
+    const mime = String(file.type || "").toLowerCase();
+    if (!ATESTADO_ALLOWED_EXTENSIONS.has(extension) && !ATESTADO_ALLOWED_MIME_TYPES.has(mime)) {
+      return "Formato inválido. Envie PDF, imagem, DOC ou DOCX.";
+    }
+    return "";
+  }
+
+  function safeStorageFileName(fileName = "atestado") {
+    return String(fileName || "atestado")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9_.-]/gi, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "atestado";
+  }
+
+  function getAtestadoFilterValues() {
+    return {
+      nome: String(document.getElementById("atestado-filter-nome")?.value || "").trim().toLowerCase(),
+      cpf: normalizeCpf(document.getElementById("atestado-filter-cpf")?.value || ""),
+      unidade: String(document.getElementById("atestado-filter-unidade")?.value || "").trim(),
+      status: String(document.getElementById("atestado-filter-status")?.value || "").trim(),
+    };
+  }
+
+  function filterAtestados(items = []) {
+    const filters = getAtestadoFilterValues();
+    return [...items]
+      .filter((item) => {
+        const nome = String(item.nome || "").toLowerCase();
+        const cpf = normalizeCpf(item.cpf || "");
+        const unidade = String(item.unidade || "").trim();
+        const status = String(item.status || "").trim();
+        if (filters.nome && !nome.includes(filters.nome)) return false;
+        if (filters.cpf && !cpf.includes(filters.cpf)) return false;
+        if (filters.unidade && unidade !== filters.unidade) return false;
+        if (filters.status && status !== filters.status) return false;
+        return true;
+      })
+      .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
+  }
+
+  function getLocalAtestados() {
+    return storageService.getLocalItem(ATESTADOS_LOCAL_KEY, []).map(mapAtestadoRow);
+  }
+
+  function saveLocalAtestados(items = []) {
+    storageService.setLocalItem(ATESTADOS_LOCAL_KEY, items.map(mapAtestadoRow));
+  }
+
+  async function fetchAtestadosFromSupabase() {
+    if (!supabaseClient) return getLocalAtestados();
+    try {
+      const { data: rows, error } = await supabaseClient
+        .from(ATESTADOS_TABLE)
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const mapped = (rows || []).map(mapAtestadoRow);
+      data.atestados = mapped;
+      saveLocalDataDebounced?.();
+      return mapped;
+    } catch (error) {
+      console.warn("Não foi possível carregar atestados do Supabase; usando cache local.", error);
+      return data.atestados?.length ? data.atestados : getLocalAtestados();
+    }
+  }
+
+  function updateAtestadoClearButton() {
+    const clearButton = document.getElementById("clear-atestado-filters");
+    if (!clearButton) return;
+    const filters = getAtestadoFilterValues();
+    clearButton.hidden = !(filters.nome || filters.cpf || filters.unidade || filters.status);
+  }
+
+  function renderAtestadoCards(items = []) {
+    const target = document.getElementById("atestados-list");
+    if (!target) return;
+    const filtered = filterAtestados(items);
+    updateAtestadoClearButton();
+
+    if (!filtered.length) {
+      target.innerHTML = '<p class="empty-state">Nenhum atestado encontrado.</p>';
+      return;
+    }
+
+    target.innerHTML = filtered.map((item) => {
+      const status = item.status || "Recebido";
+      const fileName = item.arquivoNome || "Atestado";
+      const fileMeta = [fileName, formatFileSize(item.arquivoTamanho)].filter(Boolean).join(" · ");
+      return `
+        <article class="item-card atestado-card">
+          <div class="item-topline">
+            <p class="item-title">${escapeHtml(item.nome || "Colaborador não informado")}</p>
+            <span class="tag">${escapeHtml(status)}</span>
+          </div>
+          <p><strong>CPF:</strong> ${escapeHtml(formatCpf(item.cpf || ""))}</p>
+          <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || item.telefone || "Não informado")}</p>
+          <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Não informada")}</p>
+          <p class="item-meta">Recebido em ${escapeHtml(item.createdAt || "Não informado")} | ${escapeHtml(fileMeta || "Arquivo anexado")}</p>
+          <div class="job-actions section-top atestado-actions">
+            ${item.arquivoUrl ? `<button type="button" class="secondary-link private-file-button" data-private-storage-bucket="${escapeHtml(getAtestadosBucket())}" data-private-storage-path="${escapeHtml(item.arquivoUrl)}">Ver atestado</button>` : ""}
+            <label class="compact-status-label">Status
+              <select data-atestado-status-id="${escapeHtml(item.id)}">
+                ${["Recebido", "Em análise", "Lançado", "Recusado"].map((option) => `<option${option === status ? " selected" : ""}>${option}</option>`).join("")}
+              </select>
+            </label>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  async function renderAtestadosSection() {
+    if (!document.getElementById("atestados-list")) return;
+    const items = await fetchAtestadosFromSupabase();
+    renderAtestadoCards(items);
+  }
+
+  async function updateAtestadoStatus(id, status) {
+    if (!id || !status) return;
+    const applyLocal = () => {
+      data.atestados = (data.atestados || []).map((item) => String(item.id) === String(id) ? { ...item, status } : item);
+      saveLocalAtestados(data.atestados || []);
+      renderAtestadoCards(data.atestados || []);
+    };
+
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient.from(ATESTADOS_TABLE).update({ status }).eq("id", id);
+        if (error) throw error;
+        applyLocal();
+        showModal?.("Status atualizado", "O status do atestado foi atualizado com sucesso.", "success");
+        return;
+      } catch (error) {
+        console.error("Erro ao atualizar status do atestado:", error);
+        showModal?.("Erro", "Não foi possível atualizar o status no Supabase. Verifique a permissão UPDATE da tabela hub_atestados.", "error");
+        return;
+      }
+    }
+
+    applyLocal();
+    showModal?.("Status atualizado localmente", "Sem Supabase ativo, a alteração ficou salva apenas neste navegador.", "info");
+  }
+
+  async function uploadPublicAtestado({ nome, cpf, telefone, unidade, file }) {
+    if (!supabaseClient) throw new Error("Supabase indisponível. Verifique a configuração pública do HUB.");
+
+    const cpfDigits = normalizeCpf(cpf);
+    const safeName = safeStorageFileName(file.name || "atestado.pdf");
+    const path = `atestados/${cpfDigits || "sem-cpf"}/${Date.now()}-${generateUUID()}-${safeName}`;
+
+    const { error: uploadError } = await supabaseClient.storage
+      .from(getAtestadosBucket())
+      .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+    if (uploadError) throw uploadError;
+
+    const payload = {
+      nome,
+      cpf: cpfDigits,
+      telefone,
+      unidade,
+      arquivo_nome: file.name || "Atestado",
+      arquivo_tamanho: file.size || 0,
+      arquivo_tipo: file.type || "application/octet-stream",
+      arquivo_url: path,
+      status: "Recebido",
+      created_by: "Publico",
+    };
+
+    const { data: inserted, error: insertError } = await supabaseClient
+      .from(ATESTADOS_TABLE)
+      .insert(payload)
+      .select("*")
+      .single();
+    if (insertError) throw insertError;
+
+    return mapAtestadoRow(inserted || payload);
+  }
+
+  function setupPublicAtestadoForm() {
+    const form = document.getElementById("atestado-form");
+    if (!form || form.dataset.atestadoReady === "true") return;
+    form.dataset.atestadoReady = "true";
+    ensurePublicCaptchaNotice?.(form);
+
+    document.getElementById("atestado-cpf")?.addEventListener("input", (event) => {
+      event.currentTarget.value = formatCpf(event.currentTarget.value);
+    });
+    document.getElementById("atestado-telefone")?.addEventListener("input", (event) => {
+      event.currentTarget.value = formatPhone(event.currentTarget.value);
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formElement = event.currentTarget;
+      const publicFormError = validatePublicFormSubmission?.(formElement);
+      if (publicFormError) {
+        showModal?.("Envio bloqueado", publicFormError, "error");
+        return;
+      }
+
+      const formData = new FormData(formElement);
+      const nome = String(formData.get("nome") || "").trim();
+      const cpf = String(formData.get("cpf") || "").trim();
+      const telefone = String(formData.get("telefone") || "").trim();
+      const unidade = String(formData.get("unidade") || "").trim();
+      const file = formData.get("atestado");
+
+      if (!/\S+\s+\S+/.test(nome)) {
+        showModal?.("Nome obrigatório", "Informe nome e sobrenome do colaborador.", "error");
+        return;
+      }
+      if (!isValidCpf(cpf)) {
+        showModal?.("CPF inválido", "Informe um CPF válido no formato 000.000.000-00.", "error");
+        return;
+      }
+      if (!telefone || normalizeCpf(telefone).length < 10) {
+        showModal?.("Telefone obrigatório", "Informe um telefone válido para contato.", "error");
+        return;
+      }
+      if (!unidade) {
+        showModal?.("Unidade obrigatória", "Selecione a unidade do colaborador.", "error");
+        return;
+      }
+      const fileError = validateAtestadoFile(file);
+      if (fileError) {
+        showModal?.("Arquivo inválido", fileError, "error");
+        return;
+      }
+
+      const submitButton = formElement.querySelector('button[type="submit"]');
+      const originalText = submitButton?.textContent || "Enviar atestado";
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Enviando...";
+      }
+
+      try {
+        await uploadPublicAtestado({ nome, cpf, telefone, unidade, file });
+        formElement.reset();
+        showModal?.("Atestado enviado", "Seu atestado foi enviado com sucesso para o RH.", "success");
+      } catch (error) {
+        console.error("Erro ao enviar atestado:", error);
+        showModal?.("Erro no envio", error.message || "Não foi possível enviar o atestado. Verifique sua conexão e tente novamente.", "error");
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = originalText;
+        }
+      }
+    });
+  }
+
+  function setupAtestadosInternalView() {
+    if (!document.getElementById("atestados-list")) return;
+    ["atestado-filter-nome", "atestado-filter-cpf", "atestado-filter-unidade", "atestado-filter-status"].forEach((id) => {
+      const field = document.getElementById(id);
+      if (!field || field.dataset.atestadoFilterReady === "true") return;
+      field.dataset.atestadoFilterReady = "true";
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, () => renderAtestadoCards(data.atestados || []));
+    });
+
+    document.getElementById("atestado-filter-cpf")?.addEventListener("input", (event) => {
+      event.currentTarget.value = formatCpf(event.currentTarget.value);
+    });
+
+    document.getElementById("clear-atestado-filters")?.addEventListener("click", () => {
+      ["atestado-filter-nome", "atestado-filter-cpf", "atestado-filter-unidade", "atestado-filter-status"].forEach((id) => {
+        const field = document.getElementById(id);
+        if (field) field.value = "";
+      });
+      renderAtestadoCards(data.atestados || []);
+    });
+
+    document.addEventListener("change", (event) => {
+      const select = event.target.closest?.("[data-atestado-status-id]");
+      if (!select) return;
+      updateAtestadoStatus(select.dataset.atestadoStatusId, select.value);
+    });
+  }
+
+  try {
+    const originalRenderAll = renderAll;
+    renderAll = function patchedRenderAllForAtestados() {
+      originalRenderAll?.();
+      renderAtestadosSection();
+    };
+  } catch (_) {}
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setupPublicAtestadoForm();
+    setupAtestadosInternalView();
+  });
+
+  setupPublicAtestadoForm();
+  setupAtestadosInternalView();
 })();
