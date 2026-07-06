@@ -5514,6 +5514,7 @@ function renderDashboard() {
         })
         .join("");
     }
+    applyEmojiImages(dashboardTarget);
   }
 
   renderDashboardCalendar(upcomingEvents);
@@ -5774,6 +5775,9 @@ function renderPublicVagas() {
       `;
     }
   }
+
+  applyEmojiImages(list);
+  applyEmojiImages(selectedPanel);
 }
 
 function renderTeamUsers() {
@@ -7076,11 +7080,11 @@ function renderAll() {
     `;
   });
 
+  applyEmojiImages(document.getElementById("vagas-list"));
+
   renderCalendar();
   renderDocumentRecords();
   renderTeamUsers();
-
-  applyEmojiImages(document.body);
 }
 
 function getAuthorAvatar(authorName, knownAvatarPath = "") {
