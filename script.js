@@ -3303,6 +3303,7 @@ function renderChatEmojiMenu() {
     <button type="button" class="chat-emoji-option" data-action="insert-chat-emoji" data-emoji="${escapeHtml(emoji)}" aria-label="Inserir ${escapeHtml(emoji)}">${escapeHtml(emoji)}</button>
   `).join("");
   menu.dataset.ready = "true";
+  applyEmojiImages(menu);
 }
 
 function toggleChatEmojiMenu() {
@@ -6712,6 +6713,16 @@ function renderFormattedChatText(message = "") {
   return html.replace(/\n/g, "<br>");
 }
 
+function applyEmojiImages(target) {
+  if (!target || !window.twemoji) return;
+  window.twemoji.parse(target, {
+    base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
+    folder: "svg",
+    ext: ".svg",
+    className: "emoji-image",
+  });
+}
+
 function handleSettingsKeyboardShortcut(event) {
   if (event.defaultPrevented || event.isComposing) return;
   const target = event.target;
@@ -7449,6 +7460,7 @@ function renderChat() {
   }).join("");
 
   target.innerHTML = chatHtml;
+  applyEmojiImages(target);
 
   target.scrollTop = target.scrollHeight;
   hydrateChatMediaPreviews();
@@ -10387,6 +10399,7 @@ class NotificationTracker {
     if (this.statTotal) this.statTotal.textContent = total;
     if (this.statUnread) this.statUnread.textContent = unread;
     if (this.statPending) this.statPending.textContent = pending;
+    if (this.markAllReadBtn) this.markAllReadBtn.hidden = unread === 0;
   }
 
   markAllRead() {
