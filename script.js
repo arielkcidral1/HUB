@@ -6239,6 +6239,7 @@ function showUserNotificationPopout(title, message, options = {}) {
 
     popout.append(icon, content, closeButton);
     container.prepend(popout);
+    applyEmojiImages(popout);
 
     const timer = window.setTimeout(() => removeUserNotificationPopout(popout), options.duration || 12000);
 
@@ -7078,6 +7079,8 @@ function renderAll() {
   renderCalendar();
   renderDocumentRecords();
   renderTeamUsers();
+
+  applyEmojiImages(document.body);
 }
 
 function getAuthorAvatar(authorName, knownAvatarPath = "") {
@@ -10277,6 +10280,8 @@ class NotificationTracker {
 
       this.notificationsList.appendChild(li);
     });
+
+    applyEmojiImages(this.notificationsList);
   }
 
   openNotification(notif) {
@@ -10347,6 +10352,7 @@ class NotificationTracker {
 
     this.footerArea?.after(detail);
     this.detailArea = detail;
+    applyEmojiImages(detail);
     detail.querySelector("[data-tracker-back]")?.addEventListener("click", () => this.showListView());
     detail.querySelector("[data-tracker-back]")?.focus();
   }
