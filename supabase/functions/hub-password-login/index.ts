@@ -65,11 +65,13 @@ Deno.serve(async (req: Request) => {
   if ((!isValidCpf(cpf) && !isEmail) || !password) return json(req, 400, { error: "Credenciais invalidas." });
 
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data: allowed, error: rateError } = await admin.rpc("hub_check_public_rate_limit", {
+  const rateRequestId = crypto.randomUUID();
+  const { data: allowed, error: rateError } = await admin.rpc("hub_reserve_public_rate_limit", {
     p_form_type: "login_cpf",
     p_ip_hash: await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${Deno.env.get("RATE_LIMIT_SALT") || "hub"}:${getClientIdentifier(req)}`)).then((hash) => Array.from(new Uint8Array(hash)).map((byte) => byte.toString(16).padStart(2, "0")).join("")),
     p_window_seconds: 600,
     p_max: 5,
+    p_request_id: rateRequestId,
   });
   if (rateError || !allowed) return json(req, 429, { error: "Muitas tentativas. Tente novamente mais tarde." });
 
