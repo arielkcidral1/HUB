@@ -77,6 +77,64 @@
   --transition: all 0.18s ease;
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* — Cor base — */
+  --bg:              #0F1419;
+  --surface:         #171D24;
+  --surface-soft:    #202832;
+  --surface-raised:  #232B35;
+
+  /* — Tinta & texto — */
+  --ink:             #EEF1F5;
+  --ink-secondary:   #C3CAD3;
+  --muted:           #8B98A8;
+
+  /* — Teal (identidade principal) — */
+  --teal:            #2FA697;
+  --teal-light:      #3DBBAB;
+  --teal-dark:       #1F7A6E;
+  --teal-surface:    #16302D;
+  --teal-border:     #2A5750;
+
+  /* — Dourado (acento nobre) — */
+  --gold:            #E0AC3A;
+  --gold-light:      #F0C15C;
+  --gold-surface:    #2E2717;
+  --gold-border:     #5A481F;
+
+  /* — Sistema — */
+  --danger:          #E5695A;
+  --danger-surface:  #3A211E;
+  --success:         #3FBE8B;
+  --success-surface: #16302A;
+
+  /* — Cores do Dashboard — */
+  --dashboard-denuncia-bg: #2E2717;
+  --dashboard-denuncia-border: #5A481F;
+  --dashboard-chamado-bg: #182534;
+  --dashboard-chamado-border: #2C4A66;
+  --dashboard-malote-bg: #241f38;
+  --dashboard-malote-border: #423a63;
+  --dashboard-notificacao-bg: #16302D;
+  --dashboard-notificacao-border: #2A5750;
+  --dashboard-vaga-bg: #16302A;
+  --dashboard-vaga-border: #275c44;
+  --dashboard-documento-bg: #202832;
+  --dashboard-documento-border: #333d49;
+
+  /* — Linha divisória — */
+  --line:            #333D49;
+  --line-strong:     #46525F;
+
+  /* — Sombras refinadas — */
+  --shadow-xs:  0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-sm:  0 1px 4px rgba(0, 0, 0, 0.32), 0 0 1px rgba(0, 0, 0, 0.24);
+  --shadow-md:  0 4px 16px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg:  0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.34);
+}
+
 /* ==========================================================================
    RESET & BASE
    ========================================================================== */
@@ -1723,6 +1781,52 @@ textarea {
   line-height: 1.45;
 }
 
+.chat-message-textarea-hidden {
+  display: none;
+}
+
+.chat-message-editor {
+  flex: 1 1 260px;
+  width: auto;
+  min-height: 40px;
+  max-height: 132px;
+  overflow-y: auto;
+  line-height: 1.45;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: #FAFBFC;
+  color: var(--ink);
+  padding: 11px 13px;
+  outline: none;
+  font-size: 14.5px;
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+  transition: var(--transition);
+}
+
+.chat-message-editor:focus {
+  background: #FFFFFF;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(12, 98, 89, 0.1);
+}
+
+.chat-message-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #B0BBC8;
+  pointer-events: none;
+}
+
+.chat-message-editor[contenteditable="false"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--surface-soft);
+}
+
+.chat-message-editor .emoji-image {
+  vertical-align: -0.2em;
+}
+
 .file-button {
   display: inline-flex;
   align-items: center;
@@ -1909,6 +2013,21 @@ textarea {
 
 .chat-emoji-option:hover {
   background: var(--surface-soft);
+}
+
+.emoji-image {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  margin: 0 0.05em;
+  vertical-align: -0.18em;
+}
+
+.chat-emoji-option .emoji-image {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  vertical-align: middle;
 }
 
 .poll-button {
@@ -3293,6 +3412,11 @@ form.panel[data-public-chamados="true"].panel {
     order: 2;
   }
 
+  .chat-message-editor {
+    flex: 1 1 100%;
+    order: 2;
+  }
+
   .chat-attachment-preview {
     order: 1;
     flex-basis: 100%;
@@ -4099,21 +4223,21 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 .tracker-modal-header {
-  padding: 24px;
+  padding: 12px 24px;
   border-bottom: 1px solid var(--line);
   position: relative;
   background: var(--surface);
 }
 
 .tracker-modal-header h2 {
-  margin: 0 0 4px 0;
-  font-size: 20px;
+  margin: 0 0 2px 0;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .tracker-modal-header .item-meta {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .tracker-modal-close {
@@ -4143,8 +4267,8 @@ form.panel[data-public-chamados="true"].panel {
 .tracker-modal-filters {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
-  padding: 16px 24px;
+  gap: 10px;
+  padding: 8px 24px;
   border-bottom: 1px solid var(--line);
   background: var(--surface-soft);
 }
@@ -4152,11 +4276,11 @@ form.panel[data-public-chamados="true"].panel {
 .tracker-filter-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
 }
 
 .tracker-filter-group label {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--muted);
@@ -4165,12 +4289,12 @@ form.panel[data-public-chamados="true"].panel {
 
 .tracker-filter-select,
 .tracker-search-input {
-  padding: 8px 12px;
+  padding: 5px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 12px;
   font-family: inherit;
 }
 
@@ -4184,30 +4308,32 @@ form.panel[data-public-chamados="true"].panel {
 .tracker-modal-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  padding: 16px 24px;
+  gap: 10px;
+  padding: 8px 24px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
 
 .stat-item {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
   text-align: center;
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: 0;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 16px;
   color: var(--ink);
   font-weight: 700;
 }
@@ -4489,6 +4615,14 @@ form.panel[data-public-chamados="true"].panel {
 
 .tracker-detail-actions .primary-button {
   min-width: 150px;
+}
+
+:root[data-theme="dark"] .tracker-modal-content {
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme="dark"] .tracker-modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
 }
 
 @media (max-width: 768px) {

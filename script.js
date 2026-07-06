@@ -150,6 +150,7 @@ const USER_SETTINGS_DEFAULTS = Object.freeze({
   hidePresence: false,
   blurChatPreviews: false,
   localPrivacyMode: false,
+  darkMode: false,
   compactMode: false,
   messageSize: "normal",
   showEmojiButton: true,
@@ -178,6 +179,7 @@ const TABLES = {
   atestados: "hub_atestados",
   usuarios: USERS_TABLE,
 };
+const READ_RECEIPTS_TABLE = "hub_read_receipts";
 let publicVagaCargoFilter = "";
 let publicVagaUnidadeFilter = "";
 let chatAudioRecorder = null;
@@ -189,6 +191,7 @@ let chatAttachmentPreviewUrl = "";
 let chatAttachmentPreviewUrls = [];
 let chatSelectedFiles = [];
 let chatAttachmentPreviewIndex = 0;
+let chatComposerEmojiTimer = null;
 
 function getHubSupabaseConfig() {
   return {
@@ -315,6 +318,7 @@ let dashboardNotificationOffset = 0;
 let visibleDashboardActivityItems = [];
 let currentUserSettings = loadUserSettings();
 let lastUnreadNotificationCount = 0;
+let notificationBaselineReady = false;
 let hubNotificationServiceWorkerRegistration = null;
 let lastRealtimeNotificationSignature = "";
 let hubPollingNotificationKeys = new Set();
@@ -1135,10 +1139,57 @@ function saveReadNotificationIds() {
   storageService.setLocalItem(READ_NOTIFICATIONS_KEY, [...readNotificationIds]);
 }
 
+function getCurrentUserId() {
+  return currentAuthUser?.id || null;
+}
+
+async function pushReadReceiptsToServer(newNotificationIds, newMessageIds) {
+  const userId = getCurrentUserId();
+  const client = supabaseClient || getSupabaseClient();
+  if (!userId || !client) return;
+
+  const rows = [
+    ...newNotificationIds.map((id) => ({ user_id: userId, item_type: "notification", item_id: id })),
+    ...newMessageIds.map((id) => ({ user_id: userId, item_type: "message", item_id: id })),
+  ];
+  if (!rows.length) return;
+
+  try {
+    await client.from(READ_RECEIPTS_TABLE).upsert(rows, { onConflict: "user_id,item_type,item_id" });
+  } catch (error) {
+    console.error("Erro ao sincronizar leitura de notificacoes:", error);
+  }
+}
+
+async function syncReadReceiptsFromServer() {
+  const userId = getCurrentUserId();
+  const client = supabaseClient || getSupabaseClient();
+  if (!userId || !client) return;
+
+  try {
+    const { data: rows, error } = await client
+      .from(READ_RECEIPTS_TABLE)
+      .select("item_type,item_id")
+      .eq("user_id", userId);
+    if (error) throw error;
+
+    (rows || []).forEach((row) => {
+      if (row.item_type === "notification") readNotificationIds.add(String(row.item_id));
+      else if (row.item_type === "message") readRhMessageIds.add(String(row.item_id));
+    });
+
+    saveReadNotificationIds();
+    saveReadRhMessageIds();
+  } catch (error) {
+    console.error("Erro ao carregar leitura de notificacoes do servidor:", error);
+  }
+}
+
 function markNotificationsRead(notificationIds = [], messageIds = []) {
   const normalizedNotificationIds = Array.isArray(notificationIds) ? notificationIds : [notificationIds];
   const normalizedMessageIds = Array.isArray(messageIds) ? messageIds : [messageIds];
-  let changed = false;
+  const newNotificationIds = [];
+  const newMessageIds = [];
 
   normalizedNotificationIds
     .filter((id) => id !== undefined && id !== null && String(id).trim())
@@ -1146,7 +1197,7 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
     .forEach((id) => {
       if (!readNotificationIds.has(id)) {
         readNotificationIds.add(id);
-        changed = true;
+        newNotificationIds.push(id);
       }
     });
 
@@ -1156,14 +1207,15 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
     .forEach((id) => {
       if (!readRhMessageIds.has(id)) {
         readRhMessageIds.add(id);
-        changed = true;
+        newMessageIds.push(id);
       }
     });
 
-  if (!changed) return false;
+  if (!newNotificationIds.length && !newMessageIds.length) return false;
 
   saveReadNotificationIds();
   saveReadRhMessageIds();
+  pushReadReceiptsToServer(newNotificationIds, newMessageIds);
 
   try { lastUnreadNotificationCount = getUnreadRhMessages().length; } catch (_) {}
   try { renderDashboard?.(); } catch (_) {}
@@ -1187,8 +1239,10 @@ function markRhMessagesRead() {
   const currentChannel = activeChatChannel;
   const unread = getUnreadRhMessages().filter((item) => normalizeChatChannel(item.canal) === currentChannel);
   if (!unread.length) return;
-  unread.forEach((item) => readRhMessageIds.add(String(item.id)));
+  const newMessageIds = unread.map((item) => String(item.id));
+  newMessageIds.forEach((id) => readRhMessageIds.add(id));
   saveReadRhMessageIds();
+  pushReadReceiptsToServer([], newMessageIds);
 }
 
 function checkAndMarkChatAsRead() {
@@ -3251,6 +3305,7 @@ function renderChatEmojiMenu() {
     <button type="button" class="chat-emoji-option" data-action="insert-chat-emoji" data-emoji="${escapeHtml(emoji)}" aria-label="Inserir ${escapeHtml(emoji)}">${escapeHtml(emoji)}</button>
   `).join("");
   menu.dataset.ready = "true";
+  applyEmojiImages(menu);
 }
 
 function toggleChatEmojiMenu() {
@@ -3264,16 +3319,106 @@ function toggleChatEmojiMenu() {
   if (nextOpen) closeChatAttachMenu();
 }
 
+function getChatComposerEditor() {
+  return document.getElementById("chat-message-editor");
+}
+
+function getChatComposerTextarea() {
+  return document.querySelector('#chat-form textarea[name="mensagem"]');
+}
+
+function serializeComposerNode(node) {
+  let text = "";
+  node.childNodes.forEach((child) => {
+    if (child.nodeType === Node.TEXT_NODE) {
+      text += child.nodeValue;
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      if (child.tagName === "IMG" && (child.dataset.emoji || child.alt)) {
+        text += child.dataset.emoji || child.alt;
+      } else if (child.tagName === "BR") {
+        text += "\n";
+      } else {
+        text += serializeComposerNode(child);
+      }
+    }
+  });
+  return text;
+}
+
+function syncChatComposerToTextarea() {
+  const editor = getChatComposerEditor();
+  const textarea = getChatComposerTextarea();
+  if (!editor || !textarea) return;
+  textarea.value = serializeComposerNode(editor);
+}
+
+function buildEmojiImageElement(emoji) {
+  if (window.twemoji) {
+    const wrapper = document.createElement("span");
+    wrapper.innerHTML = window.twemoji.parse(emoji, {
+      base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
+      folder: "svg",
+      ext: ".svg",
+      className: "emoji-image",
+    });
+    const img = wrapper.querySelector("img");
+    if (img) {
+      img.dataset.emoji = emoji;
+      return img;
+    }
+  }
+  return document.createTextNode(emoji);
+}
+
+function convertComposerEmojisPreservingCaret() {
+  const editor = getChatComposerEditor();
+  if (!editor || !window.twemoji) return;
+  const selection = window.getSelection();
+  let marker = null;
+  if (selection && selection.rangeCount && editor.contains(selection.anchorNode)) {
+    const range = selection.getRangeAt(0).cloneRange();
+    range.collapse(true);
+    marker = document.createElement("span");
+    marker.className = "chat-composer-caret-marker";
+    range.insertNode(marker);
+  }
+  applyEmojiImages(editor);
+  if (marker && marker.isConnected) {
+    const newRange = document.createRange();
+    newRange.setStartAfter(marker);
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    marker.remove();
+  }
+  syncChatComposerToTextarea();
+}
+
+function getComposerSelectionRange(editor) {
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount && editor.contains(selection.anchorNode)) {
+    return selection.getRangeAt(0);
+  }
+  const range = document.createRange();
+  range.selectNodeContents(editor);
+  range.collapse(false);
+  return range;
+}
+
 function insertChatEmoji(emoji) {
-  const input = document.querySelector('#chat-form textarea[name="mensagem"]');
-  if (!input || input.disabled) return;
-  const value = input.value || "";
-  const start = Number.isInteger(input.selectionStart) ? input.selectionStart : value.length;
-  const end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : start;
-  input.value = `${value.slice(0, start)}${emoji}${value.slice(end)}`;
-  const cursor = start + String(emoji).length;
-  input.focus();
-  input.setSelectionRange(cursor, cursor);
+  const editor = getChatComposerEditor();
+  if (!editor || editor.getAttribute("contenteditable") !== "true") return;
+  editor.focus();
+  const selection = window.getSelection();
+  const range = getComposerSelectionRange(editor);
+  range.deleteContents();
+  const node = buildEmojiImageElement(emoji);
+  range.insertNode(node);
+  range.setStartAfter(node);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  syncChatComposerToTextarea();
 }
 
 function openChatFilePicker({ accept = getChatDefaultFileAccept(), capture = "" } = {}) {
@@ -5259,7 +5404,11 @@ function renderDashboard() {
 
   document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status === "Aberta" || item.status === "Urgente").length;
   const unreadRhMessages = getUnreadRhMessages();
-  notifyUnreadRhMessages(unreadRhMessages.length);
+  if (notificationBaselineReady) {
+    notifyUnreadRhMessages(unreadRhMessages.length);
+  } else {
+    lastUnreadNotificationCount = unreadRhMessages.length;
+  }
   if (document.getElementById("metric-comunicados")) {
     document.getElementById("metric-comunicados").textContent = unreadRhMessages.length;
   }
@@ -5456,6 +5605,7 @@ function renderDashboard() {
         })
         .join("");
     }
+    applyEmojiImages(dashboardTarget);
   }
 
   renderDashboardCalendar(upcomingEvents);
@@ -5716,6 +5866,9 @@ function renderPublicVagas() {
       `;
     }
   }
+
+  applyEmojiImages(list);
+  applyEmojiImages(selectedPanel);
 }
 
 function renderTeamUsers() {
@@ -5875,6 +6028,7 @@ function syncUserSettingsControls() {
 
 function applyUserSettings() {
   currentUserSettings = normalizeUserSettings(currentUserSettings);
+  document.documentElement.setAttribute("data-theme", currentUserSettings.darkMode ? "dark" : "light");
   document.body?.classList.toggle("user-setting-compact", currentUserSettings.compactMode);
   document.body?.classList.toggle("user-setting-message-small", currentUserSettings.messageSize === "small");
   document.body?.classList.toggle("user-setting-message-large", currentUserSettings.messageSize === "large");
@@ -6180,6 +6334,7 @@ function showUserNotificationPopout(title, message, options = {}) {
 
     popout.append(icon, content, closeButton);
     container.prepend(popout);
+    applyEmojiImages(popout);
 
     const timer = window.setTimeout(() => removeUserNotificationPopout(popout), options.duration || 12000);
 
@@ -6455,8 +6610,7 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
 
   const currentName = normalizeLoginName(getCurrentUserName());
   const author = normalizeLoginName(item.autor || item.createdBy || item.updatedBy || item.solicitante || "");
-  const pageIsVisible = document.visibilityState === "visible" && document.hasFocus?.();
-  if (collection === "comunicados" && author && author === currentName && pageIsVisible) return false;
+  if (collection === "comunicados" && author && author === currentName) return false;
 
   lastRealtimeNotificationSignature = signature;
   return true;
@@ -6610,6 +6764,8 @@ function resetChatComposerState() {
   const chatForm = document.getElementById("chat-form");
   const messageInput = chatForm?.querySelector('textarea[name="mensagem"]');
   if (messageInput) messageInput.value = "";
+  const editor = getChatComposerEditor();
+  if (editor) editor.innerHTML = "";
   clearChatSelectedFile();
 }
 
@@ -6626,17 +6782,21 @@ function closeActiveChat() {
 }
 
 function wrapChatSelection(prefix, suffix = prefix) {
-  const input = document.querySelector('#chat-form textarea[name="mensagem"]');
-  if (!input || input.disabled) return false;
-  const value = input.value || "";
-  const start = Number.isInteger(input.selectionStart) ? input.selectionStart : value.length;
-  const end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : start;
-  const selected = value.slice(start, end);
-  input.value = `${value.slice(0, start)}${prefix}${selected}${suffix}${value.slice(end)}`;
-  const cursorStart = start + prefix.length;
-  const cursorEnd = cursorStart + selected.length;
-  input.focus();
-  input.setSelectionRange(cursorStart, cursorEnd || cursorStart);
+  const editor = getChatComposerEditor();
+  if (!editor || editor.getAttribute("contenteditable") !== "true") return false;
+  editor.focus();
+  const range = getComposerSelectionRange(editor);
+  const selectedText = range.toString();
+  range.deleteContents();
+  const textNode = document.createTextNode(`${prefix}${selectedText}${suffix}`);
+  range.insertNode(textNode);
+  const selection = window.getSelection();
+  const newRange = document.createRange();
+  newRange.setStart(textNode, prefix.length);
+  newRange.setEnd(textNode, prefix.length + selectedText.length);
+  selection.removeAllRanges();
+  selection.addRange(newRange);
+  syncChatComposerToTextarea();
   return true;
 }
 
@@ -6656,10 +6816,20 @@ function renderFormattedChatText(message = "") {
   return html.replace(/\n/g, "<br>");
 }
 
+function applyEmojiImages(target) {
+  if (!target || !window.twemoji) return;
+  window.twemoji.parse(target, {
+    base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
+    folder: "svg",
+    ext: ".svg",
+    className: "emoji-image",
+  });
+}
+
 function handleSettingsKeyboardShortcut(event) {
   if (event.defaultPrevented || event.isComposing) return;
   const target = event.target;
-  const isTyping = target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+  const isTyping = target && (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable);
   if (event.key === "Escape") {
     closeChatAttachMenu();
     closeChatEmojiMenu();
@@ -6676,7 +6846,7 @@ function handleSettingsKeyboardShortcut(event) {
     focusChatMessageFilter();
     return;
   }
-  if (["b", "i", "u"].includes(event.key.toLowerCase()) && target?.matches?.('#chat-form textarea[name="mensagem"]')) {
+  if (["b", "i", "u"].includes(event.key.toLowerCase()) && target?.matches?.('#chat-form textarea[name="mensagem"], #chat-message-editor')) {
     event.preventDefault();
     applyChatEditingShortcut(event.key);
     return;
@@ -7006,6 +7176,8 @@ function renderAll() {
     `;
   });
 
+  applyEmojiImages(document.getElementById("vagas-list"));
+
   renderCalendar();
   renderDocumentRecords();
   renderTeamUsers();
@@ -7300,6 +7472,11 @@ function renderChat() {
       messageInput.placeholder = "Escolha um chat ao lado para enviar mensagens";
       messageInput.disabled = true;
     }
+    const idleEditor = getChatComposerEditor();
+    if (idleEditor) {
+      idleEditor.dataset.placeholder = "Escolha um chat ao lado para enviar mensagens";
+      idleEditor.setAttribute("contenteditable", "false");
+    }
     if (sendButton) sendButton.disabled = true;
     if (fileInput) fileInput.disabled = true;
     if (emojiButton) emojiButton.disabled = true;
@@ -7325,6 +7502,11 @@ function renderChat() {
   if (messageInput) {
     messageInput.placeholder = isGeneralChatChannel(activeChannel.id) ? `Escreva em ${activeChannel.label}` : `Mensagem para ${activeChannel.label}`;
     messageInput.disabled = false;
+  }
+  const activeEditor = getChatComposerEditor();
+  if (activeEditor) {
+    activeEditor.dataset.placeholder = isGeneralChatChannel(activeChannel.id) ? `Escreva em ${activeChannel.label}` : `Mensagem para ${activeChannel.label}`;
+    activeEditor.setAttribute("contenteditable", "true");
   }
   if (sendButton) sendButton.disabled = false;
   if (fileInput) fileInput.disabled = false;
@@ -7393,6 +7575,7 @@ function renderChat() {
   }).join("");
 
   target.innerHTML = chatHtml;
+  applyEmojiImages(target);
 
   target.scrollTop = target.scrollHeight;
   hydrateChatMediaPreviews();
@@ -8041,18 +8224,32 @@ document.addEventListener("click", (event) => {
 const chatForm = document.getElementById("chat-form");
 if (chatForm) {
   const chatMessageInput = chatForm.querySelector('textarea[name="mensagem"]');
-  chatMessageInput?.addEventListener("keydown", (event) => {
+  const chatMessageEditor = document.getElementById("chat-message-editor");
+
+  chatMessageEditor?.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
     event.preventDefault();
     chatForm.requestSubmit();
   });
 
+  chatMessageEditor?.addEventListener("input", () => {
+    syncChatComposerToTextarea();
+    window.clearTimeout(chatComposerEmojiTimer);
+    chatComposerEmojiTimer = window.setTimeout(convertComposerEmojisPreservingCaret, 220);
+  });
+
+  chatMessageEditor?.addEventListener("paste", (event) => {
+    event.preventDefault();
+    const text = (event.clipboardData || window.clipboardData).getData("text/plain");
+    document.execCommand("insertText", false, text);
+  });
+
   // Garante que Enter em qualquer elemento do formulário (ex: após anexar arquivo) também envia
   chatForm.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
-    if (event.target === chatMessageInput) return; // já tratado acima
+    if (event.target === chatMessageInput || event.target === chatMessageEditor) return; // já tratado acima
     if (event.target.tagName === "BUTTON") return; // deixa botões funcionarem normalmente
     event.preventDefault();
     chatForm.requestSubmit();
@@ -8111,6 +8308,8 @@ if (chatForm) {
     renderChat();
     // Limpa o formulário imediatamente
     formElement.reset();
+    const composerEditor = getChatComposerEditor();
+    if (composerEditor) composerEditor.innerHTML = "";
     clearChatSelectedFile();
 
     // ── UPLOAD de arquivos em background ──────────────────────────────────
@@ -8988,7 +9187,7 @@ function prefillChamadoRequester() {
   input.classList.add("readonly-field");
 }
 
-function initializeAppData() {
+async function initializeAppData() {
   populateUnitSelects();
   populateEpiSelects();
   supabaseClient = getSupabaseClient();
@@ -9002,7 +9201,9 @@ function initializeAppData() {
   renderAccountSettings();
   registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
-  loadFromSupabase({ setupLive: true });
+  await syncReadReceiptsFromServer();
+  await loadFromSupabase({ setupLive: true });
+  notificationBaselineReady = true;
 }
 
 disableSensitiveFieldAutofill();
@@ -10205,6 +10406,8 @@ class NotificationTracker {
 
       this.notificationsList.appendChild(li);
     });
+
+    applyEmojiImages(this.notificationsList);
   }
 
   openNotification(notif) {
@@ -10275,6 +10478,7 @@ class NotificationTracker {
 
     this.footerArea?.after(detail);
     this.detailArea = detail;
+    applyEmojiImages(detail);
     detail.querySelector("[data-tracker-back]")?.addEventListener("click", () => this.showListView());
     detail.querySelector("[data-tracker-back]")?.focus();
   }
@@ -10329,6 +10533,7 @@ class NotificationTracker {
     if (this.statTotal) this.statTotal.textContent = total;
     if (this.statUnread) this.statUnread.textContent = unread;
     if (this.statPending) this.statPending.textContent = pending;
+    if (this.markAllReadBtn) this.markAllReadBtn.hidden = unread === 0;
   }
 
   markAllRead() {

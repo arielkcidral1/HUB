@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://nblfwesptlpetbwfmdqf.supabase.co; media-src 'self' blob: https://nblfwesptlpetbwfmdqf.supabase.co; connect-src 'self' https://nblfwesptlpetbwfmdqf.supabase.co wss://nblfwesptlpetbwfmdqf.supabase.co https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://nblfwesptlpetbwfmdqf.supabase.co https://cdn.jsdelivr.net; media-src 'self' blob: https://nblfwesptlpetbwfmdqf.supabase.co; connect-src 'self' https://nblfwesptlpetbwfmdqf.supabase.co wss://nblfwesptlpetbwfmdqf.supabase.co https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
     <title>HUB | RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
     <link rel="stylesheet" href="style.css" />
@@ -298,7 +298,8 @@
                   <button class="chat-emoji-button" id="chat-emoji-button" type="button" data-action="toggle-chat-emoji-menu" aria-label="Abrir emojis" aria-expanded="false">&#128522;</button>
                   <div class="chat-emoji-menu" id="chat-emoji-menu" hidden aria-label="Emojis do chat"></div>
                 </div>
-                <textarea name="mensagem" rows="1" placeholder="Escreva uma mensagem para o RH" autocomplete="off"></textarea>
+                <div id="chat-message-editor" class="chat-message-editor" contenteditable="true" data-placeholder="Escreva uma mensagem para o RH" role="textbox" aria-multiline="true" aria-label="Escreva uma mensagem"></div>
+                <textarea name="mensagem" rows="1" class="chat-message-textarea-hidden" tabindex="-1" aria-hidden="true"></textarea>
                 <button class="secondary-link poll-button" id="create-poll-button" type="button" data-action="open-chat-poll" hidden>Enquete</button>
                 <button class="record-audio-button" id="record-audio-button" type="button" aria-label="Gravar áudio" title="Gravar áudio">
                   <img src="assets/microphone-icon.png" alt="" aria-hidden="true" />
@@ -1276,6 +1277,10 @@
               <div class="settings-section">
                 <h3>Apar&ecirc;ncia</h3>
                 <label class="settings-option">
+                  <input type="checkbox" id="settings-appearance-dark-mode" data-user-setting="darkMode" />
+                  <span><strong>Modo escuro</strong><small>Aplica um tema escuro em todo o sistema.</small></span>
+                </label>
+                <label class="settings-option">
                   <input type="checkbox" id="settings-chat-compact" data-user-setting="compactMode" />
                   <span><strong>Modo compacto</strong><small>Reduz espa&ccedil;amentos do chat e listas para caber mais informa&ccedil;&atilde;o na tela.</small></span>
                 </label>
@@ -1387,6 +1392,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
     <script src="script.js"></script>
     <script src="vagas-admin-filters.js"></script>
   </body>
