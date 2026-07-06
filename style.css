@@ -77,6 +77,64 @@
   --transition: all 0.18s ease;
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* — Cor base — */
+  --bg:              #0F1419;
+  --surface:         #171D24;
+  --surface-soft:    #202832;
+  --surface-raised:  #232B35;
+
+  /* — Tinta & texto — */
+  --ink:             #EEF1F5;
+  --ink-secondary:   #C3CAD3;
+  --muted:           #8B98A8;
+
+  /* — Teal (identidade principal) — */
+  --teal:            #2FA697;
+  --teal-light:      #3DBBAB;
+  --teal-dark:       #1F7A6E;
+  --teal-surface:    #16302D;
+  --teal-border:     #2A5750;
+
+  /* — Dourado (acento nobre) — */
+  --gold:            #E0AC3A;
+  --gold-light:      #F0C15C;
+  --gold-surface:    #2E2717;
+  --gold-border:     #5A481F;
+
+  /* — Sistema — */
+  --danger:          #E5695A;
+  --danger-surface:  #3A211E;
+  --success:         #3FBE8B;
+  --success-surface: #16302A;
+
+  /* — Cores do Dashboard — */
+  --dashboard-denuncia-bg: #2E2717;
+  --dashboard-denuncia-border: #5A481F;
+  --dashboard-chamado-bg: #182534;
+  --dashboard-chamado-border: #2C4A66;
+  --dashboard-malote-bg: #241f38;
+  --dashboard-malote-border: #423a63;
+  --dashboard-notificacao-bg: #16302D;
+  --dashboard-notificacao-border: #2A5750;
+  --dashboard-vaga-bg: #16302A;
+  --dashboard-vaga-border: #275c44;
+  --dashboard-documento-bg: #202832;
+  --dashboard-documento-border: #333d49;
+
+  /* — Linha divisória — */
+  --line:            #333D49;
+  --line-strong:     #46525F;
+
+  /* — Sombras refinadas — */
+  --shadow-xs:  0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-sm:  0 1px 4px rgba(0, 0, 0, 0.32), 0 0 1px rgba(0, 0, 0, 0.24);
+  --shadow-md:  0 4px 16px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg:  0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.34);
+}
+
 /* ==========================================================================
    RESET & BASE
    ========================================================================== */
@@ -4508,25 +4566,12 @@ form.panel[data-public-chamados="true"].panel {
   min-width: 150px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .tracker-modal-content {
-    --surface: #1b2128;
-    --surface-soft: #232a33;
-    --ink: #eef1f5;
-    --ink-secondary: #c3cad3;
-    --muted: #93a0b0;
-    --line: #333d49;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
-  }
+:root[data-theme="dark"] .tracker-modal-content {
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
 
-  .tracker-modal-overlay {
-    background: rgba(0, 0, 0, 0.7);
-  }
-
-  .tracker-filter-select,
-  .tracker-search-input {
-    color-scheme: dark;
-  }
+:root[data-theme="dark"] .tracker-modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
 }
 
 @media (max-width: 768px) {

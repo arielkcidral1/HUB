@@ -150,6 +150,7 @@ const USER_SETTINGS_DEFAULTS = Object.freeze({
   hidePresence: false,
   blurChatPreviews: false,
   localPrivacyMode: false,
+  darkMode: false,
   compactMode: false,
   messageSize: "normal",
   showEmojiButton: true,
@@ -5932,6 +5933,7 @@ function syncUserSettingsControls() {
 
 function applyUserSettings() {
   currentUserSettings = normalizeUserSettings(currentUserSettings);
+  document.documentElement.setAttribute("data-theme", currentUserSettings.darkMode ? "dark" : "light");
   document.body?.classList.toggle("user-setting-compact", currentUserSettings.compactMode);
   document.body?.classList.toggle("user-setting-message-small", currentUserSettings.messageSize === "small");
   document.body?.classList.toggle("user-setting-message-large", currentUserSettings.messageSize === "large");
