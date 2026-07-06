@@ -178,6 +178,7 @@ const TABLES = {
   atestados: "hub_atestados",
   usuarios: USERS_TABLE,
 };
+const READ_RECEIPTS_TABLE = "hub_read_receipts";
 let publicVagaCargoFilter = "";
 let publicVagaUnidadeFilter = "";
 let chatAudioRecorder = null;
@@ -315,6 +316,7 @@ let dashboardNotificationOffset = 0;
 let visibleDashboardActivityItems = [];
 let currentUserSettings = loadUserSettings();
 let lastUnreadNotificationCount = 0;
+let notificationBaselineReady = false;
 let hubNotificationServiceWorkerRegistration = null;
 let lastRealtimeNotificationSignature = "";
 let hubPollingNotificationKeys = new Set();
@@ -1135,10 +1137,57 @@ function saveReadNotificationIds() {
   storageService.setLocalItem(READ_NOTIFICATIONS_KEY, [...readNotificationIds]);
 }
 
+function getCurrentUserId() {
+  return currentAuthUser?.id || null;
+}
+
+async function pushReadReceiptsToServer(newNotificationIds, newMessageIds) {
+  const userId = getCurrentUserId();
+  const client = supabaseClient || getSupabaseClient();
+  if (!userId || !client) return;
+
+  const rows = [
+    ...newNotificationIds.map((id) => ({ user_id: userId, item_type: "notification", item_id: id })),
+    ...newMessageIds.map((id) => ({ user_id: userId, item_type: "message", item_id: id })),
+  ];
+  if (!rows.length) return;
+
+  try {
+    await client.from(READ_RECEIPTS_TABLE).upsert(rows, { onConflict: "user_id,item_type,item_id" });
+  } catch (error) {
+    console.error("Erro ao sincronizar leitura de notificacoes:", error);
+  }
+}
+
+async function syncReadReceiptsFromServer() {
+  const userId = getCurrentUserId();
+  const client = supabaseClient || getSupabaseClient();
+  if (!userId || !client) return;
+
+  try {
+    const { data: rows, error } = await client
+      .from(READ_RECEIPTS_TABLE)
+      .select("item_type,item_id")
+      .eq("user_id", userId);
+    if (error) throw error;
+
+    (rows || []).forEach((row) => {
+      if (row.item_type === "notification") readNotificationIds.add(String(row.item_id));
+      else if (row.item_type === "message") readRhMessageIds.add(String(row.item_id));
+    });
+
+    saveReadNotificationIds();
+    saveReadRhMessageIds();
+  } catch (error) {
+    console.error("Erro ao carregar leitura de notificacoes do servidor:", error);
+  }
+}
+
 function markNotificationsRead(notificationIds = [], messageIds = []) {
   const normalizedNotificationIds = Array.isArray(notificationIds) ? notificationIds : [notificationIds];
   const normalizedMessageIds = Array.isArray(messageIds) ? messageIds : [messageIds];
-  let changed = false;
+  const newNotificationIds = [];
+  const newMessageIds = [];
 
   normalizedNotificationIds
     .filter((id) => id !== undefined && id !== null && String(id).trim())
@@ -1146,7 +1195,7 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
     .forEach((id) => {
       if (!readNotificationIds.has(id)) {
         readNotificationIds.add(id);
-        changed = true;
+        newNotificationIds.push(id);
       }
     });
 
@@ -1156,14 +1205,15 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
     .forEach((id) => {
       if (!readRhMessageIds.has(id)) {
         readRhMessageIds.add(id);
-        changed = true;
+        newMessageIds.push(id);
       }
     });
 
-  if (!changed) return false;
+  if (!newNotificationIds.length && !newMessageIds.length) return false;
 
   saveReadNotificationIds();
   saveReadRhMessageIds();
+  pushReadReceiptsToServer(newNotificationIds, newMessageIds);
 
   try { lastUnreadNotificationCount = getUnreadRhMessages().length; } catch (_) {}
   try { renderDashboard?.(); } catch (_) {}
@@ -1187,8 +1237,10 @@ function markRhMessagesRead() {
   const currentChannel = activeChatChannel;
   const unread = getUnreadRhMessages().filter((item) => normalizeChatChannel(item.canal) === currentChannel);
   if (!unread.length) return;
-  unread.forEach((item) => readRhMessageIds.add(String(item.id)));
+  const newMessageIds = unread.map((item) => String(item.id));
+  newMessageIds.forEach((id) => readRhMessageIds.add(id));
   saveReadRhMessageIds();
+  pushReadReceiptsToServer([], newMessageIds);
 }
 
 function checkAndMarkChatAsRead() {
@@ -5259,7 +5311,11 @@ function renderDashboard() {
 
   document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status === "Aberta" || item.status === "Urgente").length;
   const unreadRhMessages = getUnreadRhMessages();
-  notifyUnreadRhMessages(unreadRhMessages.length);
+  if (notificationBaselineReady) {
+    notifyUnreadRhMessages(unreadRhMessages.length);
+  } else {
+    lastUnreadNotificationCount = unreadRhMessages.length;
+  }
   if (document.getElementById("metric-comunicados")) {
     document.getElementById("metric-comunicados").textContent = unreadRhMessages.length;
   }
@@ -8988,7 +9044,7 @@ function prefillChamadoRequester() {
   input.classList.add("readonly-field");
 }
 
-function initializeAppData() {
+async function initializeAppData() {
   populateUnitSelects();
   populateEpiSelects();
   supabaseClient = getSupabaseClient();
@@ -9002,7 +9058,9 @@ function initializeAppData() {
   renderAccountSettings();
   registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
-  loadFromSupabase({ setupLive: true });
+  await syncReadReceiptsFromServer();
+  await loadFromSupabase({ setupLive: true });
+  notificationBaselineReady = true;
 }
 
 disableSensitiveFieldAutofill();
