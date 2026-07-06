@@ -191,6 +191,7 @@ let chatAttachmentPreviewUrl = "";
 let chatAttachmentPreviewUrls = [];
 let chatSelectedFiles = [];
 let chatAttachmentPreviewIndex = 0;
+let chatComposerEmojiTimer = null;
 
 function getHubSupabaseConfig() {
   return {
@@ -3318,16 +3319,106 @@ function toggleChatEmojiMenu() {
   if (nextOpen) closeChatAttachMenu();
 }
 
+function getChatComposerEditor() {
+  return document.getElementById("chat-message-editor");
+}
+
+function getChatComposerTextarea() {
+  return document.querySelector('#chat-form textarea[name="mensagem"]');
+}
+
+function serializeComposerNode(node) {
+  let text = "";
+  node.childNodes.forEach((child) => {
+    if (child.nodeType === Node.TEXT_NODE) {
+      text += child.nodeValue;
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      if (child.tagName === "IMG" && (child.dataset.emoji || child.alt)) {
+        text += child.dataset.emoji || child.alt;
+      } else if (child.tagName === "BR") {
+        text += "\n";
+      } else {
+        text += serializeComposerNode(child);
+      }
+    }
+  });
+  return text;
+}
+
+function syncChatComposerToTextarea() {
+  const editor = getChatComposerEditor();
+  const textarea = getChatComposerTextarea();
+  if (!editor || !textarea) return;
+  textarea.value = serializeComposerNode(editor);
+}
+
+function buildEmojiImageElement(emoji) {
+  if (window.twemoji) {
+    const wrapper = document.createElement("span");
+    wrapper.innerHTML = window.twemoji.parse(emoji, {
+      base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
+      folder: "svg",
+      ext: ".svg",
+      className: "emoji-image",
+    });
+    const img = wrapper.querySelector("img");
+    if (img) {
+      img.dataset.emoji = emoji;
+      return img;
+    }
+  }
+  return document.createTextNode(emoji);
+}
+
+function convertComposerEmojisPreservingCaret() {
+  const editor = getChatComposerEditor();
+  if (!editor || !window.twemoji) return;
+  const selection = window.getSelection();
+  let marker = null;
+  if (selection && selection.rangeCount && editor.contains(selection.anchorNode)) {
+    const range = selection.getRangeAt(0).cloneRange();
+    range.collapse(true);
+    marker = document.createElement("span");
+    marker.className = "chat-composer-caret-marker";
+    range.insertNode(marker);
+  }
+  applyEmojiImages(editor);
+  if (marker && marker.isConnected) {
+    const newRange = document.createRange();
+    newRange.setStartAfter(marker);
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    marker.remove();
+  }
+  syncChatComposerToTextarea();
+}
+
+function getComposerSelectionRange(editor) {
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount && editor.contains(selection.anchorNode)) {
+    return selection.getRangeAt(0);
+  }
+  const range = document.createRange();
+  range.selectNodeContents(editor);
+  range.collapse(false);
+  return range;
+}
+
 function insertChatEmoji(emoji) {
-  const input = document.querySelector('#chat-form textarea[name="mensagem"]');
-  if (!input || input.disabled) return;
-  const value = input.value || "";
-  const start = Number.isInteger(input.selectionStart) ? input.selectionStart : value.length;
-  const end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : start;
-  input.value = `${value.slice(0, start)}${emoji}${value.slice(end)}`;
-  const cursor = start + String(emoji).length;
-  input.focus();
-  input.setSelectionRange(cursor, cursor);
+  const editor = getChatComposerEditor();
+  if (!editor || editor.getAttribute("contenteditable") !== "true") return;
+  editor.focus();
+  const selection = window.getSelection();
+  const range = getComposerSelectionRange(editor);
+  range.deleteContents();
+  const node = buildEmojiImageElement(emoji);
+  range.insertNode(node);
+  range.setStartAfter(node);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  syncChatComposerToTextarea();
 }
 
 function openChatFilePicker({ accept = getChatDefaultFileAccept(), capture = "" } = {}) {
@@ -6519,8 +6610,7 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
 
   const currentName = normalizeLoginName(getCurrentUserName());
   const author = normalizeLoginName(item.autor || item.createdBy || item.updatedBy || item.solicitante || "");
-  const pageIsVisible = document.visibilityState === "visible" && document.hasFocus?.();
-  if (collection === "comunicados" && author && author === currentName && pageIsVisible) return false;
+  if (collection === "comunicados" && author && author === currentName) return false;
 
   lastRealtimeNotificationSignature = signature;
   return true;
@@ -6674,6 +6764,8 @@ function resetChatComposerState() {
   const chatForm = document.getElementById("chat-form");
   const messageInput = chatForm?.querySelector('textarea[name="mensagem"]');
   if (messageInput) messageInput.value = "";
+  const editor = getChatComposerEditor();
+  if (editor) editor.innerHTML = "";
   clearChatSelectedFile();
 }
 
@@ -6690,17 +6782,21 @@ function closeActiveChat() {
 }
 
 function wrapChatSelection(prefix, suffix = prefix) {
-  const input = document.querySelector('#chat-form textarea[name="mensagem"]');
-  if (!input || input.disabled) return false;
-  const value = input.value || "";
-  const start = Number.isInteger(input.selectionStart) ? input.selectionStart : value.length;
-  const end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : start;
-  const selected = value.slice(start, end);
-  input.value = `${value.slice(0, start)}${prefix}${selected}${suffix}${value.slice(end)}`;
-  const cursorStart = start + prefix.length;
-  const cursorEnd = cursorStart + selected.length;
-  input.focus();
-  input.setSelectionRange(cursorStart, cursorEnd || cursorStart);
+  const editor = getChatComposerEditor();
+  if (!editor || editor.getAttribute("contenteditable") !== "true") return false;
+  editor.focus();
+  const range = getComposerSelectionRange(editor);
+  const selectedText = range.toString();
+  range.deleteContents();
+  const textNode = document.createTextNode(`${prefix}${selectedText}${suffix}`);
+  range.insertNode(textNode);
+  const selection = window.getSelection();
+  const newRange = document.createRange();
+  newRange.setStart(textNode, prefix.length);
+  newRange.setEnd(textNode, prefix.length + selectedText.length);
+  selection.removeAllRanges();
+  selection.addRange(newRange);
+  syncChatComposerToTextarea();
   return true;
 }
 
@@ -6733,7 +6829,7 @@ function applyEmojiImages(target) {
 function handleSettingsKeyboardShortcut(event) {
   if (event.defaultPrevented || event.isComposing) return;
   const target = event.target;
-  const isTyping = target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+  const isTyping = target && (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable);
   if (event.key === "Escape") {
     closeChatAttachMenu();
     closeChatEmojiMenu();
@@ -6750,7 +6846,7 @@ function handleSettingsKeyboardShortcut(event) {
     focusChatMessageFilter();
     return;
   }
-  if (["b", "i", "u"].includes(event.key.toLowerCase()) && target?.matches?.('#chat-form textarea[name="mensagem"]')) {
+  if (["b", "i", "u"].includes(event.key.toLowerCase()) && target?.matches?.('#chat-form textarea[name="mensagem"], #chat-message-editor')) {
     event.preventDefault();
     applyChatEditingShortcut(event.key);
     return;
@@ -7376,6 +7472,11 @@ function renderChat() {
       messageInput.placeholder = "Escolha um chat ao lado para enviar mensagens";
       messageInput.disabled = true;
     }
+    const idleEditor = getChatComposerEditor();
+    if (idleEditor) {
+      idleEditor.dataset.placeholder = "Escolha um chat ao lado para enviar mensagens";
+      idleEditor.setAttribute("contenteditable", "false");
+    }
     if (sendButton) sendButton.disabled = true;
     if (fileInput) fileInput.disabled = true;
     if (emojiButton) emojiButton.disabled = true;
@@ -7401,6 +7502,11 @@ function renderChat() {
   if (messageInput) {
     messageInput.placeholder = isGeneralChatChannel(activeChannel.id) ? `Escreva em ${activeChannel.label}` : `Mensagem para ${activeChannel.label}`;
     messageInput.disabled = false;
+  }
+  const activeEditor = getChatComposerEditor();
+  if (activeEditor) {
+    activeEditor.dataset.placeholder = isGeneralChatChannel(activeChannel.id) ? `Escreva em ${activeChannel.label}` : `Mensagem para ${activeChannel.label}`;
+    activeEditor.setAttribute("contenteditable", "true");
   }
   if (sendButton) sendButton.disabled = false;
   if (fileInput) fileInput.disabled = false;
@@ -8118,18 +8224,32 @@ document.addEventListener("click", (event) => {
 const chatForm = document.getElementById("chat-form");
 if (chatForm) {
   const chatMessageInput = chatForm.querySelector('textarea[name="mensagem"]');
-  chatMessageInput?.addEventListener("keydown", (event) => {
+  const chatMessageEditor = document.getElementById("chat-message-editor");
+
+  chatMessageEditor?.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
     event.preventDefault();
     chatForm.requestSubmit();
   });
 
+  chatMessageEditor?.addEventListener("input", () => {
+    syncChatComposerToTextarea();
+    window.clearTimeout(chatComposerEmojiTimer);
+    chatComposerEmojiTimer = window.setTimeout(convertComposerEmojisPreservingCaret, 220);
+  });
+
+  chatMessageEditor?.addEventListener("paste", (event) => {
+    event.preventDefault();
+    const text = (event.clipboardData || window.clipboardData).getData("text/plain");
+    document.execCommand("insertText", false, text);
+  });
+
   // Garante que Enter em qualquer elemento do formulário (ex: após anexar arquivo) também envia
   chatForm.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
-    if (event.target === chatMessageInput) return; // já tratado acima
+    if (event.target === chatMessageInput || event.target === chatMessageEditor) return; // já tratado acima
     if (event.target.tagName === "BUTTON") return; // deixa botões funcionarem normalmente
     event.preventDefault();
     chatForm.requestSubmit();
@@ -8188,6 +8308,8 @@ if (chatForm) {
     renderChat();
     // Limpa o formulário imediatamente
     formElement.reset();
+    const composerEditor = getChatComposerEditor();
+    if (composerEditor) composerEditor.innerHTML = "";
     clearChatSelectedFile();
 
     // ── UPLOAD de arquivos em background ──────────────────────────────────

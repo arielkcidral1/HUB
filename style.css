@@ -1781,6 +1781,52 @@ textarea {
   line-height: 1.45;
 }
 
+.chat-message-textarea-hidden {
+  display: none;
+}
+
+.chat-message-editor {
+  flex: 1 1 260px;
+  width: auto;
+  min-height: 40px;
+  max-height: 132px;
+  overflow-y: auto;
+  line-height: 1.45;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: #FAFBFC;
+  color: var(--ink);
+  padding: 11px 13px;
+  outline: none;
+  font-size: 14.5px;
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+  transition: var(--transition);
+}
+
+.chat-message-editor:focus {
+  background: #FFFFFF;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(12, 98, 89, 0.1);
+}
+
+.chat-message-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #B0BBC8;
+  pointer-events: none;
+}
+
+.chat-message-editor[contenteditable="false"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--surface-soft);
+}
+
+.chat-message-editor .emoji-image {
+  vertical-align: -0.2em;
+}
+
 .file-button {
   display: inline-flex;
   align-items: center;
@@ -3362,6 +3408,11 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer textarea[name="mensagem"] {
+    flex: 1 1 100%;
+    order: 2;
+  }
+
+  .chat-message-editor {
     flex: 1 1 100%;
     order: 2;
   }

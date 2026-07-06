@@ -298,7 +298,8 @@
                   <button class="chat-emoji-button" id="chat-emoji-button" type="button" data-action="toggle-chat-emoji-menu" aria-label="Abrir emojis" aria-expanded="false">&#128522;</button>
                   <div class="chat-emoji-menu" id="chat-emoji-menu" hidden aria-label="Emojis do chat"></div>
                 </div>
-                <textarea name="mensagem" rows="1" placeholder="Escreva uma mensagem para o RH" autocomplete="off"></textarea>
+                <div id="chat-message-editor" class="chat-message-editor" contenteditable="true" data-placeholder="Escreva uma mensagem para o RH" role="textbox" aria-multiline="true" aria-label="Escreva uma mensagem"></div>
+                <textarea name="mensagem" rows="1" class="chat-message-textarea-hidden" tabindex="-1" aria-hidden="true"></textarea>
                 <button class="secondary-link poll-button" id="create-poll-button" type="button" data-action="open-chat-poll" hidden>Enquete</button>
                 <button class="record-audio-button" id="record-audio-button" type="button" aria-label="Gravar áudio" title="Gravar áudio">
                   <img src="assets/microphone-icon.png" alt="" aria-hidden="true" />
