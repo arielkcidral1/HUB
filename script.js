@@ -920,7 +920,7 @@ function isLoginPage() {
 function getLoginRedirectTarget() {
   const params = new URLSearchParams(window.location.search);
   const next = params.get("next");
-  const allowedTargets = new Set(["index.html", "denuncia.html", "chamados.html", "vagas.html", "candidatura.html", "atestados.html"]);
+  const allowedTargets = new Set(["index.html", "denuncia.html", "chamados.html", "vagas.html", "candidatura.html"]);
   if (!next) return "index.html";
   if (/^https?:\/\//i.test(next)) return "index.html";
   const target = next.startsWith("/") ? next.slice(1) : next;
@@ -7931,7 +7931,7 @@ if (chatForm) {
           canal: activeChatChannel,
           mensagem: index === 0 ? message : "",
           arquivo: { name: file.name, size: file.size, type: attachmentType, url: null },
-          createdAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+          createdAt: new Date().toISOString(),
           _pending: true,
         };
       })
@@ -7941,7 +7941,7 @@ if (chatForm) {
         canal: activeChatChannel,
         mensagem: message,
         arquivo: null,
-        createdAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        createdAt: new Date().toISOString(),
         _pending: true,
       }];
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
@@ -10796,18 +10796,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return parts.length > 1 ? parts.pop().toLowerCase() : "";
   }
 
-  function validateAtestadoFile(file) {
-    if (!file || !file.name) return "Anexe o atestado antes de enviar.";
-    if (file.size > getAtestadoMaxSize()) return "O arquivo deve ter no máximo 10 MB.";
-
-    const extension = getFileExtension(file.name);
-    const mime = String(file.type || "").toLowerCase();
-    if (!ATESTADO_ALLOWED_EXTENSIONS.has(extension) && !ATESTADO_ALLOWED_MIME_TYPES.has(mime)) {
-      return "Formato inválido. Envie PDF, imagem, DOC ou DOCX.";
-    }
-    return "";
-  }
-
   function safeStorageFileName(fileName = "atestado") {
     return String(fileName || "atestado")
       .normalize("NFD")
@@ -10977,107 +10965,6 @@ document.addEventListener('DOMContentLoaded', () => {
     showModal?.("Status atualizado localmente", "Sem Supabase ativo, a alteração ficou salva apenas neste navegador.", "info");
   }
 
-  async function uploadPublicAtestado({ nome, cpf, telefone, unidade, file }) {
-    const cpfDigits = normalizeCpf(cpf);
-    const uploaded = await hubUpload(file, "atestado");
-
-    const response = await fetch("/api/public/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "atestados",
-        payload: {
-          nome,
-          cpf: cpfDigits,
-          telefone,
-          unidade,
-          arquivo_nome: file.name || "Atestado",
-          arquivo_tamanho: file.size || 0,
-          arquivo_tipo: file.type || "application/octet-stream",
-          arquivo_url: uploaded.url,
-        },
-      }),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "Nao foi possivel enviar o atestado.");
-
-    return mapAtestadoRow(result.data);
-  }
-
-  function setupPublicAtestadoForm() {
-    const form = document.getElementById("atestado-form");
-    if (!form || form.dataset.atestadoReady === "true") return;
-    form.dataset.atestadoReady = "true";
-    ensurePublicCaptchaNotice?.(form);
-
-    document.getElementById("atestado-cpf")?.addEventListener("input", (event) => {
-      event.currentTarget.value = formatCpf(event.currentTarget.value);
-    });
-    document.getElementById("atestado-telefone")?.addEventListener("input", (event) => {
-      event.currentTarget.value = formatPhone(event.currentTarget.value);
-    });
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const formElement = event.currentTarget;
-      const publicFormError = validatePublicFormSubmission?.(formElement);
-      if (publicFormError) {
-        showModal?.("Envio bloqueado", publicFormError, "error");
-        return;
-      }
-
-      const formData = new FormData(formElement);
-      const nome = String(formData.get("nome") || "").trim();
-      const cpf = String(formData.get("cpf") || "").trim();
-      const telefone = String(formData.get("telefone") || "").trim();
-      const unidade = String(formData.get("unidade") || "").trim();
-      const file = formData.get("atestado");
-
-      if (!/\S+\s+\S+/.test(nome)) {
-        showModal?.("Nome obrigatório", "Informe nome e sobrenome do colaborador.", "error");
-        return;
-      }
-      if (!isValidCpf(cpf)) {
-        showModal?.("CPF inválido", "Informe um CPF válido no formato 000.000.000-00.", "error");
-        return;
-      }
-      if (!telefone || normalizeCpf(telefone).length < 10) {
-        showModal?.("Telefone obrigatório", "Informe um telefone válido para contato.", "error");
-        return;
-      }
-      if (!unidade) {
-        showModal?.("Unidade obrigatória", "Selecione a unidade do colaborador.", "error");
-        return;
-      }
-      const fileError = validateAtestadoFile(file);
-      if (fileError) {
-        showModal?.("Arquivo inválido", fileError, "error");
-        return;
-      }
-
-      const submitButton = formElement.querySelector('button[type="submit"]');
-      const originalText = submitButton?.textContent || "Enviar atestado";
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.textContent = "Enviando...";
-      }
-
-      try {
-        await uploadPublicAtestado({ nome, cpf, telefone, unidade, file });
-        formElement.reset();
-        showModal?.("Atestado enviado", "Seu atestado foi enviado com sucesso para o RH.", "success");
-      } catch (error) {
-        console.error("Erro ao enviar atestado:", error);
-        showModal?.("Erro no envio", error.message || "Não foi possível enviar o atestado. Verifique sua conexão e tente novamente.", "error");
-      } finally {
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.textContent = originalText;
-        }
-      }
-    });
-  }
-
   function setupAtestadosInternalView() {
     if (!document.getElementById("atestados-list")) return;
     ["atestado-filter-nome", "atestado-filter-cpf", "atestado-filter-unidade"].forEach((id) => {
@@ -11126,10 +11013,8 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (_) {}
 
   document.addEventListener("DOMContentLoaded", () => {
-    setupPublicAtestadoForm();
     setupAtestadosInternalView();
   });
 
-  setupPublicAtestadoForm();
   setupAtestadosInternalView();
 })();
