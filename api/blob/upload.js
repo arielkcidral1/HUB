@@ -3,7 +3,7 @@ import { sql } from "../_lib/db.js";
 import { json, corsHeaders } from "../_lib/cors.js";
 import { requireUser } from "../_lib/jwt.js";
 
-export const config = { runtime: "edge" };
+// @vercel/blob's server SDK (put/del) needs the Node.js runtime, not Edge.
 
 function envValue(name) {
   return globalThis.process?.env?.[name] || "";
