@@ -1327,7 +1327,7 @@ function renderCurrentUser() {
     if (user?.foto_perfil && isHttpUrl(user.foto_perfil)) {
       avatar.src = user.foto_perfil;
       avatar.style.display = "block";
-    } else if (user?.foto_perfil && supabaseClient) {
+    } else if (user?.foto_perfil) {
       createPrivateStorageUrl(getHubSupabaseConfig().chatFilesBucket || "hub-chat-files", user.foto_perfil)
         .then((signedUrl) => {
           avatar.src = signedUrl;
@@ -3908,80 +3908,31 @@ async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, c
 }
 
 async function submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, documentos, accessPassword, turnstileToken }) {
-  const config = getHubSupabaseConfig();
-  if (!config.url || !config.anonKey) throw new Error("Supabase publico indisponivel.");
-  const embeddedDocuments = await buildContractorDocumentPayload(documentos);
+  const body = new FormData();
+  body.append("empresa", String(empresa || ""));
+  body.append("origemHtml", String(origemHtml || ""));
+  body.append("nome", String(nome || ""));
+  body.append("telefone", String(telefone || ""));
+  body.append("cpf", String(cpf || ""));
+  body.append("accessPassword", String(accessPassword || ""));
+  Array.from(documentos || []).forEach((file) => body.append("documentos", file));
+  body.append("turnstileToken", String(turnstileToken || ""));
 
-  const buildBody = (submissionType) => {
-    const body = new FormData();
-    body.append("type", submissionType);
-    body.append("submissionType", submissionType);
-    body.append("tipo", submissionType);
-    body.append("empresa", String(empresa || ""));
-    body.append("origemHtml", String(origemHtml || ""));
-    body.append("nome", String(nome || ""));
-    body.append("telefone", String(telefone || ""));
-    body.append("cpf", String(cpf || ""));
-    body.append("accessPassword", String(accessPassword || ""));
-    Array.from(documentos || []).forEach((file) => body.append("documentos", file));
-    body.append("turnstileToken", String(turnstileToken || ""));
-    return body;
-  };
-
-  const attempts = [
-    {
-      url: `${config.url}/rest/v1/rpc/hub_submit_contractor_documents`,
-      rpc: true,
-      body: {
-        payload: {
-          empresa: String(empresa || ""),
-          origemHtml: String(origemHtml || ""),
-          accessPassword: String(accessPassword || ""),
-          nome: String(nome || ""),
-          telefone: String(telefone || ""),
-          cpf: String(cpf || ""),
-          documentos: embeddedDocuments,
-        },
-      },
-    },
-    { url: "/api/contractor-documents", type: "documentosContratados", localApi: true },
-    { url: `${config.url}/functions/v1/hub-public-submit?type=documentosContratados`, type: "documentosContratados" },
-  ];
-
-  let lastError = null;
-  for (const attempt of attempts) {
-    const response = await fetch(attempt.url, {
-      method: "POST",
-      headers: attempt.localApi ? {} : attempt.rpc ? {
-        "Content-Type": "application/json",
-        "apikey": config.anonKey,
-        "Authorization": `Bearer ${config.anonKey}`,
-      } : {
-        "apikey": config.anonKey,
-        "Authorization": `Bearer ${config.anonKey}`,
-      },
-      body: attempt.rpc ? JSON.stringify(attempt.body) : buildBody(attempt.type),
-    });
-
-    const result = await response.json().catch(() => ({}));
-    if (response.ok) {
-      const savedRecord = mapContractorDocumentRow(result.data || {});
-      if (savedRecord.id) {
-        data.documentosContratados = mergeContractorDocuments([savedRecord], data.documentosContratados || []);
-        saveLocalData();
-      }
-      return result.data;
-    }
-
-    lastError = new Error(result.error || "Envio publico bloqueado.");
-    lastError.code = result.code;
-    lastError.status = response.status;
-    const canTryNext = /tipo invalido|not found|not_found|funcao sem supabase_service_role_key|function not found|schema cache|row-level security/i.test(lastError.message)
-      || [400, 401, 404, 405, 500].includes(response.status);
-    if (!canTryNext) throw lastError;
+  const response = await fetch("/api/contractor-documents", { method: "POST", body });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(result.error || "Envio publico bloqueado.");
+    error.code = result.code;
+    error.status = response.status;
+    throw error;
   }
 
-  throw new Error(lastError?.message || "Nao foi possivel salvar os documentos no Supabase. O envio nao foi registrado para o RH.");
+  const savedRecord = mapContractorDocumentRow(result.data || {});
+  if (savedRecord.id) {
+    data.documentosContratados = mergeContractorDocuments([savedRecord], data.documentosContratados || []);
+    saveLocalData();
+  }
+  return result.data;
 }
 
 function isPublicInsertOnlyCollection(collection) {
@@ -4427,7 +4378,7 @@ function updateUserMenuHeader() {
   if (avatarEl) {
     if (user?.foto_perfil && isHttpUrl(user.foto_perfil)) {
       avatarEl.src = user.foto_perfil;
-    } else if (user?.foto_perfil && supabaseClient) {
+    } else if (user?.foto_perfil) {
       createPrivateStorageUrl(getHubSupabaseConfig().chatFilesBucket || "hub-chat-files", user.foto_perfil)
         .then((signedUrl) => { avatarEl.src = signedUrl; })
         .catch(() => {});
@@ -5609,7 +5560,7 @@ function renderAccountSettings() {
     if (user?.foto_perfil && isHttpUrl(user.foto_perfil)) {
       avatarPreview.src = user.foto_perfil;
       if (settingsAvatar) settingsAvatar.src = user.foto_perfil;
-    } else if (user?.foto_perfil && supabaseClient) {
+    } else if (user?.foto_perfil) {
       createPrivateStorageUrl(getHubSupabaseConfig().chatFilesBucket || "hub-chat-files", user.foto_perfil)
         .then((signedUrl) => {
           avatarPreview.src = signedUrl;
@@ -6374,7 +6325,7 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
 }
 
 function startAuthenticatedNotificationsOnAnyPage() {
-  if (!isAuthenticated() || !supabaseClient) return;
+  if (!isAuthenticated()) return;
   currentUserSettings.desktopNotifications = true;
   currentUserSettings.notificationSound = true;
   saveUserSettings(currentUserSettings);

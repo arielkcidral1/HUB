@@ -1,39 +1,20 @@
+import { sql } from "./_lib/db.js";
+import { json, corsHeaders } from "./_lib/cors.js";
+
 export const config = { runtime: "edge" };
 
 function envValue(name) {
   return globalThis.process?.env?.[name] || "";
 }
 
-const SUPABASE_URL = envValue("SUPABASE_URL") || "https://nblfwesptlpetbwfmdqf.supabase.co";
-const SERVICE_ROLE_KEY = envValue("SUPABASE_SERVICE_ROLE_KEY") || envValue("SUPABASE_SERVICE_KEY");
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_FILES = 20;
-const ALLOWED_ORIGINS = new Set([
-  "https://hub-opal-nine.vercel.app",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-]);
 const ACCESS_PASSWORDS = {
   "Fredy Pneus": "fredy5212",
   "Besten Pneus": "besten5212",
   "Achei Pneus": "Achei5212",
   "Trinca Mkt": "trinca5212",
 };
-
-function corsHeaders(request) {
-  const origin = request.headers.get("origin") || "";
-  return {
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Content-Type": "application/json",
-    "Vary": "Origin",
-    ...(ALLOWED_ORIGINS.has(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
-  };
-}
-
-function json(request, status, body) {
-  return new Response(JSON.stringify(body), { status, headers: corsHeaders(request) });
-}
 
 function text(value) {
   return String(value || "").trim();
@@ -64,26 +45,28 @@ async function fileToDataUrl(file) {
   return `data:${mimeType};base64,${btoa(binary)}`;
 }
 
-async function insertContractorDocument(row, includeSource = true) {
-  const body = includeSource ? row : Object.fromEntries(Object.entries(row).filter(([key]) => key !== "origem_html"));
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/hub_documentos_contratados?select=*`, {
-    method: "POST",
-    headers: {
-      "apikey": SERVICE_ROLE_KEY,
-      "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-      "Prefer": "return=representation",
-    },
-    body: JSON.stringify(body),
-  });
-  const result = await response.json().catch(() => null);
-  return { response, result };
+function getClientIdentifier(req) {
+  return req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-real-ip") ||
+    `ua:${req.headers.get("user-agent") || "unknown"}`;
+}
+
+async function checkRateLimit(request) {
+  const ipHashBuffer = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`${envValue("RATE_LIMIT_SALT") || "hub"}:${getClientIdentifier(request)}`)
+  );
+  const ipHash = Array.from(new Uint8Array(ipHashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const requestId = crypto.randomUUID();
+  const [{ hub_reserve_public_rate_limit: allowed }] = await sql`
+    select app_private.hub_reserve_public_rate_limit(${"documentos_contratados"}, ${ipHash}, ${600}, ${10}, ${requestId}) as hub_reserve_public_rate_limit
+  `;
+  return allowed;
 }
 
 export default async function handler(request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
   if (request.method !== "POST") return json(request, 405, { error: "Metodo nao permitido." });
-  if (!SERVICE_ROLE_KEY) return json(request, 500, { error: "Funcao sem SUPABASE_SERVICE_ROLE_KEY configurada no Vercel." });
 
   let formData;
   try {
@@ -103,6 +86,9 @@ export default async function handler(request) {
   const validationError = isValidPayload(payload);
   if (validationError) return json(request, 400, { error: validationError });
 
+  const allowed = await checkRateLimit(request);
+  if (!allowed) return json(request, 429, { error: "Muitos envios. Tente novamente mais tarde." });
+
   const files = formData.getAll("documentos").filter((file) => file instanceof File && file.name);
   if (!files.length || files.length > MAX_FILES) return json(request, 400, { error: "Documentos invalidos." });
   if (files.some((file) => file.size <= 0 || file.size > MAX_FILE_SIZE)) {
@@ -119,26 +105,17 @@ export default async function handler(request) {
     });
   }
 
-  const row = {
-    empresa: payload.empresa,
-    origem_html: payload.origemHtml,
-    nome: payload.nome,
-    telefone: payload.telefone,
-    cpf: payload.cpf,
-    documentos,
-    created_by: "Publico",
-  };
-
-  let { response, result } = await insertContractorDocument(row, true);
-  if (!response.ok && result?.code === "PGRST204" && /origem_html/i.test(result?.message || "")) {
-    ({ response, result } = await insertContractorDocument(row, false));
-  }
-
-  if (!response.ok) {
-    const message = result?.code === "23505"
+  try {
+    const rows = await sql`
+      insert into hub_documentos_contratados (empresa, origem_html, nome, telefone, cpf, documentos, created_by)
+      values (${payload.empresa}, ${payload.origemHtml}, ${payload.nome}, ${payload.telefone}, ${payload.cpf}, ${JSON.stringify(documentos)}, ${"Publico"})
+      returning *
+    `;
+    return json(request, 200, { data: rows[0] });
+  } catch (error) {
+    const message = /unique|duplicate/i.test(error.message || "")
       ? "CPF ja possui envio de documentos registrado."
-      : result?.message || "Nao foi possivel salvar documentos.";
-    return json(request, response.status, { error: message, code: result?.code });
+      : error.message || "Nao foi possivel salvar documentos.";
+    return json(request, 400, { error: message });
   }
-  return json(request, 200, { data: Array.isArray(result) ? result[0] : result });
 }
