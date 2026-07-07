@@ -308,6 +308,7 @@ let chamadosSelectionMode = false;
 let showArchivedChamados = false;
 let denunciasSelectionMode = false;
 let showArchivedDenuncias = false;
+const selectedDenunciaIds = new Set();
 let dashboardCalendarViewMode = "week";
 let visibleCalendarDate = new Date();
 let dashboardNotificationOffset = 0;
@@ -6673,6 +6674,10 @@ function renderDenunciasSection() {
   const naoLidas = data.denuncias.filter(item => item.status === "Aberta" || item.status === "Urgente");
   const lidas = data.denuncias.filter(item => item.status === "Lida");
   const arquivadas = data.denuncias.filter(item => item.status === "Arquivada");
+  const selectableDenunciaIds = new Set([...naoLidas, ...lidas].map((item) => String(item.id)));
+  selectedDenunciaIds.forEach((id) => {
+    if (!selectableDenunciaIds.has(String(id))) selectedDenunciaIds.delete(id);
+  });
   const selectDenunciasButton = document.getElementById("select-denuncias");
   const primaryDenunciasTitle = document.getElementById("denuncias-primary-title");
   const toggleArchivedDenunciasButton = document.getElementById("toggle-archived-denuncias");
@@ -6704,7 +6709,7 @@ function renderDenunciasSection() {
              data-id="${escapeHtml(item.id)}">
       <div class="item-topline">
         <p class="item-title">
-          ${!archived && denunciasSelectionMode ? `<input class="denuncia-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar denúncia de ${escapeHtml(item.createdAt)}" data-action="no-op" />` : ""}
+          ${!archived && denunciasSelectionMode ? `<input class="denuncia-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar denúncia de ${escapeHtml(item.createdAt)}" data-action="no-op" ${selectedDenunciaIds.has(String(item.id)) ? "checked" : ""} />` : ""}
           Denuncia anonima
         </p>
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
@@ -7622,13 +7627,12 @@ document.getElementById("select-denuncias")?.addEventListener("click", () => {
   if (!denunciasSelectionMode) {
     denunciasSelectionMode = true;
     showArchivedDenuncias = false;
+    selectedDenunciaIds.clear();
     renderAll();
     return;
   }
 
-  const selectedIds = Array.from(document.querySelectorAll(".denuncia-select:checked"))
-    .map((input) => input.value)
-    .filter(Boolean);
+  const selectedIds = Array.from(selectedDenunciaIds).filter(Boolean);
 
   if (!selectedIds.length) {
     showModal("Nenhuma denúncia selecionada", "Selecione pelo menos uma denúncia para arquivar.", "error");
@@ -7643,6 +7647,7 @@ document.getElementById("select-denuncias")?.addEventListener("click", () => {
       const results = await Promise.all(selectedIds.map((id) => atualizarStatusDenuncia(id, "Arquivada")));
       if (results.every(Boolean)) {
         denunciasSelectionMode = false;
+        selectedDenunciaIds.clear();
         renderAll();
         showModal("Denúncias arquivadas", "As denúncias selecionadas foram movidas para Arquivadas.", "info");
       }
@@ -7652,6 +7657,7 @@ document.getElementById("select-denuncias")?.addEventListener("click", () => {
 
 document.getElementById("exit-denuncias-selection")?.addEventListener("click", () => {
   denunciasSelectionMode = false;
+  selectedDenunciaIds.clear();
   renderAll();
 });
 
@@ -9482,6 +9488,11 @@ document.addEventListener('click', (event) => {
 
   // Ação especial para não fazer nada, útil para checkboxes dentro de elementos clicáveis
   if (action === 'no-op') {
+    if (target.classList.contains("denuncia-select")) {
+      const denunciaId = String(target.value || "");
+      if (denunciaId && target.checked) selectedDenunciaIds.add(denunciaId);
+      if (denunciaId && !target.checked) selectedDenunciaIds.delete(denunciaId);
+    }
     event.stopPropagation();
     return;
   }
@@ -9497,7 +9508,11 @@ document.addEventListener('click', (event) => {
       break;
     case 'toggle-denuncia-selection': {
       const checkbox = document.querySelector(`.denuncia-select[value="${CSS.escape(String(id))}"]`);
-      if (checkbox) checkbox.checked = !checkbox.checked;
+      if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        if (checkbox.checked) selectedDenunciaIds.add(String(id));
+        else selectedDenunciaIds.delete(String(id));
+      }
       break;
     }
     case 'reabrir-denuncia':
