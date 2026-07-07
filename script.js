@@ -9645,7 +9645,7 @@ class NotificationTracker {
     }
 
     (sourceData.denuncias || [])
-      .filter((item) => item.status === "Aberta" || item.status === "Urgente")
+      .filter((item) => item.status !== "Arquivada")
       .forEach((item) => pushNotification({
         id: `denuncia-${item.id}`,
         type: "denuncia",
@@ -9654,8 +9654,8 @@ class NotificationTracker {
         details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "Não informado"}\n\n${item.descricao || "Sem descrição."}`,
         time: item.createdAt || "Recentemente",
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
-        status: item.status === "Urgente" ? "urgent" : "pending",
-        unread: true,
+        status: item.status === "Urgente" ? "urgent" : item.status === "Lida" ? "resolved" : "pending",
+        unread: item.status !== "Lida",
         view: "denuncias",
       }));
 
