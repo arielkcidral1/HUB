@@ -5755,11 +5755,11 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
     currentUserSettings.desktopNotifications = false;
     saveUserSettings(currentUserSettings);
     syncUserSettingsControls();
-    showDesktopNotificationPermissionPrompt(true);
+    removeDesktopNotificationPermissionPrompt();
     return permission;
   } catch (error) {
     console.warn("Permissão de notificações não pôde ser solicitada:", error);
-    showDesktopNotificationPermissionPrompt(true);
+    removeDesktopNotificationPermissionPrompt();
     return "error";
   }
 }
@@ -5839,24 +5839,9 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
 
 function armDesktopNotificationPermissionRequest() {
   if (!isAuthenticated() || !isBrowserNotificationSupported()) return;
-  if (Notification.permission === "granted") return;
-
-  currentUserSettings.desktopNotifications = true;
-  currentUserSettings.notificationSound = true;
-  saveUserSettings(currentUserSettings);
-  showDesktopNotificationPermissionPrompt(Notification.permission === "denied");
-
-  if (hubNotificationPermissionInteractionBound || Notification.permission === "denied") return;
-  hubNotificationPermissionInteractionBound = true;
-
-  const askOnce = () => {
-    if (!isAuthenticated() || Notification.permission !== "default") return;
-    requestDesktopNotificationPermission();
-  };
-
-  document.addEventListener("click", askOnce, { once: true, capture: true });
-  document.addEventListener("keydown", askOnce, { once: true, capture: true });
-  document.addEventListener("touchstart", askOnce, { once: true, capture: true });
+  removeDesktopNotificationPermissionPrompt();
+  if (!currentUserSettings.desktopNotifications) return;
+  if (Notification.permission === "granted") registerHubNotificationServiceWorker();
 }
 
 function playNotificationTone(audioContext, destination, frequency, startAt, duration, peakVolume, waveType = "square") {
@@ -6004,7 +5989,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
   if (!isBrowserNotificationSupported()) return false;
 
   if (Notification.permission !== "granted") {
-    showDesktopNotificationPermissionPrompt(Notification.permission === "denied");
+    removeDesktopNotificationPermissionPrompt();
     return false;
   }
 
@@ -6321,10 +6306,7 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
 
 function startAuthenticatedNotificationsOnAnyPage() {
   if (!isAuthenticated()) return;
-  currentUserSettings.desktopNotifications = true;
-  currentUserSettings.notificationSound = true;
-  saveUserSettings(currentUserSettings);
-  registerHubNotificationServiceWorker();
+  if (currentUserSettings.desktopNotifications && isBrowserNotificationSupported() && Notification.permission === "granted") registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
   setupRealtime();
   setupAutoRefresh();
@@ -8826,7 +8808,7 @@ async function initializeAppData() {
   applyRoleAccess();
   prefillChamadoRequester();
   renderAccountSettings();
-  registerHubNotificationServiceWorker();
+  if (currentUserSettings.desktopNotifications && isBrowserNotificationSupported() && Notification.permission === "granted") registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
   await syncReadReceiptsFromServer();
   await loadFromSupabase({ setupLive: true });
