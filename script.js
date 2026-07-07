@@ -745,24 +745,37 @@ function clearAuthenticatedUser() {
   applyUserSettings();
 }
 
+async function fetchHubApiSession() {
+  try {
+    let response = await fetch("/api/auth/session", { credentials: "include" });
+    if (response.status === 401) {
+      const refreshed = await fetch("/api/auth/refresh", { method: "POST", credentials: "include" });
+      if (refreshed.ok) response = await fetch("/api/auth/session", { credentials: "include" });
+    }
+    if (!response.ok) return null;
+    const result = await response.json().catch(() => ({}));
+    return result?.user || null;
+  } catch {
+    return null;
+  }
+}
+
 async function getCurrentAuthUser() {
-  const client = supabaseClient || getSupabaseClient();
-  if (!client?.auth) return null;
-  const { data, error } = await client.auth.getUser();
-  if (error) return null;
-  return data?.user || null;
+  return fetchHubApiSession();
 }
 
 async function getAuthSession() {
-  const client = supabaseClient || getSupabaseClient();
-  if (!client?.auth) return null;
-  const { data, error } = await client.auth.getSession();
-  if (error) return null;
-  return data?.session || null;
+  const user = await fetchHubApiSession();
+  return user ? { user } : null;
 }
 
 async function loadUserProfile(authUser) {
-  if (!authUser || !supabaseClient) return null;
+  if (!authUser) return null;
+  if (authUser.nome !== undefined && authUser.cargo !== undefined) {
+    upsertLocalUser({ ...authUser, syncStatus: "active" });
+    return authUser;
+  }
+  if (!supabaseClient) return null;
   const email = normalizeLoginName(authUser.email);
   const displayName = normalizeLoginName(getAuthUserDisplayName(authUser));
 
@@ -835,76 +848,43 @@ async function restoreAuthenticatedSession() {
 }
 
 async function validateLogin(identifier, password) {
-  const client = supabaseClient || getSupabaseClient();
   const normalizedIdentifier = String(identifier || "").trim();
   const normalizedPassword = String(password || "").trim();
 
-  if (!client?.auth) {
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      cpf: isValidCpf(normalizedIdentifier) ? normalizeCpf(normalizedIdentifier) : "",
+      email: normalizedIdentifier.includes("@") ? normalizedIdentifier.toLowerCase() : "",
+      password: normalizedPassword,
+    }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
     const errorMsg = document.getElementById("login-error");
-    if (errorMsg) errorMsg.textContent = "Erro de conexão com o Supabase.";
+    if (errorMsg) errorMsg.textContent = result.error || "E-mail ou senha incorretos.";
     return false;
   }
 
-  let authData;
-  let error;
-  if (isValidCpf(normalizedIdentifier) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedIdentifier)) {
-    const config = getHubSupabaseConfig();
-    const response = await fetch(`${config.url}/functions/v1/hub-password-login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": config.anonKey, "x-hub-client-id": getPublicClientId() },
-      body: JSON.stringify({
-        cpf: isValidCpf(normalizedIdentifier) ? normalizeCpf(normalizedIdentifier) : "",
-        email: normalizedIdentifier.includes("@") ? normalizedIdentifier.toLowerCase() : "",
-        password: normalizedPassword,
-      }),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const errorMsg = document.getElementById("login-error");
-      if (response.status === 429 && errorMsg) errorMsg.textContent = result.error || "Muitas tentativas. Tente novamente mais tarde.";
-      return false;
-    }
-    const session = result.session;
-    const setSession = await client.auth.setSession({ access_token: session?.access_token || "", refresh_token: session?.refresh_token || "" });
-    authData = setSession.data;
-    error = setSession.error;
-  } else {
-    const result = await client.auth.signInWithPassword({ email: normalizedIdentifier, password: normalizedPassword });
-    authData = result.data;
-    error = result.error;
-  }
-
-  if (error || !authData?.user) {
-    console.error("Erro no login Supabase Auth:", error);
-    return false;
-  }
-
-  const profile = await loadUserProfile(authData.user);
-  setAuthenticatedUser(authData.user, profile);
+  const profile = await loadUserProfile(result.user);
+  setAuthenticatedUser(result.user, profile);
   return true;
 }
 
 async function verifyCurrentPassword(password) {
   if (!password) return false;
-
-  // Verifica a senha via endpoint REST sem substituir a sessao ativa.
-  // signInWithPassword sobrescreve o token em memoria e pode causar
-  // redirecionamentos antes do onConfirm ser chamado.
-  const authUser = await getCurrentAuthUser();
-  const email = authUser?.email || "";
-  if (!email) return false;
-
-  const config = getHubSupabaseConfig();
   try {
-    const res = await fetch(`${config.url}/auth/v1/token?grant_type=password`, {
+    const res = await fetch("/api/auth/verify-password", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": config.anonKey,
-      },
-      body: JSON.stringify({ email, password: String(password).trim() }),
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: String(password).trim() }),
     });
-    return res.ok;
+    if (!res.ok) return false;
+    const result = await res.json().catch(() => ({}));
+    return Boolean(result.ok);
   } catch {
     return false;
   }
@@ -949,7 +929,11 @@ function getLoginRedirectTarget() {
 }
 
 async function logout() {
-  if (supabaseClient?.auth) await supabaseClient.auth.signOut();
+  try {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+  } catch {
+    // segue para limpar o estado local mesmo se a chamada falhar
+  }
   clearAuthenticatedUser();
   window.location.href = "login.html";
 }
@@ -4548,18 +4532,20 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
     syncStatus: user.syncStatus || "active",
   };
 
-  if (newPassword && supabaseClient?.auth) {
-    if (currentPassword) {
-      const isPasswordValid = await verifyCurrentPassword(currentPassword);
-      if (!isPasswordValid) {
-        showModal("Senha incorreta", "A senha atual informada nao confere.", "error");
-        return false;
-      }
+  if (newPassword) {
+    if (!currentPassword) {
+      showModal("Senha atual necessaria", "Informe a senha atual para definir uma nova senha.", "error");
+      return false;
     }
-    const { error: authError } = await supabaseClient.auth.updateUser({ password: newPassword });
-    if (authError) {
-      console.error("Erro ao atualizar senha no Supabase Auth:", authError);
-      showModal("Erro", "Nao foi possivel atualizar a senha no Supabase Auth.", "error");
+    const changeResponse = await fetch("/api/auth/change-password", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const changeResult = await changeResponse.json().catch(() => ({}));
+    if (!changeResponse.ok) {
+      showModal("Erro", changeResult.error || "Nao foi possivel atualizar a senha.", "error");
       return false;
     }
   }
