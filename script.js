@@ -6057,7 +6057,19 @@ function updateHubAppBadge(count = 0) {
   } catch (_) {}
 }
 
+const hubNotifiedMessageIds = new Set();
+
 function showHubCrossPageNotification(title, message, options = {}) {
+  // Mais de um mecanismo (contagem de não lidas + polling) pode disparar
+  // para a mesma mensagem no mesmo ciclo; dedupe pelo id da mensagem para
+  // garantir no máximo uma notificação por mensagem.
+  const messageIds = options.messageIds || [];
+  if (messageIds.length) {
+    const hasNewId = messageIds.some((id) => !hubNotifiedMessageIds.has(id));
+    if (!hasNewId) return;
+    messageIds.forEach((id) => hubNotifiedMessageIds.add(id));
+  }
+
   playUserNotificationSound();
   updateHubAppBadge(1);
   if (document.visibilityState === "hidden" || !document.hasFocus?.()) {
