@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import { compare as bcryptCompare } from "bcryptjs";
 import { sql } from "../_lib/db.js";
 import { json, corsHeaders } from "../_lib/cors.js";
 import { requireUser } from "../_lib/jwt.js";
@@ -21,7 +21,7 @@ export default async function handler(request) {
 
   const rows = await sql`select password_hash from hub_action_passwords where action = ${"delete_malote"}`;
   const passwordHash = rows[0]?.password_hash;
-  const passwordOk = passwordHash ? await bcrypt.compare(password, passwordHash) : false;
+  const passwordOk = passwordHash ? await bcryptCompare(password, passwordHash) : false;
   if (!passwordOk) return json(request, 403, { error: "Senha de autorizacao invalida." });
 
   if (body.validateOnly) return json(request, 200, { valid: true });

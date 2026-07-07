@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import { hash as bcryptHash } from "bcryptjs";
 import { sql } from "../_lib/db.js";
 import { json, corsHeaders } from "../_lib/cors.js";
 
@@ -24,7 +24,7 @@ export default async function handler(request) {
   const user = rows[0];
   if (!user) return json(request, 400, { error: "Link de redefinicao invalido ou expirado." });
 
-  const passwordHash = await bcrypt.hash(newPassword, 12);
+  const passwordHash = await bcryptHash(newPassword, 12);
   await sql`
     update hub_users
     set password_hash = ${passwordHash}, password_reset_token = null, password_reset_expires_at = null

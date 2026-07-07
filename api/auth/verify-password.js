@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import { compare as bcryptCompare } from "bcryptjs";
 import { sql } from "../_lib/db.js";
 import { json, corsHeaders } from "../_lib/cors.js";
 import { requireUser } from "../_lib/jwt.js";
@@ -19,6 +19,6 @@ export default async function handler(request) {
 
   const rows = await sql`select password_hash from hub_users where id = ${user.id}`;
   const passwordHash = rows[0]?.password_hash;
-  const ok = passwordHash ? await bcrypt.compare(password, passwordHash) : false;
+  const ok = passwordHash ? await bcryptCompare(password, passwordHash) : false;
   return json(request, 200, { ok });
 }

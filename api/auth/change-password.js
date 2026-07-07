@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import { compare as bcryptCompare, hash as bcryptHash } from "bcryptjs";
 import { sql } from "../_lib/db.js";
 import { json, corsHeaders } from "../_lib/cors.js";
 import { requireUser } from "../_lib/jwt.js";
@@ -22,10 +22,10 @@ export default async function handler(request) {
 
   const rows = await sql`select password_hash from hub_users where id = ${user.id}`;
   const passwordHash = rows[0]?.password_hash;
-  const currentOk = passwordHash ? await bcrypt.compare(currentPassword, passwordHash) : false;
+  const currentOk = passwordHash ? await bcryptCompare(currentPassword, passwordHash) : false;
   if (!currentOk) return json(request, 401, { error: "Senha atual incorreta." });
 
-  const newHash = await bcrypt.hash(newPassword, 12);
+  const newHash = await bcryptHash(newPassword, 12);
   await sql`update hub_users set password_hash = ${newHash} where id = ${user.id}`;
   return json(request, 200, { ok: true });
 }

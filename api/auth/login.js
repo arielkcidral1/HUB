@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import { compare as bcryptCompare } from "bcryptjs";
 import { sql } from "../_lib/db.js";
 import { json, corsHeaders } from "../_lib/cors.js";
 import { normalizeCpf, isValidCpf, formatCpf } from "../_lib/cpf.js";
@@ -53,7 +53,7 @@ export default async function handler(request) {
   const user = users[0];
   if (!user?.password_hash) return json(request, 401, { error: "Credenciais invalidas." });
 
-  const passwordOk = await bcrypt.compare(password, user.password_hash);
+  const passwordOk = await bcryptCompare(password, user.password_hash);
   if (!passwordOk) return json(request, 401, { error: "Credenciais invalidas." });
 
   const accessToken = await signAccessToken({ sub: user.id, email: user.email, cargo: user.cargo });
