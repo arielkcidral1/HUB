@@ -6087,6 +6087,15 @@ function showHubCrossPageNotification(title, message, options = {}) {
 
   const openAndMark = () => {
     markNotificationsRead(options.notificationId ? [options.notificationId] : [], options.messageIds || []);
+    if (options.view) {
+      if (options.canal) {
+        activeChatChannel = normalizeChatChannel(options.canal);
+        try { renderChat?.(); } catch (_) {}
+      }
+      activateView(options.view);
+      try { checkAndMarkChatAsRead?.(); } catch (_) {}
+      return;
+    }
     openNotificationTrackerFromPopout();
   };
 
@@ -6094,7 +6103,7 @@ function showHubCrossPageNotification(title, message, options = {}) {
     type: options.type,
     icon: options.icon,
     duration: options.duration || 15000,
-    hint: options.hint || "Clique para marcar como lida e abrir o acompanhamento",
+    hint: options.view ? "Clique para abrir" : "Clique para marcar como lida e abrir o acompanhamento",
     onClick: openAndMark,
   });
   showBrowserDesktopNotification(title, message, {
@@ -6116,6 +6125,8 @@ function getRealtimeNotificationText(collection, item = {}) {
       icon: "💬",
       type: "mensagem",
       tag: `hub-rh-comunicacao-${item.id || Date.now()}`,
+      view: "comunicacao",
+      canal: item.canal || "",
     };
   }
 
@@ -6126,6 +6137,7 @@ function getRealtimeNotificationText(collection, item = {}) {
       icon: "🚨",
       type: "denuncia",
       tag: `hub-rh-denuncia-${item.id || Date.now()}`,
+      view: "denuncias",
     };
   }
 
@@ -6136,6 +6148,7 @@ function getRealtimeNotificationText(collection, item = {}) {
       icon: "🎫",
       type: "chamado",
       tag: `hub-rh-chamado-${item.id || Date.now()}`,
+      view: "chamados",
     };
   }
 
@@ -6146,6 +6159,7 @@ function getRealtimeNotificationText(collection, item = {}) {
       icon: "📦",
       type: "malote",
       tag: `hub-rh-malote-${item.id || Date.now()}`,
+      view: "malotes",
     };
   }
 
@@ -6156,6 +6170,7 @@ function getRealtimeNotificationText(collection, item = {}) {
       icon: "💼",
       type: "vaga",
       tag: `hub-rh-vaga-${item.id || Date.now()}`,
+      view: "vagas",
     };
   }
 
@@ -6166,6 +6181,7 @@ function getRealtimeNotificationText(collection, item = {}) {
       icon: "📄",
       type: "documento",
       tag: `hub-rh-documento-${item.id || Date.now()}`,
+      view: "documentos",
     };
   }
 
@@ -6250,6 +6266,8 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
     requireInteraction: true,
     notificationId: `${notification.type || collection}-${item.id || Date.now()}`,
     messageIds: collection === "comunicados" && item.id ? [item.id] : [],
+    view: notification.view,
+    canal: notification.canal,
   });
 
   const pollingKey = getNotificationPollingKey(collection, item);
@@ -6284,6 +6302,7 @@ function notifyUnreadRhMessages(count) {
     requireInteraction: true,
     notificationId: `mensagem-rh-${unreadIds[0] || Date.now()}`,
     messageIds: unreadIds,
+    view: "comunicacao",
   });
 
   lastUnreadNotificationCount = count;
@@ -9937,18 +9956,7 @@ class NotificationTracker {
 
   openNotification(notif) {
     const readNotif = this.markNotificationRead(notif);
-    const target = readNotif || notif;
-    if (target?.view) {
-      this.closeModal();
-      if (target.canal) {
-        activeChatChannel = normalizeChatChannel(target.canal);
-        try { renderChat?.(); } catch (_) {}
-      }
-      activateView(target.view);
-      try { checkAndMarkChatAsRead?.(); } catch (_) {}
-      return;
-    }
-    this.showDetailView(target);
+    this.showDetailView(readNotif || notif);
   }
 
   markNotificationRead(notif = {}) {
