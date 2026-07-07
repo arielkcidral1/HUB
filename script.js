@@ -2677,7 +2677,7 @@ if (collection === "malotes") {
     return rows.map((row) => ({
       id: row.id,
       titulo: row.titulo,
-      data: row.data,
+      data: typeof row.data === "string" ? row.data.slice(0, 10) : new Date(row.data).toISOString().slice(0, 10),
       horario: row.horario,
       responsavel: row.responsavel,
       tipo: row.tipo || "Evento",
