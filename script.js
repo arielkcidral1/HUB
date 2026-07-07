@@ -1009,6 +1009,52 @@ function getSupabaseClient() {
   });
 }
 
+const hubApi = {
+  async list(collection) {
+    const response = await fetch(`/api/records/${collection}`, { credentials: "include" });
+    if (!response.ok) throw await hubApi._error(response);
+    const result = await response.json();
+    return result.data || [];
+  },
+  async insert(collection, payload) {
+    const response = await fetch(`/api/records/${collection}`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw await hubApi._error(response);
+    const result = await response.json();
+    return result.data;
+  },
+  async update(collection, id, payload) {
+    const response = await fetch(`/api/records/${collection}/${id}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw await hubApi._error(response);
+    const result = await response.json();
+    return result.data;
+  },
+  async remove(collection, id) {
+    const response = await fetch(`/api/records/${collection}/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!response.ok) throw await hubApi._error(response);
+    const result = await response.json();
+    return result.data;
+  },
+  async _error(response) {
+    const body = await response.json().catch(() => ({}));
+    const error = new Error(body.error || `Erro HTTP ${response.status}`);
+    error.status = response.status;
+    return error;
+  },
+};
+
 function setSyncStatus(text, isOnline = false) {
   const target = document.getElementById("sync-status");
   if (!target) return;
@@ -1129,17 +1175,21 @@ function getCurrentUserId() {
 
 async function pushReadReceiptsToServer(newNotificationIds, newMessageIds) {
   const userId = getCurrentUserId();
-  const client = supabaseClient || getSupabaseClient();
-  if (!userId || !client) return;
+  if (!userId) return;
 
   const rows = [
-    ...newNotificationIds.map((id) => ({ user_id: userId, item_type: "notification", item_id: id })),
-    ...newMessageIds.map((id) => ({ user_id: userId, item_type: "message", item_id: id })),
+    ...newNotificationIds.map((id) => ({ item_type: "notification", item_id: id })),
+    ...newMessageIds.map((id) => ({ item_type: "message", item_id: id })),
   ];
   if (!rows.length) return;
 
   try {
-    await client.from(READ_RECEIPTS_TABLE).upsert(rows, { onConflict: "user_id,item_type,item_id" });
+    await fetch("/api/read-receipts", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rows }),
+    });
   } catch (error) {
     console.error("Erro ao sincronizar leitura de notificacoes:", error);
   }
@@ -1147,17 +1197,15 @@ async function pushReadReceiptsToServer(newNotificationIds, newMessageIds) {
 
 async function syncReadReceiptsFromServer() {
   const userId = getCurrentUserId();
-  const client = supabaseClient || getSupabaseClient();
-  if (!userId || !client) return;
+  if (!userId) return;
 
   try {
-    const { data: rows, error } = await client
-      .from(READ_RECEIPTS_TABLE)
-      .select("item_type,item_id")
-      .eq("user_id", userId);
-    if (error) throw error;
+    const response = await fetch("/api/read-receipts", { credentials: "include" });
+    if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+    const result = await response.json();
+    const rows = result.data || [];
 
-    (rows || []).forEach((row) => {
+    rows.forEach((row) => {
       if (row.item_type === "notification") readNotificationIds.add(String(row.item_id));
       else if (row.item_type === "message") readRhMessageIds.add(String(row.item_id));
     });
@@ -3061,30 +3109,25 @@ function withoutOptionalApplicationColumns(payload) {
 async function loadFromSupabase(options = {}) {
   const { setupLive = true } = options;
 
-  if (!supabaseClient) {
+  if (!isAuthenticated()) {
     setSyncStatus("Modo local", false);
     renderAll();
     return;
   }
 
   try {
-    const { data: userRows, error: usersError } = await supabaseClient
-      .from(USERS_TABLE)
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (usersError) throw usersError;
-
+    const userRows = await hubApi.list("usuarios");
     const mappedUsers = mapRows("usuarios", userRows || []);
     const dbNames = mappedUsers.map((user) => normalizeLoginName(user.nome));
     data.usuarios = (data.usuarios || []).filter((localUser) => {
       const normalizedName = normalizeLoginName(localUser.nome);
       if (dbNames.includes(normalizedName)) return true;
       if (localUser.syncStatus === "local") {
-        supabaseClient.from(USERS_TABLE).insert({
+        hubApi.insert("usuarios", {
           nome: localUser.nome,
           email: localUser.email || null,
           created_by: "Auto-Sync",
-        }).then();
+        }).catch(() => {});
         return true;
       }
       return false;
@@ -3092,18 +3135,16 @@ async function loadFromSupabase(options = {}) {
     data.usuarios = mergeUsersByName(data.usuarios, mappedUsers);
 
     const requests = await Promise.allSettled(
-      Object.entries(TABLES)
-        .filter(([collection]) => collection !== "usuarios")
-        .map(async ([collection, table]) => {
-        let query = supabaseClient.from(table).select("*").order("created_at", { ascending: false });
-        if (collection === "comunicados") {
-          query = query.in("canal", getAllowedChatChannelIds());
-        }
-
-        const { data: rows, error } = await query;
-        if (error) throw error;
-        return [collection, mapRows(collection, rows || [])];
-      })
+      Object.keys(TABLES)
+        .filter((collection) => collection !== "usuarios")
+        .map(async (collection) => {
+          let rows = await hubApi.list(collection);
+          if (collection === "comunicados") {
+            const allowed = new Set(getAllowedChatChannelIds());
+            rows = rows.filter((row) => allowed.has(row.canal));
+          }
+          return [collection, mapRows(collection, rows || [])];
+        })
     );
 
     requests.forEach((result) => {
@@ -3112,28 +3153,27 @@ async function loadFromSupabase(options = {}) {
 
         data[collection] = rows;
       } else {
-        console.error("Erro ao carregar colecao do Supabase:", result.reason);
+        console.error("Erro ao carregar colecao:", result.reason);
       }
     });
     ensureRequiredTeamUsers();
     saveLocalData();
     if (setupLive) {
-      setupRealtime();
       setupAutoRefresh();
     }
     const hasFailures = requests.some((result) => result.status === "rejected");
-    setSyncStatus(hasFailures ? "Supabase parcial" : "Supabase EIXO online", !hasFailures);
+    setSyncStatus(hasFailures ? "Sincronizacao parcial" : "HUB online", !hasFailures);
     renderAll();
     if (setupLive) rememberCurrentNotificationKeysForPolling();
   } catch (error) {
-    console.error("Erro ao carregar Supabase:", error);
-    setSyncStatus("Supabase pendente", false);
+    console.error("Erro ao carregar dados:", error);
+    setSyncStatus("Sincronizacao pendente", false);
     renderAll();
   }
 }
 
 async function refreshFromSupabase() {
-  if (!supabaseClient || refreshInProgress) return;
+  if (!isAuthenticated() || refreshInProgress) return;
 
   refreshInProgress = true;
   try {
@@ -3155,48 +3195,11 @@ function setupAutoRefresh() {
   }, 5000);
 }
 
-function setupRealtime() {
-  if (!supabaseClient || realtimeChannel) return;
-
-  realtimeChannel = supabaseClient.channel("hub-realtime-updates");
-
-  Object.entries(TABLES).forEach(([collection, table]) => {
-    realtimeChannel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table },
-      (payload) => {
-        const row = payload.eventType === "DELETE" ? payload.old : payload.new;
-        if (!row) return;
-        if (collection === "comunicados" && !canAccessChatChannel(row.canal)) return;
-
-        const mappedRealtimeItem = mapRows(collection, [row])[0] || row;
-        notifyRealtimeItem(collection, mappedRealtimeItem, payload.eventType);
-        mergeRealtimeRow(collection, row, payload.eventType);
-        renderRealtimeUpdate(collection);
-      }
-    );
-  });
-
-  realtimeChannel.subscribe((status) => {
-    if (status === "SUBSCRIBED") {
-      console.info("HUB realtime conectado");
-      setSyncStatus("Tempo real online", true);
-    } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-      console.warn("HUB realtime desconectado:", status);
-      setSyncStatus("Reconectando...", false);
-      // Remove canal atual e agenda reconexão
-      try { realtimeChannel.unsubscribe(); } catch (_) {}
-      realtimeChannel = null;
-      setTimeout(() => {
-        if (!realtimeChannel && supabaseClient) {
-          console.info("HUB realtime tentando reconectar...");
-          setupRealtime();
-          refreshFromSupabase();
-        }
-      }, 3000);
-    }
-  });
-}
+// Substituido pelo polling de 5s (setupAutoRefresh) na migracao para Neon.
+// A API por tras do HUB agora e' um conjunto de Vercel Functions sem
+// mecanismo de push equivalente ao Supabase Realtime; a atualizacao de
+// dados entre sessoes tem uma latencia de ate 5s.
+function setupRealtime() {}
 
 async function uploadChatFile(file) {
   if (!supabaseClient || !file || !file.name) return null;
@@ -3839,16 +3842,9 @@ function ensurePublicCaptchaNotice(formElement) {
 }
 
 async function submitPublicRecord(collection, payload, turnstileToken = "") {
-  const config = getHubSupabaseConfig();
-  if (!config.url || !config.anonKey) throw new Error("Supabase publico indisponivel.");
-
-  const response = await fetch(`${config.url}/functions/v1/hub-public-submit`, {
+  const response = await fetch("/api/public/submit", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": config.anonKey,
-      "Authorization": `Bearer ${config.anonKey}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       type: collection,
       payload,
@@ -4017,7 +4013,7 @@ function appendLocalInsertedItem(collection, values) {
 }
 
 async function addItem(collection, values) {
-  if (!supabaseClient) {
+  if (!isAuthenticated() && !isPublicInsertOnlyCollection(collection)) {
     appendLocalInsertedItem(collection, values);
     saveLocalData();
     renderAll();
@@ -4047,134 +4043,20 @@ async function addItem(collection, values) {
       return true;
     }
 
-    const { data: inserted, error } = await supabaseClient
-      .from(TABLES[collection])
-      .insert(payload)
-      .select("*")
-      .single();
-
-    if (error) {
-      if (isMissingCreatedByColumn(error)) {
-        const { data: insertedWithoutAuthor, error: retryError } = await supabaseClient
-          .from(TABLES[collection])
-          .insert(withoutCreatedBy(payload))
-          .select("*")
-          .single();
-
-        if (retryError) throw retryError;
-
-        data[collection].unshift({
-          ...mapRows(collection, [insertedWithoutAuthor])[0],
-          createdBy: values.createdBy || getCurrentUserName(),
-        });
-        saveLocalData();
-        setSyncStatus("Supabase sem autoria", false);
-        renderAll();
-        return true;
-      }
-
-      if (collection === "malotes" && isMissingColumn(error, "updated_by")) {
-        const { data: insertedWithoutEditor, error: retryError } = await supabaseClient
-          .from(TABLES[collection])
-          .insert(withoutUpdatedBy(payload))
-          .select("*")
-          .single();
-
-        if (retryError) throw retryError;
-
-        data[collection].unshift({
-          ...mapRows(collection, [insertedWithoutEditor])[0],
-          createdBy: values.createdBy || getCurrentUserName(),
-        });
-        saveLocalData();
-        setSyncStatus("Supabase precisa migracao", false);
-        renderAll();
-        return true;
-      }
-
-      if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos") || isMissingColumn(error, "unidade"))) {
-        const { data: insertedLegacy, error: retryError } = await supabaseClient
-          .from(TABLES[collection])
-          .insert(withoutOptionalJobColumns(payload))
-          .select("*")
-          .single();
-
-        if (retryError) throw retryError;
-
-        data[collection].unshift({
-          ...mapRows(collection, [insertedLegacy])[0],
-          descricao: values.descricao || "",
-          requisitos: values.requisitos || "",
-          createdBy: values.createdBy || getCurrentUserName(),
-        });
-        saveLocalData();
-        setSyncStatus("Supabase precisa migracao", false);
-        renderAll();
-        showModal("Banco precisa atualizar", "A vaga foi salva em modo compatibilidade. Rode o supabase-schema.sql atualizado para gravar descricao e requisitos em colunas proprias.", "info");
-        return true;
-      }
-
-      if (collection === "candidaturas" && isMissingColumn(error, "telefone")) {
-        const { data: insertedLegacy, error: retryError } = await supabaseClient
-          .from(TABLES[collection])
-          .insert(withoutOptionalApplicationColumns(payload))
-          .select("*")
-          .single();
-
-        if (retryError) throw retryError;
-
-        data[collection].unshift({
-          ...mapRows(collection, [insertedLegacy])[0],
-          telefone: values.telefone || "",
-          createdBy: values.createdBy || getCurrentUserName(),
-        });
-        saveLocalData();
-        setSyncStatus("Supabase precisa migracao", false);
-        renderAll();
-        showModal("Banco precisa atualizar", "A candidatura foi salva, mas rode o supabase-schema.sql atualizado para gravar telefone no banco.", "info");
-        return true;
-      }
-
-      throw error;
-    }
-
+    const inserted = await hubApi.insert(collection, payload);
     data[collection].unshift(mapRows(collection, [inserted])[0]);
     saveLocalData();
-    setSyncStatus("Supabase EIXO online", true);
+    setSyncStatus("HUB online", true);
     renderAll();
     return true;
   } catch (error) {
-    console.error("Erro ao salvar no Supabase:", error);
-    if (collection === "atestados") {
-    return rows.map(mapAtestadoRow);
-  }
-
-  if (collection === "eventos") {
-      data[collection].unshift({
-        id: generateUUID(),
-        createdAt: todayLabel(),
-        sortAt: new Date().toISOString(),
-        createdBy: values.createdBy || getCurrentUserName(),
-        ...values,
-      });
-      saveLocalData();
-      setSyncStatus("Evento salvo localmente", false);
-      renderAll();
-      showModal("Evento salvo localmente", "Rode o SQL do calendario no Supabase para sincronizar esta agenda entre computadores.", "info");
-      return true;
-    }
-    setSyncStatus("Erro no Supabase", false);
-    const isRlsBlock = error?.code === "42501" || error?.message?.includes("row-level security") || error?.code === "PGRST301";
-    const isNoRows = error?.code === "PGRST116";
+    console.error("Erro ao salvar:", error);
+    setSyncStatus("Erro ao salvar", false);
     const message = isPublicInsertOnlyCollection(collection)
       ? (error?.message || "Nao foi possivel enviar o formulario publico.")
-      : collection === "chamados"
-        ? "Nao foi possivel abrir o chamado. Rode o arquivo fix-chamados-supabase.sql no Supabase para criar a tabela hub_chamados."
-        : collection === "vagas" && (isRlsBlock || isNoRows)
-          ? "Sem permissao para salvar a vaga. Verifique se seu usuario tem cargo 'RH' na tabela hub_users e se o e-mail do perfil coincide com o e-mail do login. Rode o hub-vagas-fix.sql para corrigir."
-          : collection === "vagas"
-            ? `Nao foi possivel salvar a vaga. ${error?.message || "Confira se as colunas descricao, requisitos e created_by existem em hub_vagas (rode hub-vagas-fix.sql)."}`
-            : "Nao foi possivel salvar no Supabase. Confira se as tabelas hub_* existem no projeto EIXO.";
+      : error?.status === 403
+        ? "Sem permissao para salvar este registro."
+        : (error?.message || "Nao foi possivel salvar o registro.");
     showModal("Erro ao Salvar", message, "error");
     return false;
   }
@@ -4190,7 +4072,7 @@ async function addItem(collection, values) {
 async function updateItem(collection, id, values) {
   if (!id) return false;
 
-  if (!supabaseClient) {
+  if (!isAuthenticated()) {
     data[collection] = (data[collection] || []).map((item) =>
       String(item.id) === String(id) ? { ...item, ...values } : item
     );
@@ -4201,121 +4083,25 @@ async function updateItem(collection, id, values) {
 
   try {
     const payload = toDbPayload(collection, values);
-    if (collection === "malotes") {
+    if (collection === "malotes" || collection === "eventos") {
       delete payload.created_by;
       payload.updated_by = values.updatedBy || getCurrentUserName();
     }
-    if (collection === "atestados") {
-    return rows.map(mapAtestadoRow);
-  }
-
-  if (collection === "eventos") {
-      delete payload.created_by;
-      payload.updated_by = values.updatedBy || getCurrentUserName();
-    }
-    if (collection === "chamados") {
+    if (collection === "chamados" || collection === "vagas") {
       delete payload.created_by;
     }
-    if (collection === "vagas") {
-      delete payload.created_by;
-    }
-    const { data: updated, error } = await supabaseClient
-      .from(TABLES[collection])
-      .update(payload)
-      .eq("id", id)
-      .select("*")
-      .single();
 
-    if (error) {
-      if (isMissingCreatedByColumn(error)) {
-        const { data: updatedWithoutAuthor, error: retryError } = await supabaseClient
-          .from(TABLES[collection])
-          .update(withoutCreatedBy(payload))
-          .eq("id", id)
-          .select("*")
-          .single();
-
-        if (retryError) throw retryError;
-        mergeRealtimeRow(collection, updatedWithoutAuthor, "UPDATE");
-        renderRealtimeUpdate(collection);
-        setSyncStatus("Supabase sem autoria", false);
-        return true;
-      }
-
-      if ((collection === "malotes" || collection === "eventos") && isMissingColumn(error, "updated_by")) {
-        const { data: updatedWithoutEditor, error: retryError } = await supabaseClient
-          .from(TABLES[collection])
-          .update(withoutUpdatedBy(payload))
-          .eq("id", id)
-          .select("*")
-          .single();
-
-        if (retryError) throw retryError;
-        mergeRealtimeRow(collection, {
-          ...updatedWithoutEditor,
-          updated_by: values.updatedBy || getCurrentUserName(),
-        }, "UPDATE");
-        renderRealtimeUpdate(collection);
-        setSyncStatus("Supabase precisa migracao", false);
-        return true;
-      }
-
-      if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos") || isMissingColumn(error, "unidade"))) {
-        const { data: updatedLegacy, error: retryError } = await supabaseClient
-          .from(TABLES[collection])
-          .update(withoutOptionalJobColumns(payload))
-          .eq("id", id)
-          .select("*")
-          .single();
-
-        if (retryError) throw retryError;
-        mergeRealtimeRow(collection, {
-          ...updatedLegacy,
-          descricao: values.descricao || "",
-          requisitos: values.requisitos || "",
-        }, "UPDATE");
-        renderRealtimeUpdate(collection);
-        setSyncStatus("Supabase precisa migracao", false);
-        showModal("Banco precisa atualizar", "A vaga foi atualizada em modo compatibilidade. Rode o supabase-schema.sql atualizado para gravar descricao e requisitos em colunas proprias.", "info");
-        return true;
-      }
-
-      throw error;
-    }
-
+    const updated = await hubApi.update(collection, id, payload);
     mergeRealtimeRow(collection, updated, "UPDATE");
     renderRealtimeUpdate(collection);
-    setSyncStatus("Supabase EIXO online", true);
+    setSyncStatus("HUB online", true);
     return true;
   } catch (error) {
-    console.error("Erro ao atualizar no Supabase:", error);
-    if (collection === "atestados") {
-    return rows.map(mapAtestadoRow);
-  }
-
-  if (collection === "eventos") {
-      data[collection] = (data[collection] || []).map((item) =>
-        String(item.id) === String(id)
-          ? { ...item, ...values, createdBy: item.createdBy || values.createdBy || getCurrentUserName(), updatedBy: values.updatedBy || getCurrentUserName() }
-          : item
-      );
-      saveLocalData();
-      setSyncStatus("Evento atualizado localmente", false);
-      renderAll();
-      showModal("Evento atualizado localmente", "Rode o SQL do calendario no Supabase para sincronizar esta agenda entre computadores.", "info");
-      return true;
-    }
-    setSyncStatus("Erro no Supabase", false);
-    const isRlsBlock = error?.code === "42501" || error?.message?.includes("row-level security") || error?.code === "PGRST301";
-    const isNoRows   = error?.code === "PGRST116";
-    const message =
-      collection === "chamados"
-        ? "O Supabase bloqueou o arquivamento do chamado. Rode o arquivo fix-arquivar-chamados-supabase.sql no Supabase para liberar UPDATE em hub_chamados."
-        : collection === "vagas" && (isRlsBlock || isNoRows)
-          ? "Sem permissao para editar a vaga. Verifique se seu usuario tem cargo 'RH' em hub_users com o mesmo e-mail do login."
-          : collection === "vagas"
-            ? `Nao foi possivel editar a vaga. ${error?.message || "Confira as colunas de hub_vagas (rode hub-vagas-fix.sql)."}`
-            : "Nao foi possivel atualizar o registro no Supabase.";
+    console.error("Erro ao atualizar:", error);
+    setSyncStatus("Erro ao atualizar", false);
+    const message = error?.status === 403
+      ? "Sem permissao para editar este registro."
+      : (error?.message || "Nao foi possivel atualizar o registro.");
     showModal("Erro ao Atualizar", message, "error");
     return false;
   }
@@ -4331,7 +4117,7 @@ async function updateItem(collection, id, values) {
 async function deleteItem(collection, id) {
   if (!id) return false;
 
-  if (!supabaseClient) {
+  if (!isAuthenticated()) {
     data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
     if (collection === "vagas") {
       data.candidaturas = (data.candidaturas || []).filter((item) => String(item.vaga_id) !== String(id));
@@ -4342,45 +4128,22 @@ async function deleteItem(collection, id) {
   }
 
   try {
-    if (collection === "vagas") {
-      const { error: candidaturaError } = await supabaseClient.from(TABLES.candidaturas).delete().eq("vaga_id", id);
-      if (candidaturaError) throw candidaturaError;
-    }
-
-    const { data: deletedRows, error } = await supabaseClient.from(TABLES[collection]).delete().eq("id", id).select("id");
-    if (error) throw error;
-
-    if (!deletedRows?.length) {
-      setSyncStatus("Delete pendente no Supabase", false);
-      showModal("Permissao de Delete", "O Supabase nao confirmou a exclusao da vaga. Rode o supabase-schema.sql atualizado para liberar DELETE em hub_vagas.", "error");
-      await refreshFromSupabase();
-      return false;
-    }
-
+    await hubApi.remove(collection, id);
     data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
     if (collection === "vagas") {
       data.candidaturas = (data.candidaturas || []).filter((item) => String(item.vaga_id) !== String(id));
     }
     saveLocalData();
     renderAll();
-    setSyncStatus("Supabase EIXO online", true);
+    setSyncStatus("HUB online", true);
     return true;
   } catch (error) {
-    console.error("Erro ao deletar no Supabase:", error);
-    if (collection === "atestados") {
-    return rows.map(mapAtestadoRow);
-  }
-
-  if (collection === "eventos") {
-      data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
-      saveLocalData();
-      renderAll();
-      setSyncStatus("Evento deletado localmente", false);
-      showModal("Evento deletado localmente", "Rode o SQL do calendario no Supabase para sincronizar esta agenda entre computadores.", "info");
-      return true;
-    }
-    setSyncStatus("Erro no Supabase", false);
-    showModal("Erro ao Deletar", "Nao foi possivel deletar o registro no Supabase.", "error");
+    console.error("Erro ao deletar:", error);
+    setSyncStatus("Erro ao deletar", false);
+    const message = error?.status === 403
+      ? "Sem permissao para excluir este registro."
+      : "Nao foi possivel deletar o registro.";
+    showModal("Erro ao Deletar", message, "error");
     return false;
   }
 }
@@ -4427,66 +4190,34 @@ async function saveTeamUser(values) {
     return false;
   }
 
-  if (!supabaseClient) {
+  if (!isAuthenticated()) {
     upsertLocalUser({ nome, email, cargo, syncStatus: "active" });
     return true;
   }
 
   try {
-    const { data: existingRows, error: findError } = await supabaseClient
-      .from(USERS_TABLE)
-      .select("id, nome, email, cpf")
-      .or(`email.ilike.${email},cpf.eq.${cpf}`)
-      .limit(1);
+    const normalizedEmail = normalizeLoginName(email);
+    const normalizedCpf = normalizeCpf(cpf);
+    const existing = (data.usuarios || []).find((row) =>
+      (normalizedEmail && normalizeLoginName(row.email) === normalizedEmail) ||
+      (normalizedCpf && normalizeCpf(row.cpf) === normalizedCpf)
+    );
 
-    let existing = null;
-    if (findError && isMissingColumn(findError, "email")) {
-      const fallback = await supabaseClient
-        .from(USERS_TABLE)
-        .select("id, nome")
-        .ilike("nome", nome)
-        .limit(1);
-      if (fallback.error) throw fallback.error;
-      existing = fallback.data?.[0] || null;
-    } else if (findError) {
-      throw findError;
-    } else {
-      existing = existingRows?.[0] || null;
-    }
+    const payload = { nome, email, cpf, cargo, created_by: getCurrentUserName() };
+    const saved = existing
+      ? await hubApi.update("usuarios", existing.id, payload)
+      : await hubApi.insert("usuarios", payload);
 
-    let query = existing
-      ? supabaseClient.from(USERS_TABLE).update({ nome, email, cpf, cargo, created_by: getCurrentUserName() }).eq("id", existing.id)
-      : supabaseClient.from(USERS_TABLE).insert({ nome, email, cpf, cargo, created_by: getCurrentUserName() });
-
-    let result = await query.select("*");
-
-    if (result.error && isMissingCreatedByColumn(result.error)) {
-      query = existing
-      ? supabaseClient.from(USERS_TABLE).update({ nome, email, cpf, cargo }).eq("id", existing.id)
-      : supabaseClient.from(USERS_TABLE).insert({ nome, email, cpf, cargo });
-      result = await query.select("*");
-    }
-
-    if (result.error && isMissingColumn(result.error, "email")) {
-      query = existing
-        ? supabaseClient.from(USERS_TABLE).update({ nome, cargo, created_by: getCurrentUserName() }).eq("id", existing.id)
-        : supabaseClient.from(USERS_TABLE).insert({ nome, cargo, created_by: getCurrentUserName() });
-      result = await query.select("*");
-    }
-
-    if (result.error) throw result.error;
-    const savedRows = result.data;
-
-    const saved = mapRows("usuarios", savedRows || [])[0] || { nome, email, cargo, createdAt: todayLabel() };
-    upsertLocalUser({ ...saved, email: saved.email || email, cpf: saved.cpf || cpf, cargo: saved.cargo || cargo, syncStatus: "active" });
-    setSyncStatus("Supabase EIXO online", true);
-    showModal("Perfil salvo", "Crie ou atualize o usuário correspondente no Supabase Auth para liberar o login.", "info");
+    const mapped = mapRows("usuarios", [saved])[0] || { nome, email, cargo, createdAt: todayLabel() };
+    upsertLocalUser({ ...mapped, email: mapped.email || email, cpf: mapped.cpf || cpf, cargo: mapped.cargo || cargo, syncStatus: "active" });
+    setSyncStatus("HUB online", true);
+    showModal("Perfil salvo", "Defina uma senha para esse usuario (via fluxo de redefinicao de senha) para liberar o login.", "info");
     return true;
   } catch (error) {
-    console.error("Erro ao salvar usuario no Supabase:", error);
+    console.error("Erro ao salvar usuario:", error);
     upsertLocalUser({ nome, email, cargo, syncStatus: "local" });
     setSyncStatus("Usuario salvo local", false);
-    showModal("Aviso de Banco de Dados", "O perfil foi salvo localmente. Crie o usuario no Supabase Auth e confira a tabela hub_users.", "error");
+    showModal("Aviso de Banco de Dados", "O perfil foi salvo localmente. Tente novamente mais tarde.", "error");
     return true;
   }
 }
@@ -4495,16 +4226,7 @@ async function loadPublicData() {
   if (!isPublicJobsPage()) return;
 
   try {
-    const config = getHubSupabaseConfig();
-    if (!config.url || !config.anonKey) throw new Error("Supabase publico indisponivel.");
-
-    const response = await fetch(`${config.url}/functions/v1/hub-public-submit?type=vagas`, {
-      headers: {
-        "apikey": config.anonKey,
-        "Authorization": `Bearer ${config.anonKey}`,
-      },
-    });
-
+    const response = await fetch("/api/public/vagas");
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "Nao foi possivel carregar vagas publicas.");
 
@@ -4550,24 +4272,17 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
     }
   }
 
-  if (!supabaseClient) {
+  if (!isAuthenticated()) {
     upsertLocalUser(updatedUser);
     if (newName) storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
     return true;
   }
 
   try {
-    const session = await getAuthSession();
-    if (!session?.access_token) throw new Error("Sessao expirada.");
-
-    const config = getHubSupabaseConfig();
-    const response = await fetch(`${config.url}/functions/v1/hub-account-update`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": config.anonKey,
-        "Authorization": `Bearer ${session.access_token}`,
-      },
+    const response = await fetch("/api/users/me", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         nome: updatedUser.nome,
         foto_perfil: newFotoUrl || null,
@@ -4585,14 +4300,14 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
     // Keep it in sync so a newly uploaded avatar is shown immediately.
     currentUserProfile = { ...(currentUserProfile || {}), ...persistedUser };
     if (newName) storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
-    setSyncStatus("Supabase EIXO online", true);
+    setSyncStatus("HUB online", true);
     return true;
   } catch (error) {
     console.error("Erro ao atualizar conta:", error);
     upsertLocalUser({ ...updatedUser, syncStatus: "local" });
     if (newName) storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
     setSyncStatus("Conta atualizada local", false);
-    showModal("Atualizacao local", "Os dados foram alterados localmente. Rode os SQLs atualizados no Supabase se o banco bloquear as colunas.", "info");
+    showModal("Atualizacao local", "Os dados foram alterados localmente.", "info");
     return true;
   }
 }
@@ -4621,24 +4336,18 @@ async function deleteTeamUser(id) {
 
   const localUser = data.usuarios.find((u) => String(u.id) === String(id));
 
-  if (!supabaseClient || !localUser) {
+  if (!isAuthenticated() || !localUser) {
     removeLocalUser(id);
     return true;
   }
 
   try {
-    const { error } = await supabaseClient
-      .from(USERS_TABLE)
-      .delete()
-      .eq("id", localUser.id);
-
-    if (error) throw error;
-
+    await hubApi.remove("usuarios", localUser.id);
     removeLocalUser(id);
-    setSyncStatus("Supabase EIXO online", true);
+    setSyncStatus("HUB online", true);
     return true;
   } catch (error) {
-    console.error("Erro ao excluir usuario no Supabase:", error);
+    console.error("Erro ao excluir usuario:", error);
     removeLocalUser(id);
     setSyncStatus("Usuario removido local", false);
     return true;
@@ -5734,27 +5443,19 @@ async function lerDenuncia(id) {
 
   // Se a denúncia ainda constar como Não lida ("Aberta"), movemos para "Lida"
   if (denuncia.status === "Aberta") {
-    if (!supabaseClient) {
+    if (!isAuthenticated()) {
       denuncia.status = "Lida";
       saveLocalData();
       renderAll();
     } else {
       try {
-        const { data: updated, error } = await supabaseClient
-          .from(TABLES.denuncias)
-          .update({ status: "Lida" })
-          .eq("id", id)
-          .select()
-          .single();
-        
-        if (error || !updated) throw error || new Error("Nenhuma linha alterada.");
-        
+        await hubApi.update("denuncias", id, { status: "Lida" });
         denuncia.status = "Lida";
         saveLocalData();
         renderAll();
       } catch (err) {
-        console.error("Erro ao atualizar status da denúncia no Supabase:", err);
-        showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada. Você precisa rodar o script SQL de UPDATE no painel do Supabase para consertar as permissões.", "error");
+        console.error("Erro ao atualizar status da denúncia:", err);
+        showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada.", "error");
       }
     }
   }
@@ -5764,7 +5465,7 @@ async function atualizarStatusDenuncia(id, status) {
   const denuncia = data.denuncias.find((item) => String(item.id) === String(id));
   if (!denuncia) return false;
 
-  if (!supabaseClient) {
+  if (!isAuthenticated()) {
     denuncia.status = status;
     saveLocalData();
     renderAll();
@@ -5772,21 +5473,13 @@ async function atualizarStatusDenuncia(id, status) {
   }
 
   try {
-    const { data: updated, error } = await supabaseClient
-      .from(TABLES.denuncias)
-      .update({ status })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error || !updated) throw error || new Error("Nenhuma linha alterada.");
-
+    const updated = await hubApi.update("denuncias", id, { status });
     mergeRealtimeRow("denuncias", updated, "UPDATE");
     renderRealtimeUpdate("denuncias");
     return true;
   } catch (err) {
-    console.error("Erro ao atualizar status da denúncia no Supabase:", err);
-    showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada. Rode o supabase-schema.sql atualizado para liberar UPDATE em hub_denuncias.", "error");
+    console.error("Erro ao atualizar status da denúncia:", err);
+    showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada.", "error");
     return false;
   }
 }
@@ -9590,29 +9283,20 @@ async function excluirMalote(id) {
 };
 
 async function verifyAuthorizationPassword(password) {
-  const session = await getAuthSession();
-  const config = getHubSupabaseConfig();
-  if (!session?.access_token || !config.url || !config.anonKey) return false;
-  const response = await fetch(`${config.url}/functions/v1/hub-malote-delete`, {
+  const response = await fetch("/api/malotes/delete", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": config.anonKey, "Authorization": `Bearer ${session.access_token}` },
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ validateOnly: true, password }),
   });
-  if (response.ok) return true;
-  const result = await response.json().catch(() => ({}));
-  // Se a Edge Function nao suporta validateOnly, tenta id invalido para checar apenas a senha
-  if (result.error === "Senha de autorizacao invalida.") return false;
-  // Qualquer outro erro (ex: id invalido) significa que a senha foi aceita
-  return response.status !== 401 && response.status !== 403;
+  return response.ok;
 }
 
 async function deleteMaloteWithAuthorization(id, password) {
-  const session = await getAuthSession();
-  const config = getHubSupabaseConfig();
-  if (!session?.access_token || !config.url || !config.anonKey) return false;
-  const response = await fetch(`${config.url}/functions/v1/hub-malote-delete`, {
+  const response = await fetch("/api/malotes/delete", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": config.anonKey, "Authorization": `Bearer ${session.access_token}` },
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, password }),
   });
   const result = await response.json().catch(() => ({}));
@@ -10867,20 +10551,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentEmail = getCurrentUserEmailSafe();
     const localItems = getLocalFeedbacks().map(mapFeedbackRow);
 
-    if (!supabaseClient) {
+    if (!isAuthenticated()) {
       return isArielUser()
         ? localItems.sort((a, b) => String(b.sortAt).localeCompare(String(a.sortAt)))
         : localItems.filter((item) => !currentEmail || normalizeAccessName(item.autorEmail) === normalizeAccessName(currentEmail));
     }
 
     try {
-      let query = supabaseClient.from(FEEDBACK_TABLE).select("*").order("created_at", { ascending: false });
-      if (!isArielUser() && currentEmail) query = query.eq("autor_email", currentEmail);
-      const { data: rows, error } = await query;
-      if (error) throw error;
-      return (rows || []).map(mapFeedbackRow);
+      const response = await fetch("/api/feedback", { credentials: "include" });
+      if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+      const result = await response.json();
+      return (result.data || []).map(mapFeedbackRow);
     } catch (error) {
-      console.warn("Feedbacks carregados do armazenamento local. Verifique se a tabela hub_feedbacks existe no Supabase.", error);
+      console.warn("Feedbacks carregados do armazenamento local.", error);
       return isArielUser()
         ? localItems.sort((a, b) => String(b.sortAt).localeCompare(String(a.sortAt)))
         : localItems.filter((item) => !currentEmail || normalizeAccessName(item.autorEmail) === normalizeAccessName(currentEmail));
@@ -10894,20 +10577,18 @@ document.addEventListener('DOMContentLoaded', () => {
       created_at: new Date().toISOString(),
     });
 
-    if (supabaseClient) {
+    if (isAuthenticated()) {
       try {
-        const { error } = await supabaseClient.from(FEEDBACK_TABLE).insert({
-          tipo: payload.tipo,
-          mensagem: payload.mensagem,
-          autor_nome: payload.autorNome,
-          autor_email: payload.autorEmail || null,
-          status: "Novo",
-          created_by: payload.autorNome,
+        const response = await fetch("/api/feedback", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tipo: payload.tipo, mensagem: payload.mensagem }),
         });
-        if (error) throw error;
+        if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
         return { savedOnSupabase: true };
       } catch (error) {
-        console.warn("Não foi possível salvar feedback no Supabase; salvando localmente.", error);
+        console.warn("Não foi possível salvar feedback; salvando localmente.", error);
       }
     }
 
@@ -10928,17 +10609,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const normalizedId = String(feedbackId || "");
     if (!normalizedId) return { deletedOnSupabase: false };
 
-    if (supabaseClient) {
+    if (isAuthenticated()) {
       try {
-        let query = supabaseClient.from(FEEDBACK_TABLE).delete().eq("id", normalizedId);
-        const currentEmail = getCurrentUserEmailSafe();
-        if (!isArielUser() && currentEmail) query = query.eq("autor_email", currentEmail);
-        const { error } = await query;
-        if (error) throw error;
+        const response = await fetch(`/api/feedback?id=${encodeURIComponent(normalizedId)}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
         removeLocalFeedbackById(normalizedId);
         return { deletedOnSupabase: true };
       } catch (error) {
-        console.warn("Não foi possível excluir feedback no Supabase; tentando remover somente do armazenamento local.", error);
+        console.warn("Não foi possível excluir feedback; tentando remover somente do armazenamento local.", error);
       }
     }
 
@@ -11212,19 +10893,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function fetchAtestadosFromSupabase() {
-    if (!supabaseClient) return getLocalAtestados();
+    if (!isAuthenticated()) return getLocalAtestados();
     try {
-      const { data: rows, error } = await supabaseClient
-        .from(ATESTADOS_TABLE)
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
+      const rows = await hubApi.list("atestados");
       const mapped = (rows || []).map(mapAtestadoRow);
       data.atestados = mapped;
       saveLocalDataDebounced?.();
       return mapped;
     } catch (error) {
-      console.warn("Não foi possível carregar atestados do Supabase; usando cache local.", error);
+      console.warn("Não foi possível carregar atestados; usando cache local.", error);
       return data.atestados?.length ? data.atestados : getLocalAtestados();
     }
   }
@@ -11299,34 +10976,24 @@ document.addEventListener('DOMContentLoaded', () => {
       try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
     };
 
-    if (supabaseClient) {
+    if (isAuthenticated()) {
       try {
-        const pathToRemove = filePath || item?.arquivoUrl || "";
-        if (pathToRemove) {
-          const { error: storageError } = await supabaseClient.storage
-            .from(getAtestadosBucket())
-            .remove([pathToRemove]);
-          if (storageError) console.warn("Não foi possível remover o arquivo do storage:", storageError);
-        }
-
-        const { error } = await supabaseClient
-          .from(ATESTADOS_TABLE)
-          .delete()
-          .eq("id", id);
-        if (error) throw error;
+        // A remocao do arquivo no storage (Vercel Blob) ainda depende da Fase 3
+        // da migracao; por enquanto so o registro na tabela e' removido.
+        await hubApi.remove("atestados", id);
 
         applyLocalDelete();
         showModal?.("Atestado apagado", "O atestado foi removido com sucesso.", "success");
         return;
       } catch (error) {
         console.error("Erro ao apagar atestado:", error);
-        showModal?.("Erro", "Não foi possível apagar o atestado. Verifique a permissão DELETE da tabela hub_atestados e do bucket hub-atestados.", "error");
+        showModal?.("Erro", "Não foi possível apagar o atestado.", "error");
         return;
       }
     }
 
     applyLocalDelete();
-    showModal?.("Atestado apagado localmente", "Sem Supabase ativo, a exclusão foi feita apenas neste navegador.", "info");
+    showModal?.("Atestado apagado localmente", "Sem sessao ativa, a exclusão foi feita apenas neste navegador.", "info");
   }
 
   async function updateAtestadoStatus(id, status) {
@@ -11337,16 +11004,15 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAtestadoCards(data.atestados || []);
     };
 
-    if (supabaseClient) {
+    if (isAuthenticated()) {
       try {
-        const { error } = await supabaseClient.from(ATESTADOS_TABLE).update({ status }).eq("id", id);
-        if (error) throw error;
+        await hubApi.update("atestados", id, { status });
         applyLocal();
         showModal?.("Status atualizado", "O status do atestado foi atualizado com sucesso.", "success");
         return;
       } catch (error) {
         console.error("Erro ao atualizar status do atestado:", error);
-        showModal?.("Erro", "Não foi possível atualizar o status no Supabase. Verifique a permissão UPDATE da tabela hub_atestados.", "error");
+        showModal?.("Erro", "Não foi possível atualizar o status.", "error");
         return;
       }
     }

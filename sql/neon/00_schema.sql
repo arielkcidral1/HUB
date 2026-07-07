@@ -204,11 +204,14 @@ create table if not exists public.hub_unit_test_runs (
   created_at timestamptz not null default now()
 );
 
--- ── Feedback (nao localizada no dump original; presente no app como FEEDBACK_TABLE) ─
-create table if not exists public.hub_feedback (
+-- ── Feedback (modulo "Feedbacks/Reclamacoes/Sugestoes", FEEDBACK_TABLE em script.js) ─
+create table if not exists public.hub_feedbacks (
   id uuid primary key default gen_random_uuid(),
-  autor text,
+  tipo text,
   mensagem text not null,
+  autor_nome text,
+  autor_email text,
+  status text not null default 'Novo',
   created_by text,
   created_at timestamptz not null default now()
 );
