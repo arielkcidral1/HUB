@@ -1119,7 +1119,34 @@ function disableSensitiveFieldAutofill() {
     input.autocomplete = "off";
     input.dataset.lpignore = "true";
     input.dataset["1pIgnore"] = "true";
+    input.dataset.formType = "other";
+    input.setAttribute("autocapitalize", "off");
+    input.setAttribute("spellcheck", "false");
+    if (input.type === "password") {
+      if (document.activeElement !== input) input.setAttribute("readonly", "readonly");
+      if (input.dataset.autofillGuarded === "true") return;
+      input.dataset.autofillGuarded = "true";
+      const unlockPasswordField = () => input.removeAttribute("readonly");
+      input.addEventListener("focus", unlockPasswordField);
+      input.addEventListener("pointerdown", unlockPasswordField);
+      input.addEventListener("keydown", unlockPasswordField);
+    }
   });
+}
+
+function setupFullNameValidationMessage() {
+  const fullNamePattern = "\\S+\\s+\\S+.*";
+  const message = "digite o nome completo";
+
+  const updateMessage = (target) => {
+    if (!(target instanceof HTMLInputElement) || target.pattern !== fullNamePattern) return;
+    target.title = message;
+    target.setCustomValidity(target.validity.patternMismatch ? message : "");
+  };
+
+  document.addEventListener("invalid", (event) => updateMessage(event.target), true);
+  document.addEventListener("input", (event) => updateMessage(event.target), true);
+  document.querySelectorAll("input[pattern]").forEach(updateMessage);
 }
 
 function getPublicClientId() {
@@ -1771,7 +1798,7 @@ function createMaloteCollaboratorBlock(group = {}) {
     <div class="malote-collaborator" data-malote-collaborator>
       <div class="item-topline">
         <label>Colaborador que irá receber
-          <input name="malote_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
+          <input name="malote_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" title="digite o nome completo" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
         </label>
         <button class="danger-button remove-malote-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
       </div>
@@ -1789,7 +1816,7 @@ function createChamadoCollaboratorBlock(group = {}) {
     <div class="malote-collaborator" data-chamado-collaborator>
       <div class="item-topline">
         <label>Colaborador que irá receber
-          <input name="chamado_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
+          <input name="chamado_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" title="digite o nome completo" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
         </label>
         <button class="danger-button remove-chamado-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
       </div>
@@ -2126,7 +2153,7 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
       <div class="modal-body">
         <p>${escapeHtml(text)}</p>
         <label class="modal-password-label">Senha de autorizacao
-          <input id="modal-action-password" type="password" autocomplete="current-password" placeholder="Digite a senha" />
+          <input id="modal-action-password" type="password" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Digite a senha" />
         </label>
         <p class="form-feedback error" id="modal-action-error" hidden>Senha incorreta.</p>
       </div>
@@ -2160,6 +2187,7 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
   });
 
   document.body.appendChild(overlay);
+  disableSensitiveFieldAutofill();
   overlay.querySelector("#modal-action-password").focus();
 }
 
@@ -8299,13 +8327,13 @@ function showResetPasswordModal() {
       <div class="modal-header info">Redefinir senha</div>
       <div class="modal-body">
         <label class="modal-password-label flush-top">Senha atual
-          <input id="modal-current-pwd" type="password" placeholder="Digite sua senha atual" autocomplete="current-password" />
+          <input id="modal-current-pwd" type="password" placeholder="Digite sua senha atual" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" />
         </label>
         <label class="modal-password-label">Nova senha
-          <input id="modal-new-pwd" type="password" placeholder="Digite a nova senha" autocomplete="new-password" />
+          <input id="modal-new-pwd" type="password" placeholder="Digite a nova senha" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" />
         </label>
         <label class="modal-password-label">Confirmar nova senha
-          <input id="modal-confirm-pwd" type="password" placeholder="Confirme a nova senha" autocomplete="new-password" />
+          <input id="modal-confirm-pwd" type="password" placeholder="Confirme a nova senha" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" />
         </label>
         <p class="form-feedback error modal-error-spacing" id="modal-action-error" hidden></p>
       </div>
@@ -8371,6 +8399,7 @@ function showResetPasswordModal() {
   });
 
   document.body.appendChild(overlay);
+  disableSensitiveFieldAutofill();
   overlay.querySelector("#modal-current-pwd").focus();
 }
 
@@ -8785,6 +8814,7 @@ async function initializeAppData() {
 }
 
 disableSensitiveFieldAutofill();
+setupFullNameValidationMessage();
 
 setupLogin().then((canInitialize) => {
   if (canInitialize) initializeAppData();
@@ -10689,5 +10719,3 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.key === FEEDBACK_LOCAL_KEY) renderFeedbackPanel();
   });
 })();
-
-
