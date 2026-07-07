@@ -1055,6 +1055,32 @@ const hubApi = {
   },
 };
 
+async function hubUpload(file, category) {
+  const response = await fetch(`/api/blob/upload?category=${encodeURIComponent(category)}&filename=${encodeURIComponent(file.name || "arquivo")}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || "Nao foi possivel enviar o arquivo.");
+  return result;
+}
+
+async function hubDeleteBlob(url) {
+  if (!url) return;
+  try {
+    await fetch("/api/blob/delete", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+  } catch (error) {
+    console.warn("Nao foi possivel remover o arquivo do storage:", error);
+  }
+}
+
 function setSyncStatus(text, isOnline = false) {
   const target = document.getElementById("sync-status");
   if (!target) return;
@@ -2348,18 +2374,13 @@ function getStoragePath(value, bucket) {
 }
 
 async function createPrivateStorageUrl(bucket, value) {
-  if (!supabaseClient) throw new Error("Supabase indisponivel.");
-  if (isHttpUrl(value)) {
-    const path = getStoragePath(value, bucket);
-    if (path && path !== value) value = path;
-  }
-
-  const path = getStoragePath(value, bucket);
-  const { data: signedData, error } = await supabaseClient.storage
-    .from(bucket)
-    .createSignedUrl(path, 60 * 5);
-  if (error) throw error;
-  return signedData.signedUrl;
+  // Uploads no Vercel Blob ja armazenam a URL publica completa (com sufixo
+  // aleatorio) direto na coluna do banco, entao normalmente basta devolver
+  // o valor como esta. So sobra logica de resolucao de path para arquivos
+  // antigos do Supabase Storage, que nao existem mais nesta base (migrada
+  // para o Neon sem dados legados).
+  if (isHttpUrl(value)) return value;
+  throw new Error("Arquivo indisponivel.");
 }
 
 function replacePrivateAvatarPlaceholders(path, signedUrl) {
@@ -3202,16 +3223,9 @@ function setupAutoRefresh() {
 function setupRealtime() {}
 
 async function uploadChatFile(file) {
-  if (!supabaseClient || !file || !file.name) return null;
-
-  const bucket = getHubSupabaseConfig().chatFilesBucket || "hub-chat-files";
-  const safeName = file.name.replace(/[^a-z0-9_.-]/gi, "-");
-  const channel = normalizeChatChannel(activeChatChannel || GENERAL_CHANNEL);
-  const path = `chat/${channel}/${Date.now()}-${generateUUID()}-${safeName}`;
-  const { error } = await supabaseClient.storage.from(bucket).upload(path, file, { contentType: getChatFileMimeType(file), upsert: false });
-  if (error) throw error;
-
-  return path;
+  if (!file || !file.name) return null;
+  const uploaded = await hubUpload(file, "chat");
+  return uploaded.url;
 }
 
 function getChatFileMimeType(fileOrAttachment) {
@@ -3864,25 +3878,22 @@ async function submitPublicRecord(collection, payload, turnstileToken = "") {
 }
 
 async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, curriculo, turnstileToken }) {
-  const config = getHubSupabaseConfig();
-  if (!config.url || !config.anonKey) throw new Error("Supabase publico indisponivel.");
+  const uploaded = await hubUpload(curriculo, "curriculo");
 
-  const body = new FormData();
-  body.append("type", "candidaturas");
-  body.append("vaga_id", String(vaga_id || ""));
-  body.append("nome", String(nome || ""));
-  body.append("telefone", String(telefone || ""));
-  body.append("cpf", String(cpf || ""));
-  body.append("curriculo", curriculo);
-  body.append("turnstileToken", String(turnstileToken || ""));
-
-  const response = await fetch(`${config.url}/functions/v1/hub-public-submit`, {
+  const response = await fetch("/api/public/submit", {
     method: "POST",
-    headers: {
-      "apikey": config.anonKey,
-      "Authorization": `Bearer ${config.anonKey}`,
-    },
-    body,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "candidaturas",
+      payload: {
+        vaga_id,
+        nome,
+        telefone,
+        cpf,
+        curriculo_url: uploaded.url,
+      },
+      turnstileToken,
+    }),
   });
 
   const result = await response.json().catch(() => ({}));
@@ -8575,16 +8586,10 @@ if (contaForm) {
     setAccountFormLoading(true);
 
     let fotoUrl = null;
-    if (fotoFile && fotoFile.name && supabaseClient) {
+    if (fotoFile && fotoFile.name) {
       try {
-        const safeName = fotoFile.name.replace(/[^a-z0-9_.-]/gi, "-");
-        const path = `avatars/${Date.now()}-${generateUUID()}-${safeName}`;
-        const { error: uploadError } = await supabaseClient.storage
-          .from(getHubSupabaseConfig().chatFilesBucket || "hub-chat-files")
-          .upload(path, fotoFile, { contentType: fotoFile.type, upsert: false });
-        if (uploadError) throw uploadError;
-
-        fotoUrl = path;
+        const uploaded = await hubUpload(fotoFile, "avatar");
+        fotoUrl = uploaded.url;
       } catch (e) {
         console.error("Erro ao enviar foto", e);
         setAccountFormLoading(false);
@@ -10978,9 +10983,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isAuthenticated()) {
       try {
-        // A remocao do arquivo no storage (Vercel Blob) ainda depende da Fase 3
-        // da migracao; por enquanto so o registro na tabela e' removido.
+        const pathToRemove = filePath || item?.arquivoUrl || "";
         await hubApi.remove("atestados", id);
+        if (pathToRemove) await hubDeleteBlob(pathToRemove);
 
         applyLocalDelete();
         showModal?.("Atestado apagado", "O atestado foi removido com sucesso.", "success");
@@ -11022,45 +11027,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function uploadPublicAtestado({ nome, cpf, telefone, unidade, file }) {
-    if (!supabaseClient) throw new Error("Supabase indisponível. Verifique a configuração pública do HUB.");
-
     const cpfDigits = normalizeCpf(cpf);
-    const safeName = safeStorageFileName(file.name || "atestado.pdf");
-    const path = `atestados/${cpfDigits || "sem-cpf"}/${Date.now()}-${generateUUID()}-${safeName}`;
+    const uploaded = await hubUpload(file, "atestado");
 
-    const { error: uploadError } = await supabaseClient.storage
-      .from(getAtestadosBucket())
-      .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
-    if (uploadError) throw uploadError;
-
-    const payload = {
-      nome,
-      cpf: cpfDigits,
-      telefone,
-      unidade,
-      arquivo_nome: file.name || "Atestado",
-      arquivo_tamanho: file.size || 0,
-      arquivo_tipo: file.type || "application/octet-stream",
-      arquivo_url: path,
-      status: "Recebido",
-      created_by: "Publico",
-    };
-
-    // IMPORTANTE:
-    // Não usar .select().single() no envio público.
-    // O visitante/anon tem permissão apenas para INSERIR, não para LER a tabela.
-    // Quando o INSERT pede retorno com .select(), o Supabase tenta aplicar SELECT
-    // e pode retornar erro de RLS mesmo com a policy de INSERT correta.
-    const { error: insertError } = await supabaseClient
-      .from(ATESTADOS_TABLE)
-      .insert(payload);
-    if (insertError) throw insertError;
-
-    return mapAtestadoRow({
-      id: generateUUID(),
-      ...payload,
-      created_at: new Date().toISOString(),
+    const response = await fetch("/api/public/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "atestados",
+        payload: {
+          nome,
+          cpf: cpfDigits,
+          telefone,
+          unidade,
+          arquivo_nome: file.name || "Atestado",
+          arquivo_tamanho: file.size || 0,
+          arquivo_tipo: file.type || "application/octet-stream",
+          arquivo_url: uploaded.url,
+        },
+      }),
     });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Nao foi possivel enviar o atestado.");
+
+    return mapAtestadoRow(result.data);
   }
 
   function setupPublicAtestadoForm() {

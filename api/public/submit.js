@@ -61,9 +61,46 @@ async function handleChamado(body) {
   return { data: rows[0] };
 }
 
+async function handleAtestado(body) {
+  const nome = trimmed(body.nome);
+  const cpf = trimmed(body.cpf).replace(/\D/g, "");
+  if (nome.length < 3 || nome.length > 160) return { error: "Nome invalido." };
+  if (cpf.length !== 11) return { error: "CPF invalido." };
+  if (!body.arquivo_url) return { error: "Envie o arquivo do atestado antes de confirmar." };
+
+  const rows = await sql`
+    insert into hub_atestados (nome, cpf, telefone, unidade, arquivo_nome, arquivo_tamanho, arquivo_tipo, arquivo_url, status, created_by)
+    values (
+      ${nome}, ${cpf}, ${trimmed(body.telefone)}, ${trimmed(body.unidade)},
+      ${trimmed(body.arquivo_nome) || "Atestado"}, ${Number(body.arquivo_tamanho) || 0},
+      ${trimmed(body.arquivo_tipo) || "application/octet-stream"}, ${body.arquivo_url},
+      ${"Recebido"}, ${"Publico"}
+    )
+    returning *
+  `;
+  return { data: rows[0] };
+}
+
+async function handleCandidatura(body) {
+  const nome = trimmed(body.nome);
+  const cpf = trimmed(body.cpf).replace(/\D/g, "");
+  if (nome.length < 1) return { error: "Nome invalido." };
+  if (cpf.length !== 11) return { error: "CPF invalido." };
+  if (!body.vaga_id) return { error: "Vaga invalida." };
+
+  const rows = await sql`
+    insert into hub_candidaturas (vaga_id, nome, telefone, cpf, curriculo_url, created_by)
+    values (${body.vaga_id}, ${nome}, ${trimmed(body.telefone)}, ${cpf}, ${body.curriculo_url || null}, ${"Publico"})
+    returning *
+  `;
+  return { data: rows[0] };
+}
+
 const HANDLERS = {
   denuncias: { fn: handleDenuncia, windowSeconds: 600, max: 5 },
   chamados: { fn: handleChamado, windowSeconds: 600, max: 10 },
+  atestados: { fn: handleAtestado, windowSeconds: 600, max: 5 },
+  candidaturas: { fn: handleCandidatura, windowSeconds: 600, max: 5 },
 };
 
 export default async function handler(request) {
