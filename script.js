@@ -651,7 +651,10 @@ function isAuthenticated() {
 
 function getCurrentUserName() {
   if (!isAuthenticated() && isPublicPage()) return "Publico";
-  return storageService.getSessionItem(`${SESSION_KEY}-user`) || "Voce";
+  const hydratedName = currentUserProfile?.nome || (currentAuthUser ? getAuthUserDisplayName(currentAuthUser) : "");
+  return storageService.getSessionItem(`${SESSION_KEY}-user`) ||
+    (hydratedName ? getLoginDisplayName(hydratedName) : "") ||
+    "Voce";
 }
 
 /**
@@ -720,7 +723,18 @@ function setAuthenticatedUser(authUser, profile = null) {
   const displayName = profile?.nome || getAuthUserDisplayName(authUser);
   storageService.setSessionItem(SESSION_KEY, "active");
   storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
+  storageService.setSessionItem(`${SESSION_KEY}-email`, profile?.email || authUser?.email || "");
+  storageService.setSessionItem(`${SESSION_KEY}-role`, profile?.cargo || authUser?.cargo || authUser?.app_metadata?.cargo || "");
   reloadUserSettingsForCurrentUser();
+  refreshAuthenticatedShell();
+}
+
+function refreshAuthenticatedShell() {
+  if (isPublicPage()) return;
+  renderCurrentUser?.();
+  updateUserMenuHeader?.();
+  renderAccountSettings?.();
+  applyRoleAccess?.();
 }
 
 function clearSensitiveClientCache() {
