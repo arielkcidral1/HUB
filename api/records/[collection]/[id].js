@@ -11,6 +11,14 @@ function safeColumns(row) {
   return Object.keys(row).filter((key) => IDENTIFIER.test(key) && key !== "id");
 }
 
+// Colunas jsonb (ex: hub_malotes.colaboradores) recebem um array/objeto JS do
+// corpo da requisicao; o driver do Neon nao serializa isso como JSON
+// automaticamente, entao precisa virar string antes de virar parametro.
+function toSqlParam(value) {
+  if (value !== null && typeof value === "object") return JSON.stringify(value);
+  return value;
+}
+
 export default async function handler(request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
 
@@ -33,7 +41,7 @@ export default async function handler(request) {
     const columns = safeColumns(body);
     if (!columns.length) return json(request, 400, { error: "Nenhum campo para atualizar." });
     const assignments = columns.map((column, index) => `${column} = $${index + 1}`).join(", ");
-    const values = columns.map((column) => body[column]);
+    const values = columns.map((column) => toSqlParam(body[column]));
     values.push(id);
     const text = `update ${rule.table} set ${assignments} where id = $${values.length} returning *`;
     const rows = await sql(text, values);
