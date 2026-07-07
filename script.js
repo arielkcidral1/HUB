@@ -1146,7 +1146,7 @@ function saveLocalData() {
 let _saveLocalDataTimer = null;
 function saveLocalDataDebounced() {
   if (_saveLocalDataTimer) clearTimeout(_saveLocalDataTimer);
-  _saveLocalDataTimer = setTimeout(() => { saveLocalData(); }, 300);
+  _saveLocalDataTimer = setTimeout(() => { saveLocalData(); }, 80);
 }
 
 
@@ -3159,7 +3159,7 @@ function setupAutoRefresh() {
   // de setInterval em abas ocultas, mas o timer continua rodando.
   refreshTimer = window.setInterval(() => {
     refreshFromSupabase();
-  }, 5000);
+  }, 2000);
 }
 
 // Substituido pelo polling de 5s (setupAutoRefresh) na migracao para Neon.
@@ -7793,7 +7793,7 @@ if (chatForm) {
   chatMessageEditor?.addEventListener("input", () => {
     syncChatComposerToTextarea();
     window.clearTimeout(chatComposerEmojiTimer);
-    chatComposerEmojiTimer = window.setTimeout(convertComposerEmojisPreservingCaret, 220);
+    chatComposerEmojiTimer = window.setTimeout(convertComposerEmojisPreservingCaret, 80);
   });
 
   chatMessageEditor?.addEventListener("paste", (event) => {
@@ -9937,7 +9937,18 @@ class NotificationTracker {
 
   openNotification(notif) {
     const readNotif = this.markNotificationRead(notif);
-    this.showDetailView(readNotif || notif);
+    const target = readNotif || notif;
+    if (target?.view) {
+      this.closeModal();
+      if (target.canal) {
+        activeChatChannel = normalizeChatChannel(target.canal);
+        try { renderChat?.(); } catch (_) {}
+      }
+      activateView(target.view);
+      try { checkAndMarkChatAsRead?.(); } catch (_) {}
+      return;
+    }
+    this.showDetailView(target);
   }
 
   markNotificationRead(notif = {}) {
