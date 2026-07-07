@@ -2,7 +2,7 @@ import { hash as bcryptHash } from "bcryptjs";
 import { sql } from "../_lib/db.js";
 import { json, corsHeaders } from "../_lib/cors.js";
 
-export const config = { runtime: "edge" };
+// bcryptjs precisa do runtime Node.js (nao roda de forma confiavel no Edge).
 
 export default async function handler(request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });

@@ -4,7 +4,7 @@ import { json, corsHeaders } from "../_lib/cors.js";
 import { requireUser } from "../_lib/jwt.js";
 import { isRh } from "../_lib/authz.js";
 
-export const config = { runtime: "edge" };
+// bcryptjs precisa do runtime Node.js (nao roda de forma confiavel no Edge).
 
 export default async function handler(request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
