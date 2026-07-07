@@ -1116,14 +1116,14 @@ function loadDocumentRecords() {
 }
 
 function disableSensitiveFieldAutofill() {
-  document.querySelectorAll('input[type="password"], input[type="email"], input[name="cpf"], input[name="identificador"], [data-login-identifier], [data-login-password]').forEach((input) => {
-    input.autocomplete = input.hasAttribute("data-login-identifier") || input.hasAttribute("data-login-password") ? "one-time-code" : "off";
+  document.querySelectorAll('input[type="password"], input[type="email"], input[name="cpf"], input[name="identificador"], [data-login-identifier], [data-login-password], [data-action-password]').forEach((input) => {
+    input.autocomplete = input.hasAttribute("data-login-identifier") || input.hasAttribute("data-login-password") || input.hasAttribute("data-action-password") ? "one-time-code" : "off";
     input.dataset.lpignore = "true";
     input.dataset["1pIgnore"] = "true";
     input.dataset.formType = "other";
     input.setAttribute("autocapitalize", "off");
     input.setAttribute("spellcheck", "false");
-    if (input.type === "password" || input.hasAttribute("data-login-identifier") || input.hasAttribute("data-login-password")) {
+    if (input.type === "password" || input.hasAttribute("data-login-identifier") || input.hasAttribute("data-login-password") || input.hasAttribute("data-action-password")) {
       if (document.activeElement !== input) input.setAttribute("readonly", "readonly");
       if (input.dataset.autofillGuarded === "true") return;
       input.dataset.autofillGuarded = "true";
@@ -2154,7 +2154,7 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
       <div class="modal-body">
         <p>${escapeHtml(text)}</p>
         <label class="modal-password-label">Senha de autorizacao
-          <input id="modal-action-password" type="password" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Digite a senha" />
+          <input id="modal-action-password" name="hub_action_key" class="masked-password-input" data-action-password type="text" autocomplete="one-time-code" inputmode="text" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Digite a senha" />
         </label>
         <p class="form-feedback error" id="modal-action-error" hidden>Senha incorreta.</p>
       </div>
