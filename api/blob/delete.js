@@ -1,27 +1,26 @@
 import { del } from "@vercel/blob";
 import { sql } from "../_lib/db.js";
-import { json, corsHeaders } from "../_lib/cors.js";
-import { requireUser } from "../_lib/jwt.js";
+import { sendJson, applyCorsHeadersNode } from "../_lib/cors.js";
+import { requireUserNode } from "../_lib/jwt.js";
 import { isRh } from "../_lib/authz.js";
 
 // @vercel/blob's server SDK (put/del) needs the Node.js runtime, not Edge.
 
-export default async function handler(request) {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
-  if (request.method !== "POST") return json(request, 405, { error: "Metodo nao permitido." });
+export default async function handler(req, res) {
+  if (req.method === "OPTIONS") { applyCorsHeadersNode(req, res); res.status(204).end(); return; }
+  if (req.method !== "POST") return sendJson(req, res, 405, { error: "Metodo nao permitido." });
 
-  const user = await requireUser(request, sql);
-  if (!user || !isRh(user)) return json(request, 403, { error: "Sem permissao." });
+  const user = await requireUserNode(req, sql);
+  if (!user || !isRh(user)) return sendJson(req, res, 403, { error: "Sem permissao." });
 
-  let body;
-  try { body = await request.json(); } catch { return json(request, 400, { error: "Requisicao invalida." }); }
+  const body = req.body || {};
   const url = String(body.url || "");
-  if (!url) return json(request, 400, { error: "Informe a url do arquivo." });
+  if (!url) return sendJson(req, res, 400, { error: "Informe a url do arquivo." });
 
   try {
     await del(url);
-    return json(request, 200, { ok: true });
+    sendJson(req, res, 200, { ok: true });
   } catch (error) {
-    return json(request, 400, { error: error.message || "Nao foi possivel remover o arquivo." });
+    sendJson(req, res, 400, { error: error.message || "Nao foi possivel remover o arquivo." });
   }
 }

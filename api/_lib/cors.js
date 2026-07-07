@@ -22,3 +22,19 @@ export function json(request, status, body, extraHeaders) {
     headers: { ...corsHeaders(request), "Content-Type": "application/json", ...(extraHeaders || {}) },
   });
 }
+
+// Variantes para funcoes no runtime Node.js (req/res classicos do Vercel).
+
+export function applyCorsHeadersNode(req, res) {
+  const origin = req.headers?.origin || "";
+  res.setHeader("Access-Control-Allow-Headers", "content-type");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Vary", "Origin");
+  if (ALLOWED_ORIGINS.has(origin)) res.setHeader("Access-Control-Allow-Origin", origin);
+}
+
+export function sendJson(req, res, status, body) {
+  applyCorsHeadersNode(req, res);
+  res.status(status).json(body);
+}

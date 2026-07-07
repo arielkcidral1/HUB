@@ -1,25 +1,24 @@
 import bcryptPkg from "bcryptjs";
 const { compare: bcryptCompare } = bcryptPkg;
 import { sql } from "../_lib/db.js";
-import { json, corsHeaders } from "../_lib/cors.js";
-import { requireUser } from "../_lib/jwt.js";
+import { sendJson, applyCorsHeadersNode } from "../_lib/cors.js";
+import { requireUserNode } from "../_lib/jwt.js";
 
 // bcryptjs precisa do runtime Node.js (nao roda de forma confiavel no Edge).
 
-export default async function handler(request) {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
-  if (request.method !== "POST") return json(request, 405, { error: "Metodo nao permitido." });
+export default async function handler(req, res) {
+  if (req.method === "OPTIONS") { applyCorsHeadersNode(req, res); res.status(204).end(); return; }
+  if (req.method !== "POST") return sendJson(req, res, 405, { error: "Metodo nao permitido." });
 
-  const user = await requireUser(request, sql);
-  if (!user) return json(request, 401, { error: "Nao autenticado." });
+  const user = await requireUserNode(req, sql);
+  if (!user) return sendJson(req, res, 401, { error: "Nao autenticado." });
 
-  let body;
-  try { body = await request.json(); } catch { return json(request, 400, { error: "Requisicao invalida." }); }
+  const body = req.body || {};
   const password = String(body.password || "");
-  if (!password) return json(request, 400, { ok: false });
+  if (!password) return sendJson(req, res, 400, { ok: false });
 
   const rows = await sql`select password_hash from hub_users where id = ${user.id}`;
   const passwordHash = rows[0]?.password_hash;
   const ok = passwordHash ? await bcryptCompare(password, passwordHash) : false;
-  return json(request, 200, { ok });
+  sendJson(req, res, 200, { ok });
 }
