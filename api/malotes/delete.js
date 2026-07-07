@@ -19,9 +19,10 @@ export default async function handler(req, res) {
   const password = String(body.password || body.actionPassword || "");
   if (!password) return sendJson(req, res, 400, { error: "Informe a senha de acao." });
 
-  const rows = await sql`select password_hash from hub_action_passwords where action = ${"delete_malote"}`;
+  const rows = await sql`select public.hub_get_action_password_hash(${"delete_malote"}) as password_hash`;
   const passwordHash = rows[0]?.password_hash;
-  const passwordOk = passwordHash ? await bcryptCompare(password, passwordHash) : false;
+  if (!passwordHash) return sendJson(req, res, 500, { error: "Senha de acao nao configurada. Peca para o RH definir uma senha de exclusao." });
+  const passwordOk = await bcryptCompare(password, passwordHash);
   if (!passwordOk) return sendJson(req, res, 403, { error: "Senha de autorizacao invalida." });
 
   if (body.validateOnly) return sendJson(req, res, 200, { valid: true });

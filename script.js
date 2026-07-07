@@ -2622,7 +2622,6 @@ if (collection === "malotes") {
       unidade: row.unidade,
       setor: row.setor || "",
       epis: row.epis,
-      codigoSolicitacao: row.codigo_solicitacao || "",
       observacoes: row.observacoes || "",
       status: row.status || "Aberto",
       createdAt: formatDateTime(row.created_at),
@@ -6467,15 +6466,6 @@ function renderChatChannels() {
 }
 
 
-function formatChamadoFilterCode(value = "") {
-  const digits = String(value || "").replace(/\D/g, "").slice(0, 5);
-  return digits.length > 4 ? `${digits.slice(0, 4)}-${digits.slice(4)}` : digits;
-}
-
-function getChamadoSearchCode(item = {}) {
-  return String(item.codigoSolicitacao || item.id || "").toLowerCase();
-}
-
 function getChamadoCollaboratorSearchText(item = {}) {
   const collaboratorGroups = Array.isArray(item.colaboradores) ? item.colaboradores : [];
   const groupNames = collaboratorGroups.map((group) => group.colaborador || "").join(" ");
@@ -6493,7 +6483,6 @@ function getChamadosFilterValues() {
   return {
     destino: String(document.getElementById("chamado-filter-destino")?.value || "").trim(),
     colaborador: String(document.getElementById("chamado-filter-colaborador")?.value || "").trim().toLowerCase(),
-    codigo: String(document.getElementById("chamado-filter-codigo")?.value || "").trim().toLowerCase(),
     mes: document.getElementById("chamado-filter-mes")?.value || "",
   };
 }
@@ -6503,7 +6492,6 @@ function filterChamadosByCurrentFilters(items = []) {
   return items.filter((item) => {
     if (filters.destino && String(item.unidade || "") !== filters.destino) return false;
     if (filters.colaborador && !getChamadoCollaboratorSearchText(item).includes(filters.colaborador)) return false;
-    if (filters.codigo && !getChamadoSearchCode(item).includes(filters.codigo)) return false;
     if (filters.mes && getChamadoCreatedMonth(item) !== filters.mes) return false;
     return true;
   });
@@ -6594,7 +6582,6 @@ function renderChamadosSection() {
       </div>
       <p><strong>Solicitante:</strong> ${escapeHtml(item.solicitante)}</p>
       ${item.setor ? `<p><strong>Setor:</strong> ${escapeHtml(item.setor)}</p>` : ""}
-      <p><strong>Código da Solicitação:</strong> ${escapeHtml(item.codigoSolicitacao || item.id || "Nao informado")}</p>
       <p><strong>EPIs:</strong> ${escapeHtml(item.epis)}</p>
       ${item.observacoes ? `<p><strong>Observacoes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
       <p class="item-meta">${escapeHtml(item.createdAt)}</p>
@@ -7456,13 +7443,9 @@ document.getElementById("malote-code-search")?.addEventListener("input", () => {
 
 document.getElementById("chamado-filter-destino")?.addEventListener("change", renderChamadosSection);
 document.getElementById("chamado-filter-colaborador")?.addEventListener("input", renderChamadosSection);
-document.getElementById("chamado-filter-codigo")?.addEventListener("input", (event) => {
-  event.currentTarget.value = formatChamadoFilterCode(event.currentTarget.value);
-  renderChamadosSection();
-});
 document.getElementById("chamado-filter-mes")?.addEventListener("change", renderChamadosSection);
 document.getElementById("limpar-filtros-chamados")?.addEventListener("click", () => {
-  ["chamado-filter-destino", "chamado-filter-colaborador", "chamado-filter-codigo", "chamado-filter-mes"].forEach((id) => {
+  ["chamado-filter-destino", "chamado-filter-colaborador", "chamado-filter-mes"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
@@ -7890,7 +7873,7 @@ if (chatForm) {
       data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
       renderChat();
       setSyncStatus("Erro no anexo", false);
-      showModal("Erro no Anexo", "Nao foi possivel enviar um dos arquivos. Confira o bucket hub-chat-files no Supabase.", "error");
+      showModal("Erro no Anexo", error?.message || "Nao foi possivel enviar um dos arquivos. Tente novamente.", "error");
       return;
     }
 
