@@ -2451,6 +2451,15 @@ function openChatImageModal(bucket, path, name) {
     });
 }
 
+function getResumeDownloadName(candidatura) {
+  const url = String(candidatura?.curriculo_url || "");
+  const cleanUrl = url.split("?")[0];
+  const match = cleanUrl.match(/\.([a-z0-9]+)$/i);
+  const extension = match ? match[1] : "pdf";
+  const nome = String(candidatura?.nome || "candidato").trim() || "candidato";
+  return `Curriculo - ${nome}.${extension}`;
+}
+
 async function downloadPrivateStorageFile(bucket, value, filename = "documento") {
   try {
     const signedUrl = await createPrivateStorageUrl(bucket, value);
@@ -6711,7 +6720,7 @@ function renderAll() {
             <span class="meta-line">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
             <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
           </p>
-          <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver Currículo</button>
+          <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}" data-private-storage-name="${escapeHtml(getResumeDownloadName(c))}">Ver Currículo</button>
         </div>
       `).join("");
     }
@@ -7146,7 +7155,7 @@ function renderChatAttachment(attachment) {
   const path = escapeHtml(attachment.url || "");
   const name = escapeHtml(attachment.name || "Arquivo");
   const size = escapeHtml(formatFileSize(attachment.size));
-  const chip = `<button class="attachment-chip" type="button" data-private-storage-bucket="${bucket}" data-private-storage-path="${path}">Arquivo: ${name} ${size}</button>`;
+  const chip = `<button class="attachment-chip" type="button" data-private-storage-bucket="${bucket}" data-private-storage-path="${path}" data-private-storage-name="${name}">Arquivo: ${name} ${size}</button>`;
 
   if (!attachment.url) return chip;
 

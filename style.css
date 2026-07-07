@@ -1320,7 +1320,7 @@ textarea {
 
 .chamados-filter-fields {
   display: grid;
-  grid-template-columns: 150px 86px 130px 105px;
+  grid-template-columns: 150px 130px 105px;
   gap: 8px;
   align-items: center;
 }
