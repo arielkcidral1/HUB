@@ -25,8 +25,6 @@ const CHAT_POLL_PREFIX = "__HUB_POLL__:";
 const RESUME_BUCKET = "hub-curriculos";
 const RESUME_PUBLIC_PREFIX = "candidaturas";
 const CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos";
-const ATESTADOS_BUCKET = "hub-atestados";
-const ATESTADO_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 const CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 const RESUME_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const RESUME_ALLOWED_MIME_TYPES = new Set([
@@ -176,7 +174,6 @@ const TABLES = {
   vtRegistros: "hub_vt_registros",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
-  atestados: "hub_atestados",
   usuarios: USERS_TABLE,
 };
 const READ_RECEIPTS_TABLE = "hub_read_receipts";
@@ -289,7 +286,6 @@ const defaultData = {
   vtRegistros: [],
   documentosContratados: [],
   candidaturas: [],
-  atestados: [],
   usuarios: [],
 };
 
@@ -894,8 +890,7 @@ function isPublicPage() {
   return Boolean(
     document.querySelector("[data-public-denuncia]") ||
     document.querySelector("[data-public-vagas]") ||
-    document.querySelector("[data-public-contratados]") ||
-    document.querySelector("[data-public-atestados]")
+    document.querySelector("[data-public-contratados]")
   );
 }
 
@@ -904,8 +899,7 @@ function isPublicSubmissionFormPage() {
     document.querySelector("[data-public-denuncia]") ||
     document.querySelector("[data-public-vagas]") ||
     document.querySelector("[data-public-chamados]") ||
-    document.querySelector("[data-public-contratados]") ||
-    document.querySelector("[data-public-atestados]")
+    document.querySelector("[data-public-contratados]")
   );
 }
 
@@ -1112,7 +1106,6 @@ function loadLocalData() {
       .filter((item) => !String(item.id || "").startsWith("local-") && !item.pendingSync)
       .map(mapContractorDocumentRow),
     candidaturas: parsed.candidaturas || [],
-    atestados: (parsed.atestados || []).map(mapAtestadoRow),
     usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
   };
 }
@@ -2568,24 +2561,6 @@ function renderChatPoll(item, poll) {
 }
 
 
-function mapAtestadoRow(row = {}) {
-  return {
-    id: row.id || generateUUID(),
-    nome: row.nome || row.nome_completo || "",
-    cpf: row.cpf || "",
-    telefone: row.telefone || "",
-    unidade: row.unidade || "",
-    arquivoNome: row.arquivo_nome || row.arquivoNome || row.file_name || "Atestado",
-    arquivoTamanho: Number(row.arquivo_tamanho || row.arquivoTamanho || 0),
-    arquivoTipo: row.arquivo_tipo || row.arquivoTipo || "application/octet-stream",
-    arquivoUrl: row.arquivo_url || row.arquivoUrl || row.storage_path || "",
-    status: row.status || "Recebido",
-    createdBy: row.created_by || "Publico",
-    createdAt: row.created_at ? formatDateTime(row.created_at) : row.createdAt || todayLabel(),
-    sortAt: row.created_at || row.sortAt || new Date().toISOString(),
-  };
-}
-
 function mapRows(collection, rows) {
   if (collection === "denuncias") {
     return rows.map((row) => ({
@@ -2669,10 +2644,6 @@ if (collection === "malotes") {
     }));
   }
 
-  if (collection === "atestados") {
-    return rows.map(mapAtestadoRow);
-  }
-
   if (collection === "eventos") {
     return rows.map((row) => ({
       id: row.id,
@@ -2703,21 +2674,6 @@ if (collection === "malotes") {
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
     }));
-  }
-
-  if (collection === "atestados") {
-    return {
-      nome: values.nome || "",
-      cpf: values.cpf || "",
-      telefone: values.telefone || "",
-      unidade: values.unidade || "",
-      arquivo_nome: values.arquivoNome || "Atestado",
-      arquivo_tamanho: values.arquivoTamanho || 0,
-      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
-      arquivo_url: values.arquivoUrl || "",
-      status: values.status || "Recebido",
-      created_by: values.createdBy || "Publico",
-    };
   }
 
   if (collection === "documentosContratados") {
@@ -3018,10 +2974,6 @@ function toDbPayload(collection, values) {
     return payload;
   }
 
-  if (collection === "atestados") {
-    return rows.map(mapAtestadoRow);
-  }
-
   if (collection === "eventos") {
     return {
       titulo: values.titulo,
@@ -3045,21 +2997,6 @@ function toDbPayload(collection, values) {
       saldo_atual: values.saldoAtual,
       valor_necessario: values.valorNecessario,
       created_by: values.createdBy || getCurrentUserName(),
-    };
-  }
-
-  if (collection === "atestados") {
-    return {
-      nome: values.nome || "",
-      cpf: values.cpf || "",
-      telefone: values.telefone || "",
-      unidade: values.unidade || "",
-      arquivo_nome: values.arquivoNome || "Atestado",
-      arquivo_tamanho: values.arquivoTamanho || 0,
-      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
-      arquivo_url: values.arquivoUrl || "",
-      status: values.status || "Recebido",
-      created_by: values.createdBy || "Publico",
     };
   }
 
@@ -4948,7 +4885,7 @@ function applyRoleAccess() {
     ? new Set(["comunicacao", "conta"])
     : isManagerUser()
     ? new Set(["comunicacao", "documentos", "conta"])
-    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "calendario", "documentos", "documentos-contratados", "atestados", "gerenciamento-vt", "equipe", "conta"]);
+    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "calendario", "documentos", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : isManagerUser()
@@ -5203,17 +5140,6 @@ function renderDashboard() {
         systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
         meta: getDashboardSystemUpdateMeta(item),
       })),
-    ...(data.atestados || [])
-      .map((item) => ({
-        kind: "atestado",
-        notificationId: getDashboardNotificationId("atestado", item),
-        title: `Atestado · ${item.nome || "Colaborador"}`,
-        text: `${item.unidade || "Unidade não informada"} · ${item.arquivoNome || "Atestado anexado"}`,
-        details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${formatCpf(item.cpf || "") || "Não informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
-        tag: "Atestado",
-        date: item.createdAt,
-        dateTime: item.sortAt || item.createdAt,
-      }))
   ];
 
   const sortedDashboardItems = dashboardItems.map((item, index) => ({ ...item, _sortIndex: index }));
@@ -6209,21 +6135,6 @@ function getRealtimeNotificationText(collection, item = {}) {
       icon: "💼",
       type: "vaga",
       tag: `hub-rh-vaga-${item.id || Date.now()}`,
-    };
-  }
-
-  if (collection === "atestados") {
-    return {
-      nome: values.nome || "",
-      cpf: values.cpf || "",
-      telefone: values.telefone || "",
-      unidade: values.unidade || "",
-      arquivo_nome: values.arquivoNome || "Atestado",
-      arquivo_tamanho: values.arquivoTamanho || 0,
-      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
-      arquivo_url: values.arquivoUrl || "",
-      status: values.status || "Recebido",
-      created_by: values.createdBy || "Publico",
     };
   }
 
@@ -9834,22 +9745,6 @@ class NotificationTracker {
         });
       });
 
-    (sourceData.atestados || [])
-      .forEach((item) => {
-        pushNotification({
-          id: `atestado-${item.id}`,
-          type: "atestado",
-          title: `Atestado · ${item.nome || "Colaborador"}`,
-          description: `${item.unidade || "Unidade não informada"} · ${item.arquivoNome || "Atestado anexado"}`,
-          details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Não informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
-          time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.createdAt || "Recentemente",
-          status: "pending",
-          unread: true,
-          view: "atestados",
-        });
-      });
-
     const upcoming = typeof getUpcomingEvents === "function" ? getUpcomingEvents() : [];
     upcoming.forEach((item) => {
       const eventDate = item.data || "";
@@ -9917,7 +9812,6 @@ class NotificationTracker {
       vaga: "vagas",
       evento: "calendario",
       documento: "documentos",
-      atestado: "atestados",
     };
     return views[type] || "dashboard";
   }
@@ -9931,7 +9825,6 @@ class NotificationTracker {
       vaga: "💼",
       evento: "📅",
       documento: "📄",
-      atestado: "🩺",
       geral: "📢",
     };
     return icons[type] || "📢";
@@ -10139,7 +10032,6 @@ class NotificationTracker {
       vaga: "Vaga",
       evento: "Evento",
       documento: "Documento",
-      atestado: "Atestado",
       geral: "Geral",
     };
     return types[type] || type;
@@ -10767,254 +10659,3 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 
 
-/* ========================================================================
-   ATESTADOS PUBLICOS + ABA INTERNA DE VISUALIZAÇÃO
-   ======================================================================== */
-(function setupAtestadosModule() {
-  const ATESTADOS_TABLE = "hub_atestados";
-  const ATESTADOS_LOCAL_KEY = "hub-atestados-local-v1";
-  const ATESTADO_ALLOWED_MIME_TYPES = new Set([
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ]);
-  const ATESTADO_ALLOWED_EXTENSIONS = new Set(["pdf", "jpg", "jpeg", "png", "webp", "doc", "docx"]);
-
-  function getAtestadosBucket() {
-    return typeof ATESTADOS_BUCKET !== "undefined" ? ATESTADOS_BUCKET : "hub-atestados";
-  }
-
-  function getAtestadoMaxSize() {
-    return typeof ATESTADO_MAX_SIZE_BYTES !== "undefined" ? ATESTADO_MAX_SIZE_BYTES : 10 * 1024 * 1024;
-  }
-
-  function getFileExtension(fileName = "") {
-    const parts = String(fileName || "").split(".");
-    return parts.length > 1 ? parts.pop().toLowerCase() : "";
-  }
-
-  function safeStorageFileName(fileName = "atestado") {
-    return String(fileName || "atestado")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9_.-]/gi, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "") || "atestado";
-  }
-
-  function getAtestadoFilterValues() {
-    return {
-      nome: String(document.getElementById("atestado-filter-nome")?.value || "").trim().toLowerCase(),
-      cpf: normalizeCpf(document.getElementById("atestado-filter-cpf")?.value || ""),
-      unidade: String(document.getElementById("atestado-filter-unidade")?.value || "").trim(),
-    };
-  }
-
-  function filterAtestados(items = []) {
-    const filters = getAtestadoFilterValues();
-    return [...items]
-      .filter((item) => {
-        const nome = String(item.nome || "").toLowerCase();
-        const cpf = normalizeCpf(item.cpf || "");
-        const unidade = String(item.unidade || "").trim();
-        if (filters.nome && !nome.includes(filters.nome)) return false;
-        if (filters.cpf && !cpf.includes(filters.cpf)) return false;
-        if (filters.unidade && unidade !== filters.unidade) return false;
-        return true;
-      })
-      .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
-  }
-
-  function getLocalAtestados() {
-    return storageService.getLocalItem(ATESTADOS_LOCAL_KEY, []).map(mapAtestadoRow);
-  }
-
-  function saveLocalAtestados(items = []) {
-    storageService.setLocalItem(ATESTADOS_LOCAL_KEY, items.map(mapAtestadoRow));
-  }
-
-  async function fetchAtestadosFromSupabase() {
-    if (!isAuthenticated()) return getLocalAtestados();
-    try {
-      const rows = await hubApi.list("atestados");
-      const mapped = (rows || []).map(mapAtestadoRow);
-      data.atestados = mapped;
-      saveLocalDataDebounced?.();
-      return mapped;
-    } catch (error) {
-      console.warn("Não foi possível carregar atestados; usando cache local.", error);
-      return data.atestados?.length ? data.atestados : getLocalAtestados();
-    }
-  }
-
-  function updateAtestadoClearButton() {
-    const clearButton = document.getElementById("clear-atestado-filters");
-    if (!clearButton) return;
-    const filters = getAtestadoFilterValues();
-    clearButton.hidden = !(filters.nome || filters.cpf || filters.unidade);
-  }
-
-  function renderAtestadoCards(items = []) {
-    const target = document.getElementById("atestados-list");
-    if (!target) return;
-    const filtered = filterAtestados(items);
-    updateAtestadoClearButton();
-
-    if (!filtered.length) {
-      target.innerHTML = '<p class="empty-state">Nenhum atestado encontrado.</p>';
-      return;
-    }
-
-    target.innerHTML = filtered.map((item) => {
-      const status = item.status || "Recebido";
-      const fileName = item.arquivoNome || "Atestado";
-      const fileMeta = [fileName, formatFileSize(item.arquivoTamanho)].filter(Boolean).join(" · ");
-      return `
-        <article class="item-card atestado-card">
-          <div class="item-topline">
-            <p class="item-title">${escapeHtml(item.nome || "Colaborador não informado")}</p>
-            <span class="tag">${escapeHtml(status)}</span>
-          </div>
-          <p><strong>CPF:</strong> ${escapeHtml(formatCpf(item.cpf || ""))}</p>
-          <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || item.telefone || "Não informado")}</p>
-          <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Não informada")}</p>
-          <p class="item-meta">Recebido em ${escapeHtml(item.createdAt || "Não informado")} | ${escapeHtml(fileMeta || "Arquivo anexado")}</p>
-          <div class="job-actions section-top atestado-actions">
-            <div class="atestado-action-buttons">
-              ${item.arquivoUrl ? `<button type="button" class="secondary-link private-file-button atestado-action-button" data-private-storage-bucket="${escapeHtml(getAtestadosBucket())}" data-private-storage-path="${escapeHtml(item.arquivoUrl)}">Ver atestado</button>` : ""}
-              <button type="button" class="danger-button atestado-action-button" data-delete-atestado-id="${escapeHtml(item.id)}" data-delete-atestado-path="${escapeHtml(item.arquivoUrl || "")}">Apagar atestado</button>
-            </div>
-            <label class="compact-status-label">Status
-              <select data-atestado-status-id="${escapeHtml(item.id)}">
-                ${["Recebido", "Em análise", "Lançado", "Recusado"].map((option) => `<option${option === status ? " selected" : ""}>${option}</option>`).join("")}
-              </select>
-            </label>
-          </div>
-        </article>
-      `;
-    }).join("");
-  }
-
-  async function renderAtestadosSection() {
-    if (!document.getElementById("atestados-list")) return;
-    const items = await fetchAtestadosFromSupabase();
-    renderAtestadoCards(items);
-    try { renderDashboard?.(); } catch (_) {}
-    try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
-  }
-
-  async function deleteAtestado(id, filePath = "") {
-    if (!id) return;
-    const item = (data.atestados || []).find((record) => String(record.id) === String(id));
-    const label = item?.nome ? ` de ${item.nome}` : "";
-    if (!confirm(`Tem certeza que deseja apagar o atestado${label}? Essa ação não poderá ser desfeita.`)) return;
-
-    const applyLocalDelete = () => {
-      data.atestados = (data.atestados || []).filter((record) => String(record.id) !== String(id));
-      saveLocalAtestados(data.atestados || []);
-      renderAtestadoCards(data.atestados || []);
-      try { renderDashboard?.(); } catch (_) {}
-      try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
-    };
-
-    if (isAuthenticated()) {
-      try {
-        const pathToRemove = filePath || item?.arquivoUrl || "";
-        await hubApi.remove("atestados", id);
-        if (pathToRemove) await hubDeleteBlob(pathToRemove);
-
-        applyLocalDelete();
-        showModal?.("Atestado apagado", "O atestado foi removido com sucesso.", "success");
-        return;
-      } catch (error) {
-        console.error("Erro ao apagar atestado:", error);
-        showModal?.("Erro", "Não foi possível apagar o atestado.", "error");
-        return;
-      }
-    }
-
-    applyLocalDelete();
-    showModal?.("Atestado apagado localmente", "Sem sessao ativa, a exclusão foi feita apenas neste navegador.", "info");
-  }
-
-  async function updateAtestadoStatus(id, status) {
-    if (!id || !status) return;
-    const applyLocal = () => {
-      data.atestados = (data.atestados || []).map((item) => String(item.id) === String(id) ? { ...item, status } : item);
-      saveLocalAtestados(data.atestados || []);
-      renderAtestadoCards(data.atestados || []);
-    };
-
-    if (isAuthenticated()) {
-      try {
-        await hubApi.update("atestados", id, { status });
-        applyLocal();
-        showModal?.("Status atualizado", "O status do atestado foi atualizado com sucesso.", "success");
-        return;
-      } catch (error) {
-        console.error("Erro ao atualizar status do atestado:", error);
-        showModal?.("Erro", "Não foi possível atualizar o status.", "error");
-        return;
-      }
-    }
-
-    applyLocal();
-    showModal?.("Status atualizado localmente", "Sem Supabase ativo, a alteração ficou salva apenas neste navegador.", "info");
-  }
-
-  function setupAtestadosInternalView() {
-    if (!document.getElementById("atestados-list")) return;
-    ["atestado-filter-nome", "atestado-filter-cpf", "atestado-filter-unidade"].forEach((id) => {
-      const field = document.getElementById(id);
-      if (!field || field.dataset.atestadoFilterReady === "true") return;
-      field.dataset.atestadoFilterReady = "true";
-      const eventName = field.tagName === "SELECT" ? "change" : "input";
-      field.addEventListener(eventName, () => renderAtestadoCards(data.atestados || []));
-    });
-
-    document.getElementById("atestado-filter-cpf")?.addEventListener("input", (event) => {
-      event.currentTarget.value = formatCpf(event.currentTarget.value);
-    });
-
-    document.getElementById("clear-atestado-filters")?.addEventListener("click", () => {
-      ["atestado-filter-nome", "atestado-filter-cpf", "atestado-filter-unidade"].forEach((id) => {
-        const field = document.getElementById(id);
-        if (field) field.value = "";
-      });
-      renderAtestadoCards(data.atestados || []);
-    });
-
-    if (!document.documentElement.dataset.atestadoDeleteReady) {
-      document.documentElement.dataset.atestadoDeleteReady = "true";
-      document.addEventListener("click", (event) => {
-        const deleteButton = event.target.closest?.("[data-delete-atestado-id]");
-        if (!deleteButton) return;
-        event.preventDefault();
-        deleteAtestado(deleteButton.dataset.deleteAtestadoId, deleteButton.dataset.deleteAtestadoPath || "");
-      });
-    }
-
-    document.addEventListener("change", (event) => {
-      const select = event.target.closest?.("[data-atestado-status-id]");
-      if (!select) return;
-      updateAtestadoStatus(select.dataset.atestadoStatusId, select.value);
-    });
-  }
-
-  try {
-    const originalRenderAll = renderAll;
-    renderAll = function patchedRenderAllForAtestados() {
-      originalRenderAll?.();
-      renderAtestadosSection();
-    };
-  } catch (_) {}
-
-  document.addEventListener("DOMContentLoaded", () => {
-    setupAtestadosInternalView();
-  });
-
-  setupAtestadosInternalView();
-})();
