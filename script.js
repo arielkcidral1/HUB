@@ -2919,6 +2919,11 @@ function toDbPayload(collection, values) {
       arquivo_tamanho: values.arquivo?.size || null,
       arquivo_tipo: values.arquivo?.type || null,
       arquivo_url: values.arquivo?.url || null,
+      // Usa o momento do envio (antes do upload do anexo terminar), nao o
+      // momento em que o INSERT no banco de fato roda - senao uma mensagem
+      // de texto rapida enviada logo apos um anexo lento pode gravar com
+      // created_at anterior ao do anexo, invertendo a ordem no chat.
+      created_at: values.createdAt || undefined,
     };
   }
 
@@ -7886,12 +7891,14 @@ if (chatForm) {
         canal: activeChatChannel,
         mensagem: index === 0 ? message : "",
         arquivo,
+        createdAt: pendingMessages[index]?.createdAt,
       }))
       : [{
         autor: getCurrentUserName(),
         canal: activeChatChannel,
         mensagem: message,
         arquivo: null,
+        createdAt: pendingMessages[0]?.createdAt,
       }];
 
     const results = [];
