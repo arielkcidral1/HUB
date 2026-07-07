@@ -1,4 +1,5 @@
-import { hash as bcryptHash } from "bcryptjs";
+import bcryptPkg from "bcryptjs";
+const { hash: bcryptHash } = bcryptPkg;
 import { sql } from "../_lib/db.js";
 import { json, corsHeaders } from "../_lib/cors.js";
 

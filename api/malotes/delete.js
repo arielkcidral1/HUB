@@ -1,4 +1,5 @@
-import { compare as bcryptCompare } from "bcryptjs";
+import bcryptPkg from "bcryptjs";
+const { compare: bcryptCompare } = bcryptPkg;
 import { sql } from "../_lib/db.js";
 import { json, corsHeaders } from "../_lib/cors.js";
 import { requireUser } from "../_lib/jwt.js";
