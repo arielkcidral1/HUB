@@ -6090,6 +6090,8 @@ function showHubCrossPageNotification(title, message, options = {}) {
     if (options.view) {
       if (options.canal) {
         activeChatChannel = normalizeChatChannel(options.canal);
+        try { clearChatMessageFilter?.(); } catch (_) {}
+        try { renderChatChannels?.(); } catch (_) {}
         try { renderChat?.(); } catch (_) {}
       }
       activateView(options.view);
@@ -6294,7 +6296,11 @@ function notifyUnreadRhMessages(count) {
   const newMessageCount = count - lastUnreadNotificationCount;
   const messageText = `${newMessageCount} nova(s) mensagem(ns) não lida(s).`;
 
-  const unreadIds = getUnreadRhMessages().map((item) => item.id).filter(Boolean);
+  const unreadMessages = getUnreadRhMessages();
+  const unreadIds = unreadMessages.map((item) => item.id).filter(Boolean);
+  const mostRecent = [...unreadMessages].sort(
+    (a, b) => getChatMessageTime(b.sortAt || b.createdAt) - getChatMessageTime(a.sortAt || a.createdAt)
+  )[0];
   showHubCrossPageNotification("Comunicação RH", messageText, {
     type: "mensagem",
     icon: "💬",
@@ -6303,6 +6309,7 @@ function notifyUnreadRhMessages(count) {
     notificationId: `mensagem-rh-${unreadIds[0] || Date.now()}`,
     messageIds: unreadIds,
     view: "comunicacao",
+    canal: mostRecent?.canal || "",
   });
 
   lastUnreadNotificationCount = count;
