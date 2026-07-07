@@ -953,7 +953,7 @@ async function setupLogin() {
     }
   }
 
-  loginForm?.querySelector('[name="identificador"]')?.addEventListener("input", (event) => {
+  loginForm?.querySelector("[data-login-identifier]")?.addEventListener("input", (event) => {
     const input = event.currentTarget;
     const value = String(input.value || "");
     if (/^[\d.\-\s]*$/.test(value)) input.value = formatCpf(value);
@@ -962,9 +962,9 @@ async function setupLogin() {
   if (loginForm) {
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const form = new FormData(event.currentTarget);
-      const identifier = form.get("identificador") || form.get("email") || form.get("nome");
-      const loginOk = await validateLogin(identifier, form.get("senha"));
+      const identifier = event.currentTarget.querySelector("[data-login-identifier]")?.value || "";
+      const password = event.currentTarget.querySelector("[data-login-password]")?.value || "";
+      const loginOk = await validateLogin(identifier, password);
   
       if (!loginOk) {
         const errorEl = document.getElementById("login-error");
@@ -1115,14 +1115,14 @@ function loadDocumentRecords() {
 }
 
 function disableSensitiveFieldAutofill() {
-  document.querySelectorAll('input[type="password"], input[type="email"], input[name="cpf"], input[name="identificador"]').forEach((input) => {
-    input.autocomplete = "off";
+  document.querySelectorAll('input[type="password"], input[type="email"], input[name="cpf"], input[name="identificador"], [data-login-identifier], [data-login-password]').forEach((input) => {
+    input.autocomplete = input.hasAttribute("data-login-identifier") || input.hasAttribute("data-login-password") ? "one-time-code" : "off";
     input.dataset.lpignore = "true";
     input.dataset["1pIgnore"] = "true";
     input.dataset.formType = "other";
     input.setAttribute("autocapitalize", "off");
     input.setAttribute("spellcheck", "false");
-    if (input.type === "password") {
+    if (input.type === "password" || input.hasAttribute("data-login-identifier") || input.hasAttribute("data-login-password")) {
       if (document.activeElement !== input) input.setAttribute("readonly", "readonly");
       if (input.dataset.autofillGuarded === "true") return;
       input.dataset.autofillGuarded = "true";
