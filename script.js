@@ -391,6 +391,42 @@ function getCanonicalUnit(value) {
   return raw;
 }
 
+// Mapa unidade (codigo) -> cidade, conforme relatorio fornecido pelo RH.
+const UNIT_CITY_MAP = {
+  "1- MTZ": "Joinville",
+  "2- SBS": "São Bento do Sul",
+  "3- ITJ 1": "Itajaí",
+  "4- PLÇ": "Palhoça",
+  "5- GUA": "Joinville",
+  "7- DPA JC": "Joinville",
+  "9- DPA IRI": "Joinville",
+  "10- JPL": "Joinville",
+  "11- BC": "Balneário Camboriú",
+  "12- GCS GPO": "Araquari",
+  "12- GCS JLLE": "Joinville",
+  "13- JRG 1": "Jaraguá do Sul",
+  "14- BRQ": "Brusque",
+  "15- FLN": "Florianópolis",
+  "17- FAC": "Joinville",
+  "19- RNG 1": "Rio Negrinho",
+  "20- BNU 1": "Blumenau",
+  "21- JRG 2": "Jaraguá do Sul",
+  "22- TRINCA": "Joinville",
+  "23- ITJ 2": "Itajaí",
+  "26- BNU 2": "Blumenau",
+  "28- ARA": "Araranguá",
+};
+
+// Retorna a cidade correspondente a unidade (codigo), usada para exibir e
+// filtrar vagas por cidade em vez do codigo interno da unidade.
+function getUnitCity(value) {
+  return UNIT_CITY_MAP[getCanonicalUnit(value)] || "";
+}
+
+const UNIT_CITIES = [...new Set(Object.values(UNIT_CITY_MAP))].sort((a, b) =>
+  a.localeCompare(b, "pt-BR")
+);
+
 const EPI_OPTIONS = [
   "Luva PU",
   "Luva Pigmentada",
@@ -2247,7 +2283,7 @@ function showPublicVagaFiltersModal() {
       <div class="modal-header info">Filtrar vagas</div>
       <div class="modal-body public-filter-modal-body">
         <button class="secondary-link public-filter-option" type="button" data-action="open-cargo-filter">Filtrar por Cargo</button>
-        <button class="secondary-link public-filter-option" type="button" data-action="open-unidade-filter">Filtrar por Unidade</button>
+        <button class="secondary-link public-filter-option" type="button" data-action="open-unidade-filter">Filtrar por Cidade</button>
       </div>
       <div class="modal-footer modal-footer-split">
         <button class="secondary-link" type="button" data-action="clear-vaga-filters">Limpar</button>
@@ -2282,10 +2318,23 @@ function showPublicVagaFiltersModal() {
 
 function showPublicVagaSingleFilterModal(type) {
   const isCargo = type === "cargo";
-  const title = isCargo ? "Filtrar por Cargo" : "Filtrar por Unidade";
-  const label = isCargo ? "Cargo" : "Unidade destinada";
+  const title = isCargo ? "Filtrar por Cargo" : "Filtrar por Cidade";
+  const label = isCargo ? "Cargo" : "Cidade";
   const inputId = isCargo ? "modal-vaga-cargo-filter" : "modal-vaga-unidade-filter";
   const currentValue = isCargo ? publicVagaCargoFilter : publicVagaUnidadeFilter;
+
+  const cargoOptions = [...new Set(data.vagas.filter((v) => v.status === "Aberta").map((v) => v.cargo).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  const fieldHtml = isCargo
+    ? `<select id="${inputId}">
+        <option value="">Todos os cargos</option>
+        ${cargoOptions.map((option) => `<option value="${escapeHtml(option)}" ${option === currentValue ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+      </select>`
+    : `<select id="${inputId}">
+        <option value="">Todas as cidades</option>
+        ${UNIT_CITIES.map((city) => `<option value="${escapeHtml(city)}" ${city === currentValue ? "selected" : ""}>${escapeHtml(city)}</option>`).join("")}
+      </select>`;
 
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
@@ -2298,7 +2347,7 @@ function showPublicVagaSingleFilterModal(type) {
       <div class="modal-header info">${escapeHtml(title)}</div>
       <div class="modal-body public-filter-modal-body">
         <label>${escapeHtml(label)}
-          <input id="${inputId}" type="search" placeholder="Digite para filtrar" autocomplete="off" value="${escapeHtml(currentValue)}" />
+          ${fieldHtml}
         </label>
       </div>
       <div class="modal-footer modal-footer-split">
@@ -2322,12 +2371,6 @@ function showPublicVagaSingleFilterModal(type) {
   });
   overlay.querySelector('[data-action="back-vaga-filters"]')?.addEventListener("click", close);
   overlay.querySelector('[data-action="apply-vaga-filter"]')?.addEventListener("click", apply);
-  overlay.querySelector(`#${inputId}`)?.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      apply();
-    }
-  });
 
   document.body.appendChild(overlay);
   overlay.querySelector(`#${inputId}`)?.focus();
@@ -5434,8 +5477,8 @@ function renderPublicVagas() {
   const unidadeFilter = normalizeUnitText(publicVagaUnidadeFilter);
   const openVagas = data.vagas
     .filter(v => v.status === "Aberta")
-    .filter(v => !cargoFilter || normalizeUnitText(v.cargo).includes(cargoFilter))
-    .filter(v => !unidadeFilter || normalizeUnitText(getCanonicalUnit(v.unidade)).includes(unidadeFilter));
+    .filter(v => !cargoFilter || normalizeUnitText(v.cargo) === cargoFilter)
+    .filter(v => !unidadeFilter || normalizeUnitText(getUnitCity(v.unidade)) === unidadeFilter);
   const selectedVaga = new URLSearchParams(window.location.search).get("vaga");
 
   if (!openVagas.length) {
@@ -5454,7 +5497,7 @@ function renderPublicVagas() {
           <p class="item-title">${escapeHtml(v.cargo)}</p>
           <span class="tag">${escapeHtml(v.status)}</span>
         </div>
-        <p><strong>Unidade destinada:</strong> ${escapeHtml(getCanonicalUnit(v.unidade) || "Nao informada.")}</p>
+        <p><strong>Cidade:</strong> ${escapeHtml(getUnitCity(v.unidade) || "Nao informada.")}</p>
         <p>${escapeHtml(v.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(v.requisitos || "Nao informado.")}</p>
         <a class="primary-button button-link" href="candidatura.html?vaga=${encodeURIComponent(v.id)}">Candidatar-se</a>
@@ -5479,7 +5522,7 @@ function renderPublicVagas() {
           <p class="item-title">${escapeHtml(job.cargo)}</p>
           <span class="tag">${escapeHtml(job.status)}</span>
         </div>
-        <p><strong>Unidade destinada:</strong> ${escapeHtml(getCanonicalUnit(job.unidade) || "Nao informada.")}</p>
+        <p><strong>Cidade:</strong> ${escapeHtml(getUnitCity(job.unidade) || "Nao informada.")}</p>
         <p>${escapeHtml(job.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(job.requisitos || "Nao informado.")}</p>
       `;
