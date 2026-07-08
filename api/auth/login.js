@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   const requestId = crypto.randomUUID();
 
   const [{ hub_reserve_public_rate_limit: allowed }] = await sql`
-    select app_private.hub_reserve_public_rate_limit(${"login"}, ${ipHash}, ${600}, ${5}, ${requestId}) as hub_reserve_public_rate_limit
+    select app_private.hub_reserve_public_rate_limit(${"login"}, ${ipHash}, ${60}, ${5}, ${requestId}) as hub_reserve_public_rate_limit
   `;
   if (!allowed) return sendJson(req, res, 429, { error: "Muitas tentativas. Tente novamente mais tarde." });
 
