@@ -6773,6 +6773,9 @@ function renderDenunciasSection() {
 }
 
 function renderAll() {
+  // So revela o app-shell apos o primeiro render com dados reais, evitando o
+  // flash de conteudo desatualizado (cache local) ou nao autenticado.
+  document.getElementById("app-shell")?.classList.add("is-ready");
   renderCurrentUser();
   applyRoleAccess();
   renderAccountSettings();
@@ -6840,6 +6843,10 @@ function renderAll() {
   renderCalendar();
   renderDocumentRecords();
   renderTeamUsers();
+
+  // Mantem o painel de acompanhamento sincronizado com os dados recem
+  // carregados, em vez de so atualizar quando o usuario reabre o modal.
+  try { window.notificationTracker?.loadNotifications(); } catch (_) {}
 }
 
 function getAuthorAvatar(authorName, knownAvatarPath = "") {

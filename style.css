@@ -201,6 +201,11 @@ h2 {
   display: grid;
   grid-template-columns: 264px minmax(0, 1fr);
   min-height: 100vh;
+  visibility: hidden;
+}
+
+.app-shell.is-ready {
+  visibility: visible;
 }
 
 .app-shell.is-locked {
