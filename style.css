@@ -3016,6 +3016,30 @@ form.panel[data-public-chamados="true"].panel {
   gap: 14px;
 }
 
+.public-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.public-active-filters:empty {
+  display: none;
+}
+
+.public-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-2, transparent);
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .public-filter-option {
   width: 100%;
   justify-content: center;

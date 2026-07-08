@@ -5467,10 +5467,37 @@ async function atualizarStatusDenuncia(id, status) {
   }
 }
 
+function renderPublicVagaActiveFilters() {
+  const container = document.getElementById("public-vaga-active-filters");
+  if (!container) return;
+
+  const chips = [];
+  if (publicVagaCargoFilter) chips.push({ key: "cargo", label: `Cargo: ${publicVagaCargoFilter}` });
+  if (publicVagaUnidadeFilter) chips.push({ key: "unidade", label: `Cidade: ${publicVagaUnidadeFilter}` });
+
+  if (!chips.length) {
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = chips.map((chip) => `
+    <button type="button" class="public-filter-chip" data-clear-filter="${escapeHtml(chip.key)}">${escapeHtml(chip.label)} <span aria-hidden="true">×</span></button>
+  `).join("");
+
+  container.querySelectorAll("[data-clear-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.dataset.clearFilter === "cargo") publicVagaCargoFilter = "";
+      else publicVagaUnidadeFilter = "";
+      renderPublicVagas();
+    });
+  });
+}
+
 function renderPublicVagas() {
   const selectedInput = document.getElementById("vaga-id");
   const selectedPanel = document.getElementById("selected-public-job");
   const list = document.getElementById("public-vagas-list");
+  renderPublicVagaActiveFilters();
   if (!selectedInput && !selectedPanel && !list) return;
 
   const cargoFilter = normalizeUnitText(publicVagaCargoFilter);
@@ -8870,6 +8897,18 @@ setupFullNameValidationMessage();
 
 setupLogin().then((canInitialize) => {
   if (canInitialize) initializeAppData();
+});
+
+// O navegador pode restaurar a pagina inteira do bfcache (ex: botao voltar)
+// com o ultimo estado renderizado (dados antigos ja visiveis), sem rodar o
+// JS de novo. Ao restaurar assim, escondemos o conteudo de novo e refazemos
+// a checagem de sessao + busca de dados, para nunca mostrar dados velhos.
+window.addEventListener("pageshow", (event) => {
+  if (!event.persisted) return;
+  document.getElementById("app-shell")?.classList.remove("is-ready");
+  setupLogin().then((canInitialize) => {
+    if (canInitialize) initializeAppData();
+  });
 });
 
 function reabrirChamado(id) {
