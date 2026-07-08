@@ -8,7 +8,10 @@ function envValue(name) {
 }
 
 function getClientIdentifier(req) {
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  const firstForwarded = forwardedFor ? forwardedFor.split(",")[0].trim() : "";
   return req.headers.get("cf-connecting-ip") ||
+    firstForwarded ||
     req.headers.get("x-real-ip") ||
     `ua:${req.headers.get("user-agent") || "unknown"}`;
 }
