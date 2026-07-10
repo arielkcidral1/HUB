@@ -8876,6 +8876,28 @@ function setupPresenceHeartbeat() {
 
   sendHeartbeat();
   window.setInterval(sendHeartbeat, 20000);
+  setupPresencePolling();
+}
+
+// Atualiza so o status online/offline dos contatos, separado do ciclo
+// pesado de sincronizacao geral (que busca varias colecoes e pode demorar
+// mais que 2s). Assim a bolinha de presenca acompanha quase na hora,
+// mesmo que o resto dos dados demore mais pra sincronizar.
+function setupPresencePolling() {
+  const poll = async () => {
+    if (!isAuthenticated()) return;
+    try {
+      const rows = await hubApi.list("usuarios");
+      const fresh = mapRows("usuarios", rows || []);
+      data.usuarios = mergeUsersByName(data.usuarios || [], fresh);
+      renderChatChannels();
+    } catch (_) {
+      // mantem o ultimo estado conhecido se a requisicao falhar
+    }
+  };
+
+  poll();
+  window.setInterval(poll, 3000);
 }
 
 disableSensitiveFieldAutofill();
