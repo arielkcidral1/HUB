@@ -1482,7 +1482,7 @@ textarea {
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
-  background: var(--surface-soft);
+  background: linear-gradient(135deg, var(--surface-raised), var(--teal-surface));
   padding: 18px;
 }
 
@@ -4784,9 +4784,8 @@ form.panel[data-public-chamados="true"].panel {
   gap: 12px;
   padding: 16px;
   border-radius: 18px;
-  border: 1px solid rgba(12, 98, 89, 0.18);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 253, 250, 0.98));
+  border: 1px solid var(--teal-border);
+  background: linear-gradient(135deg, var(--surface-raised), var(--teal-surface));
   box-shadow:
     0 20px 55px rgba(14, 22, 32, 0.18),
     0 4px 14px rgba(14, 22, 32, 0.08);
@@ -4928,9 +4927,9 @@ form.panel[data-public-chamados="true"].panel {
   gap: 12px;
   width: min(760px, calc(100vw - 44px));
   padding: 14px;
-  border: 1px solid rgba(12, 98, 89, 0.22);
+  border: 1px solid var(--teal-border);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.98);
+  background: linear-gradient(135deg, var(--surface-raised), var(--teal-surface));
   box-shadow: 0 24px 70px rgba(14, 22, 32, 0.22), 0 6px 18px rgba(14, 22, 32, 0.12);
 }
 
@@ -5011,7 +5010,7 @@ form.panel[data-public-chamados="true"].panel {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: var(--surface-soft);
+  background: linear-gradient(135deg, var(--surface-raised), var(--teal-surface));
 }
 
 .tracker-chat-thread .chat-message {
