@@ -10414,11 +10414,22 @@ function setupVagasFormScrollGrid() {
     observer.observe(sentinel);
   }
 
-  criarObserver();
-  // Se os dados ainda nao tinham carregado o primeiro card no momento da
-  // medicao, tenta de novo apos os primeiros carregamentos da lista.
-  window.setTimeout(criarObserver, 800);
-  window.setTimeout(criarObserver, 2500);
+  // So cria o observer de verdade quando o primeiro card ja existir - criar
+  // antes disso usa um valor "chute" (420px) que pode disparar a troca cedo
+  // demais e depois desfazer sozinho assim que a medida real chega.
+  let tentativas = 0;
+  const esperarPrimeiroCard = window.setInterval(() => {
+    tentativas += 1;
+    const temCard = Boolean(list.querySelector(".item-card"));
+    if (temCard || tentativas >= 20) {
+      window.clearInterval(esperarPrimeiroCard);
+      criarObserver();
+    }
+  }, 250);
+
+  // A lista atualiza sozinha (polling); remedir de vez em quando garante que
+  // a margem acompanha o conteudo real caso a 1a vaga mude de tamanho.
+  window.setInterval(criarObserver, 10000);
 }
 
 document.addEventListener('DOMContentLoaded', setupVagasFormScrollGrid);
