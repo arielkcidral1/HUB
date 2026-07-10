@@ -491,7 +491,6 @@ h2 {
   height: 9px;
   border-radius: 50%;
   background: #2b2f33;
-  border: 2px solid var(--surface);
   flex: 0 0 auto;
 }
 
@@ -500,15 +499,10 @@ h2 {
 }
 
 .chat-avatar-wrap {
-  position: relative;
   display: inline-flex;
+  align-items: center;
+  gap: 6px;
   flex: 0 0 auto;
-}
-
-.chat-avatar-wrap .presence-dot {
-  position: absolute;
-  left: -2px;
-  bottom: -2px;
 }
 
 .user-avatar {
