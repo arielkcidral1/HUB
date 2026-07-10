@@ -3,8 +3,6 @@ const { hash: bcryptHash } = bcryptPkg;
 import { sql } from "../_lib/db.js";
 import { sendJson, applyCorsHeadersNode } from "../_lib/cors.js";
 
-// bcryptjs precisa do runtime Node.js (nao roda de forma confiavel no Edge).
-
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") { applyCorsHeadersNode(req, res); res.status(204).end(); return; }
   if (req.method !== "POST") return sendJson(req, res, 405, { error: "Metodo nao permitido." });

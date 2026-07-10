@@ -21,9 +21,5 @@ export default async function handler(request) {
     where lower(email) = ${email}
   `;
 
-  // Resposta identica exista ou nao o e-mail, para nao vazar quais contas existem.
-  // O envio do e-mail/link com o token fica a cargo de quem operar o sistema
-  // (nao ha servico de e-mail configurado neste repo) - por enquanto o token
-  // deve ser lido diretamente na tabela hub_users pelo RH.
   return json(request, 200, { ok: true });
 }

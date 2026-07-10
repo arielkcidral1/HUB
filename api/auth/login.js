@@ -5,10 +5,6 @@ import { sendJson, applyCorsHeadersNode } from "../_lib/cors.js";
 import { normalizeCpf, isValidCpf, formatCpf } from "../_lib/cpf.js";
 import { signAccessToken, randomOpaqueToken, hashToken, setAuthCookiesNode } from "../_lib/jwt.js";
 
-// bcryptjs precisa do runtime Node.js (nao roda de forma confiavel no Edge),
-// por isso este arquivo usa a assinatura classica (req, res) do Vercel em
-// vez da Fetch API usada nas demais funcoes Edge.
-
 function envValue(name) {
   return globalThis.process?.env?.[name] || "";
 }

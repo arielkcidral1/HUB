@@ -4,9 +4,6 @@ import { requireUser } from "../_lib/jwt.js";
 
 export const config = { runtime: "edge" };
 
-// Configuracoes de conta (tema, som de notificacao, etc.) sao por usuario,
-// nao por navegador/maquina - por isso ficam gravadas em hub_users em vez
-// de so no localStorage.
 export default async function handler(request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
   if (request.method !== "PUT") return json(request, 405, { error: "Metodo nao permitido." });

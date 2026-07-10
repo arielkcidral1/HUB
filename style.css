@@ -1,47 +1,35 @@
-/* ==========================================================================
-   HUB RH — Design System v2
-   Paleta: Slate-Teal escuro + Dourado nobre + Branco puro
-   Tipografia: Inter em toda a hierarquia, com tracking e weight precisos
-   Assinatura: Faixa gradiente teal→dourado como fio condutor visual
-   ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
   color-scheme: light;
 
-  /* — Cor base — */
   --bg:              #F7F8FA;
   --surface:         #FFFFFF;
   --surface-soft:    #F2F4F7;
   --surface-raised:  #FFFFFF;
 
-  /* — Tinta & texto — */
   --ink:             #0E1620;
   --ink-secondary:   #3D4B5C;
   --muted:           #6B7A8D;
 
-  /* — Teal (identidade principal) — */
   --teal:            #0C6259;
   --teal-light:      #0F8275;
   --teal-dark:       #094D46;
   --teal-surface:    #E8F5F3;
   --teal-border:     #B3DDD8;
 
-  /* — Dourado (acento nobre, substitui o amarelo genérico) — */
   --gold:            #C9921A;
   --gold-light:      #F0B429;
   --gold-surface:    #FEF7E6;
   --gold-border:     #F5D68A;
 
-  /* — Sistema — */
   --danger:          #C0392B;
   --danger-surface:  #FDF0EE;
   --danger-border:   #F3C4BD;
   --success:         #0E7A55;
   --success-surface: #E8F7EF;
 
-  /* — Cores do Dashboard — */
   --dashboard-denuncia-bg: #fffbeb;
   --dashboard-denuncia-border: #fde68a;
   --dashboard-chamado-bg: #eff6ff;
@@ -55,23 +43,19 @@
   --dashboard-documento-bg: #f8fafc;
   --dashboard-documento-border: #e2e8f0;
 
-  /* — Linha divisória — */
   --line:            #E4E8EE;
   --line-strong:     #CBD2DC;
 
-  /* — Sombras refinadas — */
   --shadow-xs:  0 1px 2px rgba(14, 22, 32, 0.04);
   --shadow-sm:  0 1px 4px rgba(14, 22, 32, 0.07), 0 0 1px rgba(14, 22, 32, 0.05);
   --shadow-md:  0 4px 16px rgba(14, 22, 32, 0.09), 0 1px 4px rgba(14, 22, 32, 0.06);
   --shadow-lg:  0 16px 48px rgba(14, 22, 32, 0.13), 0 4px 12px rgba(14, 22, 32, 0.08);
 
-  /* — Raios — */
   --radius-sm:  5px;
   --radius-md:  10px;
   --radius-lg:  14px;
   --radius-xl:  20px;
 
-  /* — Assinatura: gradiente teal→dourado — */
   --accent-gradient: linear-gradient(135deg, var(--teal) 0%, #0F8275 50%, var(--gold-light) 100%);
   --accent-bar:      linear-gradient(180deg, var(--teal) 0%, var(--gold-light) 100%);
 
@@ -81,38 +65,32 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  /* — Cor base — */
   --bg:              #0F1419;
   --surface:         #171D24;
   --surface-soft:    #202832;
   --surface-raised:  #232B35;
 
-  /* — Tinta & texto — */
   --ink:             #EEF1F5;
   --ink-secondary:   #C3CAD3;
   --muted:           #8B98A8;
 
-  /* — Teal (identidade principal) — */
   --teal:            #2FA697;
   --teal-light:      #3DBBAB;
   --teal-dark:       #1F7A6E;
   --teal-surface:    #16302D;
   --teal-border:     #2A5750;
 
-  /* — Dourado (acento nobre) — */
   --gold:            #E0AC3A;
   --gold-light:      #F0C15C;
   --gold-surface:    #2E2717;
   --gold-border:     #5A481F;
 
-  /* — Sistema — */
   --danger:          #E5695A;
   --danger-surface:  #3A211E;
   --danger-border:   #6B3530;
   --success:         #3FBE8B;
   --success-surface: #16302A;
 
-  /* — Cores do Dashboard — */
   --dashboard-denuncia-bg: #2E2717;
   --dashboard-denuncia-border: #5A481F;
   --dashboard-chamado-bg: #182534;
@@ -126,20 +104,14 @@
   --dashboard-documento-bg: #202832;
   --dashboard-documento-border: #333d49;
 
-  /* — Linha divisória — */
   --line:            #333D49;
   --line-strong:     #46525F;
 
-  /* — Sombras refinadas — */
   --shadow-xs:  0 1px 2px rgba(0, 0, 0, 0.24);
   --shadow-sm:  0 1px 4px rgba(0, 0, 0, 0.32), 0 0 1px rgba(0, 0, 0, 0.24);
   --shadow-md:  0 4px 16px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.3);
   --shadow-lg:  0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.34);
 }
-
-/* ==========================================================================
-   RESET & BASE
-   ========================================================================== */
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -157,7 +129,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Na página de login: trava tudo na viewport, sem gap acima */
 html:has(.login-screen) {
   height: 100%;
   background: #071c17;
@@ -195,10 +166,6 @@ h2 {
   color: var(--ink);
 }
 
-/* ==========================================================================
-   APP SHELL & LAYOUT
-   ========================================================================== */
-
 .app-shell {
   display: grid;
   grid-template-columns: 264px minmax(0, 1fr);
@@ -214,10 +181,6 @@ h2 {
   display: none;
 }
 
-/* ==========================================================================
-   LOGIN SCREEN
-   ========================================================================== */
-
 .login-screen {
   display: grid;
   place-items: center;
@@ -229,7 +192,6 @@ h2 {
     url("assets/hub-operations.png") center / cover no-repeat;
 }
 
-/* Único card glass — logo + form num só fundo */
 .login-card {
   width: min(100%, 420px);
   border-radius: var(--radius-xl);
@@ -244,12 +206,10 @@ h2 {
   overflow: hidden;
 }
 
-/* Sem listra */
 .login-card::before {
   display: none;
 }
 
-/* Bloco da logo com divisor */
 .login-brand {
   display: flex;
   align-items: center;
@@ -286,7 +246,6 @@ h2 {
   margin-top: 3px;
 }
 
-/* Form dentro do card */
 .login-card form {
   padding: 28px 32px 32px;
   display: flex;
@@ -329,10 +288,6 @@ h2 {
   font-size: 13px;
   font-weight: 600;
 }
-
-/* ==========================================================================
-   SIDEBAR
-   ========================================================================== */
 
 .sidebar {
   position: sticky;
@@ -378,7 +333,6 @@ h2 {
   backdrop-filter: blur(2px);
 }
 
-/* --- Logo / Marca --- */
 .brand {
   display: flex;
   align-items: center;
@@ -439,7 +393,6 @@ h2 {
   text-transform: uppercase;
 }
 
-/* --- Nav --- */
 .nav-list {
   display: grid;
   gap: 3px;
@@ -478,10 +431,6 @@ h2 {
   box-shadow: inset 3px 0 0 0 var(--teal-light);
 }
 
-/* ==========================================================================
-   MAIN CONTENT & TOPBAR
-   ========================================================================== */
-
 .main-content {
   padding: 36px 40px 48px;
   overflow: hidden;
@@ -512,7 +461,6 @@ h2 {
   display: block;
 }
 
-/* --- User chip & topbar actions --- */
 .user-chip {
   display: inline-flex;
   align-items: center;
@@ -561,7 +509,6 @@ h2 {
   gap: 8px;
 }
 
-/* --- Menu dropdown do usuario --- */
 .user-menu {
   position: relative;
 }
@@ -720,10 +667,6 @@ h2 {
   box-shadow: 0 0 0 3px rgba(240, 180, 41, 0.18);
 }
 
-/* ==========================================================================
-   HERO PANEL
-   ========================================================================== */
-
 .hero-panel {
   position: relative;
   min-height: 200px;
@@ -750,7 +693,6 @@ h2 {
   background: linear-gradient(100deg, rgba(9, 77, 70, 0.9) 15%, rgba(11, 26, 24, 0.6) 60%, transparent);
 }
 
-/* Faixa de acento — assinatura visual no painel hero */
 .hero-panel::before {
   content: '';
   position: absolute;
@@ -779,10 +721,6 @@ h2 {
   letter-spacing: -0.4px;
 }
 
-/* ==========================================================================
-   CARDS, PAINÉIS & GRIDS
-   ========================================================================== */
-
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(150px, 1fr));
@@ -801,7 +739,6 @@ h2 {
   overflow: hidden;
 }
 
-/* Borda-acento lateral — fio condutor visual */
 .metric-card::before {
   content: '';
   position: absolute;
@@ -862,7 +799,6 @@ h2 {
   gap: 14px;
 }
 
-/* Grids de layout */
 .section-grid,
 .workspace {
   display: grid;
@@ -1090,10 +1026,6 @@ h2 {
   align-self: start;
 }
 
-/* ==========================================================================
-   BOTÕES
-   ========================================================================== */
-
 .primary-button {
   display: inline-flex;
   align-items: center;
@@ -1163,10 +1095,6 @@ h2 {
   border-color: rgba(192, 57, 43, 0.35);
 }
 
-/* ==========================================================================
-   FORMULÁRIOS & INPUTS
-   ========================================================================== */
-
 label {
   display: grid;
   gap: 7px;
@@ -1218,10 +1146,6 @@ textarea {
 .avatar-upload-wrapper label {
   margin-bottom: 0;
 }
-
-/* ==========================================================================
-   LISTAS, CARDS & ITENS
-   ========================================================================== */
 
 .card-list,
 .activity-list {
@@ -1306,7 +1230,6 @@ textarea {
   font-size: 14px;
 }
 
-/* Listas especiais */
 .denuncia-list .item-card {
   background: var(--gold-surface);
   border-color: var(--gold-border);
@@ -1371,10 +1294,6 @@ textarea {
   font-size: 11.5px;
   justify-self: end;
 }
-
-/* ==========================================================================
-   CHAT MODULE
-   ========================================================================== */
 
 .channel-item {
   display: flex;
@@ -1760,7 +1679,6 @@ textarea {
   width: min(320px, 100%);
 }
 
-/* --- Chat composer --- */
 .chat-composer {
   display: flex;
   flex-wrap: wrap;
@@ -2508,10 +2426,6 @@ textarea {
   cursor: not-allowed;
 }
 
-/* ==========================================================================
-   DOCUMENTS MODULE
-   ========================================================================== */
-
 .document-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2598,10 +2512,6 @@ textarea {
   flex: 0 0 auto;
 }
 
-/* ==========================================================================
-   FEEDBACK & MODAIS
-   ========================================================================== */
-
 .form-feedback {
   min-height: 20px;
   margin: 0 0 14px;
@@ -2626,7 +2536,6 @@ textarea {
   border: 1px solid rgba(192, 57, 43, 0.15);
 }
 
-/* Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -2766,10 +2675,6 @@ textarea {
   margin: 16px 0 0;
 }
 
-/* ==========================================================================
-   PÁGINAS PÚBLICAS (vagas, candidatura, chamados, denúncia)
-   ========================================================================== */
-
 .public-layout {
   display: grid;
   min-height: 100vh;
@@ -2791,7 +2696,6 @@ textarea {
   width: min(100%, 900px);
 }
 
-/* Marca HUB no topo das páginas públicas */
 .public-brand {
   display: flex;
   align-items: center;
@@ -2888,7 +2792,6 @@ textarea {
   font-size: 15px;
 }
 
-/* Grade de vagas */
 .public-job-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2901,7 +2804,6 @@ textarea {
   overflow: hidden;
 }
 
-/* Borda-acento nos cards de vaga — assinatura */
 .public-job-card::before {
   content: '';
   position: absolute;
@@ -2930,7 +2832,6 @@ textarea {
   margin-top: 10px;
 }
 
-/* Formulários públicos — painel elevado com faixa de acento */
 form.panel[data-public-vagas="true"],
 form.panel[data-public-chamados="true"],
 form[data-public-denuncia="true"] {
@@ -2950,7 +2851,6 @@ form[data-public-denuncia="true"]:hover {
   box-shadow: var(--shadow-lg);
 }
 
-/* Faixa de acento no topo — assinatura nos formulários públicos */
 form.panel[data-public-vagas="true"]::before,
 form.panel[data-public-chamados="true"]::before,
 form[data-public-denuncia="true"]::before {
@@ -2961,7 +2861,6 @@ form[data-public-denuncia="true"]::before {
   background: var(--accent-gradient);
 }
 
-/* Overrides do .panel padrão nos form públicos */
 form.panel[data-public-vagas="true"].panel,
 form.panel[data-public-chamados="true"].panel {
   padding: 36px;
@@ -2979,7 +2878,6 @@ form.panel[data-public-chamados="true"].panel {
   border-radius: 3px var(--radius-md) var(--radius-md) 3px;
 }
 
-/* Vaga selecionada no form de candidatura */
 .selected-public-job {
   display: grid;
   gap: 7px;
@@ -3050,7 +2948,6 @@ form.panel[data-public-chamados="true"].panel {
   border-radius: var(--radius-md);
 }
 
-/* Job actions */
 .job-actions {
   display: flex;
   gap: 7px;
@@ -3064,7 +2961,6 @@ form.panel[data-public-chamados="true"].panel {
   font-size: 12px;
 }
 
-/* EPI rows (chamados) */
 .dynamic-fieldset {
   display: grid;
   gap: 10px;
@@ -3158,7 +3054,6 @@ form.panel[data-public-chamados="true"].panel {
   flex: 1 1 100%;
 }
 
-/* Malote */
 .malote-report {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -3302,7 +3197,6 @@ form.panel[data-public-chamados="true"].panel {
   font-size: 12px;
 }
 
-/* IDs ocultos */
 [hidden] {
   display: none !important;
 }
@@ -3312,10 +3206,6 @@ form.panel[data-public-chamados="true"].panel {
 #cancelar-edicao-evento[hidden] {
   display: none;
 }
-
-/* ==========================================================================
-   MEDIA QUERIES
-   ========================================================================== */
 
 @media (max-width: 1024px) {
   .main-content {
@@ -3595,10 +3485,6 @@ form.panel[data-public-chamados="true"].panel {
     grid-template-columns: 1fr;
   }
 }
-
-/* ==========================================================================
-   UTILITÁRIOS
-   ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -3985,7 +3871,6 @@ form.panel[data-public-chamados="true"].panel {
   background: var(--surface-soft);
 }
 
-/* Settings Panels Styling */
 .settings-section {
   padding-bottom: 24px;
   border-bottom: 1px solid var(--line);
@@ -4214,7 +4099,7 @@ form.panel[data-public-chamados="true"].panel {
 .table-col-quantity {
   width: 16%;
 }
-/* Tracker Modal Styles */
+
 .tracker-modal {
   position: fixed;
   top: 0;
@@ -4759,10 +4644,6 @@ form.panel[data-public-chamados="true"].panel {
     font-size: 12px;
   }
 }
-/* ==========================================================================
-   POPOUT INTERNO DE NOTIFICAÇÕES
-   Garante aviso visual mesmo quando o navegador bloqueia Notification API
-   ========================================================================== */
 
 .hub-notification-popout-container {
   position: fixed;
@@ -4911,11 +4792,6 @@ form.panel[data-public-chamados="true"].panel {
   }
 }
 
-/* ==========================================================================
-   PERMISSÃO DE NOTIFICAÇÕES DO NAVEGADOR
-   Exibe orientação fixa para liberar avisos fora da aba do HUB
-   ========================================================================== */
-
 .hub-notification-permission-prompt {
   position: fixed;
   right: 22px;
@@ -4985,11 +4861,6 @@ form.panel[data-public-chamados="true"].panel {
   }
 }
 
-
-/* ==========================================================================
-   Correção estável v8 — acompanhamento e mensagens agrupadas
-   ========================================================================== */
-
 .dashboard-activity[data-read="true"] {
   background: inherit;
   border-color: inherit;
@@ -5026,10 +4897,6 @@ form.panel[data-public-chamados="true"].panel {
   align-self: center;
   margin: 6px 0;
 }
-
-/* ==========================================================================
-   Ajuste v9 — modal de notificações/mensagens bem mais largo
-   ========================================================================== */
 
 .tracker-modal {
   padding: 8px;
@@ -5102,10 +4969,6 @@ form.panel[data-public-chamados="true"].panel {
   }
 }
 
-
-/* ========================================================================
-   Atestados — envio público e painel interno
-   ======================================================================== */
 .atestado-card .compact-status-label {
   min-width: 180px;
   font-size: 12px;
@@ -5133,9 +4996,6 @@ form.panel[data-public-chamados="true"].panel {
   }
 }
 
-/* ========================================================================
-   Ajuste v18 — Atestados: ações alinhadas e exclusão
-   ======================================================================== */
 .atestado-actions {
   align-items: end;
   justify-content: space-between;

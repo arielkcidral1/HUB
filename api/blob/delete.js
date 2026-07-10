@@ -4,8 +4,6 @@ import { sendJson, applyCorsHeadersNode } from "../_lib/cors.js";
 import { requireUserNode } from "../_lib/jwt.js";
 import { isRh } from "../_lib/authz.js";
 
-// @vercel/blob's server SDK (put/del) needs the Node.js runtime, not Edge.
-
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") { applyCorsHeadersNode(req, res); res.status(204).end(); return; }
   if (req.method !== "POST") return sendJson(req, res, 405, { error: "Metodo nao permitido." });

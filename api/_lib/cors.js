@@ -23,8 +23,6 @@ export function json(request, status, body, extraHeaders) {
   });
 }
 
-// Variantes para funcoes no runtime Node.js (req/res classicos do Vercel).
-
 export function applyCorsHeadersNode(req, res) {
   const origin = req.headers?.origin || "";
   res.setHeader("Access-Control-Allow-Headers", "content-type");

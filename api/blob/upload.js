@@ -3,9 +3,6 @@ import { sql } from "../_lib/db.js";
 import { sendJson, applyCorsHeadersNode } from "../_lib/cors.js";
 import { requireUserNode } from "../_lib/jwt.js";
 
-// @vercel/blob's server SDK (put/del) needs the Node.js runtime, not Edge,
-// so this uses the classic (req, res) Vercel signature, not the Fetch API.
-
 export const config = {
   api: { bodyParser: false },
 };

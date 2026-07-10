@@ -11,9 +11,6 @@ function safeColumns(row) {
   return Object.keys(row).filter((key) => IDENTIFIER.test(key));
 }
 
-// Colunas jsonb (ex: hub_malotes.colaboradores) recebem um array/objeto JS do
-// corpo da requisicao; o driver do Neon nao serializa isso como JSON
-// automaticamente, entao precisa virar string antes de virar parametro.
 function toSqlParam(value) {
   if (value !== null && typeof value === "object") return JSON.stringify(value);
   return value;

@@ -90,9 +90,6 @@ export async function requireUser(request, sql) {
   return rows[0] || null;
 }
 
-// Variantes para funcoes no runtime Node.js (req/res classicos do Vercel,
-// nao a Fetch API usada nas funcoes Edge acima).
-
 export function parseCookiesNode(req) {
   const header = req.headers?.cookie || "";
   const out = {};

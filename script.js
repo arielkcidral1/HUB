@@ -6,9 +6,7 @@ const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
-// IMPORTANTE: os IDs lidos não entram no cache sensível.
-// Assim, ao fechar/abrir o site ou perder a sessão, as notificações já visualizadas
-// não voltam como não lidas.
+
 const SENSITIVE_CLIENT_CACHE_KEYS = [
   STORAGE_KEY,
   TEAM_USERS_KEY,
@@ -362,7 +360,6 @@ const UNIT_OPTIONS = [
   "28- ARA",
 ];
 
-// Normaliza texto para comparação: remove acentos, caixa e espaços extras.
 function normalizeUnitText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -371,15 +368,11 @@ function normalizeUnitText(value) {
     .trim();
 }
 
-// Vagas antigas podem ter sido gravadas com texto livre (ex: "JRG", "JGR").
-// Aqui mapeamos esses valores legados para a opção oficial correspondente.
 const UNIT_ALIASES = {
   jrg: "13- JRG 1",
   jgr: "13- JRG 1",
 };
 
-// Retorna o valor oficial da unidade (UNIT_OPTIONS) a partir de um valor
-// gravado, mesmo que tenha sido salvo com grafia diferente ou sem o prefixo.
 function getCanonicalUnit(value) {
   const raw = String(value || "").trim();
   if (!raw) return raw;
@@ -390,7 +383,6 @@ function getCanonicalUnit(value) {
   return raw;
 }
 
-// Mapa unidade (codigo) -> cidade, conforme relatorio fornecido pelo RH.
 const UNIT_CITY_MAP = {
   "1- MTZ": "Joinville",
   "2- SBS": "São Bento do Sul",
@@ -416,8 +408,6 @@ const UNIT_CITY_MAP = {
   "28- ARA": "Araranguá",
 };
 
-// Retorna a cidade correspondente a unidade (codigo), usada para exibir e
-// filtrar vagas por cidade em vez do codigo interno da unidade.
 function getUnitCity(value) {
   return UNIT_CITY_MAP[getCanonicalUnit(value)] || "";
 }
@@ -692,11 +682,6 @@ function getCurrentUserName() {
     "Voce";
 }
 
-/**
- * [ALERTA DE SEGURANÇA] A verificação de permissão real DEVE ser feita no backend
- * com Row Level Security (RLS) do Supabase. Estas funções são apenas para controle de UI.
- * A 'role' é lida do token JWT para maior segurança no frontend, mas a RLS é indispensável.
- */
 const AuthHelper = {
   _getClaim(claim) {
     return currentAuthUser?.app_metadata?.[claim] || "";
@@ -721,18 +706,10 @@ function getCurrentUserRole() {
   return AuthHelper.getRole();
 }
 
-/**
- * Controle de UI baseado no usuario autenticado carregado do Supabase.
- * A verificacao de permissao real continua sendo feita no backend por RLS.
- */
 function isManagerUser() {
   return AuthHelper.isManager();
 }
 
-/**
- * Controle de UI baseado no usuario autenticado carregado do Supabase.
- * A verificacao de permissao real continua sendo feita no backend por RLS.
- */
 function isCashierUser() {
   return AuthHelper.isCashier();
 }
@@ -976,7 +953,7 @@ async function logout() {
   try {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
   } catch {
-    // segue para limpar o estado local mesmo se a chamada falhar
+
   }
   clearAuthenticatedUser();
   window.location.href = "login.html";
@@ -989,7 +966,6 @@ async function setupLogin() {
   supabaseClient = supabaseClient || getSupabaseClient();
   const hasAuthSession = await restoreAuthenticatedSession();
 
-  // Redirecionamentos Inteligentes
   if (hasAuthSession) {
     if (isLoginPage()) {
       window.location.replace(getLoginRedirectTarget());
@@ -1015,7 +991,7 @@ async function setupLogin() {
       const identifier = event.currentTarget.querySelector("[data-login-identifier]")?.value || "";
       const password = event.currentTarget.querySelector("[data-login-password]")?.value || "";
       const loginOk = await validateLogin(identifier, password);
-  
+
       if (!loginOk) {
         const errorEl = document.getElementById("login-error");
         if (errorEl && !errorEl.textContent.trim()) {
@@ -1023,7 +999,7 @@ async function setupLogin() {
         }
         return;
       }
-  
+
       window.location.replace(getLoginRedirectTarget());
     });
   }
@@ -1219,7 +1195,6 @@ function saveLocalDataDebounced() {
   _saveLocalDataTimer = setTimeout(() => { saveLocalData(); }, 80);
 }
 
-
 function ensureRequiredTeamUsers() {
   if (!data.usuarios) data.usuarios = [];
 }
@@ -1369,11 +1344,11 @@ function markRhMessagesRead() {
 function checkAndMarkChatAsRead() {
   const communicationView = document.getElementById("comunicacao");
   if (!communicationView?.classList.contains("active") || !canAccessChatChannel(activeChatChannel)) return;
-  
+
   const currentChannel = activeChatChannel;
   const unread = getUnreadRhMessages().filter((item) => normalizeChatChannel(item.canal) === currentChannel);
   if (!unread.length) return;
-  
+
   markRhMessagesRead();
   renderDashboard();
   renderChatChannels();
@@ -1652,7 +1627,6 @@ function formatMaskedDate(value) {
   return `${day}/${month}/${year}`;
 }
 
-// aliases para compatibilidade com chamadas existentes
 const formatDocumentDate = formatMaskedDate;
 const formatEventoDate   = formatMaskedDate;
 
@@ -1669,15 +1643,15 @@ function applyDateMask(input) {
   input.maxLength = 10;
   input.placeholder = "dd/mm/aaaa";
   input.dataset.dateMask = "true";
-  input.dataset.docDate = "true"; // mantém compatibilidade
+  input.dataset.docDate = "true";
   input.dataset.dateMaskApplied = "true";
   input.value = formatMaskedDate(input.value);
 }
 
 function normalizeDocumentDateInputs(root = document) {
-  // cobre doc-forms e o campo de data do evento-form
+
   root.querySelectorAll('[data-doc-form] input[type="date"], #evento-form input[type="date"]').forEach(applyDateMask);
-  // reinicializa campos que já foram convertidos mas podem ter recebido valor ISO novo
+
   root.querySelectorAll('[data-date-mask="true"]').forEach((input) => {
     input.value = formatMaskedDate(input.value);
   });
@@ -2445,11 +2419,7 @@ function getStoragePath(value, bucket) {
 }
 
 async function createPrivateStorageUrl(bucket, value) {
-  // Uploads no Vercel Blob ja armazenam a URL publica completa (com sufixo
-  // aleatorio) direto na coluna do banco, entao normalmente basta devolver
-  // o valor como esta. So sobra logica de resolucao de path para arquivos
-  // antigos do Supabase Storage, que nao existem mais nesta base (migrada
-  // para o Neon sem dados legados).
+
   if (isHttpUrl(value)) return value;
   throw new Error("Arquivo indisponivel.");
 }
@@ -2647,7 +2617,6 @@ function renderChatPoll(item, poll) {
   `;
 }
 
-
 function mapRows(collection, rows) {
   if (collection === "denuncias") {
     return rows.map((row) => ({
@@ -2655,7 +2624,7 @@ function mapRows(collection, rows) {
       identificacao: row.identificacao,
       categoria: row.categoria,
       descricao: row.descricao,
-      status: row.status || "Aberta", // Garante o mapeamento do status
+      status: row.status || "Aberta",
       createdBy: row.created_by || "Sistema",
       createdAt: formatDateTime(row.created_at),
       sortAt: row.created_at || "",
@@ -3023,10 +2992,7 @@ function toDbPayload(collection, values) {
       arquivo_tamanho: values.arquivo?.size || null,
       arquivo_tipo: values.arquivo?.type || null,
       arquivo_url: values.arquivo?.url || null,
-      // Usa o momento do envio (antes do upload do anexo terminar), nao o
-      // momento em que o INSERT no banco de fato roda - senao uma mensagem
-      // de texto rapida enviada logo apos um anexo lento pode gravar com
-      // created_at anterior ao do anexo, invertendo a ordem no chat.
+
       created_at: values.createdAt || undefined,
     };
   }
@@ -3265,18 +3231,11 @@ async function refreshFromSupabase() {
 function setupAutoRefresh() {
   if (refreshTimer) return;
 
-  // Atualiza mesmo com a aba em segundo plano/minimizada, para que notificacoes
-  // de novas mensagens continuem chegando. O navegador pode limitar a frequencia
-  // de setInterval em abas ocultas, mas o timer continua rodando.
   refreshTimer = window.setInterval(() => {
     refreshFromSupabase();
   }, 2000);
 }
 
-// Substituido pelo polling de 5s (setupAutoRefresh) na migracao para Neon.
-// A API por tras do HUB agora e' um conjunto de Vercel Functions sem
-// mecanismo de push equivalente ao Supabase Realtime; a atualizacao de
-// dados entre sessoes tem uma latencia de ate 5s.
 function setupRealtime() {}
 
 async function uploadChatFile(file) {
@@ -4081,13 +4040,6 @@ async function addItem(collection, values) {
   }
 }
 
-/**
- * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente.
- * Sem uma política de Row Level Security (RLS) no Supabase, um usuário autenticado
- * poderia, teoricamente, alterar este 'id' para modificar ou deletar um registro
- * que não lhe pertence.
- * SOLUÇÃO: Implemente políticas de RLS na tabela correspondente no Supabase para garantir que um usuário só possa operar nos registros que ele tem permissão (ex: que ele mesmo criou).
- */
 async function updateItem(collection, id, values) {
   if (!id) return false;
 
@@ -4127,13 +4079,6 @@ async function updateItem(collection, id, values) {
   }
 }
 
-/**
- * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente para exclusão.
- * Sem uma política de Row Level Security (RLS) no Supabase, um usuário autenticado
- * poderia, teoricamente, alterar este 'id' para deletar um registro
- * que não lhe pertence.
- * SOLUÇÃO: Implemente políticas de RLS na tabela correspondente no Supabase para garantir que um usuário só possa deletar os registros que ele tem permissão.
- */
 async function deleteItem(collection, id) {
   if (!id) return false;
 
@@ -4316,8 +4261,6 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
     const persistedUser = { ...updatedUser, ...saved };
     upsertLocalUser(persistedUser);
 
-    // Rendering prioritizes this in-memory profile over the local user list.
-    // Keep it in sync so a newly uploaded avatar is shown immediately.
     currentUserProfile = { ...(currentUserProfile || {}), ...persistedUser };
     if (newName) storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
     setSyncStatus("HUB online", true);
@@ -4994,14 +4937,6 @@ function resetVtForm() {
   updateVtCalculation();
 }
 
-/**
- * [ALERTA DE SEGURANÇA] Esta função controla a visibilidade dos elementos da UI
- * com base na role do usuário armazenada no sessionStorage. Um usuário mal-intencionado
- * pode facilmente alterar essa role no console do navegador para obter acesso visual
- * a seções restritas.
- * A segurança real da aplicação NÃO PODE depender desta função. Ela deve ser garantida
- * por políticas de Row Level Security (RLS) no Supabase, que filtram os dados no servidor.
- */
 function applyRoleAccess() {
   if (!isAuthenticated() || isPublicPage() || !document.querySelector(".nav-list")) return;
   refreshCurrentUserRoleFromData();
@@ -5147,8 +5082,6 @@ function renderDashboard() {
     document.getElementById("metric-documentos").textContent = (data.documentos || []).filter((item) => !isArchivedRecord(item)).length;
   }
 
-  // Mensagens do RH aparecem como um único bloco no acompanhamento.
-  // Quando ficam lidas, não mudam de cor; apenas perdem prioridade para itens novos.
   const accessibleRhMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
   const sortedRhMessagesNewestFirst = [...accessibleRhMessages]
     .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
@@ -5280,8 +5213,6 @@ function renderDashboard() {
   const dashboardPageSize = 3;
   dashboardNotificationOffset = 0;
 
-  // Acompanhamento da tela principal deve exibir somente notificações não lidas.
-  // Quando todas estiverem lidas, a lista fica vazia.
   const unreadDashboardItems = sortedDashboardItems.filter((item) => !isDashboardActivityReadForOrdering(item));
   const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
   visibleDashboardActivityItems = visibleDashboardItems;
@@ -5444,19 +5375,16 @@ function renderCalendar() {
   `);
 }
 
-// Lógica de abertura de denúncia para leitura e transição de estado automática
 async function lerDenuncia(id) {
   const denuncia = data.denuncias.find(item => String(item.id) === String(id));
   if (!denuncia) return;
 
-  // Mostra o relato em formato de modal customizado
   showModal(
     "Visualização da Denúncia",
     `Categoria: ${denuncia.categoria}\nRecebida em: ${denuncia.createdAt}\nStatus Atual: ${denuncia.status}\n\nRelato:\n"${denuncia.descricao}"`,
     "info"
   );
 
-  // Se a denúncia ainda constar como Não lida ("Aberta"), movemos para "Lida"
   if (denuncia.status === "Aberta") {
     if (!isAuthenticated()) {
       denuncia.status = "Lida";
@@ -5695,7 +5623,7 @@ function migrateUserSettingsToCurrentKey(settings) {
       localStorage.setItem(currentKey, JSON.stringify(normalizeUserSettings(settings)));
     }
   } catch {
-    // Mantem o fallback global se o navegador bloquear escrita na chave por usuario.
+
   }
 }
 
@@ -5730,10 +5658,6 @@ function saveUserSettings(settings = currentUserSettings) {
   syncUserSettingsToServer(currentUserSettings);
 }
 
-// As configuracoes de conta sao por usuario, nao por navegador/maquina - por
-// isso, alem do cache local (pra aplicar instantaneamente), ficam gravadas no
-// banco. O envio e' "melhor esforco": se falhar (offline, etc.), o cache
-// local continua valendo nesta maquina ate a proxima sincronizacao.
 async function syncUserSettingsToServer(settings) {
   if (!isAuthenticated()) return;
   try {
@@ -5748,7 +5672,7 @@ async function syncUserSettingsToServer(settings) {
       currentAuthUser.configuracoes = result.configuracoes || settings;
     }
   } catch {
-    // Mantem o cache local; a proxima gravacao ou login tenta sincronizar de novo.
+
   }
 }
 
@@ -5761,7 +5685,7 @@ function reloadUserSettingsForCurrentUser() {
   try {
     localStorage.setItem(getUserSettingsStorageKey(), JSON.stringify(currentUserSettings));
   } catch {
-    // Cache local e' so uma otimizacao; segue sem ele se o navegador bloquear.
+
   }
   applyUserSettings();
   renderAccountSettings();
@@ -5781,8 +5705,7 @@ function syncUserSettingsControls() {
 
 function applyUserSettings() {
   currentUserSettings = normalizeUserSettings(currentUserSettings);
-  // O modo escuro so existe no index (o app interno) - as demais paginas
-  // (login, formularios publicos, portal de vagas, etc.) ficam sempre claras.
+
   const isIndexPage = Boolean(document.getElementById("app-shell"));
   document.documentElement.setAttribute("data-theme", isIndexPage && currentUserSettings.darkMode ? "dark" : "light");
   document.body?.classList.toggle("user-setting-compact", currentUserSettings.compactMode);
@@ -6013,10 +5936,9 @@ function playUserNotificationSound() {
       try { audioContext.close?.(); } catch (_) {}
     }, 1700);
   } catch {
-    // Sem som quando o navegador bloquear autoplay/audio context.
+
   }
 }
-
 
 const HUB_NOTIFICATION_POPOUT_CONTAINER_ID = "hub-notification-popout-container";
 
@@ -6220,7 +6142,6 @@ function flashHubDocumentTitle(title = "Nova notificação") {
   } catch (_) {}
 }
 
-
 function updateHubAppBadge(count = 0) {
   try {
     if (navigator.setAppBadge && count > 0) {
@@ -6234,9 +6155,7 @@ function updateHubAppBadge(count = 0) {
 const hubNotifiedMessageIds = new Set();
 
 function showHubCrossPageNotification(title, message, options = {}) {
-  // Mais de um mecanismo (contagem de não lidas + polling) pode disparar
-  // para a mesma mensagem no mesmo ciclo; dedupe pelo id da mensagem para
-  // garantir no máximo uma notificação por mensagem.
+
   const messageIds = options.messageIds || [];
   if (messageIds.length) {
     const hasNewId = messageIds.some((id) => !hubNotifiedMessageIds.has(id));
@@ -6634,7 +6553,7 @@ function renderChatChannels() {
     .map((channel) => {
       const unreadCount = getUnreadRhMessages().filter(item => normalizeChatChannel(item.canal) === channel.id).length;
       const badge = unreadCount > 0 ? `<span class="chat-badge">${unreadCount}</span>` : "";
-      
+
       let avatarHtml = "";
       if (channel.isGroup) {
         avatarHtml = `<div class="chat-avatar-fallback"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>`;
@@ -6654,7 +6573,6 @@ function renderChatChannels() {
     })
     .join("");
 }
-
 
 function getChamadoCollaboratorSearchText(item = {}) {
   const collaboratorGroups = Array.isArray(item.colaboradores) ? item.colaboradores : [];
@@ -6859,8 +6777,7 @@ function renderDenunciasSection() {
 }
 
 function renderAll() {
-  // So revela o app-shell apos o primeiro render com dados reais, evitando o
-  // flash de conteudo desatualizado (cache local) ou nao autenticado.
+
   document.getElementById("app-shell")?.classList.add("is-ready");
   renderCurrentUser();
   applyRoleAccess();
@@ -6930,8 +6847,6 @@ function renderAll() {
   renderDocumentRecords();
   renderTeamUsers();
 
-  // Mantem o painel de acompanhamento sincronizado com os dados recem
-  // carregados, em vez de so atualizar quando o usuario reabre o modal.
   try { window.notificationTracker?.loadNotifications(); } catch (_) {}
 }
 
@@ -6958,7 +6873,6 @@ function getAuthorAvatar(authorName, knownAvatarPath = "") {
   const initial = String(authorName || "?").charAt(0).toUpperCase();
   return `<div class="chat-avatar-fallback">${initial}</div>`;
 }
-
 
 function renderNotificationChatThread(messages = [], options = {}) {
   const normalizedMessages = Array.isArray(messages) ? [...messages] : [];
@@ -7016,8 +6930,6 @@ function openDashboardActivity(index) {
 
   const hasChatMessages = Array.isArray(item.chatMessages) && item.chatMessages.length;
 
-  // Mensagens abertas pelo acompanhamento principal devem usar exatamente
-  // o mesmo modal/detalhe do painel completo de notificações.
   if (hasChatMessages && window.notificationTracker && typeof window.notificationTracker.openModal === "function") {
     const tracker = window.notificationTracker;
     tracker.openModal();
@@ -7276,7 +7188,6 @@ function renderChat() {
     fileButton.disabled = false;
     fileButton.classList.remove("disabled");
   }
-
 
   const normalizedFilter = normalizeSettingsText(chatMessageFilterQuery);
   const messages = data.comunicados.filter((item) => {
@@ -7805,7 +7716,6 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
     button.classList.add("active");
     document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
 
-    // Cancela a edição se o usuário trocar de aba de documento
     if (window.editingDocId) {
       window.editingDocId = null;
       document.querySelectorAll("[data-doc-form]").forEach(form => {
@@ -7978,12 +7888,11 @@ if (chatForm) {
     document.execCommand("insertText", false, text);
   });
 
-  // Garante que Enter em qualquer elemento do formulário (ex: após anexar arquivo) também envia
   chatForm.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
-    if (event.target === chatMessageInput || event.target === chatMessageEditor) return; // já tratado acima
-    if (event.target.tagName === "BUTTON") return; // deixa botões funcionarem normalmente
+    if (event.target === chatMessageInput || event.target === chatMessageEditor) return;
+    if (event.target.tagName === "BUTTON") return;
     event.preventDefault();
     chatForm.requestSubmit();
   });
@@ -8013,7 +7922,6 @@ if (chatForm) {
       return;
     }
 
-    // ── OTIMISMO: mostra a mensagem imediatamente ──────────────────────────
     const pendingMessages = files.length
       ? files.map((file, index) => {
         const attachmentType = getChatFileMimeType(file);
@@ -8039,13 +7947,12 @@ if (chatForm) {
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
     data.comunicados = [...pendingMessages, ...(data.comunicados || [])];
     renderChat();
-    // Limpa o formulário imediatamente
+
     formElement.reset();
     const composerEditor = getChatComposerEditor();
     if (composerEditor) composerEditor.innerHTML = "";
     clearChatSelectedFile();
 
-    // ── UPLOAD de arquivos em background ──────────────────────────────────
     const uploadedFiles = [];
     try {
       for (const file of files) {
@@ -8055,7 +7962,7 @@ if (chatForm) {
       }
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
-      // Remove mensagens otimistas em caso de falha
+
       data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
       renderChat();
       setSyncStatus("Erro no anexo", false);
@@ -8063,7 +7970,6 @@ if (chatForm) {
       return;
     }
 
-    // ── PERSISTÊNCIA: remove otimistas e deixa o realtime confirmar ───────
     data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
 
     const payloads = uploadedFiles.length
@@ -8088,7 +7994,7 @@ if (chatForm) {
     }
 
     if (results.some((success) => !success)) {
-      // Restaura o campo se o envio falhar
+
       renderChat();
     }
   });
@@ -8232,7 +8138,7 @@ document.getElementById("cancelar-edicao-vaga")?.addEventListener("click", () =>
 
 const eventoForm = document.getElementById("evento-form");
 if (eventoForm) {
-  // inicializa o campo de data com máscara (caso tenha valor default)
+
   const eventoDataInput = eventoForm.elements.data;
   if (eventoDataInput) {
     eventoDataInput.value = formatEventoDate(eventoDataInput.value);
@@ -8242,7 +8148,7 @@ if (eventoForm) {
       const prev = input.value;
       const next = formatEventoDate(prev);
       input.value = next;
-      // reposiciona cursor de forma inteligente
+
       const diff = next.length - prev.length;
       if (diff !== 0) input.setSelectionRange(pos + diff, pos + diff);
       input.setCustomValidity("");
@@ -8255,7 +8161,6 @@ if (eventoForm) {
     const form = new FormData(formElement);
     const id = form.get("id");
 
-    // converte dd/mm/aaaa → yyyy-mm-dd para salvar
     const dataDisplay = String(form.get("data") || "");
     const dataIso = eventoDateToIso(dataDisplay);
     if (!dataIso) {
@@ -8549,13 +8454,11 @@ document.querySelectorAll("[data-user-setting]").forEach((field) => {
 
 document.addEventListener("keydown", handleSettingsKeyboardShortcut);
 
-// Function to initialize account settings form
 function initializeAccountSettingsForm() {
   currentUserSettings = loadUserSettings();
   applyUserSettings();
   renderAccountSettings();
-  
-  // Handle file input changes
+
   const fotoInput = document.getElementById("foto-perfil-input");
   if (fotoInput) {
     fotoInput.addEventListener("change", (e) => {
@@ -8570,38 +8473,36 @@ function initializeAccountSettingsForm() {
   }
 }
 
-// Function to validate account update
 function validateAccountUpdate(newName, fotoFile) {
   const errors = [];
-  
+
   if (newName && newName.length < 2) {
     errors.push("Nome deve ter pelo menos 2 caracteres.");
   }
-  
+
   if (newName && newName.length > 100) {
     errors.push("Nome nao pode ter mais de 100 caracteres.");
   }
-  
+
   if (fotoFile && fotoFile.name) {
     const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
     if (!allowedTypes.has(fotoFile.type)) {
       errors.push("Use uma imagem em formato JPG, PNG ou WEBP.");
     }
-    
+
     const maxSizeMB = 5;
     if (fotoFile.size > maxSizeMB * 1024 * 1024) {
       errors.push(`Imagem nao pode exceder ${maxSizeMB} MB.`);
     }
-    
+
     if (fotoFile.size < 1) {
       errors.push("Arquivo de imagem invalido.");
     }
   }
-  
+
   return { isValid: errors.length === 0, errors };
 }
 
-// Function to set form loading state
 function setAccountFormLoading(isLoading) {
   const submitBtn = document.querySelector("#conta-form .primary-button");
   if (submitBtn) {
@@ -8620,14 +8521,12 @@ if (contaForm) {
     const newName = String(form.get("novo_nome") || "").trim();
     const fotoFile = form.get("foto_perfil");
 
-    // Validate form
     const validation = validateAccountUpdate(newName, fotoFile);
     if (!validation.isValid) {
       showModal("Erro de validacao", validation.errors.join("\n"), "error");
       return;
     }
 
-    // Show loading state
     setAccountFormLoading(true);
 
     let fotoUrl = null;
@@ -8645,7 +8544,7 @@ if (contaForm) {
 
     const success = await updateCurrentAccount("", newName || null, "", fotoUrl);
     setAccountFormLoading(false);
-    
+
     if (success) {
       formElement.reset();
       const filenameLabel = document.getElementById("foto-perfil-filename");
@@ -8657,7 +8556,6 @@ if (contaForm) {
   });
 }
 
-// Initialize account settings when section is visible
 document.querySelectorAll("[data-settings-target]").forEach((button) => {
   if (button.dataset.settingsTarget === "settings-account-panel") {
     button.addEventListener("click", () => {
@@ -8666,7 +8564,6 @@ document.querySelectorAll("[data-settings-target]").forEach((button) => {
   }
 });
 
-// Initialize on page load
 initializeAccountSettingsForm();
 
 const candidaturaForm = document.getElementById("candidatura-form");
@@ -8921,10 +8818,7 @@ async function initializeAppData() {
   populateEpiSelects();
   supabaseClient = getSupabaseClient();
   if (isPublicPage()) {
-    // Popouts e som de notificacao sao exclusivos do index (o app interno) -
-    // paginas publicas (vagas, denuncia, chamados, candidatura, documentos)
-    // nao devem disparar nenhum dos dois, mesmo com um usuario logado
-    // navegando nelas.
+
     loadPublicData();
     return;
   }
@@ -8945,10 +8839,6 @@ setupLogin().then((canInitialize) => {
   if (canInitialize) initializeAppData();
 });
 
-// O navegador pode restaurar a pagina inteira do bfcache (ex: botao voltar)
-// com o ultimo estado renderizado (dados antigos ja visiveis), sem rodar o
-// JS de novo. Ao restaurar assim, escondemos o conteudo de novo e refazemos
-// a checagem de sessao + busca de dados, para nunca mostrar dados velhos.
 window.addEventListener("pageshow", (event) => {
   if (!event.persisted) return;
   document.getElementById("app-shell")?.classList.remove("is-ready");
@@ -8991,10 +8881,10 @@ function editarDocumento(id) {
 
   document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
   document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
-  
+
   const tabButton = document.querySelector(`.doc-tab[data-doc="${doc.type}"]`);
   if (tabButton) tabButton.classList.add("active");
-  
+
   const viewElement = document.getElementById(`doc-${doc.type}`);
   if (viewElement) viewElement.classList.add("active");
 
@@ -9082,7 +8972,7 @@ function editarEvento(id) {
 
   form.elements.id.value = evento.id;
   form.elements.titulo.value = evento.titulo || "";
-  // converte ISO yyyy-mm-dd para dd/mm/aaaa na máscara
+
   form.elements.data.value = formatEventoDate(evento.data || "");
   form.elements.horario.value = evento.horario || "";
   form.elements.responsavel.value = evento.responsavel || "";
@@ -9526,7 +9416,6 @@ function downloadStyledRhDocument(doc, title) {
 
           .document { width: 100%; }
 
-          /* Letterhead */
           .letterhead { display: table; width: 100%; padding-bottom: 12px; border-bottom: 3px solid #1f3a3a; }
           .letterhead-brand, .letterhead-meta { display: table-cell; vertical-align: bottom; }
           .letterhead-brand h1 { margin: 0; font-size: 20px; font-weight: 700; color: #1f3a3a; letter-spacing: 2px; }
@@ -9534,34 +9423,28 @@ function downloadStyledRhDocument(doc, title) {
           .letterhead-meta { text-align: right; font-size: 9px; color: #4b5b5b; line-height: 1.6; }
           .letterhead-meta strong { color: #1f3a3a; }
 
-          /* Title block */
           .doc-title { margin-top: 18px; margin-bottom: 4px; }
           .doc-title .doc-kicker { margin: 0; font-size: 9px; font-weight: 700; color: #1f7a6f; text-transform: uppercase; letter-spacing: 2px; }
           .doc-title h2 { margin: 4px 0 0; font-size: 17px; font-weight: 700; color: #1f2933; }
           .doc-title p { margin: 5px 0 0; font-size: 10.5px; color: #6b7c7c; font-style: italic; }
           .doc-title-rule { height: 1px; background: #d8e0e0; margin: 12px 0 18px; }
 
-          /* Section heading */
           .section-heading { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; margin: 0 0 10px; border-bottom: 1px solid #1f3a3a; }
 
-          /* Data table */
           .data-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
           .data-table td { border: 1px solid #d8e0e0; padding: 7px 10px; vertical-align: top; }
           .data-table td.label-cell { width: 32%; background: #f4f7f7; font-size: 9px; font-weight: 700; color: #4b5b5b; text-transform: uppercase; letter-spacing: .5px; }
           .data-table td.value-cell { font-size: 11px; color: #1f2933; font-weight: 500; }
 
-          /* Long-form notes */
           .note-section { margin-top: 16px; }
           .note-section h3 { margin: 0 0 6px; font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; border-bottom: 1px solid #1f3a3a; }
           .note-section p { margin: 0; padding: 10px 12px; border: 1px solid #d8e0e0; border-radius: 2px; min-height: 46px; line-height: 1.65; white-space: normal; color: #344048; background: #fafcfc; }
 
-          /* Signatures */
           .signature-box { display: table; width: 100%; margin-top: 56px; table-layout: fixed; }
           .signature-col { display: table-cell; width: 50%; padding: 0 24px; text-align: center; }
           .signature-line { border-top: 1px solid #1f2933; margin: 0 0 6px; }
           .signature-col span { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: .8px; }
 
-          /* Footer */
           .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #d8e0e0; color: #9aa8a8; font-size: 8.5px; text-align: center; letter-spacing: .5px; text-transform: uppercase; }
         </style>
       </head>
@@ -9616,7 +9499,6 @@ document.addEventListener('click', (event) => {
 
   const { action, id } = target.dataset;
 
-  // Ação especial para não fazer nada, útil para checkboxes dentro de elementos clicáveis
   if (action === 'no-op') {
     if (target.classList.contains("denuncia-select")) {
       const denunciaId = String(target.value || "");
@@ -9627,7 +9509,6 @@ document.addEventListener('click', (event) => {
     return;
   }
 
-  // Ações que precisam de stopPropagation
   if (['reabrir-denuncia', 'reabrir-chamado', 'toggle-denuncia-selection', 'toggle-chamado-selection'].includes(action)) {
     event.stopPropagation();
   }
@@ -9714,9 +9595,7 @@ document.addEventListener('click', (event) => {
       break;
   }
 });
-/* ==================== TRACKER MODAL ==================== */
 
-// Classe para gerenciar o modal de acompanhamento
 class NotificationTracker {
   constructor() {
     this.modal = document.getElementById("tracker-modal");
@@ -10294,7 +10173,6 @@ class NotificationTracker {
   }
 }
 
-// Inicializar quando o DOM estiver pronto
 function maybeOpenNotificationTrackerFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -10318,27 +10196,12 @@ document.addEventListener('DOMContentLoaded', () => {
   maybeOpenNotificationTrackerFromUrl();
 });
 
-// Enquanto o topo da lista de vagas estiver visivel na tela, ela mostra 1
-// vaga por linha (coluna estreita, ao lado do formulario). So depois de
-// rolar o equivalente a uma vaga inteira alem do topo da lista e' que ela
-// expande pra 2 por linha - assim a proxima vaga comeca no topo da area
-// visivel e nenhuma fica cortada pela troca.
-// IMPORTANTE: observa um marcador fixo (#vagas-scroll-sentinel) que nunca
-// muda de tamanho ou posicao - nunca o proprio #vagas-list, cuja altura
-// MUDA justamente por causa da classe que este observer liga/desliga
-// (1 coluna e' mais alta, 2 colunas e' mais baixa). Observar o proprio
-// alvo que a troca redimensiona cria um loop infinito: troca -> muda
-// altura -> dispara o observer de novo -> troca de novo.
 function setupVagasFormScrollGrid() {
   const sentinel = document.getElementById("vagas-scroll-sentinel");
   const list = document.getElementById("vagas-list");
   const workspace = document.getElementById("vaga-form")?.closest(".workspace");
   if (!sentinel || !list || !workspace || !("IntersectionObserver" in window)) return;
 
-  // Cards de vaga tem altura bem variavel (descricao/requisitos mais longos
-  // ou mais curtos). Em vez de um valor fixo, mede a altura real do
-  // primeiro card e usa isso como margem, com uma folga pequena - a troca
-  // acontece so depois que essa 1a vaga passa inteira pela tela.
   function medirAlturaPrimeiraVaga() {
     const primeiroCard = list.querySelector(".item-card");
     if (!primeiroCard) return 420;
@@ -10354,17 +10217,10 @@ function setupVagasFormScrollGrid() {
     observer = new IntersectionObserver(
       ([entry]) => {
         const expandido = !entry.isIntersecting;
-        // So mexe em algo quando o estado realmente muda. Sem essa
-        // checagem, recriar o observer (abaixo) ou o proprio
-        // IntersectionObserver disparando de novo com o mesmo resultado
-        // ficava trocando as classes sem necessidade.
+
         if (expandido === expandidoAtual) return;
         expandidoAtual = expandido;
-        // Deixa o navegador cuidar da rolagem sozinho aqui - qualquer
-        // tentativa de corrigir/travar a posicao manualmente (via
-        // window.scrollBy) e' o que vinha causando os bugs de rolagem
-        // (pular pro topo da pagina, travar etc). O reflow ao trocar de
-        // coluna e' suave por conta da transicao no CSS.
+
         list.classList.toggle("vagas-two-col", expandido);
         workspace.classList.toggle("vagas-workspace-expanded", expandido);
       },
@@ -10373,9 +10229,6 @@ function setupVagasFormScrollGrid() {
     observer.observe(sentinel);
   }
 
-  // So cria o observer de verdade quando o primeiro card ja existir - criar
-  // antes disso usa um valor "chute" (420px) que pode disparar a troca cedo
-  // demais e depois desfazer sozinho assim que a medida real chega.
   let tentativas = 0;
   const esperarPrimeiroCard = window.setInterval(() => {
     tentativas += 1;
@@ -10398,20 +10251,14 @@ window.addEventListener("storage", (event) => {
   try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
 });
 
-// Manter compatibilidade com botões antigos
 document.addEventListener('DOMContentLoaded', () => {
   const prevBtn = document.getElementById('dashboard-notifications-prev');
   const nextBtn = document.getElementById('dashboard-notifications-next');
-  
+
   if (prevBtn) prevBtn.style.display = 'none';
   if (nextBtn) nextBtn.style.display = 'none';
 });
-/* ==========================================================================
-   PERMISSÃO ARIEL + FEEDBACKS/RECLAMAÇÕES/SUGESTÕES
-   - Equipe visível somente para o usuário Ariel
-   - Nova aba em Conta > Configurações para envio de feedbacks
-   - Ariel visualiza todos os envios
-   ========================================================================== */
+
 (function setupArielAccessAndFeedbackModule() {
   const FEEDBACK_TABLE = "hub_feedbacks";
   const FEEDBACK_LOCAL_KEY = "hub-feedbacks-local-v1";
@@ -10614,8 +10461,6 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       event.stopPropagation();
 
-      // Quando o botão vem do menu do usuário, precisa abrir a aba Conta antes
-      // de selecionar o painel interno de Feedbacks.
       activateView?.("conta");
       ensureFeedbackSettingsUi();
       showSettingsPanel?.(FEEDBACK_PANEL_ID);
@@ -10818,7 +10663,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtered = filter === "todos" ? items : items.filter((item) => item.tipo === filter);
 
     if (isArielUser()) {
-      // Ariel somente visualiza os envios recebidos. Ele não envia por esta aba.
+
       renderFeedbackItems(document.getElementById("hub-feedback-admin-list"), filtered, { admin: true });
     } else {
       renderFeedbackItems(document.getElementById("hub-feedback-user-list"), items, { canDelete: true });

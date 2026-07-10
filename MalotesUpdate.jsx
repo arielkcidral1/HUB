@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient'; // Ajuste o caminho conforme necessário
+import { supabase } from '@/lib/supabaseClient';
 
 export default function MalotesUpdate() {
   const [malotes, setMalotes] = useState([]);
@@ -15,7 +15,6 @@ export default function MalotesUpdate() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  // Carregar os registros de malotes
   useEffect(() => {
     fetchMalotes();
   }, []);
@@ -77,7 +76,6 @@ export default function MalotesUpdate() {
       setLoading(true);
       setError(null);
 
-      // Validação básica
       if (!formData.destino.trim()) {
         setError('Destino é obrigatório');
         setLoading(false);
@@ -90,7 +88,6 @@ export default function MalotesUpdate() {
         return;
       }
 
-      // Buscar o registro atual para garantir campos obrigatórios
       const { data: maloteAtual, error: fetchError } = await supabase
         .from('hub_malotes')
         .select('*')
@@ -101,7 +98,6 @@ export default function MalotesUpdate() {
         throw fetchError;
       }
 
-      // Atualizar o registro com TODOS os campos obrigatórios
       const { data, error } = await supabase
         .from('hub_malotes')
         .update({
@@ -109,10 +105,10 @@ export default function MalotesUpdate() {
           epis: formData.epis || maloteAtual.epis,
           status: formData.status || maloteAtual.status,
           observacoes: formData.observacoes || maloteAtual.observacoes,
-          origem: maloteAtual.origem, // Campo obrigatório - preservar
+          origem: maloteAtual.origem,
           updated_by: formData.updated_by,
-          created_by: maloteAtual.created_by, // Preservar
-          codigo_solicitacao: maloteAtual.codigo_solicitacao // Preservar
+          created_by: maloteAtual.created_by,
+          codigo_solicitacao: maloteAtual.codigo_solicitacao
         })
         .eq('id', maloteId)
         .select();
@@ -124,10 +120,8 @@ export default function MalotesUpdate() {
       setSuccess('Registro atualizado com sucesso!');
       setEditingId(null);
       
-      // Recarregar os dados
       await fetchMalotes();
 
-      // Limpar mensagem de sucesso após 3 segundos
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Erro ao atualizar malote:', err);
@@ -141,7 +135,6 @@ export default function MalotesUpdate() {
     <div className="p-6 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Gerenciar Malotes</h1>
 
-      {/* Mensagens de erro e sucesso */}
       {error && (
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
           {error}
@@ -154,7 +147,6 @@ export default function MalotesUpdate() {
         </div>
       )}
 
-      {/* Tabela de malotes */}
       {loading && !editingId ? (
         <div className="text-center py-8">Carregando...</div>
       ) : (
@@ -174,7 +166,6 @@ export default function MalotesUpdate() {
               {malotes.map((malote) => (
                 <tr key={malote.id} className="hover:bg-gray-50">
                   {editingId === malote.id ? (
-                    // Modo edição
                     <>
                       <td className="border p-2">{malote.id}</td>
                       <td className="border p-2">
@@ -240,7 +231,6 @@ export default function MalotesUpdate() {
                       </td>
                     </>
                   ) : (
-                    // Modo visualização
                     <>
                       <td className="border p-2">{malote.id}</td>
                       <td className="border p-2">{malote.destino}</td>

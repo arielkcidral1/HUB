@@ -1,18 +1,9 @@
-/* ==========================================================================
-   APRIMORAMENTO: Tamanho de Mensagens em Todo o Sistema
-   Altera o tamanho de todos os textos quando alterado via settings
-   ========================================================================== */
-
-/* ────────────────────────────────────────────────────────────────────────
-   MODO PEQUENO: Reduz tamanho de todo texto do sistema
-   ──────────────────────────────────────────────────────────────────────── */
 
 .user-setting-message-small {
   --text-scale: 0.85;
   font-size: calc(15px * var(--text-scale));
 }
 
-/* Textos principais */
 .user-setting-message-small h1,
 .user-setting-message-small h2,
 .user-setting-message-small h3,
@@ -22,7 +13,6 @@
   font-size: inherit;
 }
 
-/* Chat e mensagens */
 .user-setting-message-small .chat-message,
 .user-setting-message-small .chat-message p {
   font-size: 12px !important;
@@ -36,13 +26,11 @@
   font-size: 10.5px !important;
 }
 
-/* Navegação */
 .user-setting-message-small .nav-item,
 .user-setting-message-small .nav-list button {
   font-size: 13px;
 }
 
-/* Painel */
 .user-setting-message-small .panel,
 .user-setting-message-small .panel-header,
 .user-setting-message-small .panel-header h2,
@@ -55,7 +43,6 @@
   font-size: 20px;
 }
 
-/* Cards e items */
 .user-setting-message-small .metric-card,
 .user-setting-message-small .item-card,
 .user-setting-message-small .channel-item {
@@ -70,14 +57,12 @@
   font-size: 24px;
 }
 
-/* Tabelas */
 .user-setting-message-small table,
 .user-setting-message-small th,
 .user-setting-message-small td {
   font-size: 12px;
 }
 
-/* Labels e inputs */
 .user-setting-message-small label,
 .user-setting-message-small input,
 .user-setting-message-small select,
@@ -85,12 +70,10 @@
   font-size: 13px;
 }
 
-/* Buttons */
 .user-setting-message-small button {
   font-size: 13px;
 }
 
-/* Modais e dropdowns */
 .user-setting-message-small .modal,
 .user-setting-message-small .dropdown,
 .user-setting-message-small .menu {
@@ -105,27 +88,20 @@
   font-size: 11px;
 }
 
-/* Eyebrow e títulos */
 .user-setting-message-small .eyebrow {
   font-size: 11px;
 }
 
-/* Descrições e metas */
 .user-setting-message-small .item-meta,
 .user-setting-message-small small {
   font-size: 12px;
 }
-
-/* ────────────────────────────────────────────────────────────────────────
-   MODO GRANDE: Aumenta tamanho de todo texto do sistema
-   ──────────────────────────────────────────────────────────────────────── */
 
 .user-setting-message-large {
   --text-scale: 1.2;
   font-size: calc(15px * var(--text-scale));
 }
 
-/* Chat e mensagens */
 .user-setting-message-large .chat-message,
 .user-setting-message-large .chat-message p {
   font-size: 18px !important;
@@ -139,19 +115,16 @@
   font-size: 13px !important;
 }
 
-/* Navegação */
 .user-setting-message-large .nav-item,
 .user-setting-message-large .nav-list button {
   font-size: 17px;
 }
 
-/* Painel */
 .user-setting-message-large .panel-header h2,
 .user-setting-message-large .panel-header h3 {
   font-size: 28px;
 }
 
-/* Cards e items */
 .user-setting-message-large .metric-card,
 .user-setting-message-large .item-card,
 .user-setting-message-large .channel-item {
@@ -166,14 +139,12 @@
   font-size: 32px;
 }
 
-/* Tabelas */
 .user-setting-message-large table,
 .user-setting-message-large th,
 .user-setting-message-large td {
   font-size: 16px;
 }
 
-/* Labels e inputs */
 .user-setting-message-large label,
 .user-setting-message-large input,
 .user-setting-message-large select,
@@ -181,12 +152,10 @@
   font-size: 17px;
 }
 
-/* Buttons */
 .user-setting-message-large button {
   font-size: 17px;
 }
 
-/* Modais e dropdowns */
 .user-setting-message-large .modal,
 .user-setting-message-large .dropdown,
 .user-setting-message-large .menu {
@@ -201,21 +170,14 @@
   font-size: 14px;
 }
 
-/* Eyebrow e títulos */
 .user-setting-message-large .eyebrow {
   font-size: 14px;
 }
 
-/* Descrições e metas */
 .user-setting-message-large .item-meta,
 .user-setting-message-large small {
   font-size: 16px;
 }
-
-/* ────────────────────────────────────────────────────────────────────────
-   AJUSTES DE ESPAÇAMENTO
-   ────────────────────────────────────────────────────────────────────────
-   O tamanho maior também deve aumentar espaçamentos proporcionalmente */
 
 .user-setting-message-large .chat-message {
   padding: 12px 16px;
@@ -242,11 +204,6 @@
 .user-setting-message-small .item-card {
   padding: 12px;
 }
-
-/* ────────────────────────────────────────────────────────────────────────
-   AJUSTES DE ALTURA DE LINHA
-   ────────────────────────────────────────────────────────────────────────
-   Melhor legibilidade em tamanhos diferentes */
 
 .user-setting-message-small {
   line-height: 1.4;

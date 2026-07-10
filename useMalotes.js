@@ -1,18 +1,11 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient'; // Ajuste o caminho conforme necessário
+import { supabase } from '@/lib/supabaseClient';
 
-/**
- * Hook customizado para gerenciar operações CRUD de malotes
- * Fornece funções para listar, atualizar e gerenciar registros de malotes
- */
 export function useMalotes() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [malotes, setMalotes] = useState([]);
 
-  /**
-   * Busca todos os registros de malotes do Supabase
-   */
   const fetchMalotes = useCallback(async () => {
     try {
       setLoading(true);
@@ -39,9 +32,6 @@ export function useMalotes() {
     }
   }, []);
 
-  /**
-   * Busca um malote específico por ID
-   */
   const getMaloteById = useCallback(async (id) => {
     try {
       setLoading(true);
@@ -68,16 +58,11 @@ export function useMalotes() {
     }
   }, []);
 
-  /**
-   * Atualiza um registro de malote
-   * IMPORTANTE: O campo 'updated_by' deve conter o nome do colaborador que recebe o EPI
-   */
   const updateMalote = useCallback(async (id, updates) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Validações
       if (!updates.destino || !updates.destino.trim()) {
         throw new Error('Destino é obrigatório');
       }
@@ -86,7 +71,6 @@ export function useMalotes() {
         throw new Error('Nome do colaborador que recebe o EPI é obrigatório');
       }
 
-      // Buscar o registro atual para garantir campos obrigatórios
       const { data: maloteAtual, error: fetchError } = await supabase
         .from('hub_malotes')
         .select('*')
@@ -97,16 +81,15 @@ export function useMalotes() {
         throw new Error(`Erro ao buscar registro: ${fetchError.message}`);
       }
 
-      // Preparar dados para atualização com TODOS os campos obrigatórios
       const dataToUpdate = {
         destino: updates.destino?.trim() || maloteAtual.destino,
         epis: updates.epis || maloteAtual.epis,
         status: updates.status || maloteAtual.status,
-        origem: maloteAtual.origem, // Campo obrigatório
+        origem: maloteAtual.origem,
         observacoes: updates.observacoes || maloteAtual.observacoes,
-        updated_by: updates.updated_by.trim(), // Nome do colaborador
-        created_by: maloteAtual.created_by, // Preservar criador
-        codigo_solicitacao: maloteAtual.codigo_solicitacao // Preservar código
+        updated_by: updates.updated_by.trim(),
+        created_by: maloteAtual.created_by,
+        codigo_solicitacao: maloteAtual.codigo_solicitacao
       };
 
       const { data, error: supabaseError } = await supabase
@@ -119,7 +102,6 @@ export function useMalotes() {
         throw new Error(`Erro ao atualizar: ${supabaseError.message}`);
       }
 
-      // Atualizar o array local
       setMalotes(prevMalotes =>
         prevMalotes.map(m => m.id === id ? { ...m, ...dataToUpdate } : m)
       );
@@ -135,9 +117,6 @@ export function useMalotes() {
     }
   }, []);
 
-  /**
-   * Atualiza especificamente o nome do colaborador que recebe o EPI
-   */
   const updateColaborador = useCallback(async (id, nomColaborador) => {
     try {
       setLoading(true);
@@ -147,7 +126,6 @@ export function useMalotes() {
         throw new Error('Nome do colaborador é obrigatório');
       }
 
-      // Primeiro, busca o registro atual para pegar todos os campos obrigatórios
       const { data: maloteAtual, error: fetchError } = await supabase
         .from('hub_malotes')
         .select('*')
@@ -158,7 +136,6 @@ export function useMalotes() {
         throw new Error(`Erro ao buscar registro: ${fetchError.message}`);
       }
 
-      // Atualiza com TODOS os campos (especialmente os obrigatórios)
       const { data, error: supabaseError } = await supabase
         .from('hub_malotes')
         .update({
@@ -167,7 +144,7 @@ export function useMalotes() {
           status: maloteAtual.status,
           origem: maloteAtual.origem,
           observacoes: maloteAtual.observacoes,
-          updated_by: nomColaborador.trim() // ← O campo que você quer atualizar
+          updated_by: nomColaborador.trim()
         })
         .eq('id', id)
         .select();
@@ -176,7 +153,6 @@ export function useMalotes() {
         throw new Error(`Erro ao atualizar colaborador: ${supabaseError.message}`);
       }
 
-      // Atualizar o array local
       setMalotes(prevMalotes =>
         prevMalotes.map(m =>
           m.id === id ? { ...m, updated_by: nomColaborador.trim() } : m
@@ -194,9 +170,6 @@ export function useMalotes() {
     }
   }, []);
 
-  /**
-   * Cria um novo registro de malote
-   */
   const createMalote = useCallback(async (maloteData) => {
     try {
       setLoading(true);
@@ -228,7 +201,6 @@ export function useMalotes() {
         throw new Error(`Erro ao criar malote: ${supabaseError.message}`);
       }
 
-      // Adicionar ao array local
       if (data && data.length > 0) {
         setMalotes(prevMalotes => [data[0], ...prevMalotes]);
       }
@@ -244,9 +216,6 @@ export function useMalotes() {
     }
   }, []);
 
-  /**
-   * Deleta um registro de malote
-   */
   const deleteMalote = useCallback(async (id) => {
     try {
       setLoading(true);
@@ -261,7 +230,6 @@ export function useMalotes() {
         throw new Error(`Erro ao deletar malote: ${supabaseError.message}`);
       }
 
-      // Remover do array local
       setMalotes(prevMalotes => prevMalotes.filter(m => m.id !== id));
 
       return true;
@@ -275,9 +243,6 @@ export function useMalotes() {
     }
   }, []);
 
-  /**
-   * Limpa o estado de erro
-   */
   const clearError = useCallback(() => {
     setError(null);
   }, []);
