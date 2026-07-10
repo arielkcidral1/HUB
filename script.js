@@ -2762,6 +2762,7 @@ if (collection === "malotes") {
       cargo: row.cargo || "",
       foto_perfil: row.foto_perfil || "",
       lastSeen: row.last_seen || "",
+      isOnline: Boolean(row.is_online),
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
@@ -6859,7 +6860,11 @@ function isUserOnline(authorName) {
   const normalized = normalizeLoginName(authorName);
   if (normalized === normalizeLoginName(getCurrentUserName())) return true;
   const user = (data.usuarios || []).find((u) => normalizeLoginName(u.nome) === normalized);
-  if (!user?.lastSeen) return false;
+  if (!user?.isOnline) return false;
+  // Rede de seguranca: se o navegador fechou sem disparar o aviso de saida
+  // (crash, forcar fechar etc.), o "is_online" pode ficar preso em true -
+  // nesse caso, o last_seen desatualizado ainda derruba o status pra offline.
+  if (!user.lastSeen) return false;
   return Date.now() - new Date(user.lastSeen).getTime() < PRESENCE_ONLINE_THRESHOLD_MS;
 }
 
@@ -8854,6 +8859,20 @@ function setupPresenceHeartbeat() {
     if (!isAuthenticated()) return;
     fetch("/api/auth/heartbeat", { method: "POST", credentials: "include" }).catch(() => {});
   };
+
+  // Ao fechar a aba/navegador ou sair da pagina, avisa o servidor que o
+  // usuario ficou offline na hora - sendBeacon entrega a chamada mesmo com a
+  // pagina sendo descarregada (fetch normal seria cancelado nesse momento).
+  const sendOfflineBeacon = () => {
+    if (!isAuthenticated()) return;
+    navigator.sendBeacon?.("/api/auth/heartbeat", new Blob([JSON.stringify({ online: false })], { type: "application/json" }));
+  };
+
+  window.addEventListener("pagehide", sendOfflineBeacon);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") sendOfflineBeacon();
+    else sendHeartbeat();
+  });
 
   sendHeartbeat();
   window.setInterval(sendHeartbeat, 20000);
