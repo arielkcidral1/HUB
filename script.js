@@ -10323,24 +10323,38 @@ document.addEventListener('DOMContentLoaded', () => {
   maybeOpenNotificationTrackerFromUrl();
 });
 
-// Enquanto o formulario "Cadastrar vaga" estiver visivel na tela, a lista ao
-// lado mostra 1 vaga por linha (coluna estreita); ao rolar para alem da
-// visualizacao do formulario, a lista passa a exibir 2 vagas por linha.
+// Enquanto a primeira vaga da lista estiver (ainda que parcialmente) visivel
+// na tela, a lista mostra 1 vaga por linha (coluna estreita, ao lado do
+// formulario). So depois que essa primeira vaga passa inteira pela tela (ou
+// seja, a proxima vaga ja comeca no topo da area visivel) e' que a lista
+// expande pra 2 por linha - assim nenhuma vaga fica cortada pela troca.
 function setupVagasFormScrollGrid() {
-  const form = document.getElementById("vaga-form");
   const list = document.getElementById("vagas-list");
-  const workspace = form?.closest(".workspace");
-  if (!form || !list || !workspace || !("IntersectionObserver" in window)) return;
+  const workspace = document.getElementById("vaga-form")?.closest(".workspace");
+  if (!list || !workspace || !("IntersectionObserver" in window)) return;
 
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      const expandido = !entry.isIntersecting;
-      list.classList.toggle("vagas-two-col", expandido);
-      workspace.classList.toggle("vagas-workspace-expanded", expandido);
-    },
-    { threshold: 0 }
-  );
-  observer.observe(form);
+  let cardObserver = null;
+  let observedCard = null;
+
+  function toggleExpanded(expandido) {
+    list.classList.toggle("vagas-two-col", expandido);
+    workspace.classList.toggle("vagas-workspace-expanded", expandido);
+  }
+
+  function attachToFirstCard() {
+    const firstCard = list.querySelector(".item-card");
+    if (!firstCard || firstCard === observedCard) return;
+    cardObserver?.disconnect();
+    observedCard = firstCard;
+    cardObserver = new IntersectionObserver(
+      ([entry]) => toggleExpanded(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    cardObserver.observe(firstCard);
+  }
+
+  attachToFirstCard();
+  new MutationObserver(attachToFirstCard).observe(list, { childList: true });
 }
 
 document.addEventListener('DOMContentLoaded', setupVagasFormScrollGrid);
