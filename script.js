@@ -10343,9 +10343,9 @@ function setupVagasFormScrollGrid() {
   // Cards de vaga tem altura bem variavel (descricao/requisitos mais longos
   // ou mais curtos). Em vez de um valor fixo (que deixava vagas mais altas,
   // tipo a de GCS, ficarem cortadas/com botoes inalcancaveis pela troca),
-  // mede a altura real dos 2 primeiros cards (com folga generosa) e usa
-  // isso como margem - garantindo que o limite da troca fica bem abaixo
-  // deles, nao em cima dos botoes de Editar/Excluir.
+  // mede a altura real dos 2 primeiros cards e usa isso como margem, com
+  // uma folga pequena (so o suficiente pra passar alguns pixels da 2a vaga,
+  // sem segurar a troca por mais tempo que isso).
   function medirAlturaPrimeiraVaga() {
     const cards = list.querySelectorAll(".item-card");
     if (!cards.length) return 420;
@@ -10353,7 +10353,7 @@ function setupVagasFormScrollGrid() {
     for (let i = 0; i < Math.min(2, cards.length); i += 1) {
       altura += cards[i].getBoundingClientRect().height;
     }
-    return altura + 200;
+    return altura + 24;
   }
 
   let observer = null;
