@@ -1181,7 +1181,7 @@ textarea {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: #FAFBFC;
+  background: var(--surface-soft);
   color: var(--ink);
   padding: 11px 13px;
   outline: none;
@@ -1192,14 +1192,14 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  background: #FFFFFF;
+  background: var(--surface-raised);
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgba(12, 98, 89, 0.1);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #B0BBC8;
+  color: var(--muted);
 }
 
 textarea {
@@ -1804,7 +1804,7 @@ textarea {
   line-height: 1.45;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: #FAFBFC;
+  background: var(--surface-soft);
   color: var(--ink);
   padding: 11px 13px;
   outline: none;
@@ -1816,14 +1816,14 @@ textarea {
 }
 
 .chat-message-editor:focus {
-  background: #FFFFFF;
+  background: var(--surface-raised);
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgba(12, 98, 89, 0.1);
 }
 
 .chat-message-editor:empty::before {
   content: attr(data-placeholder);
-  color: #B0BBC8;
+  color: var(--muted);
   pointer-events: none;
 }
 
