@@ -2753,6 +2753,7 @@ if (collection === "malotes") {
       unidade: row.unidade || "",
       mes: row.mes || "",
       diasUteis: row.dias_uteis || 0,
+      passagensDia: Number(row.passagens_dia) || 1,
       valorPassagem: Number(row.valor_passagem) || 0,
       saldoAtual: Number(row.saldo_atual) || 0,
       valorNecessario: Number(row.valor_necessario) || 0,
@@ -3096,6 +3097,7 @@ function toDbPayload(collection, values) {
       unidade: values.unidade,
       mes: values.mes,
       dias_uteis: values.diasUteis,
+      passagens_dia: values.passagensDia,
       valor_passagem: values.valorPassagem,
       saldo_atual: values.saldoAtual,
       valor_necessario: values.valorNecessario,
@@ -4504,8 +4506,8 @@ function formatCurrencyInput(value) {
   return `${reais},${centavos}`;
 }
 
-function calculateVtValue(diasUteis, valorPassagem, saldoAtual) {
-  return Math.max(0, (Number(diasUteis) || 0) * (Number(valorPassagem) || 0) - (Number(saldoAtual) || 0));
+function calculateVtValue(diasUteis, valorPassagem, saldoAtual, passagensDia = 1) {
+  return Math.max(0, (Number(diasUteis) || 0) * (Number(passagensDia) || 1) * (Number(valorPassagem) || 0) - (Number(saldoAtual) || 0));
 }
 
 const VT_MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -4520,20 +4522,22 @@ function formatVtMonth(value) {
 
 function updateVtCalculation() {
   const diasUteis = Number(document.getElementById("vt-dias-uteis")?.value || 0);
+  const passagensDia = Number(document.getElementById("vt-passagens-dia")?.value || 0) || 1;
   const valorPassagem = parseBrazilianCurrency(document.getElementById("vt-valor-passagem")?.value || 0);
   const saldoAtual = Number(document.getElementById("vt-saldo-atual")?.value || 0);
-  const total = calculateVtValue(diasUteis, valorPassagem, saldoAtual);
+  const total = calculateVtValue(diasUteis, valorPassagem, saldoAtual, passagensDia);
   const result = document.getElementById("vt-valor-necessario");
   const detail = document.getElementById("vt-calculo-detalhe");
   if (result) result.textContent = formatCurrencyBRL(total);
   if (detail) {
-    detail.textContent = `${diasUteis || 0} dias × ${formatCurrencyBRL(valorPassagem)} - ${formatCurrencyBRL(saldoAtual)} = ${formatCurrencyBRL(total)}`;
+    detail.textContent = `${diasUteis || 0} dias × ${passagensDia} passagem(ns) × ${formatCurrencyBRL(valorPassagem)} - ${formatCurrencyBRL(saldoAtual)} = ${formatCurrencyBRL(total)}`;
   }
 }
 
 function getVtFormValues(formElement) {
   const form = new FormData(formElement);
   const diasUteis = Number(form.get("dias_uteis") || 0);
+  const passagensDia = Number(form.get("passagens_dia") || 0) || 1;
   const valorPassagem = parseBrazilianCurrency(form.get("valor_passagem") || 0);
   const saldoAtual = Number(form.get("saldo_atual") || 0);
   return {
@@ -4541,9 +4545,10 @@ function getVtFormValues(formElement) {
     unidade: String(form.get("unidade") || "").trim(),
     mes: String(form.get("mes") || "").trim(),
     diasUteis,
+    passagensDia,
     valorPassagem,
     saldoAtual,
-    valorNecessario: calculateVtValue(diasUteis, valorPassagem, saldoAtual),
+    valorNecessario: calculateVtValue(diasUteis, valorPassagem, saldoAtual, passagensDia),
   };
 }
 
@@ -4597,6 +4602,7 @@ function getVtReportRows(useFilters = true) {
     unidade: item.unidade || "Não informada",
     mes: formatVtMonth(item.mes),
     diasUteis: Number(item.diasUteis) || 0,
+    passagensDia: Number(item.passagensDia) || 1,
     valorPassagem: Number(item.valorPassagem) || 0,
     saldoAtual: Number(item.saldoAtual) || 0,
     valorNecessario: Number(item.valorNecessario) || 0,
@@ -4667,7 +4673,7 @@ function worksheetRowXml(values, rowIndex, styleId = 0) {
 }
 
 function buildVtReportWorksheet(rows) {
-  const headers = ["Colaborador", "Unidade", "Mês", "Dias úteis", "Valor da passagem", "Saldo atual", "Valor necessário", "Registrado em"];
+  const headers = ["Colaborador", "Unidade", "Mês", "Dias úteis", "Passagens/dia", "Valor da passagem", "Saldo atual", "Valor necessário", "Registrado em"];
   const sheetRows = [
     worksheetRowXml(["Relatório de Vale Transporte"], 1, 2),
     worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
@@ -4677,6 +4683,7 @@ function buildVtReportWorksheet(rows) {
       item.unidade,
       item.mes,
       item.diasUteis,
+      item.passagensDia,
       item.valorPassagem,
       item.saldoAtual,
       item.valorNecessario,
@@ -4686,16 +4693,16 @@ function buildVtReportWorksheet(rows) {
   const lastRow = rows.length + 5;
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="A1:H${lastRow}"/>
+  <dimension ref="A1:I${lastRow}"/>
   <cols>
     <col min="1" max="1" width="30" customWidth="1"/>
     <col min="2" max="3" width="18" customWidth="1"/>
-    <col min="4" max="4" width="12" customWidth="1"/>
-    <col min="5" max="7" width="18" customWidth="1"/>
-    <col min="8" max="8" width="22" customWidth="1"/>
+    <col min="4" max="5" width="12" customWidth="1"/>
+    <col min="6" max="8" width="18" customWidth="1"/>
+    <col min="9" max="9" width="22" customWidth="1"/>
   </cols>
   <sheetData>${sheetRows.join("")}</sheetData>
-  <mergeCells count="2"><mergeCell ref="A1:H1"/><mergeCell ref="A2:H2"/></mergeCells>
+  <mergeCells count="2"><mergeCell ref="A1:I1"/><mergeCell ref="A2:I2"/></mergeCells>
 </worksheet>`;
 }
 
@@ -4884,6 +4891,7 @@ function renderVtRegistros() {
       <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Não informada")}</p>
       <p><strong>Mês:</strong> ${escapeHtml(formatVtMonth(item.mes))}</p>
       <p><strong>Dias úteis:</strong> ${escapeHtml(String(item.diasUteis || 0))}</p>
+      <p><strong>Passagens usadas por dia:</strong> ${escapeHtml(String(item.passagensDia || 1))}</p>
       <p><strong>Valor da passagem:</strong> ${escapeHtml(formatCurrencyBRL(item.valorPassagem))}</p>
       <p><strong>Saldo atual:</strong> ${escapeHtml(formatCurrencyBRL(item.saldoAtual))}</p>
       <p><strong>Valor registrado:</strong> ${escapeHtml(formatCurrencyBRL(item.valorNecessario))}</p>
@@ -9128,6 +9136,7 @@ function editarVtRegistro(id) {
   setFieldValue(form.elements.unidade, registro.unidade || "");
   setFieldValue(form.elements.mes, formatVtMonth(registro.mes) === "Não informado" ? "" : formatVtMonth(registro.mes));
   form.elements.dias_uteis.value = registro.diasUteis || "";
+  form.elements.passagens_dia.value = registro.passagensDia || 1;
   form.elements.valor_passagem.value = formatCurrencyInput(String(Math.round(Number(registro.valorPassagem || 0) * 100)));
   form.elements.saldo_atual.value = registro.saldoAtual ?? "";
   document.getElementById("cancelar-edicao-vt")?.removeAttribute("hidden");
