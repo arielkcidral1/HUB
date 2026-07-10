@@ -6441,14 +6441,6 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (pollingKey) hubPollingNotificationKeys.add(pollingKey);
 }
 
-function startAuthenticatedNotificationsOnAnyPage() {
-  if (!isAuthenticated()) return;
-  if (currentUserSettings.desktopNotifications && isBrowserNotificationSupported() && Notification.permission === "granted") registerHubNotificationServiceWorker();
-  armDesktopNotificationPermissionRequest();
-  setupRealtime();
-  setupAutoRefresh();
-}
-
 function notifyUnreadRhMessages(count) {
   if (count <= lastUnreadNotificationCount) {
     lastUnreadNotificationCount = count;
@@ -8929,8 +8921,11 @@ async function initializeAppData() {
   populateEpiSelects();
   supabaseClient = getSupabaseClient();
   if (isPublicPage()) {
+    // Popouts e som de notificacao sao exclusivos do index (o app interno) -
+    // paginas publicas (vagas, denuncia, chamados, candidatura, documentos)
+    // nao devem disparar nenhum dos dois, mesmo com um usuario logado
+    // navegando nelas.
     loadPublicData();
-    startAuthenticatedNotificationsOnAnyPage();
     return;
   }
   applyRoleAccess();
