@@ -5558,7 +5558,7 @@ function renderPublicVagas() {
         </div>
         <p><strong>Cidade:</strong> ${escapeHtml(getUnitCity(v.unidade) || "Nao informada.")}</p>
         <p><strong>Descrição:</strong><br>${escapeHtml(v.descricao || "Descricao nao informada.")}</p>
-        <p><strong>Requisitos:</strong> ${escapeHtml(v.requisitos || "Nao informado.")}</p>
+        <p><strong>Requisitos:</strong><br>${escapeHtml(v.requisitos || "Nao informado.")}</p>
         <a class="primary-button button-link" href="candidatura.html?vaga=${encodeURIComponent(v.id)}">Candidatar-se</a>
       </article>
     `).join("");
@@ -5583,7 +5583,7 @@ function renderPublicVagas() {
         </div>
         <p><strong>Cidade:</strong> ${escapeHtml(getUnitCity(job.unidade) || "Nao informada.")}</p>
         <p><strong>Descrição:</strong><br>${escapeHtml(job.descricao || "Descricao nao informada.")}</p>
-        <p><strong>Requisitos:</strong> ${escapeHtml(job.requisitos || "Nao informado.")}</p>
+        <p><strong>Requisitos:</strong><br>${escapeHtml(job.requisitos || "Nao informado.")}</p>
       `;
     }
   }
@@ -6921,7 +6921,7 @@ function renderAll() {
         <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="tag">${escapeHtml(item.status)}</span></div>
         <p><strong>Unidade destinada:</strong> ${escapeHtml(getCanonicalUnit(item.unidade) || "Nao informada.")}</p>
         <p><strong>Descrição:</strong><br>${escapeHtml(item.descricao || "Descricao nao informada.")}</p>
-        <p><strong>Requisitos:</strong> ${escapeHtml(item.requisitos || "Nao informado.")}</p>
+        <p><strong>Requisitos:</strong><br>${escapeHtml(item.requisitos || "Nao informado.")}</p>
         <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</p>
         <div class="job-actions">
           <button class="secondary-link" type="button" data-action="editar-vaga" data-id="${escapeHtml(item.id)}">Editar</button>
