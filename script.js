@@ -5781,7 +5781,10 @@ function syncUserSettingsControls() {
 
 function applyUserSettings() {
   currentUserSettings = normalizeUserSettings(currentUserSettings);
-  document.documentElement.setAttribute("data-theme", currentUserSettings.darkMode ? "dark" : "light");
+  // O modo escuro so existe no index (o app interno) - as demais paginas
+  // (login, formularios publicos, portal de vagas, etc.) ficam sempre claras.
+  const isIndexPage = Boolean(document.getElementById("app-shell"));
+  document.documentElement.setAttribute("data-theme", isIndexPage && currentUserSettings.darkMode ? "dark" : "light");
   document.body?.classList.toggle("user-setting-compact", currentUserSettings.compactMode);
   document.body?.classList.toggle("user-setting-message-small", currentUserSettings.messageSize === "small");
   document.body?.classList.toggle("user-setting-message-large", currentUserSettings.messageSize === "large");
