@@ -53,6 +53,11 @@ export const RECORD_RULES = {
   eventos: { table: "hub_eventos", ...rhOnly },
   vtRegistros: { table: "hub_vt_registros", ...rhOnly },
   documentosContratados: { table: "hub_documentos_contratados", ...rhOnly },
+  documentos: {
+    table: "hub_documentos",
+    read: (user) => isRh(user) || isManager(user),
+    write: (user) => isRh(user) || isManager(user),
+  },
   candidaturas: { table: "hub_candidaturas", ...rhOnly },
   atestados: { table: "hub_atestados", ...rhOnly },
   usuarios: {

@@ -1,5 +1,4 @@
 const STORAGE_KEY = "hub-rh-data";
-const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const CONTRACTOR_PENDING_DOCUMENTS_KEY = "hub-contractor-pending-documents";
 const SESSION_KEY = "hub-rh-session";
 const PUBLIC_CLIENT_ID_KEY = "hub-public-client-id";
@@ -12,7 +11,6 @@ const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
 // não voltam como não lidas.
 const SENSITIVE_CLIENT_CACHE_KEYS = [
   STORAGE_KEY,
-  DOCUMENT_RECORDS_KEY,
   TEAM_USERS_KEY,
   TEAM_CREDENTIALS_KEY,
 ];
@@ -173,6 +171,7 @@ const TABLES = {
   eventos: "hub_eventos",
   vtRegistros: "hub_vt_registros",
   documentosContratados: "hub_documentos_contratados",
+  documentos: "hub_documentos",
   candidaturas: "hub_candidaturas",
   usuarios: USERS_TABLE,
 };
@@ -286,6 +285,7 @@ const defaultData = {
   vtRegistros: [],
   documentosContratados: [],
   candidaturas: [],
+  documentos: [],
   usuarios: [],
 };
 
@@ -295,7 +295,6 @@ let realtimeChannel = null;
 let activeChatChannel = "";
 let refreshTimer = null;
 let refreshInProgress = false;
-let documentRecords = loadDocumentRecords();
 let readRhMessageIds = loadReadRhMessageIds();
 let readNotificationIds = loadReadNotificationIds();
 let currentAuthUser = null;
@@ -1157,12 +1156,9 @@ function loadLocalData() {
       .filter((item) => !String(item.id || "").startsWith("local-") && !item.pendingSync)
       .map(mapContractorDocumentRow),
     candidaturas: parsed.candidaturas || [],
+    documentos: parsed.documentos || [],
     usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
   };
-}
-
-function loadDocumentRecords() {
-  return storageService.getSessionItem(DOCUMENT_RECORDS_KEY, []);
 }
 
 function disableSensitiveFieldAutofill() {
@@ -1207,10 +1203,6 @@ function getPublicClientId() {
     sessionStorage.setItem(PUBLIC_CLIENT_ID_KEY, clientId);
   }
   return clientId;
-}
-
-function saveDocumentRecords() {
-  storageService.setSessionItem(DOCUMENT_RECORDS_KEY, documentRecords);
 }
 
 function saveLocalData() {
@@ -2774,6 +2766,22 @@ if (collection === "malotes") {
     return rows.map(mapContractorDocumentRow);
   }
 
+  if (collection === "documentos") {
+    return rows.map((row) => ({
+      id: row.id,
+      type: row.tipo || "",
+      summary: row.resumo || "",
+      details: row.detalhes || "",
+      formData: row.dados || {},
+      createdBy: row.created_by || getSystemFallbackAuthor(),
+      createdAt: formatDate(row.created_at),
+      updatedBy: row.updated_by || "",
+      updatedAt: row.updated_at ? formatDate(row.updated_at) : "",
+      sortAt: row.created_at || "",
+      updatedSortAt: row.updated_at || "",
+    }));
+  }
+
   if (collection === "usuarios") {
     return rows.map((row) => ({
       id: row.id,
@@ -3105,6 +3113,21 @@ function toDbPayload(collection, values) {
       documentos: values.documentos || [],
       created_by: values.createdBy || "Publico",
     };
+  }
+
+  if (collection === "documentos") {
+    const payload = {
+      tipo: values.type || "",
+      resumo: values.summary || "",
+      detalhes: values.details || "",
+      dados: values.formData || {},
+      created_by: values.createdBy || getCurrentUserName(),
+    };
+    if ("updatedBy" in values) {
+      payload.updated_by = values.updatedBy || null;
+      payload.updated_at = new Date().toISOString();
+    }
+    return payload;
   }
 
   const { createdBy, ...payload } = values;
@@ -4077,9 +4100,10 @@ async function updateItem(collection, id, values) {
 
   try {
     const payload = toDbPayload(collection, values);
-    if (collection === "malotes" || collection === "eventos") {
+    if (collection === "malotes" || collection === "eventos" || collection === "documentos") {
       delete payload.created_by;
       payload.updated_by = values.updatedBy || getCurrentUserName();
+      if (collection === "documentos") payload.updated_at = new Date().toISOString();
     }
     if (collection === "chamados" || collection === "vagas") {
       delete payload.created_by;
@@ -5112,7 +5136,7 @@ function renderDashboard() {
     document.getElementById("metric-eventos").textContent = upcomingEvents.length;
   }
   if (document.getElementById("metric-documentos")) {
-    document.getElementById("metric-documentos").textContent = documentRecords.filter((item) => !isArchivedRecord(item)).length;
+    document.getElementById("metric-documentos").textContent = (data.documentos || []).filter((item) => !isArchivedRecord(item)).length;
   }
 
   // Mensagens do RH aparecem como um único bloco no acompanhamento.
@@ -5221,7 +5245,7 @@ function renderDashboard() {
         systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
         meta: getDashboardSystemUpdateMeta(item),
       })),
-    ...documentRecords
+    ...(data.documentos || [])
       .filter((item) => !isArchivedRecord(item))
       .map((item) => ({
         kind: "documento",
@@ -7113,7 +7137,7 @@ function renderDocumentRecords() {
   const target = document.getElementById("document-records");
   if (!target) return;
 
-  const records = filterDocumentRecords(documentRecords);
+  const records = filterDocumentRecords(data.documentos || []);
 
   if (!records.length) {
     target.innerHTML = '<p class="empty-state">Nenhum registro salvo ainda.</p>';
@@ -7790,7 +7814,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
     }
   });
 
-  formElement.addEventListener("submit", (event) => {
+  formElement.addEventListener("submit", async (event) => {
     event.preventDefault();
     normalizeDocumentDateInputs(event.currentTarget);
     const form = new FormData(event.currentTarget);
@@ -7802,45 +7826,29 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
       .map(([key, value]) => `${key}: ${value}`)
       .join(" | ");
 
-    let savedDocId;
+    let success;
 
     if (window.editingDocId) {
-      savedDocId = window.editingDocId;
-      // Atualiza o documento existente
-      const index = documentRecords.findIndex(d => d.id === window.editingDocId);
-      if (index > -1) {
-        documentRecords[index] = {
-          ...documentRecords[index],
-          summary: String(collaborator),
-          details: details || "Registro salvo",
-          formData: Object.fromEntries(entries),
-          updatedBy: getCurrentUserName(),
-          updatedAt: todayLabel(),
-          updatedSortAt: new Date().toISOString(),
-        };
-      }
+      success = await updateItem("documentos", window.editingDocId, {
+        summary: String(collaborator),
+        details: details || "Registro salvo",
+        formData: Object.fromEntries(entries),
+        updatedBy: getCurrentUserName(),
+      });
       window.editingDocId = null;
       const btn = event.currentTarget.querySelector("button[type='submit']");
       if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
     } else {
-      savedDocId = generateUUID();
-      // Cria um novo documento
-      documentRecords.unshift({
-        id: savedDocId,
+      success = await addItem("documentos", {
         type: event.currentTarget.dataset.docForm,
         summary: String(collaborator),
         details: details || "Registro salvo",
         formData: Object.fromEntries(entries),
         createdBy: getCurrentUserName(),
-        createdAt: todayLabel(),
-        sortAt: new Date().toISOString(),
       });
     }
 
-    saveDocumentRecords();
-    renderDocumentRecords();
-
-    event.currentTarget.reset();
+    if (success) event.currentTarget.reset();
   });
 });
 
@@ -8938,7 +8946,7 @@ function reabrirDenuncia(id) {
 };
 
 function editarDocumento(id) {
-  const doc = documentRecords.find(d => d.id === id);
+  const doc = (data.documentos || []).find(d => d.id === id);
   if (!doc) return;
 
   window.editingDocId = id;
@@ -8968,7 +8976,7 @@ function editarDocumento(id) {
 };
 
 function excluirDocumento(id) {
-  const doc = documentRecords.find(d => d.id === id);
+  const doc = (data.documentos || []).find(d => d.id === id);
   if (!doc) return;
   showPasswordActionModal({
     title: "Excluir registro",
@@ -8976,10 +8984,8 @@ function excluirDocumento(id) {
     confirmText: "Excluir",
     danger: true,
     validatePassword: async (password) => verifyAuthorizationPassword(password),
-    onConfirm: () => {
-      documentRecords = documentRecords.filter(d => d.id !== id);
-      saveDocumentRecords();
-      renderDocumentRecords();
+    onConfirm: async () => {
+      await deleteItem("documentos", id);
     },
   });
 };
@@ -9559,7 +9565,7 @@ function downloadStyledRhDocument(doc, title) {
 }
 
 function baixarDocumentoRH(id) {
-  const doc = documentRecords.find((item) => String(item.id) === String(id));
+  const doc = (data.documentos || []).find((item) => String(item.id) === String(id));
   if (!doc) return;
   const title = documentLabels[doc.type] || doc.type;
   downloadStyledRhDocument(doc, title);
@@ -9888,7 +9894,7 @@ class NotificationTracker {
         });
       });
 
-    const docs = typeof documentRecords !== "undefined" && Array.isArray(documentRecords) ? documentRecords : [];
+    const docs = Array.isArray(sourceData.documentos) ? sourceData.documentos : [];
     docs
       .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
       .forEach((item) => {
