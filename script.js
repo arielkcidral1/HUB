@@ -10398,6 +10398,7 @@ function setupVagasFormScrollGrid() {
   }
 
   let observer = null;
+  let expandidoAtual = null;
 
   function criarObserver() {
     observer?.disconnect();
@@ -10405,6 +10406,13 @@ function setupVagasFormScrollGrid() {
     observer = new IntersectionObserver(
       ([entry]) => {
         const expandido = !entry.isIntersecting;
+        // So mexe em algo (e so roda a trava de scroll) quando o estado
+        // realmente muda. Sem essa checagem, recriar o observer (setTimeout
+        // abaixo) ou o proprio IntersectionObserver disparando de novo com
+        // o mesmo resultado fazia a trava de scroll rodar sem necessidade,
+        // brigando com a rolagem manual do usuario nesse meio-tempo.
+        if (expandido === expandidoAtual) return;
+        expandidoAtual = expandido;
         travarVagaNoLugarDuranteTransicao();
         list.classList.toggle("vagas-two-col", expandido);
         workspace.classList.toggle("vagas-workspace-expanded", expandido);
