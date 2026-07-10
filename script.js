@@ -10329,11 +10329,14 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupVagasFormScrollGrid() {
   const form = document.getElementById("vaga-form");
   const list = document.getElementById("vagas-list");
-  if (!form || !list || !("IntersectionObserver" in window)) return;
+  const workspace = form?.closest(".workspace");
+  if (!form || !list || !workspace || !("IntersectionObserver" in window)) return;
 
   const observer = new IntersectionObserver(
     ([entry]) => {
-      list.classList.toggle("vagas-two-col", !entry.isIntersecting);
+      const expandido = !entry.isIntersecting;
+      list.classList.toggle("vagas-two-col", expandido);
+      workspace.classList.toggle("vagas-workspace-expanded", expandido);
     },
     { threshold: 0 }
   );
