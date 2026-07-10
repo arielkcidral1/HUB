@@ -10340,17 +10340,38 @@ function setupVagasFormScrollGrid() {
   const workspace = document.getElementById("vaga-form")?.closest(".workspace");
   if (!sentinel || !list || !workspace || !("IntersectionObserver" in window)) return;
 
-  const ALTURA_APROX_UMA_VAGA_PX = 420;
+  // Cards de vaga tem altura bem variavel (descricao/requisitos mais longos
+  // ou mais curtos). Em vez de um valor fixo (que deixava vagas mais altas,
+  // tipo a de GCS, ficarem cortadas pela troca), mede a altura real do
+  // primeiro card (a primeira vaga inteira que precisa passar) e usa isso
+  // como margem, com uma folga extra.
+  function medirAlturaPrimeiraVaga() {
+    const primeiroCard = list.querySelector(".item-card");
+    if (!primeiroCard) return 420;
+    return primeiroCard.getBoundingClientRect().height + 60;
+  }
 
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      const expandido = !entry.isIntersecting;
-      list.classList.toggle("vagas-two-col", expandido);
-      workspace.classList.toggle("vagas-workspace-expanded", expandido);
-    },
-    { threshold: 0, rootMargin: `${ALTURA_APROX_UMA_VAGA_PX}px 0px 0px 0px` }
-  );
-  observer.observe(sentinel);
+  let observer = null;
+
+  function criarObserver() {
+    observer?.disconnect();
+    const margem = Math.ceil(medirAlturaPrimeiraVaga());
+    observer = new IntersectionObserver(
+      ([entry]) => {
+        const expandido = !entry.isIntersecting;
+        list.classList.toggle("vagas-two-col", expandido);
+        workspace.classList.toggle("vagas-workspace-expanded", expandido);
+      },
+      { threshold: 0, rootMargin: `${margem}px 0px 0px 0px` }
+    );
+    observer.observe(sentinel);
+  }
+
+  criarObserver();
+  // Se os dados ainda nao tinham carregado o primeiro card no momento da
+  // medicao, tenta de novo apos os primeiros carregamentos da lista.
+  window.setTimeout(criarObserver, 800);
+  window.setTimeout(criarObserver, 2500);
 }
 
 document.addEventListener('DOMContentLoaded', setupVagasFormScrollGrid);
