@@ -53,7 +53,7 @@ export default async function handler(req, res) {
   }
   if (!lookupEmail) return sendJson(req, res, 401, { error: "Credenciais invalidas." });
 
-  const users = await sql`select id, nome, email, cpf, cargo, foto_perfil, password_hash from hub_users where lower(email) = lower(${lookupEmail}) limit 1`;
+  const users = await sql`select id, nome, email, cpf, cargo, foto_perfil, password_hash, configuracoes from hub_users where lower(email) = lower(${lookupEmail}) limit 1`;
   const user = users[0];
   if (!user?.password_hash) return sendJson(req, res, 401, { error: "Credenciais invalidas." });
 

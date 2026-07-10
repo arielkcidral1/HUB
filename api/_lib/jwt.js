@@ -86,7 +86,7 @@ export async function requireUser(request, sql) {
   const token = getAccessCookie(request);
   const payload = await verifyAccessToken(token);
   if (!payload?.sub) return null;
-  const rows = await sql`select id, nome, email, cpf, cargo, foto_perfil from hub_users where id = ${payload.sub}`;
+  const rows = await sql`select id, nome, email, cpf, cargo, foto_perfil, configuracoes from hub_users where id = ${payload.sub}`;
   return rows[0] || null;
 }
 
@@ -138,6 +138,6 @@ export async function requireUserNode(req, sql) {
   const token = getAccessCookieNode(req);
   const payload = await verifyAccessToken(token);
   if (!payload?.sub) return null;
-  const rows = await sql`select id, nome, email, cpf, cargo, foto_perfil from hub_users where id = ${payload.sub}`;
+  const rows = await sql`select id, nome, email, cpf, cargo, foto_perfil, configuracoes from hub_users where id = ${payload.sub}`;
   return rows[0] || null;
 }

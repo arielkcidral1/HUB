@@ -5727,10 +5727,42 @@ function saveUserSettings(settings = currentUserSettings) {
   } catch {
     localStorage.setItem(USER_SETTINGS_STORAGE_KEY, JSON.stringify(currentUserSettings));
   }
+  syncUserSettingsToServer(currentUserSettings);
+}
+
+// As configuracoes de conta sao por usuario, nao por navegador/maquina - por
+// isso, alem do cache local (pra aplicar instantaneamente), ficam gravadas no
+// banco. O envio e' "melhor esforco": se falhar (offline, etc.), o cache
+// local continua valendo nesta maquina ate a proxima sincronizacao.
+async function syncUserSettingsToServer(settings) {
+  if (!isAuthenticated()) return;
+  try {
+    const response = await fetch("/api/auth/settings", {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ settings }),
+    });
+    if (response.ok && currentAuthUser) {
+      const result = await response.json().catch(() => ({}));
+      currentAuthUser.configuracoes = result.configuracoes || settings;
+    }
+  } catch {
+    // Mantem o cache local; a proxima gravacao ou login tenta sincronizar de novo.
+  }
 }
 
 function reloadUserSettingsForCurrentUser() {
-  currentUserSettings = loadUserSettings();
+  const localSettings = loadUserSettings();
+  const serverSettings = currentAuthUser?.configuracoes;
+  currentUserSettings = serverSettings && Object.keys(serverSettings).length
+    ? normalizeUserSettings(serverSettings)
+    : localSettings;
+  try {
+    localStorage.setItem(getUserSettingsStorageKey(), JSON.stringify(currentUserSettings));
+  } catch {
+    // Cache local e' so uma otimizacao; segue sem ele se o navegador bloquear.
+  }
   applyUserSettings();
   renderAccountSettings();
 }
