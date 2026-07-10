@@ -10390,10 +10390,6 @@ function setupVagasFormScrollGrid() {
       criarObserver();
     }
   }, 250);
-
-  // A lista atualiza sozinha (polling); remedir de vez em quando garante que
-  // a margem acompanha o conteudo real caso a 1a vaga mude de tamanho.
-  window.setInterval(criarObserver, 10000);
 }
 
 document.addEventListener('DOMContentLoaded', setupVagasFormScrollGrid);
