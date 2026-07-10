@@ -10380,6 +10380,13 @@ function setupVagasFormScrollGrid() {
     const DURACAO_TRANSICAO_MS = 350;
 
     function ajustar(agora) {
+      // Se a lista atualizar sozinha (polling) no meio da transicao, o card
+      // de referencia pode sair do DOM - nesse caso ele fica "solto" e
+      // getBoundingClientRect() passa a retornar tudo zerado, o que geraria
+      // uma compensacao de scroll enorme e incorreta (jogando a pagina pro
+      // topo). Para a correcao imediatamente se isso acontecer.
+      if (!referencia.isConnected) return;
+
       const posicaoAtual = referencia.getBoundingClientRect().top;
       const delta = posicaoAtual - posicaoOriginal;
       if (delta) window.scrollBy(0, delta);
