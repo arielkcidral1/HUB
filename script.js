@@ -10328,13 +10328,17 @@ document.addEventListener('DOMContentLoaded', () => {
 // rolar o equivalente a uma vaga inteira alem do topo da lista e' que ela
 // expande pra 2 por linha - assim a proxima vaga comeca no topo da area
 // visivel e nenhuma fica cortada pela troca.
-// Observa #vagas-list (que nunca e' recriado - so o conteudo dentro dele
-// muda a cada atualizacao automatica), em vez de um card especifico, pra
-// nao ficar reconectando o observer e disparando a troca sem necessidade.
+// IMPORTANTE: observa um marcador fixo (#vagas-scroll-sentinel) que nunca
+// muda de tamanho ou posicao - nunca o proprio #vagas-list, cuja altura
+// MUDA justamente por causa da classe que este observer liga/desliga
+// (1 coluna e' mais alta, 2 colunas e' mais baixa). Observar o proprio
+// alvo que a troca redimensiona cria um loop infinito: troca -> muda
+// altura -> dispara o observer de novo -> troca de novo.
 function setupVagasFormScrollGrid() {
+  const sentinel = document.getElementById("vagas-scroll-sentinel");
   const list = document.getElementById("vagas-list");
   const workspace = document.getElementById("vaga-form")?.closest(".workspace");
-  if (!list || !workspace || !("IntersectionObserver" in window)) return;
+  if (!sentinel || !list || !workspace || !("IntersectionObserver" in window)) return;
 
   const ALTURA_APROX_UMA_VAGA_PX = 420;
 
@@ -10346,7 +10350,7 @@ function setupVagasFormScrollGrid() {
     },
     { threshold: 0, rootMargin: `-${ALTURA_APROX_UMA_VAGA_PX}px 0px 0px 0px` }
   );
-  observer.observe(list);
+  observer.observe(sentinel);
 }
 
 document.addEventListener('DOMContentLoaded', setupVagasFormScrollGrid);
