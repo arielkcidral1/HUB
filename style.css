@@ -37,6 +37,7 @@
   /* — Sistema — */
   --danger:          #C0392B;
   --danger-surface:  #FDF0EE;
+  --danger-border:   #F3C4BD;
   --success:         #0E7A55;
   --success-surface: #E8F7EF;
 
@@ -107,6 +108,7 @@
   /* — Sistema — */
   --danger:          #E5695A;
   --danger-surface:  #3A211E;
+  --danger-border:   #6B3530;
   --success:         #3FBE8B;
   --success-surface: #16302A;
 
@@ -949,8 +951,8 @@ h2 {
 
 .calendar-day.is-weekend,
 .calendar-cell.is-weekend {
-  border-color: #f0a2a2;
-  background: #fff0f0;
+  border-color: var(--danger-border);
+  background: var(--danger-surface);
 }
 
 .calendar-day.has-event,
@@ -3118,7 +3120,7 @@ form.panel[data-public-chamados="true"].panel {
   padding: 10px;
   border: 1px dashed var(--teal-border);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.68);
+  background: var(--surface);
   position: relative;
 }
 
