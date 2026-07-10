@@ -10350,44 +10350,6 @@ function setupVagasFormScrollGrid() {
     return primeiroCard.getBoundingClientRect().height + 24;
   }
 
-  // A troca de 1 pra 2 colunas muda a altura da lista (2 colunas ocupa menos
-  // altura), o que por si so empurra o scroll e da a impressao de "pular"
-  // pra vaga seguinte. Pra evitar isso, trava a vaga que esta no topo da
-  // tela no lugar: mede a posicao antes, aplica a troca (instantanea, sem
-  // transicao animada de grid-template-columns - animar isso e ficar
-  // corrigindo o scroll quadro a quadro ao mesmo tempo é' o que deixava a
-  // rolagem com uma leve travada) e corrige a posicao numa unica vez logo
-  // em seguida.
-  function travarVagaNoLugar(aplicarMudanca) {
-    const cards = Array.from(list.querySelectorAll(".item-card"));
-    if (!cards.length) {
-      aplicarMudanca();
-      return;
-    }
-
-    let referencia = cards[0];
-    let menorDistancia = Math.abs(referencia.getBoundingClientRect().top);
-    cards.forEach((card) => {
-      const distancia = Math.abs(card.getBoundingClientRect().top);
-      if (distancia < menorDistancia) {
-        menorDistancia = distancia;
-        referencia = card;
-      }
-    });
-
-    const posicaoOriginal = referencia.getBoundingClientRect().top;
-    aplicarMudanca();
-
-    requestAnimationFrame(() => {
-      // Se a lista atualizar sozinha (polling) no meio disso, o card de
-      // referencia pode sair do DOM e ficar "solto" (getBoundingClientRect
-      // passaria a retornar tudo zerado) - nesse caso so ignora a correcao.
-      if (!referencia.isConnected) return;
-      const delta = referencia.getBoundingClientRect().top - posicaoOriginal;
-      if (delta) window.scrollBy(0, delta);
-    });
-  }
-
   let observer = null;
   let expandidoAtual = null;
 
@@ -10397,17 +10359,19 @@ function setupVagasFormScrollGrid() {
     observer = new IntersectionObserver(
       ([entry]) => {
         const expandido = !entry.isIntersecting;
-        // So mexe em algo (e so roda a trava de scroll) quando o estado
-        // realmente muda. Sem essa checagem, recriar o observer (setTimeout
-        // abaixo) ou o proprio IntersectionObserver disparando de novo com
-        // o mesmo resultado fazia a trava de scroll rodar sem necessidade,
-        // brigando com a rolagem manual do usuario nesse meio-tempo.
+        // So mexe em algo quando o estado realmente muda. Sem essa
+        // checagem, recriar o observer (abaixo) ou o proprio
+        // IntersectionObserver disparando de novo com o mesmo resultado
+        // ficava trocando as classes sem necessidade.
         if (expandido === expandidoAtual) return;
         expandidoAtual = expandido;
-        travarVagaNoLugar(() => {
-          list.classList.toggle("vagas-two-col", expandido);
-          workspace.classList.toggle("vagas-workspace-expanded", expandido);
-        });
+        // Deixa o navegador cuidar da rolagem sozinho aqui - qualquer
+        // tentativa de corrigir/travar a posicao manualmente (via
+        // window.scrollBy) e' o que vinha causando os bugs de rolagem
+        // (pular pro topo da pagina, travar etc). O reflow ao trocar de
+        // coluna e' suave por conta da transicao no CSS.
+        list.classList.toggle("vagas-two-col", expandido);
+        workspace.classList.toggle("vagas-workspace-expanded", expandido);
       },
       { threshold: 0, rootMargin: `${margem}px 0px 0px 0px` }
     );
