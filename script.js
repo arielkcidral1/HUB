@@ -5557,7 +5557,7 @@ function renderPublicVagas() {
           <span class="tag">${escapeHtml(v.status)}</span>
         </div>
         <p><strong>Cidade:</strong> ${escapeHtml(getUnitCity(v.unidade) || "Nao informada.")}</p>
-        <p>${escapeHtml(v.descricao || "Descricao nao informada.")}</p>
+        <p><strong>Descrição:</strong> ${escapeHtml(v.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(v.requisitos || "Nao informado.")}</p>
         <a class="primary-button button-link" href="candidatura.html?vaga=${encodeURIComponent(v.id)}">Candidatar-se</a>
       </article>
@@ -5582,7 +5582,7 @@ function renderPublicVagas() {
           <span class="tag">${escapeHtml(job.status)}</span>
         </div>
         <p><strong>Cidade:</strong> ${escapeHtml(getUnitCity(job.unidade) || "Nao informada.")}</p>
-        <p>${escapeHtml(job.descricao || "Descricao nao informada.")}</p>
+        <p><strong>Descrição:</strong> ${escapeHtml(job.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(job.requisitos || "Nao informado.")}</p>
       `;
     }
@@ -6920,7 +6920,7 @@ function renderAll() {
       <article class="item-card public-job-card">
         <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="tag">${escapeHtml(item.status)}</span></div>
         <p><strong>Unidade destinada:</strong> ${escapeHtml(getCanonicalUnit(item.unidade) || "Nao informada.")}</p>
-        <p>${escapeHtml(item.descricao || "Descricao nao informada.")}</p>
+        <p><strong>Descrição:</strong> ${escapeHtml(item.descricao || "Descricao nao informada.")}</p>
         <p><strong>Requisitos:</strong> ${escapeHtml(item.requisitos || "Nao informado.")}</p>
         <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</p>
         <div class="job-actions">
