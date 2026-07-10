@@ -313,6 +313,7 @@ let visibleDashboardActivityItems = [];
 let currentUserSettings = loadUserSettings();
 let lastUnreadNotificationCount = 0;
 let notificationBaselineReady = false;
+let presenceHeartbeatStarted = false;
 let hubNotificationServiceWorkerRegistration = null;
 let lastRealtimeNotificationSignature = "";
 let hubPollingNotificationKeys = new Set();
@@ -2760,6 +2761,7 @@ if (collection === "malotes") {
       cpf: row.cpf || "",
       cargo: row.cargo || "",
       foto_perfil: row.foto_perfil || "",
+      lastSeen: row.last_seen || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
@@ -6558,7 +6560,8 @@ function renderChatChannels() {
       if (channel.isGroup) {
         avatarHtml = `<div class="chat-avatar-fallback"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>`;
       } else if (channel.targetUser) {
-        avatarHtml = getAuthorAvatar(channel.targetUser, channel.avatarPath);
+        const onlineClass = isUserOnline(channel.targetUser) ? "is-online" : "";
+        avatarHtml = `<span class="chat-avatar-wrap">${getAuthorAvatar(channel.targetUser, channel.avatarPath)}<span class="presence-dot ${onlineClass}"></span></span>`;
       }
 
       return `
@@ -6848,6 +6851,16 @@ function renderAll() {
   renderTeamUsers();
 
   try { window.notificationTracker?.loadNotifications(); } catch (_) {}
+}
+
+const PRESENCE_ONLINE_THRESHOLD_MS = 45000;
+
+function isUserOnline(authorName) {
+  const normalized = normalizeLoginName(authorName);
+  if (normalized === normalizeLoginName(getCurrentUserName())) return true;
+  const user = (data.usuarios || []).find((u) => normalizeLoginName(u.nome) === normalized);
+  if (!user?.lastSeen) return false;
+  return Date.now() - new Date(user.lastSeen).getTime() < PRESENCE_ONLINE_THRESHOLD_MS;
 }
 
 function getAuthorAvatar(authorName, knownAvatarPath = "") {
@@ -8830,6 +8843,20 @@ async function initializeAppData() {
   await syncReadReceiptsFromServer();
   await loadFromSupabase({ setupLive: true });
   notificationBaselineReady = true;
+  setupPresenceHeartbeat();
+}
+
+function setupPresenceHeartbeat() {
+  if (presenceHeartbeatStarted) return;
+  presenceHeartbeatStarted = true;
+
+  const sendHeartbeat = () => {
+    if (!isAuthenticated()) return;
+    fetch("/api/auth/heartbeat", { method: "POST", credentials: "include" }).catch(() => {});
+  };
+
+  sendHeartbeat();
+  window.setInterval(sendHeartbeat, 20000);
 }
 
 disableSensitiveFieldAutofill();
