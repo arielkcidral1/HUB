@@ -1425,6 +1425,7 @@ textarea {
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
+  min-height: 100%;
   border: 1px solid var(--line);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   background: linear-gradient(135deg, var(--surface-raised), var(--teal-surface));
