@@ -4572,6 +4572,16 @@ form.panel[data-public-chamados="true"].panel {
   background: rgba(0, 0, 0, 0.7);
 }
 
+:root[data-theme="dark"] .chat-feed,
+:root[data-theme="dark"] .tracker-chat-thread {
+  background: linear-gradient(135deg, var(--surface), var(--teal-surface));
+}
+
+:root[data-theme="dark"] .hub-notification-popout,
+:root[data-theme="dark"] .hub-notification-permission-prompt {
+  background: linear-gradient(135deg, var(--surface), var(--teal-surface));
+}
+
 @media (max-width: 768px) {
   .tracker-modal {
     padding: 10px;
