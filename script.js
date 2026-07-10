@@ -10323,6 +10323,25 @@ document.addEventListener('DOMContentLoaded', () => {
   maybeOpenNotificationTrackerFromUrl();
 });
 
+// Enquanto o formulario "Cadastrar vaga" estiver visivel na tela, a lista ao
+// lado mostra 1 vaga por linha (coluna estreita); ao rolar para alem da
+// visualizacao do formulario, a lista passa a exibir 2 vagas por linha.
+function setupVagasFormScrollGrid() {
+  const form = document.getElementById("vaga-form");
+  const list = document.getElementById("vagas-list");
+  if (!form || !list || !("IntersectionObserver" in window)) return;
+
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      list.classList.toggle("vagas-two-col", !entry.isIntersecting);
+    },
+    { threshold: 0 }
+  );
+  observer.observe(form);
+}
+
+document.addEventListener('DOMContentLoaded', setupVagasFormScrollGrid);
+
 window.addEventListener("storage", (event) => {
   if (![READ_NOTIFICATIONS_KEY, READ_RH_MESSAGES_KEY].includes(event.key)) return;
   readNotificationIds = loadReadNotificationIds();
