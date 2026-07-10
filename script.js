@@ -10323,38 +10323,30 @@ document.addEventListener('DOMContentLoaded', () => {
   maybeOpenNotificationTrackerFromUrl();
 });
 
-// Enquanto a primeira vaga da lista estiver (ainda que parcialmente) visivel
-// na tela, a lista mostra 1 vaga por linha (coluna estreita, ao lado do
-// formulario). So depois que essa primeira vaga passa inteira pela tela (ou
-// seja, a proxima vaga ja comeca no topo da area visivel) e' que a lista
-// expande pra 2 por linha - assim nenhuma vaga fica cortada pela troca.
+// Enquanto o topo da lista de vagas estiver visivel na tela, ela mostra 1
+// vaga por linha (coluna estreita, ao lado do formulario). So depois de
+// rolar o equivalente a uma vaga inteira alem do topo da lista e' que ela
+// expande pra 2 por linha - assim a proxima vaga comeca no topo da area
+// visivel e nenhuma fica cortada pela troca.
+// Observa #vagas-list (que nunca e' recriado - so o conteudo dentro dele
+// muda a cada atualizacao automatica), em vez de um card especifico, pra
+// nao ficar reconectando o observer e disparando a troca sem necessidade.
 function setupVagasFormScrollGrid() {
   const list = document.getElementById("vagas-list");
   const workspace = document.getElementById("vaga-form")?.closest(".workspace");
   if (!list || !workspace || !("IntersectionObserver" in window)) return;
 
-  let cardObserver = null;
-  let observedCard = null;
+  const ALTURA_APROX_UMA_VAGA_PX = 420;
 
-  function toggleExpanded(expandido) {
-    list.classList.toggle("vagas-two-col", expandido);
-    workspace.classList.toggle("vagas-workspace-expanded", expandido);
-  }
-
-  function attachToFirstCard() {
-    const firstCard = list.querySelector(".item-card");
-    if (!firstCard || firstCard === observedCard) return;
-    cardObserver?.disconnect();
-    observedCard = firstCard;
-    cardObserver = new IntersectionObserver(
-      ([entry]) => toggleExpanded(!entry.isIntersecting),
-      { threshold: 0 }
-    );
-    cardObserver.observe(firstCard);
-  }
-
-  attachToFirstCard();
-  new MutationObserver(attachToFirstCard).observe(list, { childList: true });
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      const expandido = !entry.isIntersecting;
+      list.classList.toggle("vagas-two-col", expandido);
+      workspace.classList.toggle("vagas-workspace-expanded", expandido);
+    },
+    { threshold: 0, rootMargin: `-${ALTURA_APROX_UMA_VAGA_PX}px 0px 0px 0px` }
+  );
+  observer.observe(list);
 }
 
 document.addEventListener('DOMContentLoaded', setupVagasFormScrollGrid);
