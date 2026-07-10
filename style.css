@@ -1414,15 +1414,20 @@ textarea {
   background: rgba(12, 98, 89, 0.2);
 }
 
+.chat-panel {
+  background: linear-gradient(135deg, var(--surface-raised), var(--teal-surface));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
 .chat-feed {
   display: flex;
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
-  min-height: 100%;
+  min-height: 480px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
-  background: linear-gradient(135deg, var(--surface-raised), var(--teal-surface));
+  background: transparent;
   padding: 18px;
 }
 
@@ -4567,7 +4572,7 @@ form.panel[data-public-chamados="true"].panel {
   background: rgba(0, 0, 0, 0.7);
 }
 
-:root[data-theme="dark"] .chat-feed,
+:root[data-theme="dark"] .chat-panel,
 :root[data-theme="dark"] .tracker-chat-thread {
   background: linear-gradient(135deg, var(--surface), var(--teal-surface));
 }
