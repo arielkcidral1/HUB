@@ -10353,11 +10353,17 @@ function setupVagasFormScrollGrid() {
   // A troca de 1 pra 2 colunas muda a altura da lista (2 colunas ocupa menos
   // altura), o que por si so empurra o scroll e da a impressao de "pular"
   // pra vaga seguinte. Pra evitar isso, trava a vaga que esta no topo da
-  // tela no lugar durante toda a transicao, compensando o scroll a cada
-  // frame pelo tanto que ela se deslocar.
-  function travarVagaNoLugarDuranteTransicao() {
+  // tela no lugar: mede a posicao antes, aplica a troca (instantanea, sem
+  // transicao animada de grid-template-columns - animar isso e ficar
+  // corrigindo o scroll quadro a quadro ao mesmo tempo é' o que deixava a
+  // rolagem com uma leve travada) e corrige a posicao numa unica vez logo
+  // em seguida.
+  function travarVagaNoLugar(aplicarMudanca) {
     const cards = Array.from(list.querySelectorAll(".item-card"));
-    if (!cards.length) return;
+    if (!cards.length) {
+      aplicarMudanca();
+      return;
+    }
 
     let referencia = cards[0];
     let menorDistancia = Math.abs(referencia.getBoundingClientRect().top);
@@ -10370,25 +10376,16 @@ function setupVagasFormScrollGrid() {
     });
 
     const posicaoOriginal = referencia.getBoundingClientRect().top;
-    const inicio = performance.now();
-    const DURACAO_TRANSICAO_MS = 350;
+    aplicarMudanca();
 
-    function ajustar(agora) {
-      // Se a lista atualizar sozinha (polling) no meio da transicao, o card
-      // de referencia pode sair do DOM - nesse caso ele fica "solto" e
-      // getBoundingClientRect() passa a retornar tudo zerado, o que geraria
-      // uma compensacao de scroll enorme e incorreta (jogando a pagina pro
-      // topo). Para a correcao imediatamente se isso acontecer.
+    requestAnimationFrame(() => {
+      // Se a lista atualizar sozinha (polling) no meio disso, o card de
+      // referencia pode sair do DOM e ficar "solto" (getBoundingClientRect
+      // passaria a retornar tudo zerado) - nesse caso so ignora a correcao.
       if (!referencia.isConnected) return;
-
-      const posicaoAtual = referencia.getBoundingClientRect().top;
-      const delta = posicaoAtual - posicaoOriginal;
+      const delta = referencia.getBoundingClientRect().top - posicaoOriginal;
       if (delta) window.scrollBy(0, delta);
-      if (agora - inicio < DURACAO_TRANSICAO_MS) {
-        requestAnimationFrame(ajustar);
-      }
-    }
-    requestAnimationFrame(ajustar);
+    });
   }
 
   let observer = null;
@@ -10407,9 +10404,10 @@ function setupVagasFormScrollGrid() {
         // brigando com a rolagem manual do usuario nesse meio-tempo.
         if (expandido === expandidoAtual) return;
         expandidoAtual = expandido;
-        travarVagaNoLugarDuranteTransicao();
-        list.classList.toggle("vagas-two-col", expandido);
-        workspace.classList.toggle("vagas-workspace-expanded", expandido);
+        travarVagaNoLugar(() => {
+          list.classList.toggle("vagas-two-col", expandido);
+          workspace.classList.toggle("vagas-workspace-expanded", expandido);
+        });
       },
       { threshold: 0, rootMargin: `${margem}px 0px 0px 0px` }
     );
