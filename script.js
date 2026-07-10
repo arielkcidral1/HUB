@@ -10348,7 +10348,7 @@ function setupVagasFormScrollGrid() {
       list.classList.toggle("vagas-two-col", expandido);
       workspace.classList.toggle("vagas-workspace-expanded", expandido);
     },
-    { threshold: 0, rootMargin: `-${ALTURA_APROX_UMA_VAGA_PX}px 0px 0px 0px` }
+    { threshold: 0, rootMargin: `${ALTURA_APROX_UMA_VAGA_PX}px 0px 0px 0px` }
   );
   observer.observe(sentinel);
 }
