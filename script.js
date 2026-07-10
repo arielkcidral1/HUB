@@ -10356,6 +10356,40 @@ function setupVagasFormScrollGrid() {
     return altura + 24;
   }
 
+  // A troca de 1 pra 2 colunas muda a altura da lista (2 colunas ocupa menos
+  // altura), o que por si so empurra o scroll e da a impressao de "pular"
+  // pra vaga seguinte. Pra evitar isso, trava a vaga que esta no topo da
+  // tela no lugar durante toda a transicao, compensando o scroll a cada
+  // frame pelo tanto que ela se deslocar.
+  function travarVagaNoLugarDuranteTransicao() {
+    const cards = Array.from(list.querySelectorAll(".item-card"));
+    if (!cards.length) return;
+
+    let referencia = cards[0];
+    let menorDistancia = Math.abs(referencia.getBoundingClientRect().top);
+    cards.forEach((card) => {
+      const distancia = Math.abs(card.getBoundingClientRect().top);
+      if (distancia < menorDistancia) {
+        menorDistancia = distancia;
+        referencia = card;
+      }
+    });
+
+    const posicaoOriginal = referencia.getBoundingClientRect().top;
+    const inicio = performance.now();
+    const DURACAO_TRANSICAO_MS = 350;
+
+    function ajustar(agora) {
+      const posicaoAtual = referencia.getBoundingClientRect().top;
+      const delta = posicaoAtual - posicaoOriginal;
+      if (delta) window.scrollBy(0, delta);
+      if (agora - inicio < DURACAO_TRANSICAO_MS) {
+        requestAnimationFrame(ajustar);
+      }
+    }
+    requestAnimationFrame(ajustar);
+  }
+
   let observer = null;
 
   function criarObserver() {
@@ -10364,6 +10398,7 @@ function setupVagasFormScrollGrid() {
     observer = new IntersectionObserver(
       ([entry]) => {
         const expandido = !entry.isIntersecting;
+        travarVagaNoLugarDuranteTransicao();
         list.classList.toggle("vagas-two-col", expandido);
         workspace.classList.toggle("vagas-workspace-expanded", expandido);
       },
