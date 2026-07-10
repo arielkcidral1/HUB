@@ -10341,19 +10341,13 @@ function setupVagasFormScrollGrid() {
   if (!sentinel || !list || !workspace || !("IntersectionObserver" in window)) return;
 
   // Cards de vaga tem altura bem variavel (descricao/requisitos mais longos
-  // ou mais curtos). Em vez de um valor fixo (que deixava vagas mais altas,
-  // tipo a de GCS, ficarem cortadas/com botoes inalcancaveis pela troca),
-  // mede a altura real dos 2 primeiros cards e usa isso como margem, com
-  // uma folga pequena (so o suficiente pra passar alguns pixels da 2a vaga,
-  // sem segurar a troca por mais tempo que isso).
+  // ou mais curtos). Em vez de um valor fixo, mede a altura real do
+  // primeiro card e usa isso como margem, com uma folga pequena - a troca
+  // acontece so depois que essa 1a vaga passa inteira pela tela.
   function medirAlturaPrimeiraVaga() {
-    const cards = list.querySelectorAll(".item-card");
-    if (!cards.length) return 420;
-    let altura = 0;
-    for (let i = 0; i < Math.min(2, cards.length); i += 1) {
-      altura += cards[i].getBoundingClientRect().height;
-    }
-    return altura + 24;
+    const primeiroCard = list.querySelector(".item-card");
+    if (!primeiroCard) return 420;
+    return primeiroCard.getBoundingClientRect().height + 24;
   }
 
   // A troca de 1 pra 2 colunas muda a altura da lista (2 colunas ocupa menos
