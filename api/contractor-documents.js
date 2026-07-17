@@ -36,13 +36,15 @@ function isValidPayload(payload) {
 
 async function fileToDataUrl(file) {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  let binary = "";
-  const chunkSize = 0x8000;
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  // Nao usar String.fromCharCode(...bytes) nem em chunks: espalhar milhares de
+  // argumentos numa chamada de funcao estoura a pilha no runtime Edge da Vercel
+  // para arquivos maiores, travando o envio sem lancar um erro tratavel.
+  const chars = new Array(bytes.length);
+  for (let index = 0; index < bytes.length; index += 1) {
+    chars[index] = String.fromCharCode(bytes[index]);
   }
   const mimeType = text(file.type) || "application/octet-stream";
-  return `data:${mimeType};base64,${btoa(binary)}`;
+  return `data:${mimeType};base64,${btoa(chars.join(""))}`;
 }
 
 function getClientIdentifier(req) {
@@ -67,7 +69,7 @@ async function checkRateLimit(request) {
   return allowed;
 }
 
-export default async function handler(request) {
+async function handleRequest(request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
   if (request.method !== "POST") return json(request, 405, { error: "Metodo nao permitido." });
 
@@ -89,7 +91,13 @@ export default async function handler(request) {
   const validationError = isValidPayload(payload);
   if (validationError) return json(request, 400, { error: validationError });
 
-  const allowed = await checkRateLimit(request);
+  let allowed;
+  try {
+    allowed = await checkRateLimit(request);
+  } catch (error) {
+    console.error("Erro ao verificar limite de envios:", error);
+    return json(request, 500, { error: `Nao foi possivel verificar o limite de envios: ${error.message || error}` });
+  }
   if (!allowed) return json(request, 429, { error: "Muitos envios. Tente novamente mais tarde." });
 
   const files = formData.getAll("documentos").filter((file) => file instanceof File && file.name);
@@ -120,5 +128,14 @@ export default async function handler(request) {
       ? "CPF ja possui envio de documentos registrado."
       : error.message || "Nao foi possivel salvar documentos.";
     return json(request, 400, { error: message });
+  }
+}
+
+export default async function handler(request) {
+  try {
+    return await handleRequest(request);
+  } catch (error) {
+    console.error("Erro inesperado no envio de documentos de contratados:", error);
+    return json(request, 500, { error: `Erro interno: ${error.message || error}` });
   }
 }

@@ -8868,10 +8868,12 @@ function setupPresenceHeartbeat() {
     navigator.sendBeacon?.("/api/auth/heartbeat", new Blob([JSON.stringify({ online: false })], { type: "application/json" }));
   };
 
+  // Trocar de aba ou minimizar NAO deve derrubar a presenca - o usuario
+  // continua logado com o sistema aberto em segundo plano. So marca offline
+  // ao fechar a aba/navegador de fato (pagehide).
   window.addEventListener("pagehide", sendOfflineBeacon);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") sendOfflineBeacon();
-    else sendHeartbeat();
+    if (document.visibilityState === "visible") sendHeartbeat();
   });
 
   sendHeartbeat();
