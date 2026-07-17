@@ -3181,39 +3181,47 @@ async function loadFromSupabase(options = {}) {
     });
     data.usuarios = mergeUsersByName(data.usuarios, mappedUsers);
 
-    const requests = await Promise.allSettled(
+    const requests = await Promise.all(
       Object.keys(TABLES)
         .filter((collection) => collection !== "usuarios")
         .map(async (collection) => {
-          let rows = await hubApi.list(collection);
-          if (collection === "comunicados") {
-            const allowed = new Set(getAllowedChatChannelIds());
-            rows = rows.filter((row) => allowed.has(row.canal));
+          try {
+            let rows = await hubApi.list(collection);
+            if (collection === "comunicados") {
+              const allowed = new Set(getAllowedChatChannelIds());
+              rows = rows.filter((row) => allowed.has(row.canal));
+            }
+            return { collection, rows: mapRows(collection, rows || []), ok: true };
+          } catch (error) {
+            console.error(`Erro ao carregar colecao ${collection}:`, error);
+            return { collection, ok: false };
           }
-          return [collection, mapRows(collection, rows || [])];
         })
     );
 
-    requests.forEach((result) => {
-      if (result.status === "fulfilled") {
-        const [collection, rows] = result.value;
-
-        data[collection] = rows;
-      } else {
-        console.error("Erro ao carregar colecao:", result.reason);
-      }
+    // Nunca mantem o snapshot antigo em cache quando uma busca falha: registros
+    // que ja foram deletados por outra sessao nao podem continuar aparecendo so
+    // porque essa colecao especifica nao atualizou agora. Fica vazio ate o
+    // proximo ciclo de auto-atualizacao conseguir buscar de novo.
+    requests.forEach(({ collection, rows, ok }) => {
+      data[collection] = ok ? rows : [];
     });
     ensureRequiredTeamUsers();
     saveLocalData();
     if (setupLive) {
       setupAutoRefresh();
     }
-    const hasFailures = requests.some((result) => result.status === "rejected");
+    const hasFailures = requests.some((result) => !result.ok);
     setSyncStatus(hasFailures ? "Sincronizacao parcial" : "HUB online", !hasFailures);
     renderAll();
     if (setupLive) rememberCurrentNotificationKeysForPolling();
   } catch (error) {
     console.error("Erro ao carregar dados:", error);
+    // Mesma logica: se a sincronizacao inteira falhou, nao renderiza o
+    // snapshot antigo do cache local (pode conter registros ja deletados).
+    Object.keys(TABLES)
+      .filter((collection) => collection !== "usuarios")
+      .forEach((collection) => { data[collection] = []; });
     setSyncStatus("Sincronizacao pendente", false);
     renderAll();
   }
