@@ -1416,6 +1416,7 @@ function getSelectedMaloteDestino() {
 function getMaloteFilterValues() {
   return {
     destino: String(document.getElementById("malote-destino-filter")?.value || "").trim().toLowerCase(),
+    status: String(document.getElementById("malote-status-filter")?.value || "").trim(),
     colaborador: String(document.getElementById("malote-filter-colaborador")?.value || "").trim().toLowerCase(),
     codigo: String(document.getElementById("malote-code-search")?.value || "").trim(),
   };
@@ -1438,12 +1439,14 @@ function getMaloteCodeSearch() {
 function getFilteredMalotes() {
   const filters = getMaloteFilterValues();
   const selectedDestino = filters.destino;
+  const selectedStatus = filters.status;
   const selectedColaborador = filters.colaborador;
   const search = filters.codigo;
   const searchDigits = search.replace(/\D/g, "");
 
   return data.malotes.filter((item) => {
     if (selectedDestino && String(item.destino || "").toLowerCase() !== selectedDestino) return false;
+    if (selectedStatus && String(item.status || "") !== selectedStatus) return false;
     if (selectedColaborador && !getMaloteCollaboratorSearchText(item).includes(selectedColaborador)) return false;
     if (!searchDigits) return true;
 
@@ -7571,6 +7574,8 @@ document.getElementById("malote-destino-filter")?.addEventListener("change", () 
   renderAll();
 });
 
+document.getElementById("malote-status-filter")?.addEventListener("change", renderAll);
+
 document.getElementById("malote-filter-colaborador")?.addEventListener("input", renderAll);
 
 document.getElementById("malote-code-search")?.addEventListener("input", () => {
@@ -10215,7 +10220,9 @@ class NotificationTracker {
     if (this.statTotal) this.statTotal.textContent = total;
     if (this.statUnread) this.statUnread.textContent = unread;
     if (this.statPending) this.statPending.textContent = pending;
-    if (this.markAllReadBtn) this.markAllReadBtn.hidden = unread === 0;
+    // Mostra o botao sempre que houver notificacoes no acompanhamento;
+    // so oculta quando a lista esta totalmente vazia.
+    if (this.markAllReadBtn) this.markAllReadBtn.hidden = total === 0;
   }
 
   markAllRead() {
