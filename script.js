@@ -10297,45 +10297,28 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
   if (!form || !list || !workspace) return;
 
   const margem = Math.max(0, Number(offsetAfterForm) || 0);
+  const margemRecolher = margem + 180;
   let expandidoAtual = false;
-  let ultimoFormBottom = form.getBoundingClientRect().bottom;
 
   function aplicarEstado(expandido) {
     if (expandido === expandidoAtual) return;
-    const cardsVisiveis = [...list.querySelectorAll(".item-card")].filter((card) => {
-      const rect = card.getBoundingClientRect();
-      return rect.bottom > margem && rect.top < window.innerHeight;
-    });
-    const cardAncora = cardsVisiveis[cardsVisiveis.length - 1] || null;
-    const topoAntes = cardAncora?.getBoundingClientRect().top || 0;
-
     expandidoAtual = expandido;
 
     list.classList.toggle(expandedListClass, expandido);
     workspace.classList.toggle(expandedWorkspaceClass, expandido);
-
-    if (!cardAncora) return;
-    window.requestAnimationFrame(() => {
-      const topoDepois = cardAncora.getBoundingClientRect().top;
-      const delta = topoDepois - topoAntes;
-      if (Math.abs(delta) < 1) return;
-      window.scrollTo({ top: window.scrollY + delta, left: window.scrollX, behavior: "auto" });
-    });
   }
 
   function atualizarEstado() {
     const formBottom = form.getBoundingClientRect().bottom;
-    if (!expandidoAtual && ultimoFormBottom >= margem && formBottom < margem) {
+    if (!expandidoAtual && formBottom < margem) {
       aplicarEstado(true);
-    } else if (expandidoAtual && ultimoFormBottom <= margem && formBottom > margem) {
+    } else if (expandidoAtual && formBottom > margemRecolher) {
       aplicarEstado(false);
     }
-    ultimoFormBottom = formBottom;
   }
 
   function resetarEstadoInicial() {
     expandidoAtual = false;
-    ultimoFormBottom = form.getBoundingClientRect().bottom;
     list.classList.remove(expandedListClass);
     workspace.classList.remove(expandedWorkspaceClass);
   }
