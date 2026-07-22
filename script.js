@@ -10290,15 +10290,15 @@ document.addEventListener('DOMContentLoaded', () => {
   maybeOpenNotificationTrackerFromUrl();
 });
 
-function setupVagasFormScrollGrid() {
-  const sentinel = document.getElementById("vagas-scroll-sentinel");
-  const list = document.getElementById("vagas-list");
-  const workspace = document.getElementById("vaga-form")?.closest(".workspace");
+function setupFormScrollGrid({ sentinelId, listId, formId, expandedWorkspaceClass, expandedListClass, fallbackHeight = 420 }) {
+  const sentinel = document.getElementById(sentinelId);
+  const list = document.getElementById(listId);
+  const workspace = document.getElementById(formId)?.closest(".workspace");
   if (!sentinel || !list || !workspace || !("IntersectionObserver" in window)) return;
 
-  function medirAlturaPrimeiraVaga() {
+  function medirAlturaPrimeiroCard() {
     const primeiroCard = list.querySelector(".item-card");
-    if (!primeiroCard) return 420;
+    if (!primeiroCard) return fallbackHeight;
     return primeiroCard.getBoundingClientRect().height + 24;
   }
 
@@ -10307,7 +10307,7 @@ function setupVagasFormScrollGrid() {
 
   function criarObserver() {
     observer?.disconnect();
-    const margem = Math.ceil(medirAlturaPrimeiraVaga());
+    const margem = Math.ceil(medirAlturaPrimeiroCard());
     observer = new IntersectionObserver(
       ([entry]) => {
         const expandido = !entry.isIntersecting;
@@ -10315,8 +10315,8 @@ function setupVagasFormScrollGrid() {
         if (expandido === expandidoAtual) return;
         expandidoAtual = expandido;
 
-        list.classList.toggle("vagas-two-col", expandido);
-        workspace.classList.toggle("vagas-workspace-expanded", expandido);
+        list.classList.toggle(expandedListClass, expandido);
+        workspace.classList.toggle(expandedWorkspaceClass, expandido);
       },
       { threshold: 0, rootMargin: `${margem}px 0px 0px 0px` }
     );
@@ -10334,7 +10334,30 @@ function setupVagasFormScrollGrid() {
   }, 250);
 }
 
-document.addEventListener('DOMContentLoaded', setupVagasFormScrollGrid);
+function setupVagasFormScrollGrid() {
+  setupFormScrollGrid({
+    sentinelId: "vagas-scroll-sentinel",
+    listId: "vagas-list",
+    formId: "vaga-form",
+    expandedWorkspaceClass: "vagas-workspace-expanded",
+    expandedListClass: "vagas-two-col",
+  });
+}
+
+function setupMalotesFormScrollGrid() {
+  setupFormScrollGrid({
+    sentinelId: "malotes-scroll-sentinel",
+    listId: "malotes-list",
+    formId: "malote-form",
+    expandedWorkspaceClass: "malotes-workspace-expanded",
+    expandedListClass: "malotes-two-col",
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupVagasFormScrollGrid();
+  setupMalotesFormScrollGrid();
+});
 
 window.addEventListener("storage", (event) => {
   if (![READ_NOTIFICATIONS_KEY, READ_RH_MESSAGES_KEY].includes(event.key)) return;
