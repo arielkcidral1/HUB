@@ -10296,21 +10296,56 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
   const workspace = form?.closest(".workspace");
   if (!form || !list || !workspace) return;
 
-  let expandidoAtual = null;
+  const margem = Math.max(0, Number(offsetAfterForm) || 0);
+  let expandidoAtual = false;
+  let ultimoFormBottom = form.getBoundingClientRect().bottom;
 
-  function atualizarEstado() {
-    const margem = Math.max(0, Number(offsetAfterForm) || 0);
-    const expandido = form.getBoundingClientRect().bottom < margem;
+  function getPrimeiroCardVisivel() {
+    const cards = [...list.querySelectorAll(".item-card")];
+    return cards.find((card) => {
+      const rect = card.getBoundingClientRect();
+      return rect.bottom > margem && rect.top < window.innerHeight;
+    }) || null;
+  }
+
+  function aplicarEstado(expandido) {
     if (expandido === expandidoAtual) return;
+
+    const cardAncora = getPrimeiroCardVisivel();
+    const topoAntes = cardAncora?.getBoundingClientRect().top || 0;
+
     expandidoAtual = expandido;
 
     list.classList.toggle(expandedListClass, expandido);
     workspace.classList.toggle(expandedWorkspaceClass, expandido);
+
+    if (!cardAncora) return;
+    window.requestAnimationFrame(() => {
+      const topoDepois = cardAncora.getBoundingClientRect().top;
+      window.scrollBy({ top: topoDepois - topoAntes, left: 0, behavior: "auto" });
+    });
   }
 
-  atualizarEstado();
+  function atualizarEstado() {
+    const formBottom = form.getBoundingClientRect().bottom;
+    if (!expandidoAtual && ultimoFormBottom >= margem && formBottom < margem) {
+      aplicarEstado(true);
+    } else if (expandidoAtual && ultimoFormBottom <= margem && formBottom > margem) {
+      aplicarEstado(false);
+    }
+    ultimoFormBottom = formBottom;
+  }
+
+  function resetarEstadoInicial() {
+    expandidoAtual = false;
+    ultimoFormBottom = form.getBoundingClientRect().bottom;
+    list.classList.remove(expandedListClass);
+    workspace.classList.remove(expandedWorkspaceClass);
+  }
+
+  resetarEstadoInicial();
   window.addEventListener("scroll", atualizarEstado, { passive: true });
-  window.addEventListener("resize", atualizarEstado);
+  window.addEventListener("resize", resetarEstadoInicial);
 }
 
 function setupVagasFormScrollGrid() {
