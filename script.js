@@ -10290,24 +10290,18 @@ document.addEventListener('DOMContentLoaded', () => {
   maybeOpenNotificationTrackerFromUrl();
 });
 
-function setupFormScrollGrid({ sentinelId, listId, formId, expandedWorkspaceClass, expandedListClass, fallbackHeight = 420 }) {
+function setupFormScrollGrid({ sentinelId, listId, formId, expandedWorkspaceClass, expandedListClass, offsetAfterForm = 96 }) {
   const sentinel = document.getElementById(sentinelId);
   const list = document.getElementById(listId);
   const workspace = document.getElementById(formId)?.closest(".workspace");
   if (!sentinel || !list || !workspace || !("IntersectionObserver" in window)) return;
-
-  function medirAlturaPrimeiroCard() {
-    const primeiroCard = list.querySelector(".item-card");
-    if (!primeiroCard) return fallbackHeight;
-    return primeiroCard.getBoundingClientRect().height + 24;
-  }
 
   let observer = null;
   let expandidoAtual = null;
 
   function criarObserver() {
     observer?.disconnect();
-    const margem = Math.ceil(medirAlturaPrimeiroCard());
+    const margem = Math.max(0, Number(offsetAfterForm) || 0);
     observer = new IntersectionObserver(
       ([entry]) => {
         const expandido = !entry.isIntersecting;
@@ -10318,7 +10312,7 @@ function setupFormScrollGrid({ sentinelId, listId, formId, expandedWorkspaceClas
         list.classList.toggle(expandedListClass, expandido);
         workspace.classList.toggle(expandedWorkspaceClass, expandido);
       },
-      { threshold: 0, rootMargin: `${margem}px 0px 0px 0px` }
+      { threshold: 0, rootMargin: `-${margem}px 0px 0px 0px` }
     );
     observer.observe(sentinel);
   }
