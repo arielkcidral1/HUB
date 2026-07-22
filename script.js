@@ -10300,30 +10300,12 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
   let expandidoAtual = false;
   let ultimoFormBottom = form.getBoundingClientRect().bottom;
 
-  function getPrimeiroCardVisivel() {
-    const cards = [...list.querySelectorAll(".item-card")];
-    return cards.find((card) => {
-      const rect = card.getBoundingClientRect();
-      return rect.bottom > margem && rect.top < window.innerHeight;
-    }) || null;
-  }
-
   function aplicarEstado(expandido) {
     if (expandido === expandidoAtual) return;
-
-    const cardAncora = getPrimeiroCardVisivel();
-    const topoAntes = cardAncora?.getBoundingClientRect().top || 0;
-
     expandidoAtual = expandido;
 
     list.classList.toggle(expandedListClass, expandido);
     workspace.classList.toggle(expandedWorkspaceClass, expandido);
-
-    if (!cardAncora) return;
-    window.requestAnimationFrame(() => {
-      const topoDepois = cardAncora.getBoundingClientRect().top;
-      window.scrollBy({ top: topoDepois - topoAntes, left: 0, behavior: "auto" });
-    });
   }
 
   function atualizarEstado() {
