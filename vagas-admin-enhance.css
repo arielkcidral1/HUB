@@ -30,15 +30,6 @@
   white-space: nowrap;
 }
 
-#vagas-scroll-sentinel,
-#malotes-scroll-sentinel {
-  display: block;
-  height: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
 #vagas .workspace,
 #malotes .workspace {
   overflow-x: hidden;
