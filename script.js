@@ -10302,10 +10302,25 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
 
   function aplicarEstado(expandido) {
     if (expandido === expandidoAtual) return;
+    const cardsVisiveis = [...list.querySelectorAll(".item-card")].filter((card) => {
+      const rect = card.getBoundingClientRect();
+      return rect.bottom > margem && rect.top < window.innerHeight;
+    });
+    const cardAncora = cardsVisiveis[cardsVisiveis.length - 1] || null;
+    const topoAntes = cardAncora?.getBoundingClientRect().top || 0;
+
     expandidoAtual = expandido;
 
     list.classList.toggle(expandedListClass, expandido);
     workspace.classList.toggle(expandedWorkspaceClass, expandido);
+
+    if (!cardAncora) return;
+    window.requestAnimationFrame(() => {
+      const topoDepois = cardAncora.getBoundingClientRect().top;
+      const delta = topoDepois - topoAntes;
+      if (Math.abs(delta) < 1) return;
+      window.scrollTo({ top: window.scrollY + delta, left: window.scrollX, behavior: "auto" });
+    });
   }
 
   function atualizarEstado() {
