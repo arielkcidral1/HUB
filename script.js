@@ -173,7 +173,6 @@ const TABLES = {
   candidaturas: "hub_candidaturas",
   usuarios: USERS_TABLE,
 };
-const SERVER_SYNCED_COLLECTIONS = Object.freeze(Object.keys(TABLES).filter((collection) => collection !== "usuarios"));
 const READ_RECEIPTS_TABLE = "hub_read_receipts";
 let publicVagaCargoFilter = "";
 let publicVagaUnidadeFilter = "";
@@ -1113,16 +1112,7 @@ function setSyncStatus(text, isOnline = false) {
 
 function loadLocalData() {
   const parsed = storageService.getSessionItem(STORAGE_KEY);
-  if (!parsed) {
-    if (isAuthenticated()) {
-      return {
-        ...defaultData,
-        ...Object.fromEntries(SERVER_SYNCED_COLLECTIONS.map((collection) => [collection, []])),
-        usuarios: mergeUsersByName(defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
-      };
-    }
-    return defaultData;
-  }
+  if (!parsed) return defaultData;
 
   parsed.comunicados = (parsed.comunicados || []).map((item) => ({
     id: item.id || generateUUID(),
@@ -1132,14 +1122,6 @@ function loadLocalData() {
     arquivo: item.arquivo || null,
     createdAt: item.createdAt || "Hoje",
   }));
-
-  if (isAuthenticated()) {
-    return {
-      ...defaultData,
-      ...Object.fromEntries(SERVER_SYNCED_COLLECTIONS.map((collection) => [collection, []])),
-      usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
-    };
-  }
 
   return {
     denuncias: parsed.denuncias || [],
@@ -3232,12 +3214,8 @@ async function loadFromSupabase(options = {}) {
         })
     );
 
-    // Nunca mantem o snapshot antigo em cache quando uma busca falha: registros
-    // que ja foram deletados por outra sessao nao podem continuar aparecendo so
-    // porque essa colecao especifica nao atualizou agora. Fica vazio ate o
-    // proximo ciclo de auto-atualizacao conseguir buscar de novo.
     requests.forEach(({ collection, rows, ok }) => {
-      data[collection] = ok ? rows : [];
+      if (ok) data[collection] = rows;
     });
     ensureRequiredTeamUsers();
     saveLocalData();
@@ -3251,11 +3229,6 @@ async function loadFromSupabase(options = {}) {
     if (setupLive) rememberCurrentNotificationKeysForPolling();
   } catch (error) {
     console.error("Erro ao carregar dados:", error);
-    // Mesma logica: se a sincronizacao inteira falhou, nao renderiza o
-    // snapshot antigo do cache local (pode conter registros ja deletados).
-    Object.keys(TABLES)
-      .filter((collection) => collection !== "usuarios")
-      .forEach((collection) => { data[collection] = []; });
     setSyncStatus("Sincronizacao pendente", false);
     serverDataReady = true;
     renderAll();
