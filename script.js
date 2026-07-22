@@ -173,6 +173,7 @@ const TABLES = {
   candidaturas: "hub_candidaturas",
   usuarios: USERS_TABLE,
 };
+const SERVER_SYNCED_COLLECTIONS = Object.freeze(Object.keys(TABLES).filter((collection) => collection !== "usuarios"));
 const READ_RECEIPTS_TABLE = "hub_read_receipts";
 let publicVagaCargoFilter = "";
 let publicVagaUnidadeFilter = "";
@@ -313,6 +314,7 @@ let visibleDashboardActivityItems = [];
 let currentUserSettings = loadUserSettings();
 let lastUnreadNotificationCount = 0;
 let notificationBaselineReady = false;
+let serverDataReady = !isAuthenticated();
 let presenceHeartbeatStarted = false;
 let hubNotificationServiceWorkerRegistration = null;
 let lastRealtimeNotificationSignature = "";
@@ -1111,7 +1113,16 @@ function setSyncStatus(text, isOnline = false) {
 
 function loadLocalData() {
   const parsed = storageService.getSessionItem(STORAGE_KEY);
-  if (!parsed) return defaultData;
+  if (!parsed) {
+    if (isAuthenticated()) {
+      return {
+        ...defaultData,
+        ...Object.fromEntries(SERVER_SYNCED_COLLECTIONS.map((collection) => [collection, []])),
+        usuarios: mergeUsersByName(defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
+      };
+    }
+    return defaultData;
+  }
 
   parsed.comunicados = (parsed.comunicados || []).map((item) => ({
     id: item.id || generateUUID(),
@@ -1121,6 +1132,15 @@ function loadLocalData() {
     arquivo: item.arquivo || null,
     createdAt: item.createdAt || "Hoje",
   }));
+
+  if (isAuthenticated()) {
+    return {
+      ...defaultData,
+      ...Object.fromEntries(SERVER_SYNCED_COLLECTIONS.map((collection) => [collection, []])),
+      usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
+    };
+  }
+
   return {
     denuncias: parsed.denuncias || [],
     comunicados: parsed.comunicados || [],
@@ -3160,11 +3180,13 @@ async function loadFromSupabase(options = {}) {
   const { setupLive = true } = options;
 
   if (!isAuthenticated()) {
+    serverDataReady = true;
     setSyncStatus("Modo local", false);
     renderAll();
     return;
   }
 
+  serverDataReady = false;
   try {
     const userRows = await hubApi.list("usuarios");
     const mappedUsers = mapRows("usuarios", userRows || []);
@@ -3196,6 +3218,14 @@ async function loadFromSupabase(options = {}) {
             }
             return { collection, rows: mapRows(collection, rows || []), ok: true };
           } catch (error) {
+            if (collection === "vagas") {
+              try {
+                const rows = await fetchPublicVagasRows();
+                return { collection, rows: mapRows(collection, rows || []), ok: true };
+              } catch (fallbackError) {
+                console.error("Erro ao carregar vagas publicas como fallback:", fallbackError);
+              }
+            }
             console.error(`Erro ao carregar colecao ${collection}:`, error);
             return { collection, ok: false };
           }
@@ -3216,6 +3246,7 @@ async function loadFromSupabase(options = {}) {
     }
     const hasFailures = requests.some((result) => !result.ok);
     setSyncStatus(hasFailures ? "Sincronizacao parcial" : "HUB online", !hasFailures);
+    serverDataReady = true;
     renderAll();
     if (setupLive) rememberCurrentNotificationKeysForPolling();
   } catch (error) {
@@ -3226,6 +3257,7 @@ async function loadFromSupabase(options = {}) {
       .filter((collection) => collection !== "usuarios")
       .forEach((collection) => { data[collection] = []; });
     setSyncStatus("Sincronizacao pendente", false);
+    serverDataReady = true;
     renderAll();
   }
 }
@@ -4201,15 +4233,18 @@ async function saveTeamUser(values) {
   }
 }
 
+async function fetchPublicVagasRows() {
+  const response = await fetch("/api/public/vagas");
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || "Nao foi possivel carregar vagas publicas.");
+  return result.data || [];
+}
+
 async function loadPublicData() {
   if (!isPublicJobsPage()) return;
 
   try {
-    const response = await fetch("/api/public/vagas");
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "Nao foi possivel carregar vagas publicas.");
-
-    const rows = result.data || [];
+    const rows = await fetchPublicVagasRows();
     data.vagas = mapRows("vagas", rows || []);
     renderPublicVagas();
   } catch (error) {
@@ -9754,6 +9789,7 @@ class NotificationTracker {
   collectNotifications() {
     const notifications = [];
     const sourceData = typeof data === "object" && data ? data : {};
+    if (isAuthenticated() && !serverDataReady) return notifications;
 
     const pushNotification = (item = {}) => {
       const type = item.type || "geral";
