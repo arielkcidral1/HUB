@@ -173,6 +173,7 @@ const TABLES = {
   candidaturas: "hub_candidaturas",
   usuarios: USERS_TABLE,
 };
+const SERVER_SYNCED_COLLECTIONS = Object.freeze(Object.keys(TABLES).filter((collection) => collection !== "usuarios"));
 const READ_RECEIPTS_TABLE = "hub_read_receipts";
 let publicVagaCargoFilter = "";
 let publicVagaUnidadeFilter = "";
@@ -313,6 +314,7 @@ let visibleDashboardActivityItems = [];
 let currentUserSettings = loadUserSettings();
 let lastUnreadNotificationCount = 0;
 let notificationBaselineReady = false;
+let serverDataReady = !isAuthenticated();
 let presenceHeartbeatStarted = false;
 let hubNotificationServiceWorkerRegistration = null;
 let lastRealtimeNotificationSignature = "";
@@ -1111,7 +1113,16 @@ function setSyncStatus(text, isOnline = false) {
 
 function loadLocalData() {
   const parsed = storageService.getSessionItem(STORAGE_KEY);
-  if (!parsed) return defaultData;
+  if (!parsed) {
+    if (isAuthenticated()) {
+      return {
+        ...defaultData,
+        ...Object.fromEntries(SERVER_SYNCED_COLLECTIONS.map((collection) => [collection, []])),
+        usuarios: mergeUsersByName(defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
+      };
+    }
+    return defaultData;
+  }
 
   parsed.comunicados = (parsed.comunicados || []).map((item) => ({
     id: item.id || generateUUID(),
@@ -1121,6 +1132,15 @@ function loadLocalData() {
     arquivo: item.arquivo || null,
     createdAt: item.createdAt || "Hoje",
   }));
+
+  if (isAuthenticated()) {
+    return {
+      ...defaultData,
+      ...Object.fromEntries(SERVER_SYNCED_COLLECTIONS.map((collection) => [collection, []])),
+      usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
+    };
+  }
+
   return {
     denuncias: parsed.denuncias || [],
     comunicados: parsed.comunicados || [],
@@ -1416,6 +1436,7 @@ function getSelectedMaloteDestino() {
 function getMaloteFilterValues() {
   return {
     destino: String(document.getElementById("malote-destino-filter")?.value || "").trim().toLowerCase(),
+    status: String(document.getElementById("malote-status-filter")?.value || "").trim(),
     colaborador: String(document.getElementById("malote-filter-colaborador")?.value || "").trim().toLowerCase(),
     codigo: String(document.getElementById("malote-code-search")?.value || "").trim(),
   };
@@ -1438,12 +1459,14 @@ function getMaloteCodeSearch() {
 function getFilteredMalotes() {
   const filters = getMaloteFilterValues();
   const selectedDestino = filters.destino;
+  const selectedStatus = filters.status;
   const selectedColaborador = filters.colaborador;
   const search = filters.codigo;
   const searchDigits = search.replace(/\D/g, "");
 
   return data.malotes.filter((item) => {
     if (selectedDestino && String(item.destino || "").toLowerCase() !== selectedDestino) return false;
+    if (selectedStatus && String(item.status || "") !== selectedStatus) return false;
     if (selectedColaborador && !getMaloteCollaboratorSearchText(item).includes(selectedColaborador)) return false;
     if (!searchDigits) return true;
 
@@ -3157,11 +3180,13 @@ async function loadFromSupabase(options = {}) {
   const { setupLive = true } = options;
 
   if (!isAuthenticated()) {
+    serverDataReady = true;
     setSyncStatus("Modo local", false);
     renderAll();
     return;
   }
 
+  serverDataReady = false;
   try {
     const userRows = await hubApi.list("usuarios");
     const mappedUsers = mapRows("usuarios", userRows || []);
@@ -3181,40 +3206,58 @@ async function loadFromSupabase(options = {}) {
     });
     data.usuarios = mergeUsersByName(data.usuarios, mappedUsers);
 
-    const requests = await Promise.allSettled(
+    const requests = await Promise.all(
       Object.keys(TABLES)
         .filter((collection) => collection !== "usuarios")
         .map(async (collection) => {
-          let rows = await hubApi.list(collection);
-          if (collection === "comunicados") {
-            const allowed = new Set(getAllowedChatChannelIds());
-            rows = rows.filter((row) => allowed.has(row.canal));
+          try {
+            let rows = await hubApi.list(collection);
+            if (collection === "comunicados") {
+              const allowed = new Set(getAllowedChatChannelIds());
+              rows = rows.filter((row) => allowed.has(row.canal));
+            }
+            return { collection, rows: mapRows(collection, rows || []), ok: true };
+          } catch (error) {
+            if (collection === "vagas") {
+              try {
+                const rows = await fetchPublicVagasRows();
+                return { collection, rows: mapRows(collection, rows || []), ok: true };
+              } catch (fallbackError) {
+                console.error("Erro ao carregar vagas publicas como fallback:", fallbackError);
+              }
+            }
+            console.error(`Erro ao carregar colecao ${collection}:`, error);
+            return { collection, ok: false };
           }
-          return [collection, mapRows(collection, rows || [])];
         })
     );
 
-    requests.forEach((result) => {
-      if (result.status === "fulfilled") {
-        const [collection, rows] = result.value;
-
-        data[collection] = rows;
-      } else {
-        console.error("Erro ao carregar colecao:", result.reason);
-      }
+    // Nunca mantem o snapshot antigo em cache quando uma busca falha: registros
+    // que ja foram deletados por outra sessao nao podem continuar aparecendo so
+    // porque essa colecao especifica nao atualizou agora. Fica vazio ate o
+    // proximo ciclo de auto-atualizacao conseguir buscar de novo.
+    requests.forEach(({ collection, rows, ok }) => {
+      data[collection] = ok ? rows : [];
     });
     ensureRequiredTeamUsers();
     saveLocalData();
     if (setupLive) {
       setupAutoRefresh();
     }
-    const hasFailures = requests.some((result) => result.status === "rejected");
+    const hasFailures = requests.some((result) => !result.ok);
     setSyncStatus(hasFailures ? "Sincronizacao parcial" : "HUB online", !hasFailures);
+    serverDataReady = true;
     renderAll();
     if (setupLive) rememberCurrentNotificationKeysForPolling();
   } catch (error) {
     console.error("Erro ao carregar dados:", error);
+    // Mesma logica: se a sincronizacao inteira falhou, nao renderiza o
+    // snapshot antigo do cache local (pode conter registros ja deletados).
+    Object.keys(TABLES)
+      .filter((collection) => collection !== "usuarios")
+      .forEach((collection) => { data[collection] = []; });
     setSyncStatus("Sincronizacao pendente", false);
+    serverDataReady = true;
     renderAll();
   }
 }
@@ -4190,15 +4233,18 @@ async function saveTeamUser(values) {
   }
 }
 
+async function fetchPublicVagasRows() {
+  const response = await fetch("/api/public/vagas");
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || "Nao foi possivel carregar vagas publicas.");
+  return result.data || [];
+}
+
 async function loadPublicData() {
   if (!isPublicJobsPage()) return;
 
   try {
-    const response = await fetch("/api/public/vagas");
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "Nao foi possivel carregar vagas publicas.");
-
-    const rows = result.data || [];
+    const rows = await fetchPublicVagasRows();
     data.vagas = mapRows("vagas", rows || []);
     renderPublicVagas();
   } catch (error) {
@@ -7563,6 +7609,8 @@ document.getElementById("malote-destino-filter")?.addEventListener("change", () 
   renderAll();
 });
 
+document.getElementById("malote-status-filter")?.addEventListener("change", renderAll);
+
 document.getElementById("malote-filter-colaborador")?.addEventListener("input", renderAll);
 
 document.getElementById("malote-code-search")?.addEventListener("input", () => {
@@ -8868,10 +8916,12 @@ function setupPresenceHeartbeat() {
     navigator.sendBeacon?.("/api/auth/heartbeat", new Blob([JSON.stringify({ online: false })], { type: "application/json" }));
   };
 
+  // Trocar de aba ou minimizar NAO deve derrubar a presenca - o usuario
+  // continua logado com o sistema aberto em segundo plano. So marca offline
+  // ao fechar a aba/navegador de fato (pagehide).
   window.addEventListener("pagehide", sendOfflineBeacon);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") sendOfflineBeacon();
-    else sendHeartbeat();
+    if (document.visibilityState === "visible") sendHeartbeat();
   });
 
   sendHeartbeat();
@@ -9739,6 +9789,7 @@ class NotificationTracker {
   collectNotifications() {
     const notifications = [];
     const sourceData = typeof data === "object" && data ? data : {};
+    if (isAuthenticated() && !serverDataReady) return notifications;
 
     const pushNotification = (item = {}) => {
       const type = item.type || "geral";
@@ -10205,7 +10256,9 @@ class NotificationTracker {
     if (this.statTotal) this.statTotal.textContent = total;
     if (this.statUnread) this.statUnread.textContent = unread;
     if (this.statPending) this.statPending.textContent = pending;
-    if (this.markAllReadBtn) this.markAllReadBtn.hidden = unread === 0;
+    // Mostra o botao sempre que houver notificacoes no acompanhamento;
+    // so oculta quando a lista esta totalmente vazia.
+    if (this.markAllReadBtn) this.markAllReadBtn.hidden = total === 0;
   }
 
   markAllRead() {

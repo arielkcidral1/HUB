@@ -106,7 +106,7 @@ const HANDLERS = {
   candidaturas: { fn: handleCandidatura, windowSeconds: 600, max: 5 },
 };
 
-export default async function handler(request) {
+async function handleRequest(request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
   if (request.method !== "POST") return json(request, 405, { error: "Metodo nao permitido." });
 
@@ -116,10 +116,31 @@ export default async function handler(request) {
   const entry = HANDLERS[type];
   if (!entry) return json(request, 400, { error: "Tipo de envio nao suportado neste endpoint." });
 
-  const allowed = await checkRateLimit(request, type, entry.windowSeconds, entry.max);
+  let allowed;
+  try {
+    allowed = await checkRateLimit(request, type, entry.windowSeconds, entry.max);
+  } catch (error) {
+    console.error("Erro ao verificar limite de envios:", error);
+    return json(request, 500, { error: `Nao foi possivel verificar o limite de envios: ${error.message || error}` });
+  }
   if (!allowed) return json(request, 429, { error: "Muitos envios. Tente novamente mais tarde." });
 
-  const result = await entry.fn(body.payload || {});
+  let result;
+  try {
+    result = await entry.fn(body.payload || {});
+  } catch (error) {
+    console.error(`Erro ao salvar envio publico (${type}):`, error);
+    return json(request, 400, { error: error.message || "Nao foi possivel salvar o envio." });
+  }
   if (result.error) return json(request, 400, { error: result.error });
   return json(request, 200, { data: result.data });
+}
+
+export default async function handler(request) {
+  try {
+    return await handleRequest(request);
+  } catch (error) {
+    console.error("Erro inesperado no envio publico:", error);
+    return json(request, 500, { error: `Erro interno: ${error.message || error}` });
+  }
 }
