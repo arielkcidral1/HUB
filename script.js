@@ -10290,47 +10290,31 @@ document.addEventListener('DOMContentLoaded', () => {
   maybeOpenNotificationTrackerFromUrl();
 });
 
-function setupFormScrollGrid({ sentinelId, listId, formId, expandedWorkspaceClass, expandedListClass, offsetAfterForm = 96 }) {
-  const sentinel = document.getElementById(sentinelId);
+function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedListClass, offsetAfterForm = 96 }) {
+  const form = document.getElementById(formId);
   const list = document.getElementById(listId);
-  const workspace = document.getElementById(formId)?.closest(".workspace");
-  if (!sentinel || !list || !workspace || !("IntersectionObserver" in window)) return;
+  const workspace = form?.closest(".workspace");
+  if (!form || !list || !workspace) return;
 
-  let observer = null;
   let expandidoAtual = null;
 
-  function criarObserver() {
-    observer?.disconnect();
+  function atualizarEstado() {
     const margem = Math.max(0, Number(offsetAfterForm) || 0);
-    observer = new IntersectionObserver(
-      ([entry]) => {
-        const expandido = !entry.isIntersecting;
+    const expandido = form.getBoundingClientRect().bottom < margem;
+    if (expandido === expandidoAtual) return;
+    expandidoAtual = expandido;
 
-        if (expandido === expandidoAtual) return;
-        expandidoAtual = expandido;
-
-        list.classList.toggle(expandedListClass, expandido);
-        workspace.classList.toggle(expandedWorkspaceClass, expandido);
-      },
-      { threshold: 0, rootMargin: `-${margem}px 0px 0px 0px` }
-    );
-    observer.observe(sentinel);
+    list.classList.toggle(expandedListClass, expandido);
+    workspace.classList.toggle(expandedWorkspaceClass, expandido);
   }
 
-  let tentativas = 0;
-  const esperarPrimeiroCard = window.setInterval(() => {
-    tentativas += 1;
-    const temCard = Boolean(list.querySelector(".item-card"));
-    if (temCard || tentativas >= 20) {
-      window.clearInterval(esperarPrimeiroCard);
-      criarObserver();
-    }
-  }, 250);
+  atualizarEstado();
+  window.addEventListener("scroll", atualizarEstado, { passive: true });
+  window.addEventListener("resize", atualizarEstado);
 }
 
 function setupVagasFormScrollGrid() {
   setupFormScrollGrid({
-    sentinelId: "vagas-scroll-sentinel",
     listId: "vagas-list",
     formId: "vaga-form",
     expandedWorkspaceClass: "vagas-workspace-expanded",
@@ -10340,7 +10324,6 @@ function setupVagasFormScrollGrid() {
 
 function setupMalotesFormScrollGrid() {
   setupFormScrollGrid({
-    sentinelId: "malotes-scroll-sentinel",
     listId: "malotes-list",
     formId: "malote-form",
     expandedWorkspaceClass: "malotes-workspace-expanded",
