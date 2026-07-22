@@ -32,9 +32,23 @@
 
 #vagas .workspace,
 #malotes .workspace {
+  grid-template-columns: minmax(300px, 0.75fr) minmax(0, 1.25fr);
   overflow-x: hidden;
   overflow-anchor: none;
   transition: grid-template-columns .32s ease;
+}
+
+#vagas .workspace > .form-panel,
+#malotes .workspace > .form-panel {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+#vagas .workspace > .panel:has(#vagas-list),
+#malotes .workspace > .panel:has(#malotes-list) {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
 }
 
 #vagas .workspace.vagas-workspace-expanded,
@@ -145,5 +159,22 @@
   #vagas-list.vagas-admin-grid.vagas-two-col,
   #malotes-list.malotes-admin-grid.malotes-two-col {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  #vagas .workspace,
+  #malotes .workspace,
+  #vagas .workspace.vagas-workspace-expanded,
+  #malotes .workspace.malotes-workspace-expanded {
+    grid-template-columns: 1fr;
+  }
+
+  #vagas .workspace > .form-panel,
+  #malotes .workspace > .form-panel,
+  #vagas .workspace > .panel:has(#vagas-list),
+  #malotes .workspace > .panel:has(#malotes-list) {
+    grid-column: 1;
+    grid-row: auto;
   }
 }
