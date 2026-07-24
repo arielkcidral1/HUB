@@ -7984,10 +7984,7 @@ document.getElementById("clear-document-filters")?.addEventListener("click", () 
 });
 
 document.getElementById("disciplinary-filter-name")?.addEventListener("input", renderDisciplinaryRecords);
-document.getElementById("disciplinary-filter-date")?.addEventListener("input", (event) => {
-  event.currentTarget.value = String(event.currentTarget.value || "").replace(/\D/g, "").slice(0, 2);
-  renderDisciplinaryRecords();
-});
+document.getElementById("disciplinary-filter-date")?.addEventListener("change", renderDisciplinaryRecords);
 document.getElementById("disciplinary-filter-unit")?.addEventListener("change", renderDisciplinaryRecords);
 document.getElementById("disciplinary-filter-notes")?.addEventListener("input", renderDisciplinaryRecords);
 document.getElementById("clear-disciplinary-filters")?.addEventListener("click", () => {
