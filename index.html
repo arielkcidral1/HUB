@@ -1016,8 +1016,12 @@
                     <label>Unidade do funcionario<select name="unidade" data-unit-select required></select></label>
                   </div>
                   <label>Observacoes<textarea name="observacoes" rows="4" placeholder="Opcional"></textarea></label>
-                  <label>Anexo
-                    <input name="anexo" type="file" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
+                  <label class="disciplinary-file-field">Anexo
+                    <span class="disciplinary-file-control">
+                      <span class="disciplinary-file-button">Anexar advertencia</span>
+                      <span class="disciplinary-file-name" data-empty-label="Nenhum arquivo escolhido">Nenhum arquivo escolhido</span>
+                    </span>
+                    <input class="disciplinary-file-input" name="anexo" type="file" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
                   </label>
                   <button class="primary-button" type="submit">Salvar advertencia</button>
                 </form>
@@ -1037,8 +1041,12 @@
                     <label>Unidade do funcionario<select name="unidade" data-unit-select required></select></label>
                   </div>
                   <label>Observacoes<textarea name="observacoes" rows="4" placeholder="Opcional"></textarea></label>
-                  <label>Anexo
-                    <input name="anexo" type="file" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
+                  <label class="disciplinary-file-field">Anexo
+                    <span class="disciplinary-file-control">
+                      <span class="disciplinary-file-button">Anexar suspensao</span>
+                      <span class="disciplinary-file-name" data-empty-label="Nenhum arquivo escolhido">Nenhum arquivo escolhido</span>
+                    </span>
+                    <input class="disciplinary-file-input" name="anexo" type="file" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
                   </label>
                   <button class="primary-button" type="submit">Salvar suspensao</button>
                 </form>
