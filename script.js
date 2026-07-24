@@ -7332,26 +7332,15 @@ function updateDisciplinaryFilterClearButton() {
   clearButton.hidden = !Boolean(filters.nome || filters.data || filters.unidade || filters.observacoes);
 }
 
-function matchesDisciplinaryDateFilter(rawDate, filter) {
+function matchesDisciplinaryMonthFilter(rawDate, filter) {
   if (!filter) return true;
-  const normalizedFilter = String(filter || "").replace(/[^\d/]/g, "");
+  const normalizedFilter = String(filter || "").replace(/\D/g, "");
   if (!normalizedFilter) return true;
   const formattedDate = formatFormDate(rawDate);
-  const digits = formattedDate.replace(/\D/g, "");
   const parts = formattedDate.split("/");
-  const day = parts[0] || "";
   const month = parts[1] || "";
-  const year = parts[2] || "";
-  const monthYear = [month, year].filter(Boolean).join("/");
-  const dayMonth = [day, month].filter(Boolean).join("/");
   const compactMonth = String(Number(month || 0));
-  const compactDay = String(Number(day || 0));
-  return formattedDate.includes(normalizedFilter)
-    || digits.includes(normalizedFilter.replace(/\D/g, ""))
-    || monthYear.includes(normalizedFilter)
-    || dayMonth.includes(normalizedFilter)
-    || compactMonth === normalizedFilter
-    || compactDay === normalizedFilter;
+  return month === normalizedFilter.padStart(2, "0") || compactMonth === normalizedFilter;
 }
 
 function filterDisciplinaryRecords(items = []) {
@@ -7359,7 +7348,7 @@ function filterDisciplinaryRecords(items = []) {
   return items.filter((item) => {
     const formData = item.formData || {};
     if (filters.nome && !String(formData.colaborador || item.summary || "").toLowerCase().includes(filters.nome)) return false;
-    if (filters.data && !matchesDisciplinaryDateFilter(formData.data_medida, filters.data)) return false;
+    if (filters.data && !matchesDisciplinaryMonthFilter(formData.data_medida, filters.data)) return false;
     if (filters.unidade && String(formData.unidade || "") !== filters.unidade) return false;
     if (filters.observacoes && !String(formData.observacoes || "").toLowerCase().includes(filters.observacoes)) return false;
     return true;
@@ -7371,7 +7360,7 @@ function getDisciplinaryReportFilterLabel(useFilters = true) {
   const filters = getDisciplinaryFilterValues();
   const parts = [];
   if (filters.nome) parts.push(`Nome: ${filters.nome}`);
-  if (filters.data) parts.push(`Data: ${filters.data}`);
+  if (filters.data) parts.push(`Mes: ${filters.data}`);
   if (filters.unidade) parts.push(`Unidade: ${filters.unidade}`);
   if (filters.observacoes) parts.push(`Observacoes: ${filters.observacoes}`);
   return parts.length ? parts.join(" | ") : "Sem filtros ativos";
@@ -7996,7 +7985,7 @@ document.getElementById("clear-document-filters")?.addEventListener("click", () 
 
 document.getElementById("disciplinary-filter-name")?.addEventListener("input", renderDisciplinaryRecords);
 document.getElementById("disciplinary-filter-date")?.addEventListener("input", (event) => {
-  event.currentTarget.value = String(event.currentTarget.value || "").replace(/[^\d/]/g, "").slice(0, 10);
+  event.currentTarget.value = String(event.currentTarget.value || "").replace(/\D/g, "").slice(0, 2);
   renderDisciplinaryRecords();
 });
 document.getElementById("disciplinary-filter-unit")?.addEventListener("change", renderDisciplinaryRecords);
