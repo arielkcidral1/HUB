@@ -8146,6 +8146,16 @@ function validateDisciplinaryAttachment(file) {
   return "Anexe somente imagem, PDF ou arquivo Word.";
 }
 
+function clearDisciplinaryFormDrafts() {
+  document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
+    formElement.reset();
+    formElement.querySelectorAll("input, select, textarea").forEach((field) => {
+      field.setCustomValidity?.("");
+      if (field.type === "file") field.value = "";
+    });
+  });
+}
+
 document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
   formElement.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -8195,7 +8205,7 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
       createdBy: getCurrentUserName(),
     });
 
-    if (success) event.currentTarget.reset();
+    if (success) clearDisciplinaryFormDrafts();
   });
 });
 
