@@ -7195,6 +7195,56 @@ function getDisciplinaryRecords() {
     .sort((a, b) => new Date(b.updatedSortAt || b.sortAt || 0) - new Date(a.updatedSortAt || a.sortAt || 0));
 }
 
+function getDisciplinaryFilterValues() {
+  return {
+    nome: String(document.getElementById("disciplinary-filter-name")?.value || "").trim().toLowerCase(),
+    data: String(document.getElementById("disciplinary-filter-date")?.value || "").trim().toLowerCase(),
+    unidade: String(document.getElementById("disciplinary-filter-unit")?.value || "").trim(),
+    observacoes: String(document.getElementById("disciplinary-filter-notes")?.value || "").trim().toLowerCase(),
+  };
+}
+
+function updateDisciplinaryFilterClearButton() {
+  const clearButton = document.getElementById("clear-disciplinary-filters");
+  if (!clearButton) return;
+  const filters = getDisciplinaryFilterValues();
+  clearButton.hidden = !Boolean(filters.nome || filters.data || filters.unidade || filters.observacoes);
+}
+
+function matchesDisciplinaryDateFilter(rawDate, filter) {
+  if (!filter) return true;
+  const normalizedFilter = String(filter || "").replace(/[^\d/]/g, "");
+  if (!normalizedFilter) return true;
+  const formattedDate = formatFormDate(rawDate);
+  const digits = formattedDate.replace(/\D/g, "");
+  const parts = formattedDate.split("/");
+  const day = parts[0] || "";
+  const month = parts[1] || "";
+  const year = parts[2] || "";
+  const monthYear = [month, year].filter(Boolean).join("/");
+  const dayMonth = [day, month].filter(Boolean).join("/");
+  const compactMonth = String(Number(month || 0));
+  const compactDay = String(Number(day || 0));
+  return formattedDate.includes(normalizedFilter)
+    || digits.includes(normalizedFilter.replace(/\D/g, ""))
+    || monthYear.includes(normalizedFilter)
+    || dayMonth.includes(normalizedFilter)
+    || compactMonth === normalizedFilter
+    || compactDay === normalizedFilter;
+}
+
+function filterDisciplinaryRecords(items = []) {
+  const filters = getDisciplinaryFilterValues();
+  return items.filter((item) => {
+    const formData = item.formData || {};
+    if (filters.nome && !String(formData.colaborador || item.summary || "").toLowerCase().includes(filters.nome)) return false;
+    if (filters.data && !matchesDisciplinaryDateFilter(formData.data_medida, filters.data)) return false;
+    if (filters.unidade && String(formData.unidade || "") !== filters.unidade) return false;
+    if (filters.observacoes && !String(formData.observacoes || "").toLowerCase().includes(filters.observacoes)) return false;
+    return true;
+  });
+}
+
 function getDisciplinaryAttachment(formData = {}) {
   const anexo = formData.anexo || formData.attachment || {};
   return anexo && typeof anexo === "object" ? anexo : {};
@@ -7204,9 +7254,10 @@ function renderDisciplinaryRecords() {
   const target = document.getElementById("disciplinary-records");
   if (!target) return;
 
-  const records = getDisciplinaryRecords();
+  updateDisciplinaryFilterClearButton();
+  const records = filterDisciplinaryRecords(getDisciplinaryRecords());
   if (!records.length) {
-    target.innerHTML = '<p class="empty-state">Nenhum registro salvo ainda.</p>';
+    target.innerHTML = '<p class="empty-state">Nenhum registro encontrado.</p>';
     return;
   }
 
@@ -7760,6 +7811,21 @@ document.getElementById("clear-document-filters")?.addEventListener("click", () 
   });
   renderDocumentRecords();
   updateDocumentFilterClearButton();
+});
+
+document.getElementById("disciplinary-filter-name")?.addEventListener("input", renderDisciplinaryRecords);
+document.getElementById("disciplinary-filter-date")?.addEventListener("input", (event) => {
+  event.currentTarget.value = String(event.currentTarget.value || "").replace(/[^\d/]/g, "").slice(0, 10);
+  renderDisciplinaryRecords();
+});
+document.getElementById("disciplinary-filter-unit")?.addEventListener("change", renderDisciplinaryRecords);
+document.getElementById("disciplinary-filter-notes")?.addEventListener("input", renderDisciplinaryRecords);
+document.getElementById("clear-disciplinary-filters")?.addEventListener("click", () => {
+  ["disciplinary-filter-name", "disciplinary-filter-date", "disciplinary-filter-unit", "disciplinary-filter-notes"].forEach((id) => {
+    const field = document.getElementById(id);
+    if (field) field.value = "";
+  });
+  renderDisciplinaryRecords();
 });
 
 document.getElementById("contratado-filter-nome")?.addEventListener("input", () => {
