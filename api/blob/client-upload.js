@@ -1,8 +1,6 @@
 import { handleUpload } from "@vercel/blob/client";
 import { sql } from "../_lib/db.js";
-import { json, corsHeaders } from "../_lib/cors.js";
-
-export const config = { runtime: "edge" };
+import { sendJson, applyCorsHeadersNode } from "../_lib/cors.js";
 
 const MAX_CONTRATADO_FILE_SIZE = 10 * 1024 * 1024;
 const ACCESS_PASSWORDS = {
@@ -20,19 +18,23 @@ function text(value) {
   return String(value || "").trim();
 }
 
-function getClientIdentifier(req) {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  const firstForwarded = forwardedFor ? forwardedFor.split(",")[0].trim() : "";
-  return req.headers.get("cf-connecting-ip") ||
-    firstForwarded ||
-    req.headers.get("x-real-ip") ||
-    `ua:${req.headers.get("user-agent") || "unknown"}`;
+function getHeader(req, name) {
+  return req.headers?.[name.toLowerCase()] || req.headers?.[name] || "";
 }
 
-async function checkRateLimit(request) {
+function getClientIdentifier(req) {
+  const forwardedFor = getHeader(req, "x-forwarded-for");
+  const firstForwarded = forwardedFor ? String(forwardedFor).split(",")[0].trim() : "";
+  return getHeader(req, "cf-connecting-ip") ||
+    firstForwarded ||
+    getHeader(req, "x-real-ip") ||
+    `ua:${getHeader(req, "user-agent") || "unknown"}`;
+}
+
+async function checkRateLimit(req) {
   const ipHashBuffer = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(`${envValue("RATE_LIMIT_SALT") || "hub"}:${getClientIdentifier(request)}`)
+    new TextEncoder().encode(`${envValue("RATE_LIMIT_SALT") || "hub"}:${getClientIdentifier(req)}`)
   );
   const ipHash = Array.from(new Uint8Array(ipHashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
   const requestId = crypto.randomUUID();
@@ -67,21 +69,16 @@ function validatePathname(pathname) {
   return true;
 }
 
-export default async function handler(request) {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
-  if (request.method !== "POST") return json(request, 405, { error: "Metodo nao permitido." });
+export default async function handler(req, res) {
+  if (req.method === "OPTIONS") { applyCorsHeadersNode(req, res); res.status(204).end(); return; }
+  if (req.method !== "POST") return sendJson(req, res, 405, { error: "Metodo nao permitido." });
 
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json(request, 400, { error: "JSON invalido." });
-  }
+  const body = req.body || {};
 
   try {
     const response = await handleUpload({
       body,
-      request,
+      request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         if (!validatePathname(pathname)) throw new Error("Caminho de upload invalido.");
 
@@ -91,7 +88,7 @@ export default async function handler(request) {
 
         let allowed;
         try {
-          allowed = await checkRateLimit(request);
+          allowed = await checkRateLimit(req);
         } catch (error) {
           console.error("client upload rate limit failed", error);
           throw new Error("Nao foi possivel liberar o envio publico agora. Tente novamente em instantes.");
@@ -112,9 +109,9 @@ export default async function handler(request) {
       },
     });
 
-    return json(request, 200, response);
+    return sendJson(req, res, 200, response);
   } catch (error) {
     console.error("client blob upload failed", error);
-    return json(request, 400, { error: error.message || "Nao foi possivel enviar o arquivo." });
+    return sendJson(req, res, 400, { error: error.message || "Nao foi possivel enviar o arquivo." });
   }
 }
