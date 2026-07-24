@@ -5037,8 +5037,8 @@ function applyRoleAccess() {
   const allowedViews = isCashierUser()
     ? new Set(["comunicacao", "conta"])
     : isManagerUser()
-    ? new Set(["comunicacao", "documentos", "conta"])
-    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "calendario", "documentos", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
+    ? new Set(["comunicacao", "documentos", "advertencias-suspensoes", "conta"])
+    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : isManagerUser()
@@ -7659,7 +7659,7 @@ document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
       closeMobileMenu();
       return;
     }
-    if (isManagerUser() && !["comunicacao", "documentos", "conta"].includes(button.dataset.view)) {
+    if (isManagerUser() && !["comunicacao", "documentos", "advertencias-suspensoes", "conta"].includes(button.dataset.view)) {
       activateView("documentos");
       closeMobileMenu();
       return;
