@@ -25,8 +25,12 @@
             <h2>Acesso restrito</h2>
           </div>
           <p class="item-meta">Informe a senha recebida para acessar o envio de documentos.</p>
-          <label>Senha de acesso
-            <input name="senha_acesso" type="password" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" readonly required />
+          <label class="password-upload-field">Senha de acesso
+            <span class="password-input-control">
+              <span class="password-input-icon" aria-hidden="true"></span>
+              <input name="senha_acesso" type="password" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" readonly required />
+              <button class="password-visibility-button" type="button" data-action="toggle-password-visibility" aria-label="Mostrar senha">Mostrar</button>
+            </span>
           </label>
           <button class="primary-button" type="submit">Acessar</button>
         </form>

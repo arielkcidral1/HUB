@@ -2903,6 +2903,90 @@ textarea {
   gap: 10px;
 }
 
+.password-upload-field {
+  gap: 8px;
+}
+
+.password-input-control {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 6px 8px 6px 12px;
+  transition: var(--transition);
+}
+
+.password-input-control:focus-within {
+  border-color: var(--teal-border);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+}
+
+.password-input-control input {
+  min-height: 34px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.password-input-control input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.password-input-icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+}
+
+.password-input-icon::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 5px;
+  width: 8px;
+  height: 7px;
+  border: 1.7px solid var(--teal);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.password-input-icon::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 11px;
+  width: 12px;
+  height: 8px;
+  border-radius: 3px;
+  background: var(--teal);
+}
+
+.password-visibility-button {
+  width: auto;
+  min-height: 32px;
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  border-radius: 8px;
+  background: rgba(45, 212, 191, 0.1);
+  color: var(--teal-dark);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.password-visibility-button:hover {
+  background: rgba(45, 212, 191, 0.18);
+}
+
 .contractor-document-field {
   display: grid;
   grid-template-columns: 1fr auto;

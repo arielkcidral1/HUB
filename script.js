@@ -10141,6 +10141,17 @@ document.addEventListener('click', (event) => {
       event.preventDefault();
       handleChatAttachOption(target.dataset.attachType);
       break;
+    case 'toggle-password-visibility': {
+      event.preventDefault();
+      const control = target.closest(".password-input-control");
+      const input = control?.querySelector('input[type="password"], input[type="text"]');
+      if (!input) break;
+      const showing = input.type === "text";
+      input.type = showing ? "password" : "text";
+      target.textContent = showing ? "Mostrar" : "Ocultar";
+      target.setAttribute("aria-label", showing ? "Mostrar senha" : "Ocultar senha");
+      break;
+    }
     case 'toggle-chat-emoji-menu':
       event.preventDefault();
       toggleChatEmojiMenu();
