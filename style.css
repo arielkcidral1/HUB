@@ -3152,6 +3152,17 @@ form.panel[data-public-chamados="true"].panel {
   align-items: center;
 }
 
+.disciplinary-filter-bar {
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  justify-content: end;
+  width: 100%;
+}
+
+.disciplinary-filter-fields {
+  grid-template-columns: 110px 135px 140px 150px;
+}
+
 .vt-filter-fields input,
 .vt-filter-fields select {
   min-height: 34px;
