@@ -4891,10 +4891,11 @@ function createVtReportXlsxBlob(rows) {
   ]);
 }
 
-function buildDisciplinaryReportWorksheet(rows) {
+function buildDisciplinaryReportWorksheet(rows, type = getActiveDisciplinaryType()) {
+  const typeLabel = getDisciplinaryTypeLabel(type);
   const headers = ["Nome", "Data", "Unidade", "Observacao"];
   const sheetRows = [
-    worksheetRowXml(["Relatorio de Advertencias e Suspensoes"], 1, 2),
+    worksheetRowXml([`Relatorio de ${typeLabel}`], 1, 2),
     worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
     worksheetRowXml(headers, 5, 1),
     ...rows.map((item, index) => worksheetRowXml([
@@ -4918,8 +4919,9 @@ function buildDisciplinaryReportWorksheet(rows) {
 </worksheet>`;
 }
 
-function createDisciplinaryReportXlsxBlob(rows) {
-  const worksheet = buildDisciplinaryReportWorksheet(rows);
+function createDisciplinaryReportXlsxBlob(rows, type = getActiveDisciplinaryType()) {
+  const worksheet = buildDisciplinaryReportWorksheet(rows, type);
+  const sheetName = type === "suspensao" ? "Suspensoes" : "Advertencias";
   return createZipBlob([
     {
       name: "[Content_Types].xml",
@@ -4943,7 +4945,7 @@ function createDisciplinaryReportXlsxBlob(rows) {
       name: "xl/workbook.xml",
       content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="Advertencias" sheetId="1" r:id="rId1"/></sheets>
+  <sheets><sheet name="${sheetName}" sheetId="1" r:id="rId1"/></sheets>
 </workbook>`,
     },
     {
@@ -4982,15 +4984,17 @@ function createDisciplinaryReportXlsxBlob(rows) {
   ]);
 }
 
-function gerarRelatorioDisciplinary(scope = "filtered") {
+function gerarRelatorioDisciplinary(scope = "filtered", type = getActiveDisciplinaryType()) {
   const useFilters = scope !== "all";
-  const rows = getDisciplinaryReportRows(useFilters);
+  const safeType = DISCIPLINARY_DOCUMENT_TYPES.has(type) ? type : getActiveDisciplinaryType();
+  const rows = getDisciplinaryReportRows(useFilters, safeType);
+  const typeLabel = getDisciplinaryTypeLabel(safeType).toLowerCase();
   if (!rows.length) {
-    showModal("Relatorio vazio", "Nao ha registros de advertencias ou suspensoes para gerar o relatorio.", "error");
+    showModal("Relatorio vazio", `Nao ha registros de ${typeLabel} para gerar o relatorio.`, "error");
     return;
   }
-  const blob = createDisciplinaryReportXlsxBlob(rows);
-  downloadBlob(blob, safeDownloadName(`relatorio-advertencias-suspensoes-${useFilters ? "filtrado" : "todos"}`, "xlsx"));
+  const blob = createDisciplinaryReportXlsxBlob(rows, safeType);
+  downloadBlob(blob, safeDownloadName(`relatorio-${safeType}-${useFilters ? "filtrado" : "todos"}`, "xlsx"));
   document.getElementById("custom-modal")?.remove();
 }
 
@@ -7298,6 +7302,20 @@ function getDisciplinaryRecords() {
     .sort((a, b) => new Date(b.updatedSortAt || b.sortAt || 0) - new Date(a.updatedSortAt || a.sortAt || 0));
 }
 
+function getActiveDisciplinaryType() {
+  const activeTab = document.querySelector(".disciplinary-tab.active");
+  const type = activeTab?.dataset.disciplinaryDoc;
+  return DISCIPLINARY_DOCUMENT_TYPES.has(type) ? type : "advertencia";
+}
+
+function getDisciplinaryTypeLabel(type = getActiveDisciplinaryType()) {
+  return type === "suspensao" ? "Suspensoes" : "Advertencias";
+}
+
+function getDisciplinaryRecordsByType(type = getActiveDisciplinaryType()) {
+  return getDisciplinaryRecords().filter((item) => item.type === type);
+}
+
 function getDisciplinaryFilterValues() {
   return {
     nome: String(document.getElementById("disciplinary-filter-name")?.value || "").trim().toLowerCase(),
@@ -7359,8 +7377,9 @@ function getDisciplinaryReportFilterLabel(useFilters = true) {
   return parts.length ? parts.join(" | ") : "Sem filtros ativos";
 }
 
-function getDisciplinaryReportRows(useFilters = true) {
-  const records = useFilters ? filterDisciplinaryRecords(getDisciplinaryRecords()) : getDisciplinaryRecords();
+function getDisciplinaryReportRows(useFilters = true, type = getActiveDisciplinaryType()) {
+  const typedRecords = getDisciplinaryRecordsByType(type);
+  const records = useFilters ? filterDisciplinaryRecords(typedRecords) : typedRecords;
   return records.map((item) => {
     const formData = item.formData || {};
     return {
@@ -7375,22 +7394,25 @@ function getDisciplinaryReportRows(useFilters = true) {
 function showDisciplinaryReportMenu() {
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
-  const filteredCount = filterDisciplinaryRecords(getDisciplinaryRecords()).length;
-  const totalCount = getDisciplinaryRecords().length;
+  const type = getActiveDisciplinaryType();
+  const typeLabel = getDisciplinaryTypeLabel(type);
+  const typedRecords = getDisciplinaryRecordsByType(type);
+  const filteredCount = filterDisciplinaryRecords(typedRecords).length;
+  const totalCount = typedRecords.length;
   const overlay = document.createElement("div");
   overlay.id = "custom-modal";
   overlay.className = "modal-overlay";
   overlay.innerHTML = `
     <div class="modal-card vt-report-modal">
-      <div class="modal-header info">Relatorio de Advertencias e Suspensoes</div>
+      <div class="modal-header info">Relatorio de ${escapeHtml(typeLabel)}</div>
       <div class="modal-body">
         <p>Escolha quais registros deseja exportar em .xlsx.</p>
         <div class="vt-report-options">
-          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="filtered">
+          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="filtered" data-type="${escapeHtml(type)}">
             <span>Registros filtrados</span>
             <small>${escapeHtml(String(filteredCount))} registro(s) - ${escapeHtml(getDisciplinaryReportFilterLabel(true))}</small>
           </button>
-          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="all">
+          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="all" data-type="${escapeHtml(type)}">
             <span>Todos os registros</span>
             <small>${escapeHtml(String(totalCount))} registro(s) cadastrados</small>
           </button>
@@ -10064,7 +10086,7 @@ document.addEventListener('click', (event) => {
     case 'editar-vt': editarVtRegistro(id); break;
     case 'excluir-vt': excluirVtRegistro(id); break;
     case 'gerar-relatorio-vt': gerarRelatorioVt(target.dataset.scope); break;
-    case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary(target.dataset.scope); break;
+    case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary(target.dataset.scope, target.dataset.type); break;
     case 'editar-documento': editarDocumento(id); break;
     case 'baixar-documento-rh': baixarDocumentoRH(id); break;
     case 'excluir-documento': excluirDocumento(id); break;
