@@ -1098,6 +1098,36 @@ async function hubUpload(file, category) {
   return result;
 }
 
+let vercelBlobClientPromise = null;
+
+async function getVercelBlobClient() {
+  if (!vercelBlobClientPromise) {
+    vercelBlobClientPromise = import("https://cdn.jsdelivr.net/npm/@vercel/blob@0.27.1/client/+esm");
+  }
+  return vercelBlobClientPromise;
+}
+
+function safeBlobPathname(file, prefix = "") {
+  const safeName = String(file?.name || "arquivo").replace(/[^a-z0-9_.-]/gi, "-") || "arquivo";
+  return `${prefix}${Date.now()}-${generateUUID()}-${safeName}`;
+}
+
+async function hubClientUpload(file, category, clientPayload = {}) {
+  if (category !== "contratado") return hubUpload(file, category);
+  const { upload } = await getVercelBlobClient();
+  try {
+    return await upload(safeBlobPathname(file, "contratados/"), file, {
+      access: "public",
+      handleUploadUrl: "/api/blob/client-upload",
+      clientPayload: JSON.stringify(clientPayload),
+      multipart: file.size > 5 * 1024 * 1024,
+      contentType: file.type || "application/octet-stream",
+    });
+  } catch (error) {
+    throw new Error(error.message || "Nao foi possivel enviar o arquivo.");
+  }
+}
+
 async function hubDeleteBlob(url) {
   if (!url) return;
   try {
@@ -3955,7 +3985,7 @@ async function submitPublicContractorDocuments({ empresa, origemHtml, nome, tele
   const uploadedDocuments = [];
   try {
     for (const file of Array.from(documentos || [])) {
-      const uploaded = await hubUpload(file, "contratado");
+      const uploaded = await hubClientUpload(file, "contratado", { empresa, origemHtml, accessPassword });
       uploadedDocuments.push({
         name: String(file.name || "documento"),
         size: Number(file.size || 0),
