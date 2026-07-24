@@ -3163,6 +3163,10 @@ form.panel[data-public-chamados="true"].panel {
   grid-template-columns: 110px 135px 140px 150px;
 }
 
+.disciplinary-filter-bar + #disciplinary-records {
+  margin-top: 18px;
+}
+
 .vt-filter-fields input,
 .vt-filter-fields select {
   min-height: 34px;
