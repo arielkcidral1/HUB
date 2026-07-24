@@ -8143,6 +8143,14 @@ function validateDisciplinaryAttachment(file) {
   return "Anexe somente imagem, PDF ou arquivo Word.";
 }
 
+function updateDisciplinaryFileLabel(input) {
+  const field = input?.closest(".disciplinary-file-field");
+  const label = field?.querySelector(".disciplinary-file-name");
+  if (!label) return;
+  const file = input.files?.[0];
+  label.textContent = file?.name || label.dataset.emptyLabel || "Nenhum arquivo escolhido";
+}
+
 function clearDisciplinaryFormDrafts() {
   document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
     formElement.reset();
@@ -8150,10 +8158,16 @@ function clearDisciplinaryFormDrafts() {
       field.setCustomValidity?.("");
       if (field.type === "file") field.value = "";
     });
+    formElement.querySelectorAll(".disciplinary-file-input").forEach(updateDisciplinaryFileLabel);
   });
 }
 
 document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
+  formElement.querySelectorAll(".disciplinary-file-input").forEach((input) => {
+    updateDisciplinaryFileLabel(input);
+    input.addEventListener("change", () => updateDisciplinaryFileLabel(input));
+  });
+
   formElement.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
