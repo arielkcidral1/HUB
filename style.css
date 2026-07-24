@@ -3160,7 +3160,7 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 .disciplinary-filter-fields {
-  grid-template-columns: 110px 135px 140px 150px;
+  grid-template-columns: 110px 140px 80px 190px;
 }
 
 .disciplinary-filter-bar + #disciplinary-records {
