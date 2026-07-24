@@ -57,7 +57,7 @@ const CATEGORIES = {
     prefix: "contratados/",
     maxSize: 10 * 1024 * 1024,
     requiresAuth: false,
-    rateLimit: { formType: "blob_contratado", windowSeconds: 600, max: 10 },
+    rateLimit: { formType: "blob_contratado", windowSeconds: 600, max: 30 },
   },
 };
 

@@ -3796,7 +3796,7 @@ function createContractorDocumentField(required = false) {
   return `
     <div class="contractor-document-field">
       <label>${required ? "Documentos" : "Documento adicional"}
-        <input name="documentos" type="file" multiple ${required ? "required" : ""} />
+        <input name="documentos" type="file" ${required ? "required" : ""} />
       </label>
       ${required ? "" : '<button class="secondary-link contractor-remove-document-button" type="button" data-action="remover-documento-contratado">Remover</button>'}
     </div>
@@ -3943,31 +3943,50 @@ async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, c
 }
 
 async function submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, documentos, accessPassword, turnstileToken }) {
-  const body = new FormData();
-  body.append("empresa", String(empresa || ""));
-  body.append("origemHtml", String(origemHtml || ""));
-  body.append("nome", String(nome || ""));
-  body.append("telefone", String(telefone || ""));
-  body.append("cpf", String(cpf || ""));
-  body.append("accessPassword", String(accessPassword || ""));
-  Array.from(documentos || []).forEach((file) => body.append("documentos", file));
-  body.append("turnstileToken", String(turnstileToken || ""));
+  const uploadedDocuments = [];
+  try {
+    for (const file of Array.from(documentos || [])) {
+      const uploaded = await hubUpload(file, "contratado");
+      uploadedDocuments.push({
+        name: String(file.name || "documento"),
+        size: Number(file.size || 0),
+        type: String(file.type || "application/octet-stream"),
+        path: uploaded.pathname || "",
+        url: uploaded.url || "",
+      });
+    }
 
-  const response = await fetch("/api/contractor-documents", { method: "POST", body });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(result.error || "Envio publico bloqueado.");
-    error.code = result.code;
-    error.status = response.status;
+    const response = await fetch("/api/contractor-documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        empresa: String(empresa || ""),
+        origemHtml: String(origemHtml || ""),
+        nome: String(nome || ""),
+        telefone: String(telefone || ""),
+        cpf: String(cpf || ""),
+        accessPassword: String(accessPassword || ""),
+        documentos: uploadedDocuments,
+        turnstileToken: String(turnstileToken || ""),
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(result.error || `Nao foi possivel salvar os documentos enviados (HTTP ${response.status}).`);
+      error.code = result.code;
+      error.status = response.status;
+      throw error;
+    }
+
+    const savedRecord = mapContractorDocumentRow(result.data || {});
+    if (savedRecord.id) {
+      data.documentosContratados = mergeContractorDocuments([savedRecord], data.documentosContratados || []);
+      saveLocalData();
+    }
+    return result.data;
+  } catch (error) {
     throw error;
   }
-
-  const savedRecord = mapContractorDocumentRow(result.data || {});
-  if (savedRecord.id) {
-    data.documentosContratados = mergeContractorDocuments([savedRecord], data.documentosContratados || []);
-    saveLocalData();
-  }
-  return result.data;
 }
 
 function isPublicInsertOnlyCollection(collection) {

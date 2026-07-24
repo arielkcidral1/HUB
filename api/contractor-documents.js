@@ -73,20 +73,30 @@ async function handleRequest(request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
   if (request.method !== "POST") return json(request, 405, { error: "Metodo nao permitido." });
 
+  const contentType = request.headers.get("content-type") || "";
   let formData;
-  try {
-    formData = await request.formData();
-  } catch {
-    return json(request, 400, { error: "Formulario invalido." });
+  let jsonBody = null;
+  if (contentType.includes("application/json")) {
+    try {
+      jsonBody = await request.json();
+    } catch {
+      return json(request, 400, { error: "JSON invalido." });
+    }
+  } else {
+    try {
+      formData = await request.formData();
+    } catch {
+      return json(request, 400, { error: "Formulario invalido." });
+    }
   }
 
   const payload = {
-    empresa: text(formData.get("empresa")),
-    origemHtml: text(formData.get("origemHtml")),
-    accessPassword: text(formData.get("accessPassword")),
-    nome: text(formData.get("nome")),
-    telefone: text(formData.get("telefone")),
-    cpf: text(formData.get("cpf")),
+    empresa: text(jsonBody ? jsonBody.empresa : formData.get("empresa")),
+    origemHtml: text(jsonBody ? jsonBody.origemHtml : formData.get("origemHtml")),
+    accessPassword: text(jsonBody ? jsonBody.accessPassword : formData.get("accessPassword")),
+    nome: text(jsonBody ? jsonBody.nome : formData.get("nome")),
+    telefone: text(jsonBody ? jsonBody.telefone : formData.get("telefone")),
+    cpf: text(jsonBody ? jsonBody.cpf : formData.get("cpf")),
   };
   const validationError = isValidPayload(payload);
   if (validationError) return json(request, 400, { error: validationError });
@@ -100,20 +110,40 @@ async function handleRequest(request) {
   }
   if (!allowed) return json(request, 429, { error: "Muitos envios. Tente novamente mais tarde." });
 
-  const files = formData.getAll("documentos").filter((file) => file instanceof File && file.name);
-  if (!files.length || files.length > MAX_FILES) return json(request, 400, { error: "Documentos invalidos." });
-  if (files.some((file) => file.size <= 0 || file.size > MAX_FILE_SIZE)) {
-    return json(request, 400, { error: "Cada documento deve ter entre 1 byte e 10 MB." });
-  }
-
   const documentos = [];
-  for (const file of files) {
-    documentos.push({
-      name: safeFileName(file.name),
-      size: file.size,
-      type: text(file.type) || "application/octet-stream",
-      dataUrl: await fileToDataUrl(file),
-    });
+  if (jsonBody) {
+    const incomingDocs = Array.isArray(jsonBody.documentos) ? jsonBody.documentos : [];
+    if (!incomingDocs.length || incomingDocs.length > MAX_FILES) return json(request, 400, { error: "Documentos invalidos." });
+    for (const doc of incomingDocs) {
+      const size = Number(doc?.size || 0);
+      const path = text(doc?.path);
+      const url = text(doc?.url);
+      if (size <= 0 || size > MAX_FILE_SIZE || (!path && !url)) {
+        return json(request, 400, { error: "Documentos invalidos." });
+      }
+      documentos.push({
+        name: safeFileName(doc?.name || "documento"),
+        size,
+        type: text(doc?.type) || "application/octet-stream",
+        path,
+        url,
+      });
+    }
+  } else {
+    const files = formData.getAll("documentos").filter((file) => file instanceof File && file.name);
+    if (!files.length || files.length > MAX_FILES) return json(request, 400, { error: "Documentos invalidos." });
+    if (files.some((file) => file.size <= 0 || file.size > MAX_FILE_SIZE)) {
+      return json(request, 400, { error: "Cada documento deve ter entre 1 byte e 10 MB." });
+    }
+
+    for (const file of files) {
+      documentos.push({
+        name: safeFileName(file.name),
+        size: file.size,
+        type: text(file.type) || "application/octet-stream",
+        dataUrl: await fileToDataUrl(file),
+      });
+    }
   }
 
   try {
