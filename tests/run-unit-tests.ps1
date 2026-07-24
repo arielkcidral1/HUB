@@ -55,6 +55,7 @@ function Test-ClientSecurityFunctions {
   $docsTrinca = Read-ProjectFile "documentos-trinca.html"
   $style = Read-ProjectFile "style.css"
   $contractorApi = Read-ProjectFile "api/contractor-documents.js"
+  $blobUpload = Read-ProjectFile "api/blob/upload.js"
 
   Assert-MatchText $script 'function escapeHtml\(value\).*replaceAll\("&", "&amp;"\).*replaceAll\("<", "&lt;"\).*replaceAll\(">", "&gt;"\).*replaceAll\(''"'', "&quot;"\).*replaceAll\("''", "&#039;"\)' "escapeHtml escapa caracteres perigosos"
   $encodingArtifacts = @(([char]0x00C3), ([char]0x00C2), ([char]0x00E2))
@@ -63,7 +64,8 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'RESUME_MAX_SIZE_BYTES\s*=\s*5\s*\*\s*1024\s*\*\s*1024' "curriculo limitado a 5 MB no cliente"
   Assert-MatchText $script 'RESUME_ALLOWED_EXTENSIONS\s*=\s*new Set\(\["pdf", "doc", "docx"\]\)' "curriculo permite apenas pdf/doc/docx"
   Assert-MatchText $script 'RESUME_ALLOWED_MIME_TYPES\s*=\s*new Set\(\[[\s\S]*application\/pdf[\s\S]*application\/msword[\s\S]*officedocument\.wordprocessingml\.document' "curriculo valida MIME permitido"
-  Assert-MatchText $script 'function uploadChatFile\(file\).*safeName\s*=\s*file\.name\.replace\(/[^/]+/gi, "-"\)' "upload de chat sanitiza nome do arquivo"
+  Assert-MatchText $script 'async function hubUpload\(file, category\)[\s\S]*filename=\$\{encodeURIComponent\(file\.name \|\| "arquivo"\)\}' "cliente envia nome original ao endpoint de upload"
+  Assert-MatchText $blobUpload 'const safeName = filename\.replace\(/\[\^a-z0-9_\.-\]/gi, "-"\)' "endpoint de upload sanitiza nome do arquivo"
   Assert-MatchText $index 'id="chat-file"[^>]*multiple[^>]*accept="[^"]*image/png[^"]*image/jpeg[^"]*video/mp4[^"]*audio/mpeg[^"]*audio/wav[^"]*audio/ogg[^"]*audio/mp4[^"]*\.m4a' "input do chat aceita multiplas imagens videos e audios"
   Assert-MatchText $index 'id="chat-emoji-button"[^>]*data-action="toggle-chat-emoji-menu"[\s\S]*id="chat-emoji-menu"[^>]*hidden' "chat possui botao e menu de emojis"
   Assert-MatchText $index 'class="chat-message-filter" id="chat-message-filter-wrap"[^>]*hidden[\s\S]*id="chat-message-filter"[^>]*type="search"[^>]*placeholder="Filtrar mensagens deste chat"' "chat possui filtro de mensagens especificas oculto por padrao"
@@ -123,7 +125,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $style '\.chat-preview-chip-wrap[\s\S]*position: relative[\s\S]*\.chat-preview-chip-remove[\s\S]*position: absolute' "chip do chat tem remocao separada do clique de previa"
   Assert-MatchText $script 'function renderChatAttachment\(attachment\).*data-chat-image-preview.*data-chat-audio-preview' "chat renderiza previa de imagem e audio"
   Assert-MatchText $script 'function hydrateChatMediaPreviews\(\).*createPrivateStorageUrl\(bucket, path\)' "chat carrega previa privada com URL assinada"
-  Assert-MatchText $script 'const path = `chat/\$\{channel\}/\$\{Date\.now\(\)\}-\$\{generateUUID\(\)\}-\$\{safeName\}`' "upload de chat grava em pasta por canal com nome unico"
+  Assert-MatchText $blobUpload 'chat: \{ prefix: "chat/"[\s\S]*const pathname = `\$\{category\.prefix\}\$\{Date\.now\(\)\}-\$\{crypto\.randomUUID\(\)\}-\$\{safeName\}`' "upload de chat grava em pasta propria com nome unico"
   Assert-MatchText $index 'data-view="gerenciamento-vt"[^>]*>Gerenciamento VT</button>' "menu possui aba Gerenciamento VT"
   Assert-MatchText $index 'data-view="documentos-contratados"[^>]*>Documentos de Contratados</button>' "menu possui aba Documentos de Contratados"
   Assert-MatchText $index 'id="primary-sidebar"[^>]*aria-label="Navegacao principal"[\s\S]*id="mobile-menu-toggle"[^>]*aria-controls="primary-sidebar"[^>]*aria-expanded="false"' "mobile possui botao para abrir menu principal"

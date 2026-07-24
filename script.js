@@ -1084,8 +1084,17 @@ async function hubUpload(file, category) {
     headers: { "Content-Type": file.type || "application/octet-stream" },
     body: file,
   });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || "Nao foi possivel enviar o arquivo.");
+  const rawBody = await response.text().catch(() => "");
+  let result = {};
+  try {
+    result = rawBody ? JSON.parse(rawBody) : {};
+  } catch {
+    result = {};
+  }
+  if (!response.ok) {
+    const details = result.error || rawBody.trim() || `HTTP ${response.status}`;
+    throw new Error(details.length > 220 ? `${details.slice(0, 220)}...` : details);
+  }
   return result;
 }
 

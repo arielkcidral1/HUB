@@ -71,44 +71,51 @@ function readRawBody(req) {
 }
 
 export default async function handler(req, res) {
-  if (req.method === "OPTIONS") { applyCorsHeadersNode(req, res); res.status(204).end(); return; }
-  if (req.method !== "POST") return sendJson(req, res, 405, { error: "Metodo nao permitido." });
-
-  const url = new URL(req.url, "http://localhost");
-  const category = CATEGORIES[url.searchParams.get("category") || ""];
-  if (!category) return sendJson(req, res, 400, { error: "Categoria de upload invalida." });
-
-  const filename = url.searchParams.get("filename") || "arquivo";
-  const contentType = req.headers["content-type"] || "application/octet-stream";
-
-  if (category.allowedContentTypes && !category.allowedContentTypes.includes(contentType)) {
-    return sendJson(req, res, 400, { error: "Tipo de arquivo nao permitido." });
-  }
-
-  if (category.requiresAuth) {
-    const user = await requireUserNode(req, sql);
-    if (!user) return sendJson(req, res, 401, { error: "Nao autenticado." });
-  } else {
-    const allowed = await checkRateLimit(
-      req,
-      category.rateLimit.formType,
-      category.rateLimit.windowSeconds,
-      category.rateLimit.max
-    );
-    if (!allowed) return sendJson(req, res, 429, { error: "Muitos envios. Tente novamente mais tarde." });
-  }
-
-  const buffer = await readRawBody(req);
-  if (buffer.length <= 0) return sendJson(req, res, 400, { error: "Arquivo vazio." });
-  if (buffer.length > category.maxSize) return sendJson(req, res, 400, { error: "Arquivo excede o tamanho maximo permitido." });
-
-  const safeName = filename.replace(/[^a-z0-9_.-]/gi, "-");
-  const pathname = `${category.prefix}${Date.now()}-${crypto.randomUUID()}-${safeName}`;
-
   try {
+    if (req.method === "OPTIONS") { applyCorsHeadersNode(req, res); res.status(204).end(); return; }
+    if (req.method !== "POST") return sendJson(req, res, 405, { error: "Metodo nao permitido." });
+
+    const url = new URL(req.url, "http://localhost");
+    const category = CATEGORIES[url.searchParams.get("category") || ""];
+    if (!category) return sendJson(req, res, 400, { error: "Categoria de upload invalida." });
+
+    const filename = url.searchParams.get("filename") || "arquivo";
+    const contentType = req.headers["content-type"] || "application/octet-stream";
+
+    if (category.allowedContentTypes && !category.allowedContentTypes.includes(contentType)) {
+      return sendJson(req, res, 400, { error: "Tipo de arquivo nao permitido." });
+    }
+
+    if (category.requiresAuth) {
+      const user = await requireUserNode(req, sql);
+      if (!user) return sendJson(req, res, 401, { error: "Nao autenticado." });
+    } else {
+      let allowed;
+      try {
+        allowed = await checkRateLimit(
+          req,
+          category.rateLimit.formType,
+          category.rateLimit.windowSeconds,
+          category.rateLimit.max
+        );
+      } catch (error) {
+        console.error("public upload rate limit failed", error);
+        return sendJson(req, res, 503, { error: "Nao foi possivel liberar o envio publico agora. Tente novamente em instantes." });
+      }
+      if (!allowed) return sendJson(req, res, 429, { error: "Muitos envios. Tente novamente mais tarde." });
+    }
+
+    const buffer = await readRawBody(req);
+    if (buffer.length <= 0) return sendJson(req, res, 400, { error: "Arquivo vazio." });
+    if (buffer.length > category.maxSize) return sendJson(req, res, 400, { error: "Arquivo excede o tamanho maximo permitido." });
+
+    const safeName = filename.replace(/[^a-z0-9_.-]/gi, "-");
+    const pathname = `${category.prefix}${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+
     const blob = await put(pathname, buffer, { access: "public", contentType, addRandomSuffix: true });
     sendJson(req, res, 200, { url: blob.url, pathname: blob.pathname });
   } catch (error) {
+    console.error("blob upload failed", error);
     sendJson(req, res, 400, { error: error.message || "Nao foi possivel enviar o arquivo." });
   }
 }
