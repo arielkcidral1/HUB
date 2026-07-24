@@ -4891,6 +4891,115 @@ function createVtReportXlsxBlob(rows) {
   ]);
 }
 
+function buildDisciplinaryReportWorksheet(rows) {
+  const headers = ["Tipo", "Funcionario", "Data", "Unidade", "Observacoes", "Anexo", "Registrado por", "Registrado em"];
+  const sheetRows = [
+    worksheetRowXml(["Relatorio de Advertencias e Suspensoes"], 1, 2),
+    worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
+    worksheetRowXml(headers, 5, 1),
+    ...rows.map((item, index) => worksheetRowXml([
+      item.tipo,
+      item.funcionario,
+      item.dataMedida,
+      item.unidade,
+      item.observacoes,
+      item.anexo,
+      item.registradoPor,
+      item.registradoEm,
+    ], index + 6)),
+  ];
+  const lastRow = rows.length + 5;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <dimension ref="A1:H${lastRow}"/>
+  <cols>
+    <col min="1" max="1" width="18" customWidth="1"/>
+    <col min="2" max="2" width="30" customWidth="1"/>
+    <col min="3" max="4" width="18" customWidth="1"/>
+    <col min="5" max="5" width="42" customWidth="1"/>
+    <col min="6" max="8" width="24" customWidth="1"/>
+  </cols>
+  <sheetData>${sheetRows.join("")}</sheetData>
+  <mergeCells count="2"><mergeCell ref="A1:H1"/><mergeCell ref="A2:H2"/></mergeCells>
+</worksheet>`;
+}
+
+function createDisciplinaryReportXlsxBlob(rows) {
+  const worksheet = buildDisciplinaryReportWorksheet(rows);
+  return createZipBlob([
+    {
+      name: "[Content_Types].xml",
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`,
+    },
+    {
+      name: "_rels/.rels",
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`,
+    },
+    {
+      name: "xl/workbook.xml",
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="Advertencias" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`,
+    },
+    {
+      name: "xl/_rels/workbook.xml.rels",
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`,
+    },
+    {
+      name: "xl/styles.xml",
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="2">
+    <font><sz val="11"/><name val="Calibri"/></font>
+    <font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font>
+  </fonts>
+  <fills count="3">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF2F7D6D"/><bgColor indexed="64"/></patternFill></fill>
+  </fills>
+  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="4">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+  </cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`,
+    },
+    { name: "xl/worksheets/sheet1.xml", content: worksheet },
+  ]);
+}
+
+function gerarRelatorioDisciplinary(scope = "filtered") {
+  const useFilters = scope !== "all";
+  const rows = getDisciplinaryReportRows(useFilters);
+  if (!rows.length) {
+    showModal("Relatorio vazio", "Nao ha registros de advertencias ou suspensoes para gerar o relatorio.", "error");
+    return;
+  }
+  const blob = createDisciplinaryReportXlsxBlob(rows);
+  downloadBlob(blob, safeDownloadName(`relatorio-advertencias-suspensoes-${useFilters ? "filtrado" : "todos"}`, "xlsx"));
+  document.getElementById("custom-modal")?.remove();
+}
+
 function gerarRelatorioVt(scope = "filtered") {
   const useFilters = scope !== "all";
   const rows = getVtReportRows(useFilters);
@@ -7245,6 +7354,67 @@ function filterDisciplinaryRecords(items = []) {
   });
 }
 
+function getDisciplinaryReportFilterLabel(useFilters = true) {
+  if (!useFilters) return "Todos os registros";
+  const filters = getDisciplinaryFilterValues();
+  const parts = [];
+  if (filters.nome) parts.push(`Nome: ${filters.nome}`);
+  if (filters.data) parts.push(`Data: ${filters.data}`);
+  if (filters.unidade) parts.push(`Unidade: ${filters.unidade}`);
+  if (filters.observacoes) parts.push(`Observacoes: ${filters.observacoes}`);
+  return parts.length ? parts.join(" | ") : "Sem filtros ativos";
+}
+
+function getDisciplinaryReportRows(useFilters = true) {
+  const records = useFilters ? filterDisciplinaryRecords(getDisciplinaryRecords()) : getDisciplinaryRecords();
+  return records.map((item) => {
+    const formData = item.formData || {};
+    const attachment = getDisciplinaryAttachment(formData);
+    return {
+      tipo: documentLabels[item.type] || item.type || "Registro",
+      funcionario: formData.colaborador || item.summary || "Funcionario nao informado",
+      dataMedida: formatFormDate(formData.data_medida || ""),
+      unidade: formData.unidade || "Unidade nao informada",
+      observacoes: formData.observacoes || "",
+      anexo: attachment.name || "",
+      registradoPor: item.createdBy || getSystemFallbackAuthor(),
+      registradoEm: formatVtReportDateTime(item.createdAt || todayLabel()),
+    };
+  });
+}
+
+function showDisciplinaryReportMenu() {
+  const existing = document.getElementById("custom-modal");
+  if (existing) existing.remove();
+  const filteredCount = filterDisciplinaryRecords(getDisciplinaryRecords()).length;
+  const totalCount = getDisciplinaryRecords().length;
+  const overlay = document.createElement("div");
+  overlay.id = "custom-modal";
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-card vt-report-modal">
+      <div class="modal-header info">Relatorio de Advertencias e Suspensoes</div>
+      <div class="modal-body">
+        <p>Escolha quais registros deseja exportar em .xlsx.</p>
+        <div class="vt-report-options">
+          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="filtered">
+            <span>Registros filtrados</span>
+            <small>${escapeHtml(String(filteredCount))} registro(s) - ${escapeHtml(getDisciplinaryReportFilterLabel(true))}</small>
+          </button>
+          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="all">
+            <span>Todos os registros</span>
+            <small>${escapeHtml(String(totalCount))} registro(s) cadastrados</small>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary-link" type="button" data-action="close-modal">Cancelar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
 function getDisciplinaryAttachment(formData = {}) {
   const anexo = formData.anexo || formData.attachment || {};
   return anexo && typeof anexo === "object" ? anexo : {};
@@ -8590,6 +8760,7 @@ document.getElementById("vt-filter-nome")?.addEventListener("input", renderVtReg
 document.getElementById("vt-filter-mes")?.addEventListener("change", renderVtRegistros);
 document.getElementById("vt-filter-unidade")?.addEventListener("change", renderVtRegistros);
 document.getElementById("abrir-relatorio-vt")?.addEventListener("click", showVtReportMenu);
+document.getElementById("abrir-relatorio-disciplinary")?.addEventListener("click", showDisciplinaryReportMenu);
 document.getElementById("limpar-filtros-vt")?.addEventListener("click", () => {
   const nameFilter = document.getElementById("vt-filter-nome");
   const monthFilter = document.getElementById("vt-filter-mes");
@@ -9904,6 +10075,7 @@ document.addEventListener('click', (event) => {
     case 'editar-vt': editarVtRegistro(id); break;
     case 'excluir-vt': excluirVtRegistro(id); break;
     case 'gerar-relatorio-vt': gerarRelatorioVt(target.dataset.scope); break;
+    case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary(target.dataset.scope); break;
     case 'editar-documento': editarDocumento(id); break;
     case 'baixar-documento-rh': baixarDocumentoRH(id); break;
     case 'excluir-documento': excluirDocumento(id); break;
