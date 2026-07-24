@@ -4892,35 +4892,29 @@ function createVtReportXlsxBlob(rows) {
 }
 
 function buildDisciplinaryReportWorksheet(rows) {
-  const headers = ["Tipo", "Funcionario", "Data", "Unidade", "Observacoes", "Anexo", "Registrado por", "Registrado em"];
+  const headers = ["Nome", "Data", "Unidade", "Observacao"];
   const sheetRows = [
     worksheetRowXml(["Relatorio de Advertencias e Suspensoes"], 1, 2),
     worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
     worksheetRowXml(headers, 5, 1),
     ...rows.map((item, index) => worksheetRowXml([
-      item.tipo,
-      item.funcionario,
+      item.nome,
       item.dataMedida,
       item.unidade,
       item.observacoes,
-      item.anexo,
-      item.registradoPor,
-      item.registradoEm,
     ], index + 6)),
   ];
   const lastRow = rows.length + 5;
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="A1:H${lastRow}"/>
+  <dimension ref="A1:D${lastRow}"/>
   <cols>
-    <col min="1" max="1" width="18" customWidth="1"/>
-    <col min="2" max="2" width="30" customWidth="1"/>
-    <col min="3" max="4" width="18" customWidth="1"/>
-    <col min="5" max="5" width="42" customWidth="1"/>
-    <col min="6" max="8" width="24" customWidth="1"/>
+    <col min="1" max="1" width="30" customWidth="1"/>
+    <col min="2" max="3" width="18" customWidth="1"/>
+    <col min="4" max="4" width="42" customWidth="1"/>
   </cols>
   <sheetData>${sheetRows.join("")}</sheetData>
-  <mergeCells count="2"><mergeCell ref="A1:H1"/><mergeCell ref="A2:H2"/></mergeCells>
+  <mergeCells count="2"><mergeCell ref="A1:D1"/><mergeCell ref="A2:D2"/></mergeCells>
 </worksheet>`;
 }
 
@@ -7369,16 +7363,11 @@ function getDisciplinaryReportRows(useFilters = true) {
   const records = useFilters ? filterDisciplinaryRecords(getDisciplinaryRecords()) : getDisciplinaryRecords();
   return records.map((item) => {
     const formData = item.formData || {};
-    const attachment = getDisciplinaryAttachment(formData);
     return {
-      tipo: documentLabels[item.type] || item.type || "Registro",
-      funcionario: formData.colaborador || item.summary || "Funcionario nao informado",
+      nome: formData.colaborador || item.summary || "Funcionario nao informado",
       dataMedida: formatFormDate(formData.data_medida || ""),
       unidade: formData.unidade || "Unidade nao informada",
       observacoes: formData.observacoes || "",
-      anexo: attachment.name || "",
-      registradoPor: item.createdBy || getSystemFallbackAuthor(),
-      registradoEm: formatVtReportDateTime(item.createdAt || todayLabel()),
     };
   });
 }
