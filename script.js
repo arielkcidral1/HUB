@@ -335,7 +335,18 @@ const documentLabels = {
   "movimentacao-pessoal": "MP - Movimentacao Pessoal",
   "requisicao-pessoal": "RP - Requisicao Pessoal",
   "solicitacao-desligamento": "SD - Solicitacao de Desligamento",
+  advertencia: "Advertencia",
+  suspensao: "Suspensao",
 };
+
+const DISCIPLINARY_DOCUMENT_TYPES = new Set(["advertencia", "suspensao"]);
+const DISCIPLINARY_ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "webp", "pdf", "doc", "docx"]);
+const DISCIPLINARY_ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+const DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 
 const UNIT_OPTIONS = [
   "1- MTZ",
@@ -6880,6 +6891,7 @@ function renderAll() {
 
   renderVtRegistros();
   renderDocumentosContratados();
+  renderDisciplinaryRecords();
 
   renderChamadosSection();
 
@@ -7159,6 +7171,8 @@ function getDocumentRecordCpf(item = {}) {
 function filterDocumentRecords(items = []) {
   const filters = getDocumentFilterValues();
   return items.filter((item) => {
+    if (DISCIPLINARY_DOCUMENT_TYPES.has(item.type)) return false;
+
     if (filters.nome) {
       const collaboratorName = String(item.formData?.colaborador || item.summary || "").toLowerCase();
       if (!collaboratorName.includes(filters.nome)) return false;
@@ -7173,6 +7187,56 @@ function filterDocumentRecords(items = []) {
 
     return true;
   });
+}
+
+function getDisciplinaryRecords() {
+  return (data.documentos || [])
+    .filter((item) => DISCIPLINARY_DOCUMENT_TYPES.has(item.type))
+    .sort((a, b) => new Date(b.updatedSortAt || b.sortAt || 0) - new Date(a.updatedSortAt || a.sortAt || 0));
+}
+
+function getDisciplinaryAttachment(formData = {}) {
+  const anexo = formData.anexo || formData.attachment || {};
+  return anexo && typeof anexo === "object" ? anexo : {};
+}
+
+function renderDisciplinaryRecords() {
+  const target = document.getElementById("disciplinary-records");
+  if (!target) return;
+
+  const records = getDisciplinaryRecords();
+  if (!records.length) {
+    target.innerHTML = '<p class="empty-state">Nenhum registro salvo ainda.</p>';
+    return;
+  }
+
+  target.innerHTML = records.map((item) => {
+    const formData = item.formData || {};
+    const attachment = getDisciplinaryAttachment(formData);
+    const attachmentButton = attachment.url
+      ? `<button type="button" class="tag tag-button teal-tag-button" data-download-url="${escapeHtml(attachment.url)}" data-download-name="${escapeHtml(attachment.name || "anexo")}">Baixar anexo</button>`
+      : "";
+    const dateLabel = formData.data_medida ? formatFormDate(formData.data_medida) : "Data nao informada";
+    const unidade = formData.unidade || "Unidade nao informada";
+    const observacoes = formData.observacoes || "Sem observacoes.";
+
+    return `
+      <article class="item-card">
+        <div class="item-topline">
+          <p class="item-title">${escapeHtml(documentLabels[item.type] || item.type)}</p>
+          <div>
+            <span class="tag">${escapeHtml(item.createdAt)}</span>
+            ${attachmentButton}
+            <button type="button" class="tag alert tag-button" data-action="excluir-documento" data-id="${escapeHtml(item.id)}">Excluir</button>
+          </div>
+        </div>
+        <p><strong>${escapeHtml(item.summary || "Funcionario nao informado")}</strong></p>
+        <p class="item-meta">Data: ${escapeHtml(dateLabel)} | Unidade: ${escapeHtml(unidade)}</p>
+        <p class="item-meta">${escapeHtml(observacoes)}</p>
+        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}${item.updatedAt ? ` em ${escapeHtml(item.updatedAt)}` : ""}</p>
+      </article>
+    `;
+  }).join("");
 }
 
 function renderDocumentRecords() {
@@ -7808,6 +7872,7 @@ document.getElementById("toggle-archived-denuncias")?.addEventListener("click", 
 
 document.querySelectorAll(".doc-tab").forEach((button) => {
   button.addEventListener("click", () => {
+    if (button.dataset.disciplinaryDoc) return;
     document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
     document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
@@ -7821,6 +7886,80 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
         if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
       });
     }
+  });
+});
+
+document.querySelectorAll(".disciplinary-tab").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".disciplinary-tab").forEach((item) => item.classList.remove("active"));
+    document.querySelectorAll(".disciplinary-view").forEach((view) => view.classList.remove("active"));
+    button.classList.add("active");
+    document.getElementById(`disciplinary-${button.dataset.disciplinaryDoc}`)?.classList.add("active");
+  });
+});
+
+function validateDisciplinaryAttachment(file) {
+  if (!file || !file.name) return "Anexe uma imagem, PDF ou arquivo Word.";
+  if (file.size <= 0) return "O arquivo anexado esta vazio.";
+  if (file.size > DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES) return "O anexo deve ter ate 10 MB.";
+  const mimeType = String(file.type || "").toLowerCase();
+  const extension = String(file.name || "").split(".").pop()?.toLowerCase() || "";
+  if (mimeType.startsWith("image/")) return null;
+  if (DISCIPLINARY_ALLOWED_MIME_TYPES.has(mimeType)) return null;
+  if (DISCIPLINARY_ALLOWED_EXTENSIONS.has(extension)) return null;
+  return "Anexe somente imagem, PDF ou arquivo Word.";
+}
+
+document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
+  formElement.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const type = event.currentTarget.dataset.disciplinaryForm;
+    const file = form.get("anexo");
+    const fileError = validateDisciplinaryAttachment(file);
+    if (fileError) {
+      showModal("Anexo invalido", fileError, "error");
+      return;
+    }
+
+    const colaborador = String(form.get("colaborador") || "").trim();
+    const dataMedida = String(form.get("data_medida") || "").trim();
+    const unidade = String(form.get("unidade") || "").trim();
+    const observacoes = String(form.get("observacoes") || "").trim();
+    if (!colaborador || !dataMedida || !unidade) {
+      showModal("Campos obrigatorios", "Informe funcionario, data e unidade para salvar o registro.", "error");
+      return;
+    }
+
+    let uploaded;
+    try {
+      uploaded = await hubUpload(file, "medidaDisciplinar");
+    } catch (error) {
+      showModal("Erro no Anexo", error?.message || "Nao foi possivel enviar o anexo.", "error");
+      return;
+    }
+
+    const success = await addItem("documentos", {
+      type,
+      summary: colaborador,
+      details: `${documentLabels[type] || type} | Data: ${formatFormDate(dataMedida)} | Unidade: ${unidade}`,
+      formData: {
+        colaborador,
+        data_medida: dataMedida,
+        unidade,
+        observacoes,
+        anexo: {
+          name: file.name || "anexo",
+          size: file.size || 0,
+          type: file.type || "application/octet-stream",
+          path: uploaded.pathname || "",
+          url: uploaded.url || "",
+        },
+      },
+      createdBy: getCurrentUserName(),
+    });
+
+    if (success) event.currentTarget.reset();
   });
 });
 
@@ -9421,10 +9560,12 @@ const documentFieldLabels = {
   cargo: "Cargo",
   funcao: "Função",
   filial: "Filial / Unidade",
+  unidade: "Unidade",
   setor: "Setor",
   data: "Data de admissão",
   data_admissao: "Data de admissão",
   data_desligamento: "Data de desligamento",
+  data_medida: "Data da medida",
   data_solicitacao: "Data da solicitação",
   data_entrevista: "Data da entrevista",
   data_ausencia: "Data(s) da ausência",

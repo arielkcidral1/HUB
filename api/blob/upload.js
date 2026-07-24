@@ -59,6 +59,11 @@ const CATEGORIES = {
     requiresAuth: false,
     rateLimit: { formType: "blob_contratado", windowSeconds: 600, max: 30 },
   },
+  medidaDisciplinar: {
+    prefix: "advertencias-suspensoes/",
+    maxSize: 10 * 1024 * 1024,
+    requiresAuth: true,
+  },
 };
 
 function readRawBody(req) {

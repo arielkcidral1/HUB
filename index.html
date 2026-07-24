@@ -31,6 +31,7 @@
           <button class="nav-item" data-view="vagas" type="button">Vagas e Projetos</button>
           <button class="nav-item" data-view="calendario" type="button">Calendario</button>
           <button class="nav-item" data-view="documentos" type="button">Documentos RH</button>
+          <button class="nav-item" data-view="advertencias-suspensoes" type="button">Advertencias e Suspensoes</button>
           <button class="nav-item" data-view="documentos-contratados" type="button">Documentos de Contratados</button>
           <button class="nav-item" data-view="gerenciamento-vt" type="button">Gerenciamento VT</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/chamados.html" type="button">Solicitar EPIs</button>
@@ -982,6 +983,72 @@
                   <button class="secondary-link compact-filter-button" id="clear-document-filters" type="button" hidden>Limpar</button>
                 </div>
                 <div class="card-list" id="document-records"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="advertencias-suspensoes">
+          <div class="document-workspace">
+            <aside class="panel doc-menu">
+              <div class="panel-header split-header">
+                <div>
+                  <h2>Medidas disciplinares</h2>
+                  <p class="item-meta">Advertencias e suspensoes</p>
+                </div>
+              </div>
+              <button class="doc-tab disciplinary-tab active" data-disciplinary-doc="advertencia" type="button">Advertencia</button>
+              <button class="doc-tab disciplinary-tab" data-disciplinary-doc="suspensao" type="button">Suspensao</button>
+            </aside>
+
+            <div class="doc-content">
+              <section class="doc-view disciplinary-view active" id="disciplinary-advertencia">
+                <form class="panel doc-form disciplinary-form" data-disciplinary-form="advertencia">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Advertencia</h2>
+                      <p class="item-meta">Registro com anexo comprobatorio</p>
+                    </div>
+                  </div>
+                  <label>Nome do funcionario<input name="colaborador" required /></label>
+                  <div class="form-grid">
+                    <label>Data da advertencia<input name="data_medida" type="date" required /></label>
+                    <label>Unidade do funcionario<select name="unidade" data-unit-select required></select></label>
+                  </div>
+                  <label>Observacoes<textarea name="observacoes" rows="4" placeholder="Opcional"></textarea></label>
+                  <label>Anexo
+                    <input name="anexo" type="file" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
+                  </label>
+                  <button class="primary-button" type="submit">Salvar advertencia</button>
+                </form>
+              </section>
+
+              <section class="doc-view disciplinary-view" id="disciplinary-suspensao">
+                <form class="panel doc-form disciplinary-form" data-disciplinary-form="suspensao">
+                  <div class="panel-header split-header">
+                    <div>
+                      <h2>Suspensao</h2>
+                      <p class="item-meta">Registro com anexo comprobatorio</p>
+                    </div>
+                  </div>
+                  <label>Nome do funcionario<input name="colaborador" required /></label>
+                  <div class="form-grid">
+                    <label>Data da suspensao<input name="data_medida" type="date" required /></label>
+                    <label>Unidade do funcionario<select name="unidade" data-unit-select required></select></label>
+                  </div>
+                  <label>Observacoes<textarea name="observacoes" rows="4" placeholder="Opcional"></textarea></label>
+                  <label>Anexo
+                    <input name="anexo" type="file" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
+                  </label>
+                  <button class="primary-button" type="submit">Salvar suspensao</button>
+                </form>
+              </section>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <h2>Registros salvos</h2>
+                </div>
+                <div class="card-list" id="disciplinary-records"></div>
               </div>
             </div>
           </div>
