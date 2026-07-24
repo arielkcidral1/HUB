@@ -1288,9 +1288,13 @@
                 <div class="avatar-upload-wrapper">
                   <img id="conta-avatar-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392a7a2'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar">
                   <div class="stack-sm">
-                    <label class="secondary-link clickable fit-link flush-bottom" for="foto-perfil-input">Escolher nova foto</label>
-                    <input class="hidden" type="file" name="foto_perfil" id="foto-perfil-input" accept="image/png, image/jpeg, image/webp" />
-                    <span id="foto-perfil-filename" class="meta-sm">Nenhuma foto selecionada</span>
+                    <label class="file-upload-field account-photo-upload">Foto
+                      <span class="file-upload-control">
+                        <span class="file-upload-button">Anexar foto</span>
+                        <span id="foto-perfil-filename" class="file-upload-name" data-empty-label="Nenhuma foto selecionada">Nenhuma foto selecionada</span>
+                      </span>
+                      <input class="file-upload-input" type="file" name="foto_perfil" id="foto-perfil-input" accept="image/png, image/jpeg, image/webp" />
+                    </label>
                   </div>
                 </div>
               </div>

@@ -3845,8 +3845,12 @@ function readFileAsDataUrl(file) {
 function createContractorDocumentField(required = false) {
   return `
     <div class="contractor-document-field">
-      <label>${required ? "Documentos" : "Documento adicional"}
-        <input name="documentos" type="file" ${required ? "required" : ""} />
+      <label class="file-upload-field">${required ? "Documentos" : "Documento adicional"}
+        <span class="file-upload-control">
+          <span class="file-upload-button">Anexar documento</span>
+          <span class="file-upload-name" data-empty-label="Nenhum arquivo escolhido">Nenhum arquivo escolhido</span>
+        </span>
+        <input class="file-upload-input" name="documentos" type="file" ${required ? "required" : ""} />
       </label>
       ${required ? "" : '<button class="secondary-link contractor-remove-document-button" type="button" data-action="remover-documento-contratado">Remover</button>'}
     </div>
@@ -7995,6 +7999,12 @@ document.getElementById("clear-disciplinary-filters")?.addEventListener("click",
   renderDisciplinaryRecords();
 });
 
+document.querySelectorAll(".file-upload-input, .disciplinary-file-input").forEach(updateFileUploadLabel);
+document.addEventListener("change", (event) => {
+  const input = event.target.closest?.(".file-upload-input, .disciplinary-file-input");
+  if (input) updateFileUploadLabel(input);
+});
+
 document.getElementById("contratado-filter-nome")?.addEventListener("input", () => {
   renderDocumentosContratados();
 });
@@ -8143,12 +8153,24 @@ function validateDisciplinaryAttachment(file) {
   return "Anexe somente imagem, PDF ou arquivo Word.";
 }
 
-function updateDisciplinaryFileLabel(input) {
-  const field = input?.closest(".disciplinary-file-field");
-  const label = field?.querySelector(".disciplinary-file-name");
+function updateFileUploadLabel(input) {
+  const field = input?.closest(".file-upload-field, .disciplinary-file-field");
+  const label = field?.querySelector(".file-upload-name, .disciplinary-file-name");
   if (!label) return;
-  const file = input.files?.[0];
-  label.textContent = file?.name || label.dataset.emptyLabel || "Nenhum arquivo escolhido";
+  const files = Array.from(input.files || []).filter((file) => file && file.name);
+  if (!files.length) {
+    label.textContent = label.dataset.emptyLabel || "Nenhum arquivo escolhido";
+    return;
+  }
+  label.textContent = files.length === 1 ? files[0].name : `${files.length} arquivos escolhidos`;
+}
+
+function resetFileUploadLabels(root = document) {
+  root.querySelectorAll?.(".file-upload-input, .disciplinary-file-input").forEach(updateFileUploadLabel);
+}
+
+function updateDisciplinaryFileLabel(input) {
+  updateFileUploadLabel(input);
 }
 
 function clearDisciplinaryFormDrafts() {
@@ -8158,14 +8180,13 @@ function clearDisciplinaryFormDrafts() {
       field.setCustomValidity?.("");
       if (field.type === "file") field.value = "";
     });
-    formElement.querySelectorAll(".disciplinary-file-input").forEach(updateDisciplinaryFileLabel);
+    resetFileUploadLabels(formElement);
   });
 }
 
 document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
   formElement.querySelectorAll(".disciplinary-file-input").forEach((input) => {
     updateDisciplinaryFileLabel(input);
-    input.addEventListener("change", () => updateDisciplinaryFileLabel(input));
   });
 
   formElement.addEventListener("submit", async (event) => {
@@ -9041,8 +9062,7 @@ if (contaForm) {
 
     if (success) {
       formElement.reset();
-      const filenameLabel = document.getElementById("foto-perfil-filename");
-      if (filenameLabel) filenameLabel.textContent = "Nenhuma foto selecionada";
+      resetFileUploadLabels(formElement);
       renderAccountSettings();
       renderCurrentUser();
       showModal("Conta atualizada", "Seus dados foram atualizados com sucesso.", "success");
@@ -9109,6 +9129,7 @@ if (candidaturaForm) {
       const inserted = await submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, curriculo, turnstileToken });
       data.candidaturas.unshift(mapRows("candidaturas", [inserted])[0]);
       formElement.reset();
+      resetFileUploadLabels(formElement);
       document.getElementById("vaga-id").value = vaga_id;
       showModal("Sucesso", "Seu currículo foi enviado com sucesso!", "info");
     } catch (error) {
@@ -9203,6 +9224,7 @@ if (contratadoDocForm) {
       await submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, documentos, accessPassword: contractorAccessPassword, turnstileToken });
       formElement.reset();
       resetContractorDocumentFields(contractorDocumentsFields);
+      resetFileUploadLabels(formElement);
       showModal("Documentos enviados", "Os documentos foram enviados com sucesso para o RH.", "info");
     } catch (error) {
       console.error(error);
