@@ -2179,7 +2179,7 @@ function getBirthdayPerson(item = {}) {
 
 function renderEventTitle(item = {}) {
   const isBirthday = normalizeEventType(item.tipo) === "aniversario";
-  const title = isBirthday ? `${item.tipo || "Aniversário"}:` : item.titulo;
+  const title = isBirthday ? item.tipo || "Aniversário" : item.titulo;
   return `<p class="item-title">${escapeHtml(title || "Evento")}</p>`;
 }
 
