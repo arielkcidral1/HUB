@@ -269,7 +269,7 @@ const defaultData = {
   quadros: [
     {
       id: generateUUID(),
-      nome: "Projetos RH",
+      nome: "Quadro principal",
       listas: [
         { id: generateUUID(), titulo: "A fazer", cartoes: [] },
         { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
@@ -6991,7 +6991,7 @@ function ensureBoardsData() {
   if (!data.quadros.length) {
     data.quadros.push({
       id: generateUUID(),
-      nome: "Projetos RH",
+      nome: "Quadro principal",
       listas: [
         { id: generateUUID(), titulo: "A fazer", cartoes: [] },
         { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
@@ -7087,7 +7087,6 @@ function renderBoards() {
               <span class="tag">${escapeHtml(card.prioridade || "Normal")}</span>
             </div>
             ${card.descricao ? `<p>${escapeHtml(card.descricao).replace(/\n/g, "<br>")}</p>` : ""}
-            <p class="item-meta">${card.responsavel ? `Responsavel: ${escapeHtml(card.responsavel)} | ` : ""}${card.prazo ? `Prazo: ${escapeHtml(formatFormDate(card.prazo))}` : "Sem prazo"}</p>
             <div class="board-card-actions">
               <button class="secondary-link" type="button" data-action="move-board-card" data-direction="-1" data-list-index="${listIndex}" data-card-index="${cardIndex}" ${listIndex === 0 ? "disabled" : ""}>Voltar</button>
               <button class="secondary-link" type="button" data-action="move-board-card" data-direction="1" data-list-index="${listIndex}" data-card-index="${cardIndex}" ${listIndex >= board.listas.length - 1 ? "disabled" : ""}>Avancar</button>
@@ -8282,18 +8281,6 @@ document.getElementById("board-form")?.addEventListener("submit", (event) => {
   persistBoards();
 });
 
-document.getElementById("board-list-form")?.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const board = getActiveBoard();
-  if (!board) return;
-  const form = event.currentTarget;
-  const titulo = String(new FormData(form).get("titulo") || "").trim();
-  if (!titulo) return;
-  board.listas.push({ id: generateUUID(), titulo, cartoes: [] });
-  form.reset();
-  persistBoards();
-});
-
 document.getElementById("board-card-form")?.addEventListener("submit", (event) => {
   event.preventDefault();
   const board = getActiveBoard();
@@ -8311,8 +8298,6 @@ document.getElementById("board-card-form")?.addEventListener("submit", (event) =
     id: isEditing ? board.listas[editListIndex].cartoes[editCardIndex].id : generateUUID(),
     titulo: String(values.get("titulo") || "").trim(),
     descricao: String(values.get("descricao") || "").trim(),
-    responsavel: String(values.get("responsavel") || "").trim(),
-    prazo: String(values.get("prazo") || "").trim(),
     prioridade: String(values.get("prioridade") || "Normal"),
     createdAt: isEditing ? board.listas[editListIndex].cartoes[editCardIndex].createdAt : todayLabel(),
     createdBy: isEditing ? board.listas[editListIndex].cartoes[editCardIndex].createdBy : getCurrentUserName(),
@@ -10433,8 +10418,6 @@ document.addEventListener('click', (event) => {
       form.elements.lista.value = board.listas[listIndex].id;
       form.elements.titulo.value = card.titulo || "";
       form.elements.descricao.value = card.descricao || "";
-      form.elements.responsavel.value = card.responsavel || "";
-      form.elements.prazo.value = card.prazo || "";
       form.elements.prioridade.value = card.prioridade || "Normal";
       form.querySelector("h3").textContent = "Editar cartao";
       form.querySelector('button[type="submit"]').textContent = "Salvar cartao";
