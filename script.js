@@ -7211,6 +7211,26 @@ function resetBoardCardForm() {
   renderBoardListOptions();
 }
 
+function getEditingBoardCardIndexes() {
+  const form = document.getElementById("board-card-form");
+  if (!form) return null;
+  const listValue = String(form.elements.edit_list_index?.value || "");
+  const cardValue = String(form.elements.edit_card_index?.value || "");
+  if (listValue === "" || cardValue === "") return null;
+  return {
+    listIndex: Number(listValue),
+    cardIndex: Number(cardValue),
+  };
+}
+
+function resetBoardCardFormIfEditing(listIndex = null, cardIndex = null) {
+  const editing = getEditingBoardCardIndexes();
+  if (!editing) return;
+  const shouldReset = listIndex === null || cardIndex === null ||
+    (editing.listIndex === Number(listIndex) && editing.cardIndex === Number(cardIndex));
+  if (shouldReset) resetBoardCardForm();
+}
+
 function renderBoards() {
   ensureBoardsData();
   const board = getActiveBoard();
@@ -10589,6 +10609,7 @@ document.addEventListener("drop", async (event) => {
   const card = fromList?.cartoes?.[draggedBoardCard.cardIndex];
   if (!board || !fromList || !toList || !card) return;
   if (draggedBoardCard.listIndex === toListIndex) return;
+  resetBoardCardFormIfEditing(draggedBoardCard.listIndex, draggedBoardCard.cardIndex);
   fromList.cartoes.splice(draggedBoardCard.cardIndex, 1);
   toList.cartoes.push(card);
   await persistBoards(board);
@@ -10663,6 +10684,7 @@ document.addEventListener('click', async (event) => {
       if (!cleanName) break;
       board.nome = cleanName;
       closeBoardContextMenu();
+      resetBoardCardFormIfEditing();
       await persistBoards(board);
       break;
     }
@@ -10672,6 +10694,7 @@ document.addEventListener('click', async (event) => {
       const duplicate = cloneBoard(board);
       const currentIndex = data.quadros.findIndex((item) => String(item.id) === String(id));
       closeBoardContextMenu();
+      resetBoardCardFormIfEditing();
       if (isAuthenticated()) {
         try {
           const inserted = await hubApi.insert("quadros", toDbPayload("quadros", duplicate));
@@ -10705,6 +10728,7 @@ document.addEventListener('click', async (event) => {
       const boardName = data.quadros[boardIndex].nome || "este quadro";
       if (!confirm(`Apagar "${boardName}"? Os cartoes deste quadro tambem serao removidos.`)) break;
       closeBoardContextMenu();
+      resetBoardCardFormIfEditing();
       if (isAuthenticated()) {
         const deleted = await deleteItem("quadros", id);
         if (!deleted) break;
@@ -10726,6 +10750,7 @@ document.addEventListener('click', async (event) => {
       const toList = board?.listas?.[listIndex + direction];
       const card = fromList?.cartoes?.[cardIndex];
       if (!board || !fromList || !toList || !card) break;
+      resetBoardCardFormIfEditing(listIndex, cardIndex);
       fromList.cartoes.splice(cardIndex, 1);
       toList.cartoes.push(card);
       await persistBoards(board);
@@ -10758,6 +10783,7 @@ document.addEventListener('click', async (event) => {
       const cardIndex = Number(target.dataset.cardIndex);
       const card = list?.cartoes?.[cardIndex];
       if (!list || !card) break;
+      resetBoardCardFormIfEditing(Number(target.dataset.listIndex), cardIndex);
       list.cartoes.splice(cardIndex + 1, 0, cloneBoardCard(card));
       await persistBoards(board);
       break;
@@ -10768,6 +10794,7 @@ document.addEventListener('click', async (event) => {
       const list = board?.listas?.[Number(target.dataset.listIndex)];
       const cardIndex = Number(target.dataset.cardIndex);
       if (!list?.cartoes?.[cardIndex]) break;
+      resetBoardCardFormIfEditing(Number(target.dataset.listIndex), cardIndex);
       list.cartoes.splice(cardIndex, 1);
       await persistBoards(board);
       break;
