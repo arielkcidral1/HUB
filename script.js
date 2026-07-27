@@ -338,7 +338,6 @@ let activeBoardId = "";
 let boardContextMenu = null;
 let boardCardActionMenu = null;
 let draggedBoardCard = null;
-let suppressBoardCardClick = false;
 window.editingDocId = null;
 
 const documentLabels = {
@@ -10426,12 +10425,28 @@ function baixarDocumentoRH(id) {
 };
 
 document.addEventListener("contextmenu", (event) => {
+  const card = event.target.closest("[data-board-card]");
+  if (card) {
+    event.preventDefault();
+    closeBoardContextMenu();
+    boardCardActionMenu = {
+      listIndex: Number(card.dataset.listIndex),
+      cardIndex: Number(card.dataset.cardIndex),
+      x: event.clientX,
+      y: event.clientY + 6,
+    };
+    renderBoardCardActionMenu();
+    return;
+  }
+
   const tab = event.target.closest("[data-board-tab]");
   if (!tab) {
     closeBoardContextMenu();
+    closeBoardCardActionMenu();
     return;
   }
   event.preventDefault();
+  closeBoardCardActionMenu();
   boardContextMenu = {
     id: tab.dataset.id,
     x: event.clientX,
@@ -10444,7 +10459,6 @@ document.addEventListener("dragstart", (event) => {
   const card = event.target.closest("[data-board-card]");
   if (!card) return;
   closeBoardCardActionMenu();
-  suppressBoardCardClick = false;
   draggedBoardCard = {
     listIndex: Number(card.dataset.listIndex),
     cardIndex: Number(card.dataset.cardIndex),
@@ -10458,10 +10472,6 @@ document.addEventListener("dragend", (event) => {
   event.target.closest("[data-board-card]")?.classList.remove("dragging");
   document.querySelectorAll(".board-lane.drag-over").forEach((lane) => lane.classList.remove("drag-over"));
   draggedBoardCard = null;
-  suppressBoardCardClick = true;
-  setTimeout(() => {
-    suppressBoardCardClick = false;
-  }, 80);
 });
 
 document.addEventListener("dragover", (event) => {
@@ -10504,20 +10514,7 @@ document.addEventListener('click', (event) => {
   }
 
   const target = event.target.closest('[data-action]');
-  if (!target) {
-    const card = event.target.closest("[data-board-card]");
-    if (card) {
-      if (suppressBoardCardClick) return;
-      boardCardActionMenu = {
-        listIndex: Number(card.dataset.listIndex),
-        cardIndex: Number(card.dataset.cardIndex),
-        x: event.clientX,
-        y: event.clientY + 6,
-      };
-      renderBoardCardActionMenu();
-    }
-    return;
-  }
+  if (!target) return;
 
   const { action, id } = target.dataset;
 
