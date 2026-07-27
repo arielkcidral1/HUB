@@ -938,11 +938,12 @@ h2 {
 .calendar-day.has-birthday,
 .calendar-cell.has-birthday {
   position: relative;
-  border-color: rgba(245, 158, 11, 0.65);
+  border-color: rgba(251, 191, 36, 0.9);
   background:
-    linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(254, 226, 226, 0.92)),
-    var(--gold-surface);
-  box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.18), 0 10px 24px rgba(245, 158, 11, 0.16);
+    linear-gradient(135deg, rgba(146, 64, 14, 0.92), rgba(157, 23, 77, 0.76)),
+    #78350f;
+  box-shadow: inset 0 0 0 2px rgba(251, 191, 36, 0.28), 0 10px 24px rgba(251, 191, 36, 0.22);
+  color: #fff7ed;
 }
 
 .calendar-day.has-birthday::after,
@@ -951,8 +952,8 @@ h2 {
   display: block;
   overflow: hidden;
   border-radius: var(--radius-sm);
-  background: #f59e0b;
-  color: #321805;
+  background: #fbbf24;
+  color: #1f1300;
   padding: 4px 6px;
   font-size: 10px;
   font-weight: 900;
@@ -1023,6 +1024,10 @@ h2 {
   font-size: 18px;
   font-weight: 800;
   text-transform: capitalize;
+}
+
+#evento-form [hidden] {
+  display: none !important;
 }
 
 .calendar-weekdays,
@@ -2672,8 +2677,8 @@ textarea {
 
 .calendar-event-preview.event-type-birthday,
 .calendar-cell span.event-type-birthday {
-  background: #f59e0b;
-  color: #321805;
+  background: #fbbf24;
+  color: #1f1300;
 }
 
 .calendar-event-preview.event-type-interview,
@@ -2836,18 +2841,18 @@ textarea {
 .item-card.event-type-birthday,
 .day-event-card.event-type-birthday,
 .calendar-preview-panel li.event-type-birthday {
-  border-color: rgba(245, 158, 11, 0.55);
+  border-color: rgba(251, 191, 36, 0.65);
   background:
-    linear-gradient(135deg, rgba(255, 247, 237, 0.96), rgba(255, 241, 242, 0.9)),
+    linear-gradient(135deg, rgba(120, 53, 15, 0.42), rgba(131, 24, 67, 0.28)),
     var(--surface);
-  box-shadow: 0 14px 30px rgba(245, 158, 11, 0.16);
+  box-shadow: 0 14px 30px rgba(251, 191, 36, 0.18);
 }
 
 .item-card.event-type-birthday .item-title::before,
 .day-event-card.event-type-birthday .item-title::before,
 .calendar-preview-panel li.event-type-birthday .item-title::before {
   content: "Aniversario - ";
-  color: #92400e;
+  color: #fbbf24;
   font-weight: 900;
 }
 
@@ -2859,9 +2864,9 @@ textarea {
 }
 
 .tag.event-tag.event-type-birthday {
-  border-color: rgba(245, 158, 11, 0.55);
-  background: #f59e0b;
-  color: #321805;
+  border-color: rgba(251, 191, 36, 0.75);
+  background: #fbbf24;
+  color: #1f1300;
 }
 
 .tag.event-tag.event-type-interview {

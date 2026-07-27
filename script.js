@@ -2167,6 +2167,12 @@ function dayHasEventType(events = [], type) {
   return events.some((item) => normalizeEventType(item.tipo) === type);
 }
 
+function getEventScheduleMeta(item = {}) {
+  const isBirthday = normalizeEventType(item.tipo) === "aniversario";
+  if (isBirthday) return "Dia inteiro";
+  return `${formatEventTime(item.horario)} | Responsavel: ${item.responsavel || "Nao informado"}`;
+}
+
 function getUpcomingEvents() {
   const today = getLocalDateKey();
   return getSortedEvents().filter((item) => !isArchivedRecord(item) && (!item.data || item.data >= today));
@@ -2440,7 +2446,7 @@ function showDayEventsModal(date) {
               <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
             </div>
             <p class="day-event-description">${escapeHtml(item.descricao || "Sem observacoes adicionais.").replace(/\n/g, "<br>")}</p>
-            <p class="item-meta">${escapeHtml(formatEventTime(item.horario))} | Responsavel: ${escapeHtml(item.responsavel)}</p>
+            <p class="item-meta">${escapeHtml(getEventScheduleMeta(item))}</p>
             <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
           </article>
         `)
@@ -5541,7 +5547,7 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
 
   list.innerHTML = visibleEvents
     .slice(0, dashboardCalendarViewMode === "week" ? 4 : 6)
-    .map((item) => `<li class="${getEventTypeClass(item)}"><div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div><p>${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(formatEventTime(item.horario))} | ${escapeHtml(item.responsavel)}</p></li>`)
+    .map((item) => `<li class="${getEventTypeClass(item)}"><div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div><p>${escapeHtml(formatEventDate(item.data))} | ${escapeHtml(getEventScheduleMeta(item))}</p></li>`)
     .join("");
 }
 
@@ -5595,7 +5601,7 @@ function renderCalendar() {
     <article class="item-card ${getEventTypeClass(item)}">
       <div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>
       <p>${escapeHtml(item.descricao || "Sem observacoes adicionais.")}</p>
-      <p class="item-meta">${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(formatEventTime(item.horario))} | Responsavel: ${escapeHtml(item.responsavel)}</p>
+      <p class="item-meta">${escapeHtml(formatEventDate(item.data))} | ${escapeHtml(getEventScheduleMeta(item))}</p>
       <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
       <div class="job-actions">
         <button class="secondary-link" type="button" data-action="editar-evento" data-id="${escapeHtml(item.id)}">Editar</button>
@@ -8681,6 +8687,20 @@ document.getElementById("cancelar-edicao-vaga")?.addEventListener("click", () =>
 const eventoForm = document.getElementById("evento-form");
 if (eventoForm) {
 
+  const updateEventoFormByType = () => {
+    const isBirthday = normalizeEventType(eventoForm.elements.tipo?.value) === "aniversario";
+    eventoForm.querySelectorAll("[data-event-required-field], [data-event-optional-field]").forEach((field) => {
+      field.hidden = isBirthday;
+      field.querySelectorAll("input, textarea, select").forEach((input) => {
+        if (input.name === "horario" || input.name === "responsavel") input.required = !isBirthday;
+        if (isBirthday) {
+          input.value = "";
+          input.setCustomValidity?.("");
+        }
+      });
+    });
+  };
+
   const eventoDataInput = eventoForm.elements.data;
   if (eventoDataInput) {
     eventoDataInput.value = formatEventoDate(eventoDataInput.value);
@@ -8718,13 +8738,14 @@ if (eventoForm) {
     }
     eventoDataInput?.setCustomValidity("");
 
+    const isBirthday = normalizeEventType(form.get("tipo")) === "aniversario";
     const payload = {
       titulo: form.get("titulo"),
       data: dataIso,
-      horario: form.get("horario"),
-      responsavel: form.get("responsavel"),
+      horario: isBirthday ? "" : form.get("horario"),
+      responsavel: isBirthday ? "" : form.get("responsavel"),
       tipo: form.get("tipo"),
-      descricao: form.get("descricao"),
+      descricao: isBirthday ? "" : form.get("descricao"),
       createdBy: getCurrentUserName(),
     };
     const success = id ? await updateItem("eventos", id, { ...payload, updatedBy: getCurrentUserName() }) : await addItem("eventos", payload);
@@ -8733,8 +8754,12 @@ if (eventoForm) {
       formElement.elements.id.value = "";
       document.getElementById("cancelar-edicao-evento")?.setAttribute("hidden", "");
       formElement.querySelector('button[type="submit"]').textContent = "Registrar evento";
+      updateEventoFormByType();
     }
   });
+
+  eventoForm.elements.tipo?.addEventListener("change", updateEventoFormByType);
+  updateEventoFormByType();
 }
 
 document.getElementById("cancelar-edicao-evento")?.addEventListener("click", () => {
@@ -8743,6 +8768,7 @@ document.getElementById("cancelar-edicao-evento")?.addEventListener("click", () 
   eventoForm.elements.id.value = "";
   document.getElementById("cancelar-edicao-evento").setAttribute("hidden", "");
   eventoForm.querySelector('button[type="submit"]').textContent = "Registrar evento";
+  eventoForm.elements.tipo?.dispatchEvent(new Event("change"));
 });
 
 document.getElementById("toggle-dashboard-calendar-view")?.addEventListener("click", () => {
@@ -9574,6 +9600,7 @@ function editarEvento(id) {
   form.elements.responsavel.value = evento.responsavel || "";
   form.elements.tipo.value = evento.tipo || "Evento";
   form.elements.descricao.value = evento.descricao || "";
+  form.elements.tipo?.dispatchEvent(new Event("change"));
   document.getElementById("cancelar-edicao-evento")?.removeAttribute("hidden");
   form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
   form.scrollIntoView({ behavior: "smooth", block: "start" });
