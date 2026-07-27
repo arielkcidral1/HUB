@@ -7073,9 +7073,26 @@ function getPriorityClass(value = "") {
 async function persistBoards(board = getActiveBoard()) {
   saveLocalData();
   renderBoards();
-  if (!isAuthenticated() || !board || String(board.id || "").startsWith("local-")) return true;
+  if (!isAuthenticated() || !board) return true;
   try {
-    const updated = await hubApi.update("quadros", board.id, toDbPayload("quadros", { ...board, updatedBy: getCurrentUserName() }));
+    const normalizedBoard = String(board.id || "").startsWith("local-")
+      ? { ...board, id: generateUUID() }
+      : board;
+    if (normalizedBoard.id !== board.id) {
+      board.id = normalizedBoard.id;
+      activeBoardId = normalizedBoard.id;
+    }
+    let updated;
+    try {
+      updated = await hubApi.update("quadros", normalizedBoard.id, toDbPayload("quadros", { ...normalizedBoard, updatedBy: getCurrentUserName() }));
+    } catch (error) {
+      if (error?.status !== 404) throw error;
+      updated = await hubApi.insert("quadros", toDbPayload("quadros", {
+        ...normalizedBoard,
+        createdBy: normalizedBoard.createdBy || getCurrentUserName(),
+        updatedBy: getCurrentUserName(),
+      }));
+    }
     mergeRealtimeRow("quadros", updated, "UPDATE");
     renderRealtimeUpdate("quadros");
     setSyncStatus("HUB online", true);
