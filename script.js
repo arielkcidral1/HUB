@@ -8697,10 +8697,10 @@ if (eventoForm) {
 
   const updateEventoFormByType = () => {
     const isBirthday = normalizeEventType(eventoForm.elements.tipo?.value) === "aniversario";
-    eventoForm.querySelectorAll("[data-event-required-field], [data-event-optional-field]").forEach((field) => {
+    eventoForm.querySelectorAll("[data-event-title-field], [data-event-required-field], [data-event-optional-field]").forEach((field) => {
       field.hidden = isBirthday;
       field.querySelectorAll("input, textarea, select").forEach((input) => {
-        if (input.name === "horario" || input.name === "responsavel") input.required = !isBirthday;
+        if (input.name === "titulo" || input.name === "horario" || input.name === "responsavel") input.required = !isBirthday;
         if (isBirthday) {
           input.value = "";
           input.setCustomValidity?.("");
@@ -8748,11 +8748,11 @@ if (eventoForm) {
 
     const isBirthday = normalizeEventType(form.get("tipo")) === "aniversario";
     const payload = {
-      titulo: form.get("titulo"),
+      titulo: isBirthday ? "Aniversário" : form.get("titulo"),
       data: dataIso,
       horario: isBirthday ? "" : form.get("horario"),
       responsavel: isBirthday ? "" : form.get("responsavel"),
-      tipo: form.get("tipo"),
+      tipo: isBirthday ? "Aniversário" : form.get("tipo"),
       descricao: isBirthday ? "" : form.get("descricao"),
       createdBy: getCurrentUserName(),
     };

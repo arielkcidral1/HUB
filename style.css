@@ -948,7 +948,7 @@ h2 {
 
 .calendar-day.has-birthday::after,
 .calendar-cell.has-birthday::after {
-  content: "Aniversario";
+  content: "Aniversário";
   display: block;
   overflow: hidden;
   border-radius: var(--radius-sm);
@@ -2851,7 +2851,7 @@ textarea {
 .item-card.event-type-birthday .item-title::before,
 .day-event-card.event-type-birthday .item-title::before,
 .calendar-preview-panel li.event-type-birthday .item-title::before {
-  content: "Aniversario - ";
+  content: "Aniversário - ";
   color: #fbbf24;
   font-weight: 900;
 }
