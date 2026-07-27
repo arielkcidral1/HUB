@@ -2177,6 +2177,12 @@ function getBirthdayPerson(item = {}) {
   return String(item.aniversariante || item.descricao || "").trim();
 }
 
+function renderEventTitle(item = {}) {
+  const isBirthday = normalizeEventType(item.tipo) === "aniversario";
+  const title = isBirthday ? `${item.tipo || "Aniversário"}:` : item.titulo;
+  return `<p class="item-title">${escapeHtml(title || "Evento")}</p>`;
+}
+
 function renderEventDescription(item = {}, className = "") {
   if (normalizeEventType(item.tipo) === "aniversario") {
     const aniversariante = getBirthdayPerson(item);
@@ -2462,7 +2468,7 @@ function showDayEventsModal(date) {
         .map((item) => `
           <article class="day-event-card ${getEventTypeClass(item)}">
             <div class="item-topline">
-              <p class="item-title">${escapeHtml(item.titulo)}</p>
+              ${renderEventTitle(item)}
               <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
             </div>
             ${renderEventDescription(item, "day-event-description")}
@@ -5567,7 +5573,7 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
 
   list.innerHTML = visibleEvents
     .slice(0, dashboardCalendarViewMode === "week" ? 4 : 6)
-    .map((item) => `<li class="${getEventTypeClass(item)}"><div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>${renderEventDescription(item)}<p>${escapeHtml(getEventListMeta(item))}</p></li>`)
+    .map((item) => `<li class="${getEventTypeClass(item)}"><div class="item-topline">${renderEventTitle(item)}<span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>${renderEventDescription(item)}<p>${escapeHtml(getEventListMeta(item))}</p></li>`)
     .join("");
 }
 
@@ -5619,7 +5625,7 @@ function renderCalendar() {
 
   renderCards("eventos-list", visibleEvents, (item) => `
     <article class="item-card ${getEventTypeClass(item)}">
-      <div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>
+      <div class="item-topline">${renderEventTitle(item)}<span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>
       ${renderEventDescription(item)}
       <p class="item-meta">${escapeHtml(getEventListMeta(item))}</p>
       <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
