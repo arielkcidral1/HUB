@@ -335,6 +335,7 @@ const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
 let activeBoardId = "";
+let boardContextMenu = null;
 window.editingDocId = null;
 
 const documentLabels = {
@@ -7032,6 +7033,53 @@ function persistBoards() {
   renderBoards();
 }
 
+function closeBoardContextMenu() {
+  boardContextMenu = null;
+  document.getElementById("board-context-menu")?.remove();
+}
+
+function renderBoardContextMenu() {
+  document.getElementById("board-context-menu")?.remove();
+  if (!boardContextMenu) return;
+  const menu = document.createElement("div");
+  menu.id = "board-context-menu";
+  menu.className = "board-context-menu";
+  menu.style.left = `${boardContextMenu.x}px`;
+  menu.style.top = `${boardContextMenu.y}px`;
+  menu.innerHTML = `
+    <button type="button" data-action="rename-board" data-id="${escapeHtml(boardContextMenu.id)}">Renomear</button>
+    <button type="button" data-action="duplicate-board" data-id="${escapeHtml(boardContextMenu.id)}">Duplicar</button>
+    <button class="danger" type="button" data-action="delete-board" data-id="${escapeHtml(boardContextMenu.id)}">Apagar</button>
+  `;
+  document.body.appendChild(menu);
+  const rect = menu.getBoundingClientRect();
+  const left = Math.min(boardContextMenu.x, window.innerWidth - rect.width - 10);
+  const top = Math.min(boardContextMenu.y, window.innerHeight - rect.height - 10);
+  menu.style.left = `${Math.max(10, left)}px`;
+  menu.style.top = `${Math.max(10, top)}px`;
+}
+
+function cloneBoard(board) {
+  return {
+    ...board,
+    id: generateUUID(),
+    nome: `${board.nome || "Quadro"} - copia`,
+    createdAt: todayLabel(),
+    listas: (board.listas || []).map((list) => ({
+      ...list,
+      id: generateUUID(),
+      cartoes: (list.cartoes || []).map((card) => ({
+        ...card,
+        id: generateUUID(),
+        createdAt: todayLabel(),
+        createdBy: getCurrentUserName(),
+        updatedAt: "",
+        updatedBy: "",
+      })),
+    })),
+  };
+}
+
 function renderBoardListOptions(board = getActiveBoard()) {
   const select = document.querySelector("#board-card-form select[name='lista']");
   if (!select) return;
@@ -7061,11 +7109,12 @@ function renderBoards() {
   if (!tabs || !lanes) return;
 
   tabs.innerHTML = data.quadros.map((item) => `
-    <button class="board-tab ${String(item.id) === String(activeBoardId) ? "active" : ""}" type="button" data-action="select-board" data-id="${escapeHtml(item.id)}">
+    <button class="board-tab ${String(item.id) === String(activeBoardId) ? "active" : ""}" type="button" data-action="select-board" data-id="${escapeHtml(item.id)}" data-board-tab="true">
       <span>${escapeHtml(item.nome)}</span>
       <small>${getBoardCardCount(item)} cartao(oes)</small>
     </button>
   `).join("");
+  renderBoardContextMenu();
 
   renderBoardListOptions(board);
   if (!board) {
@@ -10340,7 +10389,26 @@ function baixarDocumentoRH(id) {
   downloadStyledRhDocument(doc, title);
 };
 
+document.addEventListener("contextmenu", (event) => {
+  const tab = event.target.closest("[data-board-tab]");
+  if (!tab) {
+    closeBoardContextMenu();
+    return;
+  }
+  event.preventDefault();
+  boardContextMenu = {
+    id: tab.dataset.id,
+    x: event.clientX,
+    y: event.clientY + 6,
+  };
+  renderBoardContextMenu();
+});
+
 document.addEventListener('click', (event) => {
+  if (!event.target.closest("#board-context-menu") && !event.target.closest("[data-board-tab]")) {
+    closeBoardContextMenu();
+  }
+
   const target = event.target.closest('[data-action]');
   if (!target) return;
 
@@ -10389,9 +10457,50 @@ document.addEventListener('click', (event) => {
     case 'excluir-malote': excluirMalote(id); break;
     case 'open-dashboard-activity': openDashboardActivity(target.dataset.index); break;
     case 'select-board':
+      closeBoardContextMenu();
       activeBoardId = id;
       renderBoards();
       break;
+    case 'rename-board': {
+      const board = data.quadros?.find((item) => String(item.id) === String(id));
+      if (!board) break;
+      const nextName = prompt("Novo nome do quadro:", board.nome || "");
+      if (nextName === null) break;
+      const cleanName = nextName.trim();
+      if (!cleanName) break;
+      board.nome = cleanName;
+      closeBoardContextMenu();
+      persistBoards();
+      break;
+    }
+    case 'duplicate-board': {
+      const board = data.quadros?.find((item) => String(item.id) === String(id));
+      if (!board) break;
+      const duplicate = cloneBoard(board);
+      const currentIndex = data.quadros.findIndex((item) => String(item.id) === String(id));
+      data.quadros.splice(currentIndex + 1, 0, duplicate);
+      activeBoardId = duplicate.id;
+      closeBoardContextMenu();
+      persistBoards();
+      break;
+    }
+    case 'delete-board': {
+      ensureBoardsData();
+      if (data.quadros.length <= 1) {
+        alert("E preciso manter pelo menos um quadro.");
+        closeBoardContextMenu();
+        break;
+      }
+      const boardIndex = data.quadros.findIndex((item) => String(item.id) === String(id));
+      if (boardIndex < 0) break;
+      const boardName = data.quadros[boardIndex].nome || "este quadro";
+      if (!confirm(`Apagar "${boardName}"? Os cartoes deste quadro tambem serao removidos.`)) break;
+      data.quadros.splice(boardIndex, 1);
+      activeBoardId = data.quadros[Math.max(0, boardIndex - 1)]?.id || data.quadros[0]?.id || "";
+      closeBoardContextMenu();
+      persistBoards();
+      break;
+    }
     case 'move-board-card': {
       const board = getActiveBoard();
       const listIndex = Number(target.dataset.listIndex);
