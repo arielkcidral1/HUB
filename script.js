@@ -343,6 +343,7 @@ let boardCardActionMenu = null;
 let draggedBoardCard = null;
 let draggedBoardTabId = "";
 let suppressBoardCardClick = false;
+let recordContextMenu = null;
 window.editingDocId = null;
 
 const documentLabels = {
@@ -7001,40 +7002,22 @@ function updateChamadosFilterClearButton() {
 function renderChamadosSection() {
   const chamadosAbertos = filterChamadosByCurrentFilters((data.chamados || []).filter((item) => item.status !== "Arquivado"));
   const chamadosArquivados = filterChamadosByCurrentFilters((data.chamados || []).filter((item) => item.status === "Arquivado"));
-  const selectChamadosButton = document.getElementById("select-chamados");
   const primaryChamadosTitle = document.getElementById("chamados-primary-title");
   const toggleArchivedChamadosButton = document.getElementById("toggle-archived-chamados");
-  const exitChamadosSelectionButton = document.getElementById("exit-chamados-selection");
   const openChamadosPublicLink = document.getElementById("open-chamados-public");
   updateChamadosFilterClearButton();
 
-  if (chamadosSelectionMode) showArchivedChamados = false;
-
-  if (selectChamadosButton) {
-    selectChamadosButton.disabled = !chamadosAbertos.length && !chamadosArquivados.length;
-    selectChamadosButton.textContent = chamadosSelectionMode ? "Arquivar selecionados" : "Selecionar chamados";
-    selectChamadosButton.className = chamadosSelectionMode ? "danger-button" : "secondary-link";
-  }
   if (primaryChamadosTitle) primaryChamadosTitle.textContent = showArchivedChamados ? "Arquivados" : "Abertos";
   if (toggleArchivedChamadosButton) {
     toggleArchivedChamadosButton.textContent = showArchivedChamados ? "Ocultar arquivados" : "Mostrar arquivados";
     toggleArchivedChamadosButton.disabled = false;
-    toggleArchivedChamadosButton.hidden = chamadosSelectionMode;
-    toggleArchivedChamadosButton.style.display = chamadosSelectionMode ? "none" : "";
   }
-  if (exitChamadosSelectionButton) {
-    exitChamadosSelectionButton.hidden = !chamadosSelectionMode;
-    exitChamadosSelectionButton.style.display = chamadosSelectionMode ? "" : "none";
-  }
-  if (openChamadosPublicLink) openChamadosPublicLink.hidden = chamadosSelectionMode;
+  if (openChamadosPublicLink) openChamadosPublicLink.hidden = false;
 
   const chamadoCard = (item, archived = false) => `
-    <article class="item-card ${chamadosSelectionMode && !archived ? "selectable-card clickable" : ""}"
-             ${chamadosSelectionMode && !archived ? `data-action="toggle-chamado-selection" data-id="${escapeHtml(item.id)}"` : ""}>
+    <article class="item-card" ${!archived ? `data-context-type="chamado" data-id="${escapeHtml(item.id)}"` : ""}>
       <div class="item-topline">
         <p class="item-title">
-          ${!archived && chamadosSelectionMode ? `<input class="chamado-select" type="checkbox" value="${escapeHtml(item.id)}"
-                                                         aria-label="Selecionar chamado de ${escapeHtml(item.solicitante)}" data-action="no-op" />` : ""}
           ${escapeHtml(item.unidade)}
         </p>
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
@@ -7167,6 +7150,30 @@ function closeBoardContextMenu() {
 function closeBoardCardActionMenu() {
   boardCardActionMenu = null;
   document.getElementById("board-card-action-menu")?.remove();
+}
+
+function closeRecordContextMenu() {
+  recordContextMenu = null;
+  document.getElementById("record-context-menu")?.remove();
+}
+
+function renderRecordContextMenu() {
+  document.getElementById("record-context-menu")?.remove();
+  if (!recordContextMenu) return;
+  const menu = document.createElement("div");
+  menu.id = "record-context-menu";
+  menu.className = "board-context-menu record-context-menu";
+  menu.style.left = `${recordContextMenu.x}px`;
+  menu.style.top = `${recordContextMenu.y}px`;
+  menu.innerHTML = `
+    <button type="button" data-action="${recordContextMenu.type === "denuncia" ? "arquivar-denuncia" : "arquivar-chamado"}" data-id="${escapeHtml(recordContextMenu.id)}">Arquivar</button>
+  `;
+  document.body.appendChild(menu);
+  const rect = menu.getBoundingClientRect();
+  const left = Math.min(recordContextMenu.x, window.innerWidth - rect.width - 10);
+  const top = Math.min(recordContextMenu.y, window.innerHeight - rect.height - 10);
+  menu.style.left = `${Math.max(10, left)}px`;
+  menu.style.top = `${Math.max(10, top)}px`;
 }
 
 function renderBoardContextMenu() {
@@ -7395,7 +7402,8 @@ function renderDenunciasSection() {
   const cardTemplate = (item, archived = false) => `
     <article class="item-card clickable ${denunciasSelectionMode && !archived ? "selectable-card" : ""}"
              data-action="${denunciasSelectionMode && !archived ? 'toggle-denuncia-selection' : 'ler-denuncia'}"
-             data-id="${escapeHtml(item.id)}">
+             data-id="${escapeHtml(item.id)}"
+             ${!archived ? 'data-context-type="denuncia"' : ""}>
       <div class="item-topline">
         <p class="item-title">
           ${!archived && denunciasSelectionMode ? `<input class="denuncia-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar denúncia de ${escapeHtml(item.createdAt)}" data-action="no-op" ${selectedDenunciaIds.has(String(item.id)) ? "checked" : ""} />` : ""}
@@ -10615,6 +10623,21 @@ function baixarDocumentoRH(id) {
 };
 
 document.addEventListener("contextmenu", (event) => {
+  const contextRecord = event.target.closest("[data-context-type][data-id]");
+  if (contextRecord) {
+    event.preventDefault();
+    closeBoardContextMenu();
+    closeBoardCardActionMenu();
+    recordContextMenu = {
+      type: contextRecord.dataset.contextType,
+      id: contextRecord.dataset.id,
+      x: event.clientX,
+      y: event.clientY + 6,
+    };
+    renderRecordContextMenu();
+    return;
+  }
+
   const card = event.target.closest("[data-board-card]");
   if (card) {
     event.preventDefault();
@@ -10633,10 +10656,12 @@ document.addEventListener("contextmenu", (event) => {
   if (!tab) {
     closeBoardContextMenu();
     closeBoardCardActionMenu();
+    closeRecordContextMenu();
     return;
   }
   event.preventDefault();
   closeBoardCardActionMenu();
+  closeRecordContextMenu();
   boardContextMenu = {
     id: tab.dataset.id,
     x: event.clientX,
@@ -10752,6 +10777,9 @@ document.addEventListener('click', async (event) => {
   if (!event.target.closest("#board-card-action-menu") && !event.target.closest("[data-board-card]")) {
     closeBoardCardActionMenu();
   }
+  if (!event.target.closest("#record-context-menu") && !event.target.closest("[data-context-type]")) {
+    closeRecordContextMenu();
+  }
 
   const target = event.target.closest('[data-action]');
   if (!target) {
@@ -10795,6 +10823,10 @@ document.addEventListener('click', async (event) => {
     case 'reabrir-denuncia':
       reabrirDenuncia(id);
       break;
+    case 'arquivar-denuncia':
+      closeRecordContextMenu();
+      await atualizarStatusDenuncia(id, "Arquivada");
+      break;
     case 'toggle-chamado-selection': {
       const checkbox = document.querySelector(`.chamado-select[value="${CSS.escape(String(id))}"]`);
       if (checkbox) checkbox.checked = !checkbox.checked;
@@ -10802,6 +10834,10 @@ document.addEventListener('click', async (event) => {
     }
     case 'reabrir-chamado':
       reabrirChamado(id);
+      break;
+    case 'arquivar-chamado':
+      closeRecordContextMenu();
+      await updateItem("chamados", id, { status: "Arquivado" });
       break;
     case 'editar-malote': editarMalote(id); break;
     case 'baixar-documento-malote': baixarDocumentoMalote(id); break;
@@ -11045,7 +11081,15 @@ class NotificationTracker {
     this.searchInput?.addEventListener("input", () => this.applyFilters());
     this.sortSelect?.addEventListener("change", () => this.applySorting());
     this.markAllReadBtn?.addEventListener("click", () => this.markAllRead());
-    this.clearAllBtn?.addEventListener("click", () => this.clearAll());
+    this.clearAllBtn?.addEventListener("click", () => {
+      showConfirmActionModal({
+        title: "Limpar notificacoes",
+        text: "Deseja limpar a visualizacao das notificacoes?",
+        confirmText: "Limpar",
+        danger: true,
+        onConfirm: async () => this.clearAll(),
+      });
+    });
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !this.modal?.hidden) this.closeModal();
@@ -11569,7 +11613,6 @@ class NotificationTracker {
   }
 
   clearAll() {
-    if (!confirm("Tem certeza que deseja limpar a visualização das notificações?")) return;
     const idsToClear = new Set([
       ...Array.from(this.clearedNotificationIds || []),
       ...this.notifications.map((notif) => String(notif.id)),
