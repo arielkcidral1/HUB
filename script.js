@@ -140,6 +140,7 @@ const CHAT_EMOJIS = [
   "🇨🇱",
 ];
 const USER_SETTINGS_STORAGE_KEY = "hub-user-settings-v1";
+const CLEARED_TRACKER_NOTIFICATIONS_KEY = "hub-cleared-tracker-notification-ids";
 const USER_SETTINGS_DEFAULTS = Object.freeze({
   hidePresence: false,
   blurChatPreviews: false,
@@ -2222,7 +2223,10 @@ function getEventListMeta(item = {}) {
 
 function getUpcomingEvents() {
   const today = getLocalDateKey();
-  return getSortedEvents().filter((item) => !isArchivedRecord(item) && (!item.data || item.data >= today));
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 14);
+  const maxDateKey = getLocalDateKey(maxDate);
+  return getSortedEvents().filter((item) => !isArchivedRecord(item) && item.data && item.data >= today && item.data <= maxDateKey);
 }
 
 function renderEventAudit(item) {
@@ -5935,6 +5939,29 @@ function filterSettingsItems(query) {
 function getUserSettingsStorageKey() {
   const userKey = currentAuthUser?.id || currentUserProfile?.email || currentUserProfile?.cpf || "local";
   return `${USER_SETTINGS_STORAGE_KEY}:${userKey}`;
+}
+
+function getClearedTrackerNotificationsStorageKey() {
+  const userKey = currentAuthUser?.id || currentUserProfile?.email || currentUserProfile?.cpf || "local";
+  return `${CLEARED_TRACKER_NOTIFICATIONS_KEY}:${userKey}`;
+}
+
+function loadClearedTrackerNotificationIds() {
+  try {
+    const saved = localStorage.getItem(getClearedTrackerNotificationsStorageKey()) || "[]";
+    const parsed = JSON.parse(saved);
+    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveClearedTrackerNotificationIds(ids = new Set()) {
+  try {
+    localStorage.setItem(getClearedTrackerNotificationsStorageKey(), JSON.stringify(Array.from(ids).map(String)));
+  } catch {
+
+  }
 }
 
 function migrateUserSettingsToCurrentKey(settings) {
@@ -11009,6 +11036,7 @@ class NotificationTracker {
 
     this.notifications = [];
     this.filteredNotifications = [];
+    this.clearedNotificationIds = loadClearedTrackerNotificationIds();
 
     this.init();
   }
@@ -11046,6 +11074,7 @@ class NotificationTracker {
   }
 
   loadNotifications() {
+    this.clearedNotificationIds = loadClearedTrackerNotificationIds();
     this.notifications = this.collectNotifications();
     this.applyFilters();
     this.updateStats();
@@ -11235,7 +11264,9 @@ class NotificationTracker {
       });
     });
 
-    return notifications.sort((a, b) => (b.dateTime - a.dateTime) || (a.sequence - b.sequence));
+    return notifications
+      .filter((item) => !this.clearedNotificationIds.has(String(item.id)))
+      .sort((a, b) => (b.dateTime - a.dateTime) || (a.sequence - b.sequence));
   }
 
   getTimeValue(value) {
@@ -11543,6 +11574,13 @@ class NotificationTracker {
 
   clearAll() {
     if (!confirm("Tem certeza que deseja limpar a visualização das notificações?")) return;
+    const idsToClear = new Set([
+      ...Array.from(this.clearedNotificationIds || []),
+      ...this.notifications.map((notif) => String(notif.id)),
+    ]);
+    this.notifications.forEach((notif) => markNotificationsRead([notif.id], notif.messageIds || []));
+    this.clearedNotificationIds = idsToClear;
+    saveClearedTrackerNotificationIds(idsToClear);
     this.notifications = [];
     this.filteredNotifications = [];
     this.renderNotifications();
