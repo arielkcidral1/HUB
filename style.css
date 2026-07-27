@@ -929,6 +929,39 @@ h2 {
   background: var(--gold-surface);
 }
 
+.calendar-day.has-interview,
+.calendar-cell.has-interview {
+  border-color: rgba(79, 70, 229, 0.35);
+  background: rgba(79, 70, 229, 0.09);
+}
+
+.calendar-day.has-birthday,
+.calendar-cell.has-birthday {
+  position: relative;
+  border-color: rgba(245, 158, 11, 0.65);
+  background:
+    linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(254, 226, 226, 0.92)),
+    var(--gold-surface);
+  box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.18), 0 10px 24px rgba(245, 158, 11, 0.16);
+}
+
+.calendar-day.has-birthday::after,
+.calendar-cell.has-birthday::after {
+  content: "Aniversario";
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: #f59e0b;
+  color: #321805;
+  padding: 4px 6px;
+  font-size: 10px;
+  font-weight: 900;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .calendar-day .calendar-today-label,
 .calendar-cell .calendar-today-label,
 .calendar-day .calendar-holiday-label,
@@ -2637,6 +2670,18 @@ textarea {
   white-space: nowrap;
 }
 
+.calendar-event-preview.event-type-birthday,
+.calendar-cell span.event-type-birthday {
+  background: #f59e0b;
+  color: #321805;
+}
+
+.calendar-event-preview.event-type-interview,
+.calendar-cell span.event-type-interview {
+  background: rgba(79, 70, 229, 0.14);
+  color: #312e81;
+}
+
 .document-card {
   display: flex;
   align-items: center;
@@ -2786,6 +2831,43 @@ textarea {
 
 .day-event-card p {
   margin: 0;
+}
+
+.item-card.event-type-birthday,
+.day-event-card.event-type-birthday,
+.calendar-preview-panel li.event-type-birthday {
+  border-color: rgba(245, 158, 11, 0.55);
+  background:
+    linear-gradient(135deg, rgba(255, 247, 237, 0.96), rgba(255, 241, 242, 0.9)),
+    var(--surface);
+  box-shadow: 0 14px 30px rgba(245, 158, 11, 0.16);
+}
+
+.item-card.event-type-birthday .item-title::before,
+.day-event-card.event-type-birthday .item-title::before,
+.calendar-preview-panel li.event-type-birthday .item-title::before {
+  content: "Aniversario - ";
+  color: #92400e;
+  font-weight: 900;
+}
+
+.item-card.event-type-interview,
+.day-event-card.event-type-interview,
+.calendar-preview-panel li.event-type-interview {
+  border-color: rgba(79, 70, 229, 0.25);
+  background: rgba(79, 70, 229, 0.06);
+}
+
+.tag.event-tag.event-type-birthday {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: #f59e0b;
+  color: #321805;
+}
+
+.tag.event-tag.event-type-interview {
+  border-color: rgba(79, 70, 229, 0.3);
+  background: rgba(79, 70, 229, 0.12);
+  color: #312e81;
 }
 
 .event-audit-line {

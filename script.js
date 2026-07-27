@@ -2143,6 +2143,30 @@ function getSortedEvents() {
     .sort((a, b) => `${a.data || ""}T${a.horario || "00:00"}`.localeCompare(`${b.data || ""}T${b.horario || "00:00"}`));
 }
 
+function normalizeEventType(value = "") {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function getEventTypeClass(item = {}) {
+  const type = normalizeEventType(item.tipo);
+  if (type === "aniversario") return "event-type-birthday";
+  if (type === "entrevista") return "event-type-interview";
+  return "";
+}
+
+function getEventTagClass(item = {}) {
+  const typeClass = getEventTypeClass(item);
+  return typeClass ? `event-tag ${typeClass}` : "";
+}
+
+function dayHasEventType(events = [], type) {
+  return events.some((item) => normalizeEventType(item.tipo) === type);
+}
+
 function getUpcomingEvents() {
   const today = getLocalDateKey();
   return getSortedEvents().filter((item) => !isArchivedRecord(item) && (!item.data || item.data >= today));
@@ -2410,10 +2434,10 @@ function showDayEventsModal(date) {
   const eventContent = dayEvents.length
     ? dayEvents
         .map((item) => `
-          <article class="day-event-card">
+          <article class="day-event-card ${getEventTypeClass(item)}">
             <div class="item-topline">
               <p class="item-title">${escapeHtml(item.titulo)}</p>
-              <span class="tag">${escapeHtml(item.tipo)}</span>
+              <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
             </div>
             <p class="day-event-description">${escapeHtml(item.descricao || "Sem observacoes adicionais.").replace(/\n/g, "<br>")}</p>
             <p class="item-meta">${escapeHtml(formatEventTime(item.horario))} | Responsavel: ${escapeHtml(item.responsavel)}</p>
@@ -5496,13 +5520,15 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
       const holiday = getHolidayForDate(date);
       const isToday = date === todayKey;
       const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
+      const hasBirthday = dayHasEventType(dayEvents, "aniversario");
+      const hasInterview = dayHasEventType(dayEvents, "entrevista");
       return `
-        <button class="calendar-day ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+        <button class="calendar-day ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
           <span class="calendar-weekday-label">${escapeHtml(formatWeekday(date))}</span>
           <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
           ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
           ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
-          ${dayEvents.slice(0, 2).map((item) => `<span class="calendar-event-preview">${escapeHtml(item.titulo)}</span>`).join("")}
+          ${dayEvents.slice(0, 2).map((item) => `<span class="calendar-event-preview ${getEventTypeClass(item)}">${escapeHtml(item.titulo)}</span>`).join("")}
         </button>
       `;
     })
@@ -5515,7 +5541,7 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
 
   list.innerHTML = visibleEvents
     .slice(0, dashboardCalendarViewMode === "week" ? 4 : 6)
-    .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag">${escapeHtml(item.tipo)}</span></div><p>${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(formatEventTime(item.horario))} | ${escapeHtml(item.responsavel)}</p></li>`)
+    .map((item) => `<li class="${getEventTypeClass(item)}"><div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div><p>${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(formatEventTime(item.horario))} | ${escapeHtml(item.responsavel)}</p></li>`)
     .join("");
 }
 
@@ -5543,12 +5569,14 @@ function renderCalendar() {
     const holiday = getHolidayForDate(date);
     const isToday = date === todayKey;
     const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
+    const hasBirthday = dayHasEventType(dayEvents, "aniversario");
+    const hasInterview = dayHasEventType(dayEvents, "entrevista");
     cells.push(`
-      <button class="calendar-cell ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+      <button class="calendar-cell ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
         <strong>${day}</strong>
         ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
         ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
-        ${dayEvents.slice(0, 2).map((item) => `<span>${escapeHtml(item.titulo)}</span>`).join("")}
+        ${dayEvents.slice(0, 2).map((item) => `<span class="${getEventTypeClass(item)}">${escapeHtml(item.titulo)}</span>`).join("")}
       </button>
     `);
   }
@@ -5564,8 +5592,8 @@ function renderCalendar() {
   `;
 
   renderCards("eventos-list", visibleEvents, (item) => `
-    <article class="item-card">
-      <div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag">${escapeHtml(item.tipo)}</span></div>
+    <article class="item-card ${getEventTypeClass(item)}">
+      <div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>
       <p>${escapeHtml(item.descricao || "Sem observacoes adicionais.")}</p>
       <p class="item-meta">${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(formatEventTime(item.horario))} | Responsavel: ${escapeHtml(item.responsavel)}</p>
       <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
