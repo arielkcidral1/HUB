@@ -946,23 +946,6 @@ h2 {
   color: #fff7ed;
 }
 
-.calendar-day.has-birthday::after,
-.calendar-cell.has-birthday::after {
-  content: "Aniversário";
-  display: block;
-  overflow: hidden;
-  border-radius: var(--radius-sm);
-  background: #fbbf24;
-  color: #1f1300;
-  padding: 4px 6px;
-  font-size: 10px;
-  font-weight: 900;
-  text-align: center;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
 .calendar-day .calendar-today-label,
 .calendar-cell .calendar-today-label,
 .calendar-day .calendar-holiday-label,
@@ -2846,14 +2829,6 @@ textarea {
     linear-gradient(135deg, rgba(120, 53, 15, 0.42), rgba(131, 24, 67, 0.28)),
     var(--surface);
   box-shadow: 0 14px 30px rgba(251, 191, 36, 0.18);
-}
-
-.item-card.event-type-birthday .item-title::before,
-.day-event-card.event-type-birthday .item-title::before,
-.calendar-preview-panel li.event-type-birthday .item-title::before {
-  content: "Evento: ";
-  color: #fbbf24;
-  font-weight: 900;
 }
 
 .item-card.event-type-interview,
