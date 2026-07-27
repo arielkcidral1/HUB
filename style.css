@@ -1339,30 +1339,63 @@ textarea {
 .boards-workspace {
   display: grid;
   gap: 16px;
+  min-width: 0;
 }
 
 .boards-toolbar {
   gap: 14px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.boards-toolbar .panel-header {
+  min-width: 0;
+}
+
+.boards-toolbar .split-header {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.boards-toolbar .split-header > div:first-child {
+  min-width: min(220px, 100%);
 }
 
 .boards-create-form {
   display: grid;
-  grid-template-columns: minmax(180px, 260px) auto;
+  grid-template-columns: minmax(160px, 1fr) max-content;
   gap: 8px;
   align-items: end;
+  width: min(100%, 360px);
+  min-width: 0;
+}
+
+.boards-create-form input {
+  min-width: 0;
+}
+
+.boards-create-form .primary-button {
+  width: auto;
+  min-width: 108px;
+  padding-inline: 14px;
+  white-space: nowrap;
 }
 
 .board-tabs {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  min-width: 0;
+  max-width: 100%;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
 }
 
 .board-tab {
   display: grid;
   gap: 3px;
-  min-width: 150px;
+  flex: 0 0 clamp(128px, 16vw, 170px);
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface-2);
@@ -1380,6 +1413,9 @@ textarea {
 
 .board-tab span {
   font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .board-tab small {
@@ -1388,15 +1424,18 @@ textarea {
 
 .boards-main {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .board-side-panel,
 .board-card-form {
   display: grid;
   gap: 12px;
+  min-width: 0;
 }
 
 .board-card-form h3 {
@@ -1407,18 +1446,22 @@ textarea {
 
 .boards-lanes {
   display: grid;
-  grid-auto-columns: minmax(250px, 300px);
+  grid-auto-columns: minmax(220px, 280px);
   grid-auto-flow: column;
   gap: 14px;
   min-height: 420px;
   overflow-x: auto;
-  padding-bottom: 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 4px 8px 0;
+  scrollbar-width: thin;
 }
 
 .board-lane {
   display: grid;
   align-content: start;
   gap: 12px;
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
@@ -1436,6 +1479,9 @@ textarea {
   margin: 0;
   color: var(--ink);
   font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .board-card-list {
@@ -1446,6 +1492,7 @@ textarea {
 .board-card {
   display: grid;
   gap: 8px;
+  min-width: 0;
   border: 1px solid var(--line);
   border-left: 4px solid var(--teal-border);
   border-radius: 10px;
@@ -1469,7 +1516,7 @@ textarea {
 
 .board-card-actions .secondary-link,
 .board-card-actions .danger-button {
-  width: auto;
+  flex: 1 1 calc(50% - 6px);
   min-height: 30px;
   padding: 0 10px;
   font-size: 12px;
