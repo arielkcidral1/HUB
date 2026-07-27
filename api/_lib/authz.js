@@ -43,6 +43,7 @@ export const RECORD_RULES = {
   },
   malotes: { table: "hub_malotes", ...rhOnly },
   chamados: { table: "hub_chamados", ...rhOnly },
+  quadros: { table: "hub_quadros", ...rhOnly },
   vagas: { table: "hub_vagas", ...rhOnly },
   eventos: { table: "hub_eventos", ...rhOnly },
   vtRegistros: { table: "hub_vt_registros", ...rhOnly },

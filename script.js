@@ -165,6 +165,7 @@ const TABLES = {
   comunicados: "hub_chat_messages",
   malotes: "hub_malotes",
   chamados: "hub_chamados",
+  quadros: "hub_quadros",
   vagas: "hub_vagas",
   eventos: "hub_eventos",
   vtRegistros: "hub_vt_registros",
@@ -2814,6 +2815,18 @@ if (collection === "malotes") {
     }));
   }
 
+  if (collection === "quadros") {
+    return rows.map((row) => ({
+      id: row.id,
+      nome: row.nome || "Quadro",
+      listas: Array.isArray(row.listas) ? row.listas : [],
+      createdBy: row.created_by || getSystemFallbackAuthor(),
+      updatedBy: row.updated_by || "",
+      createdAt: formatDate(row.created_at),
+      sortAt: row.created_at || "",
+    }));
+  }
+
   if (collection === "candidaturas") {
     return rows.map((row) => ({
       id: row.id,
@@ -3175,6 +3188,17 @@ function toDbPayload(collection, values) {
     return payload;
   }
 
+  if (collection === "quadros") {
+    const payload = {
+      nome: values.nome || "Quadro",
+      listas: values.listas || [],
+      created_by: values.createdBy || getCurrentUserName(),
+      updated_by: values.updatedBy || null,
+    };
+    if (values.id) payload.id = values.id;
+    return payload;
+  }
+
   if (collection === "eventos") {
     return {
       titulo: values.titulo,
@@ -3293,6 +3317,7 @@ async function loadFromSupabase(options = {}) {
 
   serverDataReady = false;
   try {
+    const localQuadrosBeforeLoad = (data.quadros || []).filter((board) => board?.nome && Array.isArray(board.listas));
     const userRows = await hubApi.list("usuarios");
     const mappedUsers = mapRows("usuarios", userRows || []);
     const dbNames = mappedUsers.map((user) => normalizeLoginName(user.nome));
@@ -3336,6 +3361,21 @@ async function loadFromSupabase(options = {}) {
           }
         })
     );
+
+    const quadrosResult = requests.find((result) => result.collection === "quadros");
+    if (quadrosResult?.ok && !quadrosResult.rows?.length && localQuadrosBeforeLoad.length) {
+      try {
+        const insertedBoards = await Promise.all(
+          localQuadrosBeforeLoad.map((board) => hubApi.insert("quadros", toDbPayload("quadros", {
+            ...board,
+            createdBy: board.createdBy || getCurrentUserName(),
+          })))
+        );
+        quadrosResult.rows = mapRows("quadros", insertedBoards || []);
+      } catch (error) {
+        console.error("Erro ao migrar quadros locais:", error);
+      }
+    }
 
     requests.forEach(({ collection, rows, ok }) => {
       if (ok) data[collection] = rows;
@@ -7030,9 +7070,22 @@ function getPriorityClass(value = "") {
   return "priority-normal";
 }
 
-function persistBoards() {
+async function persistBoards(board = getActiveBoard()) {
   saveLocalData();
   renderBoards();
+  if (!isAuthenticated() || !board || String(board.id || "").startsWith("local-")) return true;
+  try {
+    const updated = await hubApi.update("quadros", board.id, toDbPayload("quadros", { ...board, updatedBy: getCurrentUserName() }));
+    mergeRealtimeRow("quadros", updated, "UPDATE");
+    renderRealtimeUpdate("quadros");
+    setSyncStatus("HUB online", true);
+    return true;
+  } catch (error) {
+    console.error("Erro ao salvar quadro:", error);
+    setSyncStatus("Erro ao salvar quadro", false);
+    showModal("Erro ao Salvar", error?.message || "Nao foi possivel salvar o quadro no banco.", "error");
+    return false;
+  }
 }
 
 function closeBoardContextMenu() {
@@ -8343,7 +8396,7 @@ document.getElementById("toggle-archived-chamados")?.addEventListener("click", (
   renderAll();
 });
 
-document.getElementById("board-form")?.addEventListener("submit", (event) => {
+document.getElementById("board-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   const nome = String(new FormData(form).get("nome") || "").trim();
@@ -8358,14 +8411,33 @@ document.getElementById("board-form")?.addEventListener("submit", (event) => {
       { id: generateUUID(), titulo: "Concluido", cartoes: [] },
     ],
     createdAt: todayLabel(),
+    createdBy: getCurrentUserName(),
   };
+  if (isAuthenticated()) {
+    try {
+      const inserted = await hubApi.insert("quadros", toDbPayload("quadros", board));
+      const mapped = mapRows("quadros", [inserted])[0];
+      data.quadros.unshift(mapped);
+      activeBoardId = mapped.id;
+      form.reset();
+      saveLocalData();
+      renderBoards();
+      setSyncStatus("HUB online", true);
+      return;
+    } catch (error) {
+      console.error("Erro ao criar quadro:", error);
+      setSyncStatus("Erro ao criar quadro", false);
+      showModal("Erro ao Salvar", error?.message || "Nao foi possivel criar o quadro no banco.", "error");
+      return;
+    }
+  }
   data.quadros.push(board);
   activeBoardId = board.id;
   form.reset();
-  persistBoards();
+  await persistBoards(board);
 });
 
-document.getElementById("board-card-form")?.addEventListener("submit", (event) => {
+document.getElementById("board-card-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const board = getActiveBoard();
   if (!board) return;
@@ -8393,7 +8465,7 @@ document.getElementById("board-card-form")?.addEventListener("submit", (event) =
   }
   list.cartoes.push(cardPayload);
   resetBoardCardForm();
-  persistBoards();
+  await persistBoards(board);
 });
 
 document.getElementById("cancelar-edicao-board-card")?.addEventListener("click", resetBoardCardForm);
@@ -10488,7 +10560,7 @@ document.addEventListener("dragleave", (event) => {
   lane.classList.remove("drag-over");
 });
 
-document.addEventListener("drop", (event) => {
+document.addEventListener("drop", async (event) => {
   const lane = event.target.closest(".board-lane");
   if (!lane || !draggedBoardCard) return;
   event.preventDefault();
@@ -10502,10 +10574,10 @@ document.addEventListener("drop", (event) => {
   if (draggedBoardCard.listIndex === toListIndex) return;
   fromList.cartoes.splice(draggedBoardCard.cardIndex, 1);
   toList.cartoes.push(card);
-  persistBoards();
+  await persistBoards(board);
 });
 
-document.addEventListener('click', (event) => {
+document.addEventListener('click', async (event) => {
   if (!event.target.closest("#board-context-menu") && !event.target.closest("[data-board-tab]")) {
     closeBoardContextMenu();
   }
@@ -10574,7 +10646,7 @@ document.addEventListener('click', (event) => {
       if (!cleanName) break;
       board.nome = cleanName;
       closeBoardContextMenu();
-      persistBoards();
+      await persistBoards(board);
       break;
     }
     case 'duplicate-board': {
@@ -10582,10 +10654,26 @@ document.addEventListener('click', (event) => {
       if (!board) break;
       const duplicate = cloneBoard(board);
       const currentIndex = data.quadros.findIndex((item) => String(item.id) === String(id));
+      closeBoardContextMenu();
+      if (isAuthenticated()) {
+        try {
+          const inserted = await hubApi.insert("quadros", toDbPayload("quadros", duplicate));
+          const mapped = mapRows("quadros", [inserted])[0];
+          data.quadros.splice(currentIndex + 1, 0, mapped);
+          activeBoardId = mapped.id;
+          saveLocalData();
+          renderBoards();
+          setSyncStatus("HUB online", true);
+        } catch (error) {
+          console.error("Erro ao duplicar quadro:", error);
+          setSyncStatus("Erro ao duplicar quadro", false);
+          showModal("Erro ao Salvar", error?.message || "Nao foi possivel duplicar o quadro no banco.", "error");
+        }
+        break;
+      }
       data.quadros.splice(currentIndex + 1, 0, duplicate);
       activeBoardId = duplicate.id;
-      closeBoardContextMenu();
-      persistBoards();
+      await persistBoards(duplicate);
       break;
     }
     case 'delete-board': {
@@ -10599,10 +10687,17 @@ document.addEventListener('click', (event) => {
       if (boardIndex < 0) break;
       const boardName = data.quadros[boardIndex].nome || "este quadro";
       if (!confirm(`Apagar "${boardName}"? Os cartoes deste quadro tambem serao removidos.`)) break;
+      closeBoardContextMenu();
+      if (isAuthenticated()) {
+        const deleted = await deleteItem("quadros", id);
+        if (!deleted) break;
+        activeBoardId = data.quadros[Math.max(0, boardIndex - 1)]?.id || data.quadros[0]?.id || "";
+        renderBoards();
+        break;
+      }
       data.quadros.splice(boardIndex, 1);
       activeBoardId = data.quadros[Math.max(0, boardIndex - 1)]?.id || data.quadros[0]?.id || "";
-      closeBoardContextMenu();
-      persistBoards();
+      await persistBoards(getActiveBoard());
       break;
     }
     case 'move-board-card': {
@@ -10616,7 +10711,7 @@ document.addEventListener('click', (event) => {
       if (!board || !fromList || !toList || !card) break;
       fromList.cartoes.splice(cardIndex, 1);
       toList.cartoes.push(card);
-      persistBoards();
+      await persistBoards(board);
       break;
     }
     case 'edit-board-card': {
@@ -10647,7 +10742,7 @@ document.addEventListener('click', (event) => {
       const card = list?.cartoes?.[cardIndex];
       if (!list || !card) break;
       list.cartoes.splice(cardIndex + 1, 0, cloneBoardCard(card));
-      persistBoards();
+      await persistBoards(board);
       break;
     }
     case 'delete-board-card': {
@@ -10657,7 +10752,7 @@ document.addEventListener('click', (event) => {
       const cardIndex = Number(target.dataset.cardIndex);
       if (!list?.cartoes?.[cardIndex]) break;
       list.cartoes.splice(cardIndex, 1);
-      persistBoards();
+      await persistBoards(board);
       break;
     }
     case 'editar-vaga': editarVaga(id); break;
