@@ -153,6 +153,7 @@ const USER_SETTINGS_DEFAULTS = Object.freeze({
   desktopNotifications: true,
   dashboardNotificationBadges: true,
   keyboardShortcuts: true,
+  boardOrder: [],
 });
 const DEFAULT_HUB_SUPABASE = {
   url: "https://nblfwesptlpetbwfmdqf.supabase.co",
@@ -339,6 +340,8 @@ let activeBoardId = "";
 let boardContextMenu = null;
 let boardCardActionMenu = null;
 let draggedBoardCard = null;
+let draggedBoardTabId = "";
+let suppressBoardCardClick = false;
 window.editingDocId = null;
 
 const documentLabels = {
@@ -5949,6 +5952,7 @@ function migrateUserSettingsToCurrentKey(settings) {
 function normalizeUserSettings(settings = {}) {
   const normalized = { ...USER_SETTINGS_DEFAULTS, ...settings };
   if (!["normal", "small", "large"].includes(normalized.messageSize)) normalized.messageSize = "normal";
+  if (!Array.isArray(normalized.boardOrder)) normalized.boardOrder = [];
   Object.keys(USER_SETTINGS_DEFAULTS).forEach((key) => {
     if (typeof USER_SETTINGS_DEFAULTS[key] === "boolean") normalized[key] = Boolean(normalized[key]);
   });
@@ -7063,6 +7067,29 @@ function getBoardCardCount(board) {
   return (board?.listas || []).reduce((total, list) => total + (list.cartoes || []).length, 0);
 }
 
+function getOrderedBoards() {
+  ensureBoardsData();
+  const order = Array.isArray(currentUserSettings.boardOrder) ? currentUserSettings.boardOrder.map(String) : [];
+  if (!order.length) {
+    return [...data.quadros].sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" }));
+  }
+  const orderIndex = new Map(order.map((id, index) => [String(id), index]));
+  return [...data.quadros].sort((a, b) => {
+    const aIndex = orderIndex.has(String(a.id)) ? orderIndex.get(String(a.id)) : Number.MAX_SAFE_INTEGER;
+    const bIndex = orderIndex.has(String(b.id)) ? orderIndex.get(String(b.id)) : Number.MAX_SAFE_INTEGER;
+    if (aIndex !== bIndex) return aIndex - bIndex;
+    return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" });
+  });
+}
+
+function saveBoardOrderFromTabs() {
+  const ids = Array.from(document.querySelectorAll("#board-tabs [data-board-tab]"))
+    .map((tab) => String(tab.dataset.id || ""))
+    .filter(Boolean);
+  currentUserSettings = normalizeUserSettings({ ...currentUserSettings, boardOrder: ids });
+  saveUserSettings(currentUserSettings);
+}
+
 function getPriorityClass(value = "") {
   const priority = String(value || "").toLowerCase();
   if (priority === "urgente") return "priority-urgent";
@@ -7211,6 +7238,37 @@ function resetBoardCardForm() {
   renderBoardListOptions();
 }
 
+function showBoardCardPreview(listIndex, cardIndex) {
+  const board = getActiveBoard();
+  const list = board?.listas?.[Number(listIndex)];
+  const card = list?.cartoes?.[Number(cardIndex)];
+  if (!board || !list || !card) return;
+  document.getElementById("custom-modal")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "custom-modal";
+  overlay.className = "modal-overlay";
+  const description = card.descricao
+    ? escapeHtml(card.descricao).replace(/\n/g, "<br>")
+    : '<span class="empty-state">Sem descricao.</span>';
+  overlay.innerHTML = `
+    <div class="modal-card board-card-preview-modal">
+      <div class="modal-header info">${escapeHtml(card.titulo || "Cartao")}</div>
+      <div class="modal-body">
+        <div class="board-card-preview-meta">
+          <span class="tag">${escapeHtml(list.titulo || "Lista")}</span>
+          <span class="tag">${escapeHtml(card.prioridade || "Normal")}</span>
+        </div>
+        <div class="board-card-preview-text">${description}</div>
+      </div>
+      <div class="modal-footer">
+        <button class="primary-button" data-action="close-modal">Fechar</button>
+      </div>
+    </div>
+  `;
+  overlay.querySelector('[data-action="close-modal"]').addEventListener("click", () => overlay.remove());
+  document.body.appendChild(overlay);
+}
+
 function getEditingBoardCardIndexes() {
   const form = document.getElementById("board-card-form");
   if (!form) return null;
@@ -7238,8 +7296,8 @@ function renderBoards() {
   const lanes = document.getElementById("boards-lanes");
   if (!tabs || !lanes) return;
 
-  tabs.innerHTML = data.quadros.map((item) => `
-    <button class="board-tab ${String(item.id) === String(activeBoardId) ? "active" : ""}" type="button" data-action="select-board" data-id="${escapeHtml(item.id)}" data-board-tab="true">
+  tabs.innerHTML = getOrderedBoards().map((item) => `
+    <button class="board-tab ${String(item.id) === String(activeBoardId) ? "active" : ""}" type="button" draggable="true" data-action="select-board" data-id="${escapeHtml(item.id)}" data-board-tab="true">
       <span>${escapeHtml(item.nome)}</span>
       <small>${getBoardCardCount(item)} cartao(oes)</small>
     </button>
@@ -8480,13 +8538,13 @@ document.getElementById("board-card-form")?.addEventListener("submit", async (ev
   if (!board) return;
   const form = event.currentTarget;
   const values = new FormData(form);
-  const list = board.listas.find((item) => String(item.id) === String(values.get("lista")));
-  if (!list) return;
   const editListValue = String(values.get("edit_list_index") || "");
   const editCardValue = String(values.get("edit_card_index") || "");
   const editListIndex = editListValue === "" ? -1 : Number(editListValue);
   const editCardIndex = editCardValue === "" ? -1 : Number(editCardValue);
   const isEditing = editListIndex >= 0 && editCardIndex >= 0 && board.listas?.[editListIndex]?.cartoes?.[editCardIndex];
+  const list = isEditing ? board.listas?.[editListIndex] : board.listas?.[0];
+  if (!list) return;
   const cardPayload = {
     id: isEditing ? board.listas[editListIndex].cartoes[editCardIndex].id : generateUUID(),
     titulo: String(values.get("titulo") || "").trim(),
@@ -10565,9 +10623,19 @@ document.addEventListener("contextmenu", (event) => {
 });
 
 document.addEventListener("dragstart", (event) => {
+  const tab = event.target.closest("[data-board-tab]");
+  if (tab) {
+    draggedBoardTabId = String(tab.dataset.id || "");
+    tab.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", draggedBoardTabId);
+    return;
+  }
+
   const card = event.target.closest("[data-board-card]");
   if (!card) return;
   closeBoardCardActionMenu();
+  suppressBoardCardClick = false;
   draggedBoardCard = {
     listIndex: Number(card.dataset.listIndex),
     cardIndex: Number(card.dataset.cardIndex),
@@ -10578,12 +10646,30 @@ document.addEventListener("dragstart", (event) => {
 });
 
 document.addEventListener("dragend", (event) => {
+  const endedCardDrag = Boolean(event.target.closest("[data-board-card]"));
+  event.target.closest("[data-board-tab]")?.classList.remove("dragging");
+  document.querySelectorAll(".board-tab.drag-over").forEach((tab) => tab.classList.remove("drag-over"));
+  draggedBoardTabId = "";
   event.target.closest("[data-board-card]")?.classList.remove("dragging");
   document.querySelectorAll(".board-lane.drag-over").forEach((lane) => lane.classList.remove("drag-over"));
   draggedBoardCard = null;
+  if (endedCardDrag) {
+    suppressBoardCardClick = true;
+    setTimeout(() => {
+      suppressBoardCardClick = false;
+    }, 80);
+  }
 });
 
 document.addEventListener("dragover", (event) => {
+  const tab = event.target.closest("[data-board-tab]");
+  if (tab && draggedBoardTabId && String(tab.dataset.id || "") !== draggedBoardTabId) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    tab.classList.add("drag-over");
+    return;
+  }
+
   const lane = event.target.closest(".board-lane");
   if (!lane || !draggedBoardCard) return;
   event.preventDefault();
@@ -10592,12 +10678,33 @@ document.addEventListener("dragover", (event) => {
 });
 
 document.addEventListener("dragleave", (event) => {
+  const tab = event.target.closest("[data-board-tab]");
+  if (tab && !tab.contains(event.relatedTarget)) {
+    tab.classList.remove("drag-over");
+  }
+
   const lane = event.target.closest(".board-lane");
   if (!lane || lane.contains(event.relatedTarget)) return;
   lane.classList.remove("drag-over");
 });
 
 document.addEventListener("drop", async (event) => {
+  const targetTab = event.target.closest("[data-board-tab]");
+  if (targetTab && draggedBoardTabId) {
+    event.preventDefault();
+    targetTab.classList.remove("drag-over");
+    const sourceTab = document.querySelector(`#board-tabs [data-board-tab][data-id="${CSS.escape(draggedBoardTabId)}"]`);
+    if (sourceTab && sourceTab !== targetTab) {
+      const tabs = document.getElementById("board-tabs");
+      const targetRect = targetTab.getBoundingClientRect();
+      const insertAfter = event.clientX > targetRect.left + targetRect.width / 2;
+      tabs.insertBefore(sourceTab, insertAfter ? targetTab.nextSibling : targetTab);
+      saveBoardOrderFromTabs();
+    }
+    draggedBoardTabId = "";
+    return;
+  }
+
   const lane = event.target.closest(".board-lane");
   if (!lane || !draggedBoardCard) return;
   event.preventDefault();
@@ -10624,7 +10731,14 @@ document.addEventListener('click', async (event) => {
   }
 
   const target = event.target.closest('[data-action]');
-  if (!target) return;
+  if (!target) {
+    const card = event.target.closest("[data-board-card]");
+    if (card) {
+      if (suppressBoardCardClick) return;
+      showBoardCardPreview(card.dataset.listIndex, card.dataset.cardIndex);
+    }
+    return;
+  }
 
   const { action, id } = target.dataset;
 
@@ -10766,7 +10880,6 @@ document.addEventListener('click', async (event) => {
       if (!board || !card || !form) break;
       form.elements.edit_list_index.value = String(listIndex);
       form.elements.edit_card_index.value = String(cardIndex);
-      form.elements.lista.value = board.listas[listIndex].id;
       form.elements.titulo.value = card.titulo || "";
       form.elements.descricao.value = card.descricao || "";
       form.elements.prioridade.value = card.prioridade || "Normal";
