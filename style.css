@@ -2851,7 +2851,7 @@ textarea {
 .item-card.event-type-birthday .item-title::before,
 .day-event-card.event-type-birthday .item-title::before,
 .calendar-preview-panel li.event-type-birthday .item-title::before {
-  content: "Aniversário - ";
+  content: "Evento: ";
   color: #fbbf24;
   font-weight: 900;
 }
