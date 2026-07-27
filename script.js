@@ -7281,10 +7281,6 @@ function showBoardCardPreview(listIndex, cardIndex) {
     <div class="modal-card board-card-preview-modal">
       <div class="modal-header info">${escapeHtml(card.titulo || "Cartao")}</div>
       <div class="modal-body">
-        <div class="board-card-preview-meta">
-          <span class="tag">${escapeHtml(list.titulo || "Lista")}</span>
-          <span class="tag">${escapeHtml(card.prioridade || "Normal")}</span>
-        </div>
         <div class="board-card-preview-text">${description}</div>
       </div>
       <div class="modal-footer">
