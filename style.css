@@ -1422,6 +1422,43 @@ textarea {
   color: var(--muted);
 }
 
+.board-context-menu {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  gap: 4px;
+  min-width: 140px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 6px;
+}
+
+.board-context-menu button {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 750;
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.board-context-menu button:hover {
+  background: var(--teal-surface);
+  color: var(--teal-text);
+}
+
+.board-context-menu button.danger {
+  color: var(--danger);
+}
+
+.board-context-menu button.danger:hover {
+  background: rgba(239, 68, 68, 0.14);
+}
+
 .boards-main {
   display: grid;
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
