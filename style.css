@@ -1483,7 +1483,7 @@ textarea {
 
 .boards-lanes {
   display: grid;
-  grid-auto-columns: minmax(220px, 280px);
+  grid-auto-columns: minmax(300px, 360px);
   grid-auto-flow: column;
   gap: 14px;
   min-height: 420px;
@@ -1503,6 +1503,12 @@ textarea {
   border-radius: 12px;
   background: var(--surface);
   padding: 12px;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.board-lane.drag-over {
+  border-color: var(--teal-border);
+  background: var(--teal-surface);
 }
 
 .board-lane-header {
@@ -1534,7 +1540,19 @@ textarea {
   border-left: 4px solid var(--teal-border);
   border-radius: 10px;
   background: var(--surface-2);
+  cursor: grab;
   padding: 12px;
+  transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+
+.board-card:hover {
+  border-color: var(--teal-border);
+}
+
+.board-card.dragging {
+  cursor: grabbing;
+  opacity: 0.55;
+  transform: rotate(1deg);
 }
 
 .board-card.priority-high {
@@ -3861,7 +3879,7 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .boards-lanes {
-    grid-auto-columns: minmax(230px, 85vw);
+    grid-auto-columns: minmax(270px, 85vw);
   }
 
   .public-jobs-header {

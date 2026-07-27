@@ -336,6 +336,9 @@ let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
 let activeBoardId = "";
 let boardContextMenu = null;
+let boardCardActionMenu = null;
+let draggedBoardCard = null;
+let suppressBoardCardClick = false;
 window.editingDocId = null;
 
 const documentLabels = {
@@ -7038,6 +7041,11 @@ function closeBoardContextMenu() {
   document.getElementById("board-context-menu")?.remove();
 }
 
+function closeBoardCardActionMenu() {
+  boardCardActionMenu = null;
+  document.getElementById("board-card-action-menu")?.remove();
+}
+
 function renderBoardContextMenu() {
   document.getElementById("board-context-menu")?.remove();
   if (!boardContextMenu) return;
@@ -7055,6 +7063,27 @@ function renderBoardContextMenu() {
   const rect = menu.getBoundingClientRect();
   const left = Math.min(boardContextMenu.x, window.innerWidth - rect.width - 10);
   const top = Math.min(boardContextMenu.y, window.innerHeight - rect.height - 10);
+  menu.style.left = `${Math.max(10, left)}px`;
+  menu.style.top = `${Math.max(10, top)}px`;
+}
+
+function renderBoardCardActionMenu() {
+  document.getElementById("board-card-action-menu")?.remove();
+  if (!boardCardActionMenu) return;
+  const menu = document.createElement("div");
+  menu.id = "board-card-action-menu";
+  menu.className = "board-context-menu board-card-action-menu";
+  menu.style.left = `${boardCardActionMenu.x}px`;
+  menu.style.top = `${boardCardActionMenu.y}px`;
+  menu.innerHTML = `
+    <button type="button" data-action="edit-board-card" data-list-index="${boardCardActionMenu.listIndex}" data-card-index="${boardCardActionMenu.cardIndex}">Editar</button>
+    <button type="button" data-action="duplicate-board-card" data-list-index="${boardCardActionMenu.listIndex}" data-card-index="${boardCardActionMenu.cardIndex}">Duplicar</button>
+    <button class="danger" type="button" data-action="delete-board-card" data-list-index="${boardCardActionMenu.listIndex}" data-card-index="${boardCardActionMenu.cardIndex}">Excluir</button>
+  `;
+  document.body.appendChild(menu);
+  const rect = menu.getBoundingClientRect();
+  const left = Math.min(boardCardActionMenu.x, window.innerWidth - rect.width - 10);
+  const top = Math.min(boardCardActionMenu.y, window.innerHeight - rect.height - 10);
   menu.style.left = `${Math.max(10, left)}px`;
   menu.style.top = `${Math.max(10, top)}px`;
 }
@@ -7080,6 +7109,18 @@ function cloneBoard(board) {
   };
 }
 
+function cloneBoardCard(card) {
+  return {
+    ...card,
+    id: generateUUID(),
+    titulo: `${card.titulo || "Cartao"} - copia`,
+    createdAt: todayLabel(),
+    createdBy: getCurrentUserName(),
+    updatedAt: "",
+    updatedBy: "",
+  };
+}
+
 function renderBoardListOptions(board = getActiveBoard()) {
   const select = document.querySelector("#board-card-form select[name='lista']");
   if (!select) return;
@@ -7102,6 +7143,7 @@ function resetBoardCardForm() {
 }
 
 function renderBoards() {
+  closeBoardCardActionMenu();
   ensureBoardsData();
   const board = getActiveBoard();
   const tabs = document.getElementById("board-tabs");
@@ -7123,25 +7165,19 @@ function renderBoards() {
   }
 
   lanes.innerHTML = (board.listas || []).map((list, listIndex) => `
-    <section class="board-lane" data-list-id="${escapeHtml(list.id)}">
+    <section class="board-lane" data-list-id="${escapeHtml(list.id)}" data-list-index="${listIndex}">
       <div class="board-lane-header">
         <h3>${escapeHtml(list.titulo)}</h3>
         <span class="tag">${(list.cartoes || []).length}</span>
       </div>
       <div class="board-card-list">
         ${(list.cartoes || []).map((card, cardIndex) => `
-          <article class="board-card ${getPriorityClass(card.prioridade)}">
+          <article class="board-card ${getPriorityClass(card.prioridade)}" draggable="true" data-board-card="true" data-list-index="${listIndex}" data-card-index="${cardIndex}">
             <div class="item-topline">
               <p class="item-title">${escapeHtml(card.titulo)}</p>
               <span class="tag">${escapeHtml(card.prioridade || "Normal")}</span>
             </div>
             ${card.descricao ? `<p>${escapeHtml(card.descricao).replace(/\n/g, "<br>")}</p>` : ""}
-            <div class="board-card-actions">
-              <button class="secondary-link" type="button" data-action="move-board-card" data-direction="-1" data-list-index="${listIndex}" data-card-index="${cardIndex}" ${listIndex === 0 ? "disabled" : ""}>Voltar</button>
-              <button class="secondary-link" type="button" data-action="move-board-card" data-direction="1" data-list-index="${listIndex}" data-card-index="${cardIndex}" ${listIndex >= board.listas.length - 1 ? "disabled" : ""}>Avancar</button>
-              <button class="secondary-link" type="button" data-action="edit-board-card" data-list-index="${listIndex}" data-card-index="${cardIndex}">Editar</button>
-              <button class="danger-button" type="button" data-action="delete-board-card" data-list-index="${listIndex}" data-card-index="${cardIndex}">Excluir</button>
-            </div>
           </article>
         `).join("") || '<p class="empty-state">Nenhum cartao nesta lista.</p>'}
       </div>
@@ -10404,13 +10440,84 @@ document.addEventListener("contextmenu", (event) => {
   renderBoardContextMenu();
 });
 
+document.addEventListener("dragstart", (event) => {
+  const card = event.target.closest("[data-board-card]");
+  if (!card) return;
+  closeBoardCardActionMenu();
+  suppressBoardCardClick = false;
+  draggedBoardCard = {
+    listIndex: Number(card.dataset.listIndex),
+    cardIndex: Number(card.dataset.cardIndex),
+  };
+  card.classList.add("dragging");
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", JSON.stringify(draggedBoardCard));
+});
+
+document.addEventListener("dragend", (event) => {
+  event.target.closest("[data-board-card]")?.classList.remove("dragging");
+  document.querySelectorAll(".board-lane.drag-over").forEach((lane) => lane.classList.remove("drag-over"));
+  draggedBoardCard = null;
+  suppressBoardCardClick = true;
+  setTimeout(() => {
+    suppressBoardCardClick = false;
+  }, 80);
+});
+
+document.addEventListener("dragover", (event) => {
+  const lane = event.target.closest(".board-lane");
+  if (!lane || !draggedBoardCard) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  lane.classList.add("drag-over");
+});
+
+document.addEventListener("dragleave", (event) => {
+  const lane = event.target.closest(".board-lane");
+  if (!lane || lane.contains(event.relatedTarget)) return;
+  lane.classList.remove("drag-over");
+});
+
+document.addEventListener("drop", (event) => {
+  const lane = event.target.closest(".board-lane");
+  if (!lane || !draggedBoardCard) return;
+  event.preventDefault();
+  lane.classList.remove("drag-over");
+  const board = getActiveBoard();
+  const fromList = board?.listas?.[draggedBoardCard.listIndex];
+  const toListIndex = Number(lane.dataset.listIndex);
+  const toList = board?.listas?.[toListIndex];
+  const card = fromList?.cartoes?.[draggedBoardCard.cardIndex];
+  if (!board || !fromList || !toList || !card) return;
+  if (draggedBoardCard.listIndex === toListIndex) return;
+  fromList.cartoes.splice(draggedBoardCard.cardIndex, 1);
+  toList.cartoes.push(card);
+  persistBoards();
+});
+
 document.addEventListener('click', (event) => {
   if (!event.target.closest("#board-context-menu") && !event.target.closest("[data-board-tab]")) {
     closeBoardContextMenu();
   }
+  if (!event.target.closest("#board-card-action-menu") && !event.target.closest("[data-board-card]")) {
+    closeBoardCardActionMenu();
+  }
 
   const target = event.target.closest('[data-action]');
-  if (!target) return;
+  if (!target) {
+    const card = event.target.closest("[data-board-card]");
+    if (card) {
+      if (suppressBoardCardClick) return;
+      boardCardActionMenu = {
+        listIndex: Number(card.dataset.listIndex),
+        cardIndex: Number(card.dataset.cardIndex),
+        x: event.clientX,
+        y: event.clientY + 6,
+      };
+      renderBoardCardActionMenu();
+    }
+    return;
+  }
 
   const { action, id } = target.dataset;
 
@@ -10516,6 +10623,7 @@ document.addEventListener('click', (event) => {
       break;
     }
     case 'edit-board-card': {
+      closeBoardCardActionMenu();
       const board = getActiveBoard();
       const listIndex = Number(target.dataset.listIndex);
       const cardIndex = Number(target.dataset.cardIndex);
@@ -10534,7 +10642,19 @@ document.addEventListener('click', (event) => {
       form.scrollIntoView({ behavior: "smooth", block: "start" });
       break;
     }
+    case 'duplicate-board-card': {
+      closeBoardCardActionMenu();
+      const board = getActiveBoard();
+      const list = board?.listas?.[Number(target.dataset.listIndex)];
+      const cardIndex = Number(target.dataset.cardIndex);
+      const card = list?.cartoes?.[cardIndex];
+      if (!list || !card) break;
+      list.cartoes.splice(cardIndex + 1, 0, cloneBoardCard(card));
+      persistBoards();
+      break;
+    }
     case 'delete-board-card': {
+      closeBoardCardActionMenu();
       const board = getActiveBoard();
       const list = board?.listas?.[Number(target.dataset.listIndex)];
       const cardIndex = Number(target.dataset.cardIndex);
