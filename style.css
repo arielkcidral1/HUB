@@ -2831,6 +2831,12 @@ textarea {
   box-shadow: 0 14px 30px rgba(251, 191, 36, 0.18);
 }
 
+.item-card.event-type-birthday .item-title,
+.day-event-card.event-type-birthday .item-title,
+.calendar-preview-panel li.event-type-birthday .item-title {
+  color: #fbbf24;
+}
+
 .item-card.event-type-interview,
 .day-event-card.event-type-interview,
 .calendar-preview-panel li.event-type-interview {
