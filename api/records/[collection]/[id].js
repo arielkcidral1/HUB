@@ -16,6 +16,27 @@ function toSqlParam(value) {
   return value;
 }
 
+function sqlPlaceholder(column, index, rule) {
+  const placeholder = `$${index + 1}`;
+  return rule.jsonbColumns?.includes(column) ? `${placeholder}::jsonb` : placeholder;
+}
+
+async function ensureCollectionTable(rule) {
+  if (rule.table !== "hub_quadros") return;
+  await sql(`create extension if not exists pgcrypto`, []);
+  await sql(`
+    create table if not exists public.hub_quadros (
+      id uuid primary key default gen_random_uuid(),
+      nome text not null check (char_length(btrim(nome)) between 1 and 120),
+      listas jsonb not null default '[]'::jsonb,
+      created_by text,
+      updated_by text,
+      created_at timestamptz not null default now()
+    )
+  `, []);
+  await sql(`create index if not exists idx_hub_quadros_created_at on public.hub_quadros (created_at desc)`, []);
+}
+
 export default async function handler(request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
 
@@ -28,6 +49,7 @@ export default async function handler(request) {
 
   const user = await requireUser(request, sql);
   if (!user) return json(request, 401, { error: "Nao autenticado." });
+  await ensureCollectionTable(rule);
 
   const canWrite = rule.updateDelete ? rule.updateDelete(user) : rule.write(user);
   if (!canWrite) return json(request, 403, { error: "Sem permissao para alterar este registro." });
@@ -37,7 +59,7 @@ export default async function handler(request) {
     try { body = await request.json(); } catch { return json(request, 400, { error: "Requisicao invalida." }); }
     const columns = safeColumns(body);
     if (!columns.length) return json(request, 400, { error: "Nenhum campo para atualizar." });
-    const assignments = columns.map((column, index) => `${column} = $${index + 1}`).join(", ");
+    const assignments = columns.map((column, index) => `${column} = ${sqlPlaceholder(column, index, rule)}`).join(", ");
     const values = columns.map((column) => toSqlParam(body[column]));
     values.push(id);
     const text = `update ${rule.table} set ${assignments} where id = $${values.length} returning *`;
