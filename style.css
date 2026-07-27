@@ -1569,13 +1569,6 @@ textarea {
   width: min(680px, calc(100vw - 28px));
 }
 
-.board-card-preview-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
 .board-card-preview-text {
   max-height: min(55vh, 460px);
   overflow: auto;
