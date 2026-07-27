@@ -266,6 +266,18 @@ const defaultData = {
     },
   ],
   chamados: [],
+  quadros: [
+    {
+      id: generateUUID(),
+      nome: "Projetos RH",
+      listas: [
+        { id: generateUUID(), titulo: "A fazer", cartoes: [] },
+        { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
+        { id: generateUUID(), titulo: "Concluido", cartoes: [] },
+      ],
+      createdAt: "Hoje",
+    },
+  ],
   vagas: [],
   eventos: [
     {
@@ -322,6 +334,7 @@ let hubPollingNotificationsReady = false;
 const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
+let activeBoardId = "";
 window.editingDocId = null;
 
 const documentLabels = {
@@ -1178,6 +1191,7 @@ function loadLocalData() {
     comunicados: parsed.comunicados || [],
     malotes: parsed.malotes || [],
     chamados: parsed.chamados || [],
+    quadros: parsed.quadros || [],
     vagas: parsed.vagas || [],
     eventos: parsed.eventos || [],
     vtRegistros: parsed.vtRegistros || [],
@@ -5205,7 +5219,7 @@ function applyRoleAccess() {
     ? new Set(["comunicacao", "conta"])
     : isManagerUser()
     ? new Set(["comunicacao", "documentos", "advertencias-suspensoes", "conta"])
-    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
+    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : isManagerUser()
@@ -6972,6 +6986,121 @@ function renderChamadosSection() {
   }
 }
 
+function ensureBoardsData() {
+  if (!Array.isArray(data.quadros)) data.quadros = [];
+  if (!data.quadros.length) {
+    data.quadros.push({
+      id: generateUUID(),
+      nome: "Projetos RH",
+      listas: [
+        { id: generateUUID(), titulo: "A fazer", cartoes: [] },
+        { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
+        { id: generateUUID(), titulo: "Concluido", cartoes: [] },
+      ],
+      createdAt: todayLabel(),
+    });
+  }
+  data.quadros.forEach((board) => {
+    if (!Array.isArray(board.listas)) board.listas = [];
+    board.listas.forEach((list) => {
+      if (!Array.isArray(list.cartoes)) list.cartoes = [];
+    });
+  });
+  if (!activeBoardId || !data.quadros.some((board) => String(board.id) === String(activeBoardId))) {
+    activeBoardId = data.quadros[0]?.id || "";
+  }
+}
+
+function getActiveBoard() {
+  ensureBoardsData();
+  return data.quadros.find((board) => String(board.id) === String(activeBoardId)) || data.quadros[0] || null;
+}
+
+function getBoardCardCount(board) {
+  return (board?.listas || []).reduce((total, list) => total + (list.cartoes || []).length, 0);
+}
+
+function getPriorityClass(value = "") {
+  const priority = String(value || "").toLowerCase();
+  if (priority === "urgente") return "priority-urgent";
+  if (priority === "alta") return "priority-high";
+  return "priority-normal";
+}
+
+function persistBoards() {
+  saveLocalData();
+  renderBoards();
+}
+
+function renderBoardListOptions(board = getActiveBoard()) {
+  const select = document.querySelector("#board-card-form select[name='lista']");
+  if (!select) return;
+  select.innerHTML = (board?.listas || [])
+    .map((list) => `<option value="${escapeHtml(list.id)}">${escapeHtml(list.titulo)}</option>`)
+    .join("");
+  select.disabled = !(board?.listas || []).length;
+}
+
+function resetBoardCardForm() {
+  const form = document.getElementById("board-card-form");
+  if (!form) return;
+  form.reset();
+  form.elements.edit_list_index.value = "";
+  form.elements.edit_card_index.value = "";
+  form.querySelector("h3").textContent = "Novo cartao";
+  form.querySelector('button[type="submit"]').textContent = "Adicionar cartao";
+  document.getElementById("cancelar-edicao-board-card")?.setAttribute("hidden", "");
+  renderBoardListOptions();
+}
+
+function renderBoards() {
+  ensureBoardsData();
+  const board = getActiveBoard();
+  const tabs = document.getElementById("board-tabs");
+  const lanes = document.getElementById("boards-lanes");
+  if (!tabs || !lanes) return;
+
+  tabs.innerHTML = data.quadros.map((item) => `
+    <button class="board-tab ${String(item.id) === String(activeBoardId) ? "active" : ""}" type="button" data-action="select-board" data-id="${escapeHtml(item.id)}">
+      <span>${escapeHtml(item.nome)}</span>
+      <small>${getBoardCardCount(item)} cartao(oes)</small>
+    </button>
+  `).join("");
+
+  renderBoardListOptions(board);
+  if (!board) {
+    lanes.innerHTML = '<p class="empty-state">Crie um quadro para comecar.</p>';
+    return;
+  }
+
+  lanes.innerHTML = (board.listas || []).map((list, listIndex) => `
+    <section class="board-lane" data-list-id="${escapeHtml(list.id)}">
+      <div class="board-lane-header">
+        <h3>${escapeHtml(list.titulo)}</h3>
+        <span class="tag">${(list.cartoes || []).length}</span>
+      </div>
+      <div class="board-card-list">
+        ${(list.cartoes || []).map((card, cardIndex) => `
+          <article class="board-card ${getPriorityClass(card.prioridade)}">
+            <div class="item-topline">
+              <p class="item-title">${escapeHtml(card.titulo)}</p>
+              <span class="tag">${escapeHtml(card.prioridade || "Normal")}</span>
+            </div>
+            ${card.descricao ? `<p>${escapeHtml(card.descricao).replace(/\n/g, "<br>")}</p>` : ""}
+            <p class="item-meta">${card.responsavel ? `Responsavel: ${escapeHtml(card.responsavel)} | ` : ""}${card.prazo ? `Prazo: ${escapeHtml(formatFormDate(card.prazo))}` : "Sem prazo"}</p>
+            <div class="board-card-actions">
+              <button class="secondary-link" type="button" data-action="move-board-card" data-direction="-1" data-list-index="${listIndex}" data-card-index="${cardIndex}" ${listIndex === 0 ? "disabled" : ""}>Voltar</button>
+              <button class="secondary-link" type="button" data-action="move-board-card" data-direction="1" data-list-index="${listIndex}" data-card-index="${cardIndex}" ${listIndex >= board.listas.length - 1 ? "disabled" : ""}>Avancar</button>
+              <button class="secondary-link" type="button" data-action="edit-board-card" data-list-index="${listIndex}" data-card-index="${cardIndex}">Editar</button>
+              <button class="danger-button" type="button" data-action="delete-board-card" data-list-index="${listIndex}" data-card-index="${cardIndex}">Excluir</button>
+            </div>
+          </article>
+        `).join("") || '<p class="empty-state">Nenhum cartao nesta lista.</p>'}
+      </div>
+    </section>
+  `).join("");
+}
+
 function renderMalotesSection() {
   renderAll();
 }
@@ -7065,6 +7194,7 @@ function renderAll() {
   renderDisciplinaryRecords();
 
   renderChamadosSection();
+  renderBoards();
 
   updateVagasFilterClearButton();
   const vagasFilters = getVagasFilterValues();
@@ -8129,6 +8259,75 @@ document.getElementById("toggle-archived-chamados")?.addEventListener("click", (
   showArchivedChamados = !showArchivedChamados;
   renderAll();
 });
+
+document.getElementById("board-form")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const nome = String(new FormData(form).get("nome") || "").trim();
+  if (!nome) return;
+  ensureBoardsData();
+  const board = {
+    id: generateUUID(),
+    nome,
+    listas: [
+      { id: generateUUID(), titulo: "A fazer", cartoes: [] },
+      { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
+      { id: generateUUID(), titulo: "Concluido", cartoes: [] },
+    ],
+    createdAt: todayLabel(),
+  };
+  data.quadros.push(board);
+  activeBoardId = board.id;
+  form.reset();
+  persistBoards();
+});
+
+document.getElementById("board-list-form")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const board = getActiveBoard();
+  if (!board) return;
+  const form = event.currentTarget;
+  const titulo = String(new FormData(form).get("titulo") || "").trim();
+  if (!titulo) return;
+  board.listas.push({ id: generateUUID(), titulo, cartoes: [] });
+  form.reset();
+  persistBoards();
+});
+
+document.getElementById("board-card-form")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const board = getActiveBoard();
+  if (!board) return;
+  const form = event.currentTarget;
+  const values = new FormData(form);
+  const list = board.listas.find((item) => String(item.id) === String(values.get("lista")));
+  if (!list) return;
+  const editListValue = String(values.get("edit_list_index") || "");
+  const editCardValue = String(values.get("edit_card_index") || "");
+  const editListIndex = editListValue === "" ? -1 : Number(editListValue);
+  const editCardIndex = editCardValue === "" ? -1 : Number(editCardValue);
+  const isEditing = editListIndex >= 0 && editCardIndex >= 0 && board.listas?.[editListIndex]?.cartoes?.[editCardIndex];
+  const cardPayload = {
+    id: isEditing ? board.listas[editListIndex].cartoes[editCardIndex].id : generateUUID(),
+    titulo: String(values.get("titulo") || "").trim(),
+    descricao: String(values.get("descricao") || "").trim(),
+    responsavel: String(values.get("responsavel") || "").trim(),
+    prazo: String(values.get("prazo") || "").trim(),
+    prioridade: String(values.get("prioridade") || "Normal"),
+    createdAt: isEditing ? board.listas[editListIndex].cartoes[editCardIndex].createdAt : todayLabel(),
+    createdBy: isEditing ? board.listas[editListIndex].cartoes[editCardIndex].createdBy : getCurrentUserName(),
+    updatedAt: isEditing ? todayLabel() : "",
+    updatedBy: isEditing ? getCurrentUserName() : "",
+  };
+  if (isEditing) {
+    board.listas[editListIndex].cartoes.splice(editCardIndex, 1);
+  }
+  list.cartoes.push(cardPayload);
+  resetBoardCardForm();
+  persistBoards();
+});
+
+document.getElementById("cancelar-edicao-board-card")?.addEventListener("click", resetBoardCardForm);
 
 document.getElementById("select-denuncias")?.addEventListener("click", () => {
   if (!denunciasSelectionMode) {
@@ -10204,6 +10403,54 @@ document.addEventListener('click', (event) => {
     case 'baixar-documento-malote': baixarDocumentoMalote(id); break;
     case 'excluir-malote': excluirMalote(id); break;
     case 'open-dashboard-activity': openDashboardActivity(target.dataset.index); break;
+    case 'select-board':
+      activeBoardId = id;
+      renderBoards();
+      break;
+    case 'move-board-card': {
+      const board = getActiveBoard();
+      const listIndex = Number(target.dataset.listIndex);
+      const cardIndex = Number(target.dataset.cardIndex);
+      const direction = Number(target.dataset.direction);
+      const fromList = board?.listas?.[listIndex];
+      const toList = board?.listas?.[listIndex + direction];
+      const card = fromList?.cartoes?.[cardIndex];
+      if (!board || !fromList || !toList || !card) break;
+      fromList.cartoes.splice(cardIndex, 1);
+      toList.cartoes.push(card);
+      persistBoards();
+      break;
+    }
+    case 'edit-board-card': {
+      const board = getActiveBoard();
+      const listIndex = Number(target.dataset.listIndex);
+      const cardIndex = Number(target.dataset.cardIndex);
+      const card = board?.listas?.[listIndex]?.cartoes?.[cardIndex];
+      const form = document.getElementById("board-card-form");
+      if (!board || !card || !form) break;
+      form.elements.edit_list_index.value = String(listIndex);
+      form.elements.edit_card_index.value = String(cardIndex);
+      form.elements.lista.value = board.listas[listIndex].id;
+      form.elements.titulo.value = card.titulo || "";
+      form.elements.descricao.value = card.descricao || "";
+      form.elements.responsavel.value = card.responsavel || "";
+      form.elements.prazo.value = card.prazo || "";
+      form.elements.prioridade.value = card.prioridade || "Normal";
+      form.querySelector("h3").textContent = "Editar cartao";
+      form.querySelector('button[type="submit"]').textContent = "Salvar cartao";
+      document.getElementById("cancelar-edicao-board-card")?.removeAttribute("hidden");
+      form.scrollIntoView({ behavior: "smooth", block: "start" });
+      break;
+    }
+    case 'delete-board-card': {
+      const board = getActiveBoard();
+      const list = board?.listas?.[Number(target.dataset.listIndex)];
+      const cardIndex = Number(target.dataset.cardIndex);
+      if (!list?.cartoes?.[cardIndex]) break;
+      list.cartoes.splice(cardIndex, 1);
+      persistBoards();
+      break;
+    }
     case 'editar-vaga': editarVaga(id); break;
     case 'excluir-vaga': excluirVaga(id); break;
     case 'editar-evento': editarEvento(id); break;
