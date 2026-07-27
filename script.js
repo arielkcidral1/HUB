@@ -2173,6 +2173,14 @@ function getEventScheduleMeta(item = {}) {
   return `${formatEventTime(item.horario)} | Responsavel: ${item.responsavel || "Nao informado"}`;
 }
 
+function renderEventDescription(item = {}, className = "") {
+  const description = String(item.descricao || "").trim();
+  if (!description && normalizeEventType(item.tipo) === "aniversario") return "";
+  const text = description || "Sem observacoes adicionais.";
+  const classAttribute = className ? ` class="${className}"` : "";
+  return `<p${classAttribute}>${escapeHtml(text).replace(/\n/g, "<br>")}</p>`;
+}
+
 function getUpcomingEvents() {
   const today = getLocalDateKey();
   return getSortedEvents().filter((item) => !isArchivedRecord(item) && (!item.data || item.data >= today));
@@ -2445,7 +2453,7 @@ function showDayEventsModal(date) {
               <p class="item-title">${escapeHtml(item.titulo)}</p>
               <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
             </div>
-            <p class="day-event-description">${escapeHtml(item.descricao || "Sem observacoes adicionais.").replace(/\n/g, "<br>")}</p>
+            ${renderEventDescription(item, "day-event-description")}
             <p class="item-meta">${escapeHtml(getEventScheduleMeta(item))}</p>
             <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
           </article>
@@ -5600,7 +5608,7 @@ function renderCalendar() {
   renderCards("eventos-list", visibleEvents, (item) => `
     <article class="item-card ${getEventTypeClass(item)}">
       <div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>
-      <p>${escapeHtml(item.descricao || "Sem observacoes adicionais.")}</p>
+      ${renderEventDescription(item)}
       <p class="item-meta">${escapeHtml(formatEventDate(item.data))} | ${escapeHtml(getEventScheduleMeta(item))}</p>
       <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
       <div class="job-actions">
