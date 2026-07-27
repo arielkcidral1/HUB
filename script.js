@@ -7142,7 +7142,6 @@ function resetBoardCardForm() {
 }
 
 function renderBoards() {
-  closeBoardCardActionMenu();
   ensureBoardsData();
   const board = getActiveBoard();
   const tabs = document.getElementById("board-tabs");
@@ -7182,6 +7181,7 @@ function renderBoards() {
       </div>
     </section>
   `).join("");
+  renderBoardCardActionMenu();
 }
 
 function renderMalotesSection() {
