@@ -34,6 +34,11 @@ async function ensureCollectionTable(rule) {
       created_at timestamptz not null default now()
     )
   `, []);
+  await sql(`alter table public.hub_quadros add column if not exists nome text`, []);
+  await sql(`alter table public.hub_quadros add column if not exists listas jsonb not null default '[]'::jsonb`, []);
+  await sql(`alter table public.hub_quadros add column if not exists created_by text`, []);
+  await sql(`alter table public.hub_quadros add column if not exists updated_by text`, []);
+  await sql(`alter table public.hub_quadros add column if not exists created_at timestamptz not null default now()`, []);
   await sql(`create index if not exists idx_hub_quadros_created_at on public.hub_quadros (created_at desc)`, []);
 }
 
