@@ -370,6 +370,8 @@ const DISCIPLINARY_ALLOWED_MIME_TYPES = new Set([
 ]);
 const DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 const DISCIPLINARY_ATTACHMENT_ACCEPT = "image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const DISCIPLINARY_ATTACHMENT_EDIT_PASSWORD = "1001";
+const disciplinaryAttachmentEditUnlocks = new Set();
 
 const UNIT_OPTIONS = [
   "1- MTZ",
@@ -7894,8 +7896,19 @@ function renderDisciplinaryRecords() {
     const attachmentButton = attachment.url
       ? `<button type="button" class="tag tag-button teal-tag-button" data-download-url="${escapeHtml(attachment.url)}" data-download-name="${escapeHtml(attachment.name || "anexo")}">Baixar anexo</button>`
       : "";
-    const attachmentUploadLabel = attachment.url ? "Substituir anexo" : "Anexar documento gerado";
-    const attachmentEmptyLabel = attachment.url ? "Nenhum novo arquivo escolhido" : "Nenhum arquivo escolhido";
+    const attachmentEditButton = attachment.url && !disciplinaryAttachmentEditUnlocks.has(String(item.id))
+      ? `<button type="button" class="tag tag-button teal-tag-button" data-action="editar-anexo-disciplinary" data-id="${escapeHtml(item.id)}">Editar anexo</button>`
+      : "";
+    const attachmentUpload = !attachment.url || disciplinaryAttachmentEditUnlocks.has(String(item.id))
+      ? `<label class="disciplinary-file-field disciplinary-card-attachment">
+          <span>${escapeHtml(attachment.url ? "Substituir anexo" : "Anexar documento gerado")}</span>
+          <span class="disciplinary-file-control">
+            <span class="disciplinary-file-button">Selecionar arquivo</span>
+            <span class="disciplinary-file-name" data-empty-label="${escapeHtml(attachment.url ? "Nenhum novo arquivo escolhido" : "Nenhum arquivo escolhido")}">${escapeHtml(attachment.url ? "Nenhum novo arquivo escolhido" : "Nenhum arquivo escolhido")}</span>
+          </span>
+          <input class="disciplinary-file-input" type="file" data-disciplinary-attachment-input data-id="${escapeHtml(item.id)}" accept="${DISCIPLINARY_ATTACHMENT_ACCEPT}" />
+        </label>`
+      : "";
     const dateLabel = formData.data_medida ? formatFormDate(formData.data_medida) : "Data nao informada";
     const unidade = formData.unidade || "Unidade nao informada";
     const observacoes = formData.observacoes || "Sem observacoes.";
@@ -7908,20 +7921,14 @@ function renderDisciplinaryRecords() {
             <span class="tag">${escapeHtml(item.createdAt)}</span>
             <button type="button" class="tag tag-button teal-tag-button" data-action="baixar-documento-rh" data-id="${escapeHtml(item.id)}">Gerar documento</button>
             ${attachmentButton}
+            ${attachmentEditButton}
             <button type="button" class="tag alert tag-button" data-action="excluir-documento" data-id="${escapeHtml(item.id)}">Excluir</button>
           </div>
         </div>
         <p><strong>${escapeHtml(item.summary || "Funcionario nao informado")}</strong></p>
         <p class="item-meta">Data: ${escapeHtml(dateLabel)} | Unidade: ${escapeHtml(unidade)}</p>
         <p class="item-meta">${escapeHtml(observacoes)}</p>
-        <label class="disciplinary-file-field disciplinary-card-attachment">
-          <span>${escapeHtml(attachmentUploadLabel)}</span>
-          <span class="disciplinary-file-control">
-            <span class="disciplinary-file-button">Selecionar arquivo</span>
-            <span class="disciplinary-file-name" data-empty-label="${escapeHtml(attachmentEmptyLabel)}">${escapeHtml(attachmentEmptyLabel)}</span>
-          </span>
-          <input class="disciplinary-file-input" type="file" data-disciplinary-attachment-input data-id="${escapeHtml(item.id)}" accept="${DISCIPLINARY_ATTACHMENT_ACCEPT}" />
-        </label>
+        ${attachmentUpload}
         <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}${item.updatedAt ? ` em ${escapeHtml(item.updatedAt)}` : ""}</p>
       </article>
     `;
@@ -8733,7 +8740,11 @@ async function attachDisciplinaryDocument(input) {
       createdBy: item.createdBy || getSystemFallbackAuthor(),
       updatedBy: getCurrentUserName(),
     });
-    if (success) showModal("Anexo salvo", "O anexo foi vinculado ao registro.", "info");
+    if (success) {
+      disciplinaryAttachmentEditUnlocks.delete(String(id));
+      renderDisciplinaryRecords();
+      showModal("Anexo salvo", "O anexo foi vinculado ao registro.", "info");
+    }
   } catch (error) {
     showModal("Erro no Anexo", error?.message || "Nao foi possivel enviar o anexo.", "error");
     if (input) {
@@ -8741,6 +8752,25 @@ async function attachDisciplinaryDocument(input) {
       updateFileUploadLabel(input);
     }
   }
+}
+
+function unlockDisciplinaryAttachmentEdit(id) {
+  const item = (data.documentos || []).find((record) => String(record.id) === String(id));
+  if (!item || !DISCIPLINARY_DOCUMENT_TYPES.has(item.type)) {
+    showModal("Registro nao encontrado", "Nao foi possivel localizar esta medida disciplinar.", "error");
+    return;
+  }
+
+  showPasswordActionModal({
+    title: "Editar anexo",
+    text: `Confirme a senha para editar o anexo de ${item.summary || "colaborador nao informado"}.`,
+    confirmText: "Liberar edicao",
+    validatePassword: async (password) => String(password || "").trim() === DISCIPLINARY_ATTACHMENT_EDIT_PASSWORD,
+    onConfirm: async () => {
+      disciplinaryAttachmentEditUnlocks.add(String(id));
+      renderDisciplinaryRecords();
+    },
+  });
 }
 
 function updateFileUploadLabel(input) {
@@ -11023,6 +11053,7 @@ document.addEventListener('click', async (event) => {
     case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary(target.dataset.scope, target.dataset.type); break;
     case 'editar-documento': editarDocumento(id); break;
     case 'baixar-documento-rh': baixarDocumentoRH(id); break;
+    case 'editar-anexo-disciplinary': unlockDisciplinaryAttachmentEdit(id); break;
     case 'excluir-documento': excluirDocumento(id); break;
     case 'excluir-documento-contratado': excluirDocumentoContratado(id); break;
     case 'excluir-usuario': excluirUsuario(id); break;
