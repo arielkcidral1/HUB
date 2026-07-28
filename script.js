@@ -345,6 +345,7 @@ let draggedBoardTabId = "";
 let suppressBoardCardClick = false;
 let recordContextMenu = null;
 window.editingDocId = null;
+window.editingDisciplinaryDocId = null;
 
 const documentLabels = {
   admissao: "Checklist de Admissao",
@@ -370,8 +371,8 @@ const DISCIPLINARY_ALLOWED_MIME_TYPES = new Set([
 ]);
 const DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 const DISCIPLINARY_ATTACHMENT_ACCEPT = "image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-const DISCIPLINARY_ATTACHMENT_EDIT_PASSWORD = "1001";
-const disciplinaryAttachmentEditUnlocks = new Set();
+const DISCIPLINARY_DOCUMENT_EDIT_PASSWORD = "1001";
+const disciplinaryDocumentEditUnlocks = new Set();
 
 const UNIT_OPTIONS = [
   "1- MTZ",
@@ -7896,10 +7897,8 @@ function renderDisciplinaryRecords() {
     const attachmentButton = attachment.url
       ? `<button type="button" class="tag tag-button teal-tag-button" data-download-url="${escapeHtml(attachment.url)}" data-download-name="${escapeHtml(attachment.name || "anexo")}">Baixar anexo</button>`
       : "";
-    const attachmentEditButton = attachment.url && !disciplinaryAttachmentEditUnlocks.has(String(item.id))
-      ? `<button type="button" class="tag tag-button teal-tag-button" data-action="editar-anexo-disciplinary" data-id="${escapeHtml(item.id)}">Editar anexo</button>`
-      : "";
-    const attachmentUpload = !attachment.url || disciplinaryAttachmentEditUnlocks.has(String(item.id))
+    const editButton = `<button type="button" class="tag tag-button teal-tag-button" data-action="editar-disciplinary" data-id="${escapeHtml(item.id)}">Editar</button>`;
+    const attachmentUpload = !attachment.url || disciplinaryDocumentEditUnlocks.has(String(item.id))
       ? `<label class="disciplinary-file-field disciplinary-card-attachment">
           <span>${escapeHtml(attachment.url ? "Substituir anexo" : "Anexar documento gerado")}</span>
           <span class="disciplinary-file-control">
@@ -7921,7 +7920,7 @@ function renderDisciplinaryRecords() {
             <span class="tag">${escapeHtml(item.createdAt)}</span>
             <button type="button" class="tag tag-button teal-tag-button" data-action="baixar-documento-rh" data-id="${escapeHtml(item.id)}">Gerar documento</button>
             ${attachmentButton}
-            ${attachmentEditButton}
+            ${editButton}
             <button type="button" class="tag alert tag-button" data-action="excluir-documento" data-id="${escapeHtml(item.id)}">Excluir</button>
           </div>
         </div>
@@ -8683,6 +8682,16 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
 
 document.querySelectorAll(".disciplinary-tab").forEach((button) => {
   button.addEventListener("click", () => {
+    if (window.editingDisciplinaryDocId) {
+      window.editingDisciplinaryDocId = null;
+      disciplinaryDocumentEditUnlocks.clear();
+      document.querySelectorAll("[data-disciplinary-form]").forEach((form) => {
+        form.reset();
+        const submitButton = form.querySelector("button[type='submit']");
+        if (submitButton && submitButton.dataset.originalText) submitButton.textContent = submitButton.dataset.originalText;
+      });
+      renderDisciplinaryRecords();
+    }
     document.querySelectorAll(".disciplinary-tab").forEach((item) => item.classList.remove("active"));
     document.querySelectorAll(".disciplinary-view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
@@ -8741,7 +8750,7 @@ async function attachDisciplinaryDocument(input) {
       updatedBy: getCurrentUserName(),
     });
     if (success) {
-      disciplinaryAttachmentEditUnlocks.delete(String(id));
+      disciplinaryDocumentEditUnlocks.delete(String(id));
       renderDisciplinaryRecords();
       showModal("Anexo salvo", "O anexo foi vinculado ao registro.", "info");
     }
@@ -8754,7 +8763,7 @@ async function attachDisciplinaryDocument(input) {
   }
 }
 
-function unlockDisciplinaryAttachmentEdit(id) {
+function editDisciplinaryDocument(id) {
   const item = (data.documentos || []).find((record) => String(record.id) === String(id));
   if (!item || !DISCIPLINARY_DOCUMENT_TYPES.has(item.type)) {
     showModal("Registro nao encontrado", "Nao foi possivel localizar esta medida disciplinar.", "error");
@@ -8762,12 +8771,32 @@ function unlockDisciplinaryAttachmentEdit(id) {
   }
 
   showPasswordActionModal({
-    title: "Editar anexo",
-    text: `Confirme a senha para editar o anexo de ${item.summary || "colaborador nao informado"}.`,
+    title: "Editar documento",
+    text: `Confirme a senha para editar o documento de ${item.summary || "colaborador nao informado"}.`,
     confirmText: "Liberar edicao",
-    validatePassword: async (password) => String(password || "").trim() === DISCIPLINARY_ATTACHMENT_EDIT_PASSWORD,
+    validatePassword: async (password) => String(password || "").trim() === DISCIPLINARY_DOCUMENT_EDIT_PASSWORD,
     onConfirm: async () => {
-      disciplinaryAttachmentEditUnlocks.add(String(id));
+      window.editingDisciplinaryDocId = id;
+      disciplinaryDocumentEditUnlocks.add(String(id));
+      document.querySelectorAll(".disciplinary-tab").forEach((button) => {
+        button.classList.toggle("active", button.dataset.disciplinaryDoc === item.type);
+      });
+      document.querySelectorAll(".disciplinary-view").forEach((view) => view.classList.remove("active"));
+      document.getElementById(`disciplinary-${item.type}`)?.classList.add("active");
+
+      const form = document.querySelector(`[data-disciplinary-form="${item.type}"]`);
+      if (form) {
+        setFieldValue(form.elements.colaborador, item.formData?.colaborador || item.summary || "");
+        setFieldValue(form.elements.data_medida, item.formData?.data_medida || "");
+        setFieldValue(form.elements.unidade, item.formData?.unidade || "");
+        setFieldValue(form.elements.observacoes, item.formData?.observacoes || "");
+        const submitButton = form.querySelector("button[type='submit']");
+        if (submitButton) {
+          if (!submitButton.dataset.originalText) submitButton.dataset.originalText = submitButton.textContent;
+          submitButton.textContent = "Salvar alteracoes";
+        }
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
       renderDisciplinaryRecords();
     },
   });
@@ -8819,20 +8848,45 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
       return;
     }
 
-    const success = await addItem("documentos", {
-      type,
-      summary: colaborador,
-      details: `${documentLabels[type] || type} | Data: ${formatFormDate(dataMedida)} | Unidade: ${unidade}`,
-      formData: {
-        colaborador,
-        data_medida: dataMedida,
-        unidade,
-        observacoes,
-      },
-      createdBy: getCurrentUserName(),
-    });
+    const details = `${documentLabels[type] || type} | Data: ${formatFormDate(dataMedida)} | Unidade: ${unidade}`;
+    const editingId = window.editingDisciplinaryDocId;
+    const editingItem = editingId
+      ? (data.documentos || []).find((item) => String(item.id) === String(editingId))
+      : null;
+    const nextFormData = {
+      ...(editingItem?.formData || {}),
+      colaborador,
+      data_medida: dataMedida,
+      unidade,
+      observacoes,
+    };
 
-    if (success) clearDisciplinaryFormDrafts();
+    const success = editingItem
+      ? await updateItem("documentos", editingId, {
+          type,
+          summary: colaborador,
+          details,
+          formData: nextFormData,
+          createdBy: editingItem.createdBy || getSystemFallbackAuthor(),
+          updatedBy: getCurrentUserName(),
+        })
+      : await addItem("documentos", {
+          type,
+          summary: colaborador,
+          details,
+          formData: nextFormData,
+          createdBy: getCurrentUserName(),
+        });
+
+    if (success) {
+      if (editingId) {
+        disciplinaryDocumentEditUnlocks.delete(String(editingId));
+        window.editingDisciplinaryDocId = null;
+      }
+      const submitButton = event.currentTarget.querySelector("button[type='submit']");
+      if (submitButton && submitButton.dataset.originalText) submitButton.textContent = submitButton.dataset.originalText;
+      clearDisciplinaryFormDrafts();
+    }
   });
 });
 
@@ -11053,7 +11107,7 @@ document.addEventListener('click', async (event) => {
     case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary(target.dataset.scope, target.dataset.type); break;
     case 'editar-documento': editarDocumento(id); break;
     case 'baixar-documento-rh': baixarDocumentoRH(id); break;
-    case 'editar-anexo-disciplinary': unlockDisciplinaryAttachmentEdit(id); break;
+    case 'editar-disciplinary': editDisciplinaryDocument(id); break;
     case 'excluir-documento': excluirDocumento(id); break;
     case 'excluir-documento-contratado': excluirDocumentoContratado(id); break;
     case 'excluir-usuario': excluirUsuario(id); break;
