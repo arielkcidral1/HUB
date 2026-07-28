@@ -369,6 +369,7 @@ const DISCIPLINARY_ALLOWED_MIME_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
 const DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
+const DISCIPLINARY_ATTACHMENT_ACCEPT = "image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 const UNIT_OPTIONS = [
   "1- MTZ",
@@ -7893,6 +7894,8 @@ function renderDisciplinaryRecords() {
     const attachmentButton = attachment.url
       ? `<button type="button" class="tag tag-button teal-tag-button" data-download-url="${escapeHtml(attachment.url)}" data-download-name="${escapeHtml(attachment.name || "anexo")}">Baixar anexo</button>`
       : "";
+    const attachmentUploadLabel = attachment.url ? "Substituir anexo" : "Anexar documento gerado";
+    const attachmentEmptyLabel = attachment.url ? "Nenhum novo arquivo escolhido" : "Nenhum arquivo escolhido";
     const dateLabel = formData.data_medida ? formatFormDate(formData.data_medida) : "Data nao informada";
     const unidade = formData.unidade || "Unidade nao informada";
     const observacoes = formData.observacoes || "Sem observacoes.";
@@ -7903,6 +7906,7 @@ function renderDisciplinaryRecords() {
           <p class="item-title">${escapeHtml(documentLabels[item.type] || item.type)}</p>
           <div>
             <span class="tag">${escapeHtml(item.createdAt)}</span>
+            <button type="button" class="tag tag-button teal-tag-button" data-action="baixar-documento-rh" data-id="${escapeHtml(item.id)}">Gerar documento</button>
             ${attachmentButton}
             <button type="button" class="tag alert tag-button" data-action="excluir-documento" data-id="${escapeHtml(item.id)}">Excluir</button>
           </div>
@@ -7910,6 +7914,14 @@ function renderDisciplinaryRecords() {
         <p><strong>${escapeHtml(item.summary || "Funcionario nao informado")}</strong></p>
         <p class="item-meta">Data: ${escapeHtml(dateLabel)} | Unidade: ${escapeHtml(unidade)}</p>
         <p class="item-meta">${escapeHtml(observacoes)}</p>
+        <label class="disciplinary-file-field disciplinary-card-attachment">
+          <span>${escapeHtml(attachmentUploadLabel)}</span>
+          <span class="disciplinary-file-control">
+            <span class="disciplinary-file-button">Selecionar arquivo</span>
+            <span class="disciplinary-file-name" data-empty-label="${escapeHtml(attachmentEmptyLabel)}">${escapeHtml(attachmentEmptyLabel)}</span>
+          </span>
+          <input class="disciplinary-file-input" type="file" data-disciplinary-attachment-input data-id="${escapeHtml(item.id)}" accept="${DISCIPLINARY_ATTACHMENT_ACCEPT}" />
+        </label>
         <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}${item.updatedAt ? ` em ${escapeHtml(item.updatedAt)}` : ""}</p>
       </article>
     `;
@@ -8454,7 +8466,11 @@ document.getElementById("clear-disciplinary-filters")?.addEventListener("click",
 document.querySelectorAll(".file-upload-input, .disciplinary-file-input").forEach(updateFileUploadLabel);
 document.addEventListener("change", (event) => {
   const input = event.target.closest?.(".file-upload-input, .disciplinary-file-input");
-  if (input) updateFileUploadLabel(input);
+  if (!input) return;
+  updateFileUploadLabel(input);
+  if (input.matches("[data-disciplinary-attachment-input]")) {
+    attachDisciplinaryDocument(input);
+  }
 });
 
 document.getElementById("contratado-filter-nome")?.addEventListener("input", () => {
@@ -8679,6 +8695,54 @@ function validateDisciplinaryAttachment(file) {
   return "Anexe somente imagem, PDF ou arquivo Word.";
 }
 
+async function attachDisciplinaryDocument(input) {
+  const id = input?.dataset?.id;
+  const file = input?.files?.[0];
+  const fileError = validateDisciplinaryAttachment(file);
+  if (fileError) {
+    showModal("Anexo invalido", fileError, "error");
+    if (input) {
+      input.value = "";
+      updateFileUploadLabel(input);
+    }
+    return;
+  }
+
+  const item = (data.documentos || []).find((record) => String(record.id) === String(id));
+  if (!item || !DISCIPLINARY_DOCUMENT_TYPES.has(item.type)) {
+    showModal("Registro nao encontrado", "Nao foi possivel localizar esta medida disciplinar.", "error");
+    return;
+  }
+
+  try {
+    const uploaded = await hubUpload(file, "medidaDisciplinar");
+    const success = await updateItem("documentos", id, {
+      type: item.type,
+      summary: item.summary,
+      details: item.details,
+      formData: {
+        ...(item.formData || {}),
+        anexo: {
+          name: file.name || "anexo",
+          size: file.size || 0,
+          type: file.type || "application/octet-stream",
+          path: uploaded.pathname || "",
+          url: uploaded.url || "",
+        },
+      },
+      createdBy: item.createdBy || getSystemFallbackAuthor(),
+      updatedBy: getCurrentUserName(),
+    });
+    if (success) showModal("Anexo salvo", "O anexo foi vinculado ao registro.", "info");
+  } catch (error) {
+    showModal("Erro no Anexo", error?.message || "Nao foi possivel enviar o anexo.", "error");
+    if (input) {
+      input.value = "";
+      updateFileUploadLabel(input);
+    }
+  }
+}
+
 function updateFileUploadLabel(input) {
   const field = input?.closest(".file-upload-field, .disciplinary-file-field");
   const label = field?.querySelector(".file-upload-name, .disciplinary-file-name");
@@ -8711,20 +8775,10 @@ function clearDisciplinaryFormDrafts() {
 }
 
 document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
-  formElement.querySelectorAll(".disciplinary-file-input").forEach((input) => {
-    updateDisciplinaryFileLabel(input);
-  });
-
   formElement.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const type = event.currentTarget.dataset.disciplinaryForm;
-    const file = form.get("anexo");
-    const fileError = validateDisciplinaryAttachment(file);
-    if (fileError) {
-      showModal("Anexo invalido", fileError, "error");
-      return;
-    }
 
     const colaborador = String(form.get("colaborador") || "").trim();
     const dataMedida = String(form.get("data_medida") || "").trim();
@@ -8732,14 +8786,6 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
     const observacoes = String(form.get("observacoes") || "").trim();
     if (!colaborador || !dataMedida || !unidade) {
       showModal("Campos obrigatorios", "Informe funcionario, data e unidade para salvar o registro.", "error");
-      return;
-    }
-
-    let uploaded;
-    try {
-      uploaded = await hubUpload(file, "medidaDisciplinar");
-    } catch (error) {
-      showModal("Erro no Anexo", error?.message || "Nao foi possivel enviar o anexo.", "error");
       return;
     }
 
@@ -8752,13 +8798,6 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
         data_medida: dataMedida,
         unidade,
         observacoes,
-        anexo: {
-          name: file.name || "anexo",
-          size: file.size || 0,
-          type: file.type || "application/octet-stream",
-          path: uploaded.pathname || "",
-          url: uploaded.url || "",
-        },
       },
       createdBy: getCurrentUserName(),
     });
@@ -10459,6 +10498,7 @@ const documentLongFieldKeys = new Set([
   "acompanhamento",
   "dependentes",
 ]);
+const documentHiddenFieldKeys = new Set(["anexo", "attachment"]);
 
 function normalizeDownloadText(value) {
   return String(value || "").trim();
@@ -10508,7 +10548,9 @@ function getDocumentFieldLabel(key) {
 }
 
 function buildStyledDocumentRows(formData = {}) {
-  const entries = Object.entries(formData).filter(([, value]) => String(value || "").trim());
+  const entries = Object.entries(formData).filter(([key, value]) =>
+    !documentHiddenFieldKeys.has(key) && String(value || "").trim()
+  );
   const compactRows = entries.filter(([key]) => !documentLongFieldKeys.has(key));
   const longRows = entries.filter(([key]) => documentLongFieldKeys.has(key));
 

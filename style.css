@@ -2922,6 +2922,10 @@ textarea {
   white-space: nowrap;
 }
 
+.disciplinary-card-attachment {
+  margin-top: 14px;
+}
+
 .calendar-event-preview.event-type-birthday,
 .calendar-cell span.event-type-birthday {
   background: #fbbf24;
