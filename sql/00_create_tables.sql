@@ -165,6 +165,7 @@ create table if not exists public.hub_documentos_contratados (
   empresa text not null check (empresa in ('Fredy Pneus', 'Besten Pneus', 'Achei Pneus', 'Trinca Mkt')),
   origem_html text not null default '' check (origem_html = '' or origem_html ~ '^documentos-(fredy|besten|achei|trinca)\.html$'),
   nome text not null check (char_length(nome) between 3 and 160),
+  email text,
   cpf text not null check (cpf ~ '^\d{3}\.\d{3}\.\d{3}-\d{2}$'),
   telefone text not null check (regexp_replace(telefone, '\D', '', 'g') ~ '^\d{10,11}$'),
   documentos jsonb not null default '[]'::jsonb,

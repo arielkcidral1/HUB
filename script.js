@@ -3012,6 +3012,7 @@ function mapContractorDocumentRow(row = {}) {
     empresa: row.empresa || "",
     origemHtml: inferContractorDocumentSource(row.origem_html || row.origemHtml, row.empresa),
     nome: row.nome || "",
+    email: row.email || "",
     cpf: row.cpf || "",
     telefone: row.telefone || "",
     documentos: parseContractorDocumentsValue(row.documentos),
@@ -3284,6 +3285,7 @@ function toDbPayload(collection, values) {
       empresa: values.empresa,
       origem_html: values.origemHtml || "",
       nome: values.nome,
+      email: values.email || "",
       cpf: values.cpf,
       telefone: values.telefone || "",
       documentos: values.documentos || [],
@@ -4165,7 +4167,7 @@ async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, c
   return result.data;
 }
 
-async function submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, documentos, accessPassword, turnstileToken }) {
+async function submitPublicContractorDocuments({ empresa, origemHtml, nome, email, telefone, cpf, documentos, accessPassword, turnstileToken }) {
   const uploadedDocuments = [];
   try {
     for (const file of Array.from(documentos || [])) {
@@ -4186,6 +4188,7 @@ async function submitPublicContractorDocuments({ empresa, origemHtml, nome, tele
         empresa: String(empresa || ""),
         origemHtml: String(origemHtml || ""),
         nome: String(nome || ""),
+        email: String(email || ""),
         telefone: String(telefone || ""),
         cpf: String(cpf || ""),
         accessPassword: String(accessPassword || ""),
@@ -5286,6 +5289,7 @@ function renderDocumentosContratados() {
         ${item.pendingSync ? '<span class="tag alert">Pendente</span>' : ""}
       </div>
       <p><strong>CPF:</strong> ${escapeHtml(formatCpf(item.cpf || ""))}</p>
+      <p><strong>E-mail:</strong> ${escapeHtml(item.email || "Não informado")}</p>
       <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || "Não informado")}</p>
       <p><strong>Origem:</strong> ${escapeHtml(getContractorSourceLabel(item.origemHtml, item.empresa) || "Não informada")}</p>
       <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Enviado por ${escapeHtml(item.nome || "Contratado não informado")}</p>
@@ -10066,13 +10070,19 @@ if (contratadoDocForm) {
     const empresa = String(form.get("empresa") || formElement.dataset.company || "").trim();
     const origemHtml = String(form.get("origem_html") || contractorLayout?.dataset.contractorSource || window.location.pathname.split("/").pop() || "").trim();
     const nome = String(form.get("nome") || "").trim();
+    const email = String(form.get("email") || "").trim();
     const telefone = String(form.get("telefone") || "").trim();
     const cpf = String(form.get("cpf") || "").trim();
     const documentos = form.getAll("documentos").filter((file) => file && file.name);
     const turnstileToken = getPublicChallengeToken(formElement);
 
-    if (!empresa || !nome || !telefone || !cpf || !documentos.length) {
+    if (!empresa || !nome || !email || !telefone || !cpf || !documentos.length) {
       showModal("Dados obrigatórios", "Preencha todos os dados e anexe pelo menos um documento.", "error");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showModal("E-mail inválido", "Informe um e-mail válido.", "error");
       return;
     }
 
@@ -10088,7 +10098,7 @@ if (contratadoDocForm) {
     }
 
     try {
-      await submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, documentos, accessPassword: contractorAccessPassword, turnstileToken });
+      await submitPublicContractorDocuments({ empresa, origemHtml, nome, email, telefone, cpf, documentos, accessPassword: contractorAccessPassword, turnstileToken });
       formElement.reset();
       resetContractorDocumentFields(contractorDocumentsFields);
       resetFileUploadLabels(formElement);

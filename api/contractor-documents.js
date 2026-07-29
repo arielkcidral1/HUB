@@ -29,6 +29,7 @@ function isValidPayload(payload) {
   if (ACCESS_PASSWORDS[payload.empresa] !== payload.accessPassword) return "Senha de acesso invalida.";
   if (!/^documentos-(fredy|besten|achei|trinca)\.html$/.test(payload.origemHtml)) return "Origem invalida.";
   if (payload.nome.length < 3 || payload.nome.length > 160) return "Nome invalido.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return "E-mail invalido.";
   if (!/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(payload.cpf)) return "CPF invalido.";
   if (!/^\d{10,11}$/.test(payload.telefone.replace(/\D/g, ""))) return "Telefone invalido.";
   return null;
@@ -95,6 +96,7 @@ async function handleRequest(request) {
     origemHtml: text(jsonBody ? jsonBody.origemHtml : formData.get("origemHtml")),
     accessPassword: text(jsonBody ? jsonBody.accessPassword : formData.get("accessPassword")),
     nome: text(jsonBody ? jsonBody.nome : formData.get("nome")),
+    email: text(jsonBody ? jsonBody.email : formData.get("email")).toLowerCase(),
     telefone: text(jsonBody ? jsonBody.telefone : formData.get("telefone")),
     cpf: text(jsonBody ? jsonBody.cpf : formData.get("cpf")),
   };
@@ -148,8 +150,8 @@ async function handleRequest(request) {
 
   try {
     const rows = await sql`
-      insert into hub_documentos_contratados (empresa, origem_html, nome, telefone, cpf, documentos, created_by)
-      values (${payload.empresa}, ${payload.origemHtml}, ${payload.nome}, ${payload.telefone}, ${payload.cpf}, ${JSON.stringify(documentos)}, ${"Publico"})
+      insert into hub_documentos_contratados (empresa, origem_html, nome, email, telefone, cpf, documentos, created_by)
+      values (${payload.empresa}, ${payload.origemHtml}, ${payload.nome}, ${payload.email}, ${payload.telefone}, ${payload.cpf}, ${JSON.stringify(documentos)}, ${"Publico"})
       returning *
     `;
     return json(request, 200, { data: rows[0] });

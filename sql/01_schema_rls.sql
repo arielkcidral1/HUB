@@ -27,6 +27,9 @@ add column if not exists email text;
 alter table if exists public.hub_users
 add column if not exists cpf text;
 
+alter table if exists public.hub_documentos_contratados
+add column if not exists email text;
+
 alter table if exists public.hub_users
 drop column if exists senha;
 
@@ -737,4 +740,3 @@ using (
   bucket_id = 'hub-chat-files'
   and app_private.hub_is_rh()
 );
-
