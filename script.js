@@ -448,6 +448,31 @@ const UNIT_CITY_MAP = {
   "28- ARA": "Araranguá",
 };
 
+const DISCIPLINARY_TEMPLATE_PATH_BY_UNIT = Object.freeze({
+  "1- MTZ": "assets/modelos-advertencia/01_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0001_17.docx",
+  "2- SBS": "assets/modelos-advertencia/02_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0003_89.docx",
+  "3- ITJ 1": "assets/modelos-advertencia/03_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0004_60.docx",
+  "4- PLÇ": "assets/modelos-advertencia/04_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0011_99.docx",
+  "5- GUA": "assets/modelos-advertencia/05_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0013_50.docx",
+  "7- DPA JC": "assets/modelos-advertencia/06_Advertencia_DPA_COMERCIO_DE_PNEUS_LTDA_CNPJ_10_432_113_0001_10.docx",
+  "9- DPA IRI": "assets/modelos-advertencia/07_Advertencia_DPA_COMERCIO_DE_PNEUS_LTDA_CNPJ_10_432_113_0002_09.docx",
+  "10- JPL": "assets/modelos-advertencia/08_Advertencia_JPL_COMERCIO_DE_AUTOPECAS_LTDA_BESTEN_CNPJ_05_218_575_0001_07.docx",
+  "11- BC": "assets/modelos-advertencia/09_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0005_40.docx",
+  "12- GCS GPO": "assets/modelos-advertencia/10_Advertencia_GCS_COMERCIO_DE_PNEUS_LTDA_ACHEI_CNPJ_05_326_792_0001_02.docx",
+  "12- GCS JLLE": "assets/modelos-advertencia/11_Advertencia_GCS_COMERCIO_DE_PNEUS_LTDA_ACHEI_CNPJ_05_326_792_0007_06.docx",
+  "13- JRG 1": "assets/modelos-advertencia/12_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0009_74.docx",
+  "14- BRQ": "assets/modelos-advertencia/13_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0008_93.docx",
+  "15- FLN": "assets/modelos-advertencia/14_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0007_02.docx",
+  "17- FAC": "assets/modelos-advertencia/15_Advertencia_FAC_CNPJ_31_708_683_0001_58.docx",
+  "19- RNG 1": "assets/modelos-advertencia/16_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0012_70.docx",
+  "20- BNU 1": "assets/modelos-advertencia/17_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0014_31.docx",
+  "21- JRG 2": "assets/modelos-advertencia/18_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0015_12.docx",
+  "22- TRINCA": "assets/modelos-advertencia/19_Advertencia_TRINCA_CNPJ_56_067_067_0001_06.docx",
+  "23- ITJ 2": "assets/modelos-advertencia/20_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0016_01.docx",
+  "26- BNU 2": "assets/modelos-advertencia/21_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0019_46.docx",
+  "28- ARA": "assets/modelos-advertencia/22_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0017_84.docx",
+});
+
 function getUnitCity(value) {
   return UNIT_CITY_MAP[getCanonicalUnit(value)] || "";
 }
@@ -7952,6 +7977,7 @@ function renderDisciplinaryRecords() {
       : "";
     const dateLabel = formData.data_medida ? formatFormDate(formData.data_medida) : "Data nao informada";
     const unidade = formData.unidade || "Unidade nao informada";
+    const motivo = formData.motivo || "";
     const observacoes = formData.observacoes || "Sem observacoes.";
 
     return `
@@ -7968,6 +7994,7 @@ function renderDisciplinaryRecords() {
         </div>
         <p><strong>${escapeHtml(item.summary || "Funcionario nao informado")}</strong></p>
         <p class="item-meta">Data: ${escapeHtml(dateLabel)} | Unidade: ${escapeHtml(unidade)}</p>
+        ${motivo ? `<p class="item-meta">Motivo: ${escapeHtml(motivo)}</p>` : ""}
         <p class="item-meta">${escapeHtml(observacoes)}</p>
         ${attachmentUpload}
         <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}${item.updatedAt ? ` em ${escapeHtml(item.updatedAt)}` : ""}</p>
@@ -8834,6 +8861,8 @@ function editDisciplinaryDocument(id) {
         setFieldValue(form.elements.colaborador, item.formData?.colaborador || item.summary || "");
         setFieldValue(form.elements.data_medida, item.formData?.data_medida || "");
         setFieldValue(form.elements.unidade, item.formData?.unidade || "");
+        setFieldValue(form.elements.local, item.formData?.local || getUnitCity(item.formData?.unidade) || "");
+        setFieldValue(form.elements.motivo, item.formData?.motivo || item.formData?.observacoes || "");
         setFieldValue(form.elements.observacoes, item.formData?.observacoes || "");
         const submitButton = form.querySelector("button[type='submit']");
         if (submitButton) {
@@ -8879,6 +8908,14 @@ function clearDisciplinaryFormDrafts() {
 }
 
 document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
+  const unitSelect = formElement.querySelector("[name='unidade']");
+  const localInput = formElement.querySelector("[name='local']");
+  unitSelect?.addEventListener("change", () => {
+    if (localInput && !String(localInput.value || "").trim()) {
+      localInput.value = getUnitCity(unitSelect.value) || "";
+    }
+  });
+
   formElement.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -8887,9 +8924,11 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
     const colaborador = String(form.get("colaborador") || "").trim();
     const dataMedida = String(form.get("data_medida") || "").trim();
     const unidade = String(form.get("unidade") || "").trim();
+    const local = String(form.get("local") || "").trim();
+    const motivo = String(form.get("motivo") || "").trim();
     const observacoes = String(form.get("observacoes") || "").trim();
-    if (!colaborador || !dataMedida || !unidade) {
-      showModal("Campos obrigatorios", "Informe funcionario, data e unidade para salvar o registro.", "error");
+    if (!colaborador || !dataMedida || !unidade || !local || !motivo) {
+      showModal("Campos obrigatorios", "Informe funcionario, data, unidade, local e motivo para salvar o registro.", "error");
       return;
     }
 
@@ -8903,6 +8942,8 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
       colaborador,
       data_medida: dataMedida,
       unidade,
+      local,
+      motivo,
       observacoes,
     };
 
@@ -10703,6 +10744,95 @@ function buildStyledDocumentRows(formData = {}) {
   return { compactHtml, longHtml };
 }
 
+function escapeXmlText(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function getDisciplinaryTemplatePath(doc = {}) {
+  const unit = getCanonicalUnit(doc.formData?.unidade || "");
+  return DISCIPLINARY_TEMPLATE_PATH_BY_UNIT[unit] || DISCIPLINARY_TEMPLATE_PATH_BY_UNIT["1- MTZ"];
+}
+
+function getDisciplinaryTemplateDateParts(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return { day: "____", month: "__________________", year: "______" };
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return {
+    day: String(date.getDate()).padStart(2, "0"),
+    month: new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(date),
+    year: String(date.getFullYear()),
+  };
+}
+
+function buildWordTextRuns(value) {
+  const lines = String(value || "").split(/\r?\n/);
+  return lines.map((line, index) => {
+    const br = index > 0 ? "<w:br/>" : "";
+    return `<w:r>${br}<w:t>${escapeXmlText(line || " ")}</w:t></w:r>`;
+  }).join("");
+}
+
+function fillDisciplinaryTemplateXml(xml, doc = {}) {
+  const formData = doc.formData || {};
+  const collaborator = formData.colaborador || doc.summary || "";
+  const reason = formData.motivo || formData.observacoes || "";
+  const local = formData.local || getUnitCity(formData.unidade) || "";
+  const dateParts = getDisciplinaryTemplateDateParts(formData.data_medida);
+  let nextXml = String(xml || "")
+    .replace(/NOME DO EMPREGADO:\s*_+/g, `NOME DO EMPREGADO: ${escapeXmlText(collaborator)}`)
+    .replace(
+      /Local e data:\s*_+,\s*____ de _+ de ______\./g,
+      `Local e data: ${escapeXmlText(local)}, ${dateParts.day} de ${escapeXmlText(dateParts.month)} de ${dateParts.year}.`
+    )
+    .replace(
+      /(<w:p>\s*<w:pPr>[\s\S]*?<\/w:pPr>\s*<w:r><w:rPr><w:b\/><\/w:rPr><w:t xml:space="preserve">MOTIVO: <\/w:t><\/w:r>)[\s\S]*?(<\/w:p>)/,
+      `$1${buildWordTextRuns(reason)}$2`
+    );
+
+  if (doc.type === "suspensao") {
+    nextXml = nextXml
+      .replace(/AVISO DE ADVERTÊNCIA AO EMPREGADO/g, "AVISO DE SUSPENSÃO AO EMPREGADO")
+      .replace(/ADVERTIDO\(A\)/g, "SUSPENSO(A)");
+  }
+
+  return nextXml;
+}
+
+async function downloadDisciplinaryTemplateDocument(doc, title) {
+  if (!window.JSZip) {
+    showModal("Gerador indisponivel", "Nao foi possivel carregar o gerador de documentos do Word. Atualize a pagina e tente novamente.", "error");
+    return;
+  }
+
+  const templatePath = getDisciplinaryTemplatePath(doc);
+  const response = await fetch(templatePath);
+  if (!response.ok) {
+    showModal("Modelo nao encontrado", "Nao foi possivel carregar o modelo desta unidade.", "error");
+    return;
+  }
+
+  const zip = await window.JSZip.loadAsync(await response.arrayBuffer());
+  const documentFile = zip.file("word/document.xml");
+  if (!documentFile) {
+    showModal("Modelo invalido", "O modelo selecionado nao possui o documento principal do Word.", "error");
+    return;
+  }
+
+  const xml = await documentFile.async("string");
+  zip.file("word/document.xml", fillDisciplinaryTemplateXml(xml, doc));
+  const blob = await zip.generateAsync({
+    type: "blob",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  const collaborator = doc.formData?.colaborador || doc.summary || "colaborador";
+  downloadBlob(blob, safeDownloadName(`${title}-${collaborator}`, "docx"));
+}
+
 function downloadStyledRhDocument(doc, title) {
   const { compactHtml, longHtml } = buildStyledDocumentRows(doc.formData || {});
   const emittedAt = formatDateTime(new Date().toISOString());
@@ -10789,10 +10919,19 @@ function downloadStyledRhDocument(doc, title) {
   downloadBlob(new Blob(["\ufeff", html], { type: "application/msword;charset=utf-8" }), safeDownloadName(title, "doc"));
 }
 
-function baixarDocumentoRH(id) {
+async function baixarDocumentoRH(id) {
   const doc = (data.documentos || []).find((item) => String(item.id) === String(id));
   if (!doc) return;
   const title = documentLabels[doc.type] || doc.type;
+  if (DISCIPLINARY_DOCUMENT_TYPES.has(doc.type)) {
+    try {
+      await downloadDisciplinaryTemplateDocument(doc, title);
+    } catch (error) {
+      console.error("Erro ao gerar documento disciplinar:", error);
+      showModal("Erro ao Gerar", error?.message || "Nao foi possivel gerar o documento no modelo.", "error");
+    }
+    return;
+  }
   downloadStyledRhDocument(doc, title);
 };
 
