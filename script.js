@@ -351,6 +351,7 @@ let chatMessageFilterVisible = false;
 let activeBoardId = "";
 let boardContextMenu = null;
 let boardCardActionMenu = null;
+let boardLaneContextMenu = null;
 let draggedBoardCard = null;
 let draggedBoardTabId = "";
 let suppressBoardCardClick = false;
@@ -7371,6 +7372,11 @@ function closeBoardCardActionMenu() {
   document.getElementById("board-card-action-menu")?.remove();
 }
 
+function closeBoardLaneContextMenu() {
+  boardLaneContextMenu = null;
+  document.getElementById("board-lane-context-menu")?.remove();
+}
+
 function closeRecordContextMenu() {
   recordContextMenu = null;
   document.getElementById("record-context-menu")?.remove();
@@ -7437,6 +7443,27 @@ function renderBoardCardActionMenu() {
   menu.style.top = `${Math.max(10, top)}px`;
 }
 
+function renderBoardLaneContextMenu() {
+  document.getElementById("board-lane-context-menu")?.remove();
+  if (!boardLaneContextMenu) return;
+  const menu = document.createElement("div");
+  menu.id = "board-lane-context-menu";
+  menu.className = "board-context-menu board-lane-context-menu";
+  menu.style.left = `${boardLaneContextMenu.x}px`;
+  menu.style.top = `${boardLaneContextMenu.y}px`;
+  menu.innerHTML = `
+    <button type="button" data-action="rename-board-lane" data-list-index="${boardLaneContextMenu.listIndex}">Renomear</button>
+    <button type="button" data-action="duplicate-board-lane" data-list-index="${boardLaneContextMenu.listIndex}">Duplicar</button>
+    <button class="danger" type="button" data-action="delete-board-lane" data-list-index="${boardLaneContextMenu.listIndex}">Apagar</button>
+  `;
+  document.body.appendChild(menu);
+  const rect = menu.getBoundingClientRect();
+  const left = Math.min(boardLaneContextMenu.x, window.innerWidth - rect.width - 10);
+  const top = Math.min(boardLaneContextMenu.y, window.innerHeight - rect.height - 10);
+  menu.style.left = `${Math.max(10, left)}px`;
+  menu.style.top = `${Math.max(10, top)}px`;
+}
+
 function cloneBoard(board) {
   return {
     ...board,
@@ -7455,6 +7482,15 @@ function cloneBoard(board) {
         updatedBy: "",
       })),
     })),
+  };
+}
+
+function cloneBoardLane(list = {}) {
+  return {
+    ...list,
+    id: generateUUID(),
+    titulo: `${list.titulo || "Coluna"} - copia`,
+    cartoes: (list.cartoes || []).map((card) => cloneBoardCard(card)),
   };
 }
 
@@ -7641,6 +7677,7 @@ function renderBoards() {
     </section>
   `).join("") + addLaneButton;
   renderBoardCardActionMenu();
+  renderBoardLaneContextMenu();
 }
 
 function renderMalotesSection() {
@@ -11154,6 +11191,7 @@ document.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     closeBoardContextMenu();
     closeBoardCardActionMenu();
+    closeBoardLaneContextMenu();
     recordContextMenu = {
       type: contextRecord.dataset.contextType,
       id: contextRecord.dataset.id,
@@ -11168,6 +11206,7 @@ document.addEventListener("contextmenu", (event) => {
   if (card) {
     event.preventDefault();
     closeBoardContextMenu();
+    closeBoardLaneContextMenu();
     boardCardActionMenu = {
       listIndex: Number(card.dataset.listIndex),
       cardIndex: Number(card.dataset.cardIndex),
@@ -11178,15 +11217,32 @@ document.addEventListener("contextmenu", (event) => {
     return;
   }
 
+  const lane = event.target.closest(".board-lane");
+  if (lane) {
+    event.preventDefault();
+    closeBoardContextMenu();
+    closeBoardCardActionMenu();
+    closeRecordContextMenu();
+    boardLaneContextMenu = {
+      listIndex: Number(lane.dataset.listIndex),
+      x: event.clientX,
+      y: event.clientY + 6,
+    };
+    renderBoardLaneContextMenu();
+    return;
+  }
+
   const tab = event.target.closest("[data-board-tab]");
   if (!tab) {
     closeBoardContextMenu();
     closeBoardCardActionMenu();
+    closeBoardLaneContextMenu();
     closeRecordContextMenu();
     return;
   }
   event.preventDefault();
   closeBoardCardActionMenu();
+  closeBoardLaneContextMenu();
   closeRecordContextMenu();
   boardContextMenu = {
     id: tab.dataset.id,
@@ -11200,6 +11256,7 @@ document.addEventListener("dragstart", (event) => {
   const tab = event.target.closest("[data-board-tab]");
   if (tab) {
     draggedBoardTabId = String(tab.dataset.id || "");
+    closeBoardLaneContextMenu();
     tab.classList.add("dragging");
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", draggedBoardTabId);
@@ -11209,6 +11266,7 @@ document.addEventListener("dragstart", (event) => {
   const card = event.target.closest("[data-board-card]");
   if (!card) return;
   closeBoardCardActionMenu();
+  closeBoardLaneContextMenu();
   suppressBoardCardClick = false;
   draggedBoardCard = {
     listIndex: Number(card.dataset.listIndex),
@@ -11303,6 +11361,9 @@ document.addEventListener('click', async (event) => {
   if (!event.target.closest("#board-card-action-menu") && !event.target.closest("[data-board-card]")) {
     closeBoardCardActionMenu();
   }
+  if (!event.target.closest("#board-lane-context-menu") && !event.target.closest(".board-lane")) {
+    closeBoardLaneContextMenu();
+  }
   if (!event.target.closest("#record-context-menu") && !event.target.closest("[data-context-type]")) {
     closeRecordContextMenu();
   }
@@ -11377,6 +11438,58 @@ document.addEventListener('click', async (event) => {
     case 'open-add-board-lane':
       showAddBoardLaneModal();
       break;
+    case 'rename-board-lane': {
+      const board = getVisibleActiveBoard();
+      const listIndex = Number(target.dataset.listIndex);
+      const list = board?.listas?.[listIndex];
+      if (!board || !list) break;
+      const nextTitle = prompt("Novo nome da coluna:", list.titulo || "");
+      if (nextTitle === null) break;
+      const cleanTitle = nextTitle.trim();
+      if (!cleanTitle) break;
+      const hasDuplicateTitle = board.listas.some((item, index) =>
+        index !== listIndex && normalizeSettingsText(item.titulo) === normalizeSettingsText(cleanTitle)
+      );
+      if (hasDuplicateTitle) {
+        showModal("Nome repetido", "Ja existe uma coluna com esse nome neste quadro.", "error");
+        break;
+      }
+      list.titulo = cleanTitle;
+      closeBoardLaneContextMenu();
+      await persistBoards(board);
+      break;
+    }
+    case 'duplicate-board-lane': {
+      const board = getVisibleActiveBoard();
+      const listIndex = Number(target.dataset.listIndex);
+      const list = board?.listas?.[listIndex];
+      if (!board || !list) break;
+      resetBoardCardFormIfEditing();
+      board.listas.splice(listIndex + 1, 0, cloneBoardLane(list));
+      closeBoardLaneContextMenu();
+      await persistBoards(board);
+      break;
+    }
+    case 'delete-board-lane': {
+      const board = getVisibleActiveBoard();
+      const listIndex = Number(target.dataset.listIndex);
+      const list = board?.listas?.[listIndex];
+      if (!board || !list) break;
+      if (board.listas.length <= 1) {
+        showModal("Coluna obrigatoria", "E preciso manter pelo menos uma coluna no quadro.", "error");
+        break;
+      }
+      const cardCount = (list.cartoes || []).length;
+      const message = cardCount
+        ? `Apagar "${list.titulo || "esta coluna"}"? Os ${cardCount} cartao(oes) desta coluna tambem serao removidos.`
+        : `Apagar "${list.titulo || "esta coluna"}"?`;
+      if (!confirm(message)) break;
+      resetBoardCardFormIfEditing();
+      board.listas.splice(listIndex, 1);
+      closeBoardLaneContextMenu();
+      await persistBoards(board);
+      break;
+    }
     case 'rename-board': {
       const board = data.quadros?.find((item) => String(item.id) === String(id));
       if (!board) break;
