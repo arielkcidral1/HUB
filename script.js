@@ -6,12 +6,23 @@ const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
+const BOOT_FETCH_TIMEOUT_MS = 9000;
 
 const SENSITIVE_CLIENT_CACHE_KEYS = [
   STORAGE_KEY,
   TEAM_USERS_KEY,
   TEAM_CREDENTIALS_KEY,
 ];
+
+async function fetchWithTimeout(resource, options = {}, timeoutMs = BOOT_FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(resource, { ...options, signal: options.signal || controller.signal });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 const RH_CHANNEL = "rh";
 const USERS_TABLE = "hub_users";
 const GENERAL_CHANNEL = "geral";
@@ -839,18 +850,33 @@ function clearAuthenticatedUser() {
   applyUserSettings();
 }
 
+function getCachedSessionUser() {
+  if (!isAuthenticated()) return null;
+  const nome = storageService.getSessionItem(`${SESSION_KEY}-user`);
+  const cargo = storageService.getSessionItem(`${SESSION_KEY}-role`);
+  const email = storageService.getSessionItem(`${SESSION_KEY}-email`);
+  if (!nome && !email) return null;
+  return {
+    id: currentAuthUser?.id || "",
+    nome: nome || email || "Usuario",
+    email: email || "",
+    cargo: cargo || "",
+    configuracoes: currentUserSettings || {},
+  };
+}
+
 async function fetchHubApiSession() {
   try {
-    let response = await fetch("/api/auth/session", { credentials: "include" });
+    let response = await fetchWithTimeout("/api/auth/session", { credentials: "include" });
     if (response.status === 401) {
-      const refreshed = await fetch("/api/auth/refresh", { method: "POST", credentials: "include" });
-      if (refreshed.ok) response = await fetch("/api/auth/session", { credentials: "include" });
+      const refreshed = await fetchWithTimeout("/api/auth/refresh", { method: "POST", credentials: "include" });
+      if (refreshed.ok) response = await fetchWithTimeout("/api/auth/session", { credentials: "include" });
     }
     if (!response.ok) return null;
     const result = await response.json().catch(() => ({}));
     return result?.user || null;
   } catch {
-    return null;
+    return getCachedSessionUser();
   }
 }
 
@@ -1102,13 +1128,13 @@ function getSupabaseClient() {
 
 const hubApi = {
   async list(collection) {
-    const response = await fetch(`/api/records/${collection}`, { credentials: "include" });
+    const response = await fetchWithTimeout(`/api/records/${collection}`, { credentials: "include" });
     if (!response.ok) throw await hubApi._error(response);
     const result = await response.json();
     return result.data || [];
   },
   async insert(collection, payload) {
-    const response = await fetch(`/api/records/${collection}`, {
+    const response = await fetchWithTimeout(`/api/records/${collection}`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -1119,7 +1145,7 @@ const hubApi = {
     return result.data;
   },
   async update(collection, id, payload) {
-    const response = await fetch(`/api/records/${collection}/${id}`, {
+    const response = await fetchWithTimeout(`/api/records/${collection}/${id}`, {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -1130,7 +1156,7 @@ const hubApi = {
     return result.data;
   },
   async remove(collection, id) {
-    const response = await fetch(`/api/records/${collection}/${id}`, {
+    const response = await fetchWithTimeout(`/api/records/${collection}/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
@@ -1376,7 +1402,7 @@ async function syncReadReceiptsFromServer() {
   if (!userId) return;
 
   try {
-    const response = await fetch("/api/read-receipts", { credentials: "include" });
+    const response = await fetchWithTimeout("/api/read-receipts", { credentials: "include" });
     if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
     const result = await response.json();
     const rows = result.data || [];
@@ -3453,6 +3479,7 @@ async function loadFromSupabase(options = {}) {
     setSyncStatus("Sincronizacao pendente", false);
     serverDataReady = true;
     renderAll();
+    if (setupLive) setupAutoRefresh();
   }
 }
 
@@ -10218,9 +10245,16 @@ async function initializeAppData() {
   applyRoleAccess();
   prefillChamadoRequester();
   renderAccountSettings();
+  serverDataReady = false;
+  renderAll();
   if (currentUserSettings.desktopNotifications && isBrowserNotificationSupported() && Notification.permission === "granted") registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
-  await syncReadReceiptsFromServer();
+  syncReadReceiptsFromServer()
+    .then(() => {
+      renderDashboard();
+      try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
+    })
+    .catch((error) => console.error("Erro ao sincronizar leituras:", error));
   await loadFromSupabase({ setupLive: true });
   notificationBaselineReady = true;
   setupPresenceHeartbeat();
@@ -10285,14 +10319,24 @@ disableSensitiveFieldAutofill();
 setupFullNameValidationMessage();
 
 setupLogin().then((canInitialize) => {
-  if (canInitialize) initializeAppData();
+  if (canInitialize) return initializeAppData();
+  return null;
+}).catch((error) => {
+  console.error("Erro ao iniciar o HUB:", error);
+  serverDataReady = true;
+  renderAll();
 });
 
 window.addEventListener("pageshow", (event) => {
   if (!event.persisted) return;
   document.getElementById("app-shell")?.classList.remove("is-ready");
   setupLogin().then((canInitialize) => {
-    if (canInitialize) initializeAppData();
+    if (canInitialize) return initializeAppData();
+    return null;
+  }).catch((error) => {
+    console.error("Erro ao restaurar o HUB:", error);
+    serverDataReady = true;
+    renderAll();
   });
 });
 
