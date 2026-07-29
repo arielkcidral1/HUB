@@ -1492,9 +1492,7 @@ textarea {
 }
 
 .boards-lanes {
-  display: grid;
-  grid-auto-columns: minmax(300px, 360px);
-  grid-auto-flow: column;
+  display: flex;
   gap: 14px;
   min-height: 420px;
   overflow-x: auto;
@@ -1508,6 +1506,7 @@ textarea {
   display: grid;
   align-content: start;
   gap: 12px;
+  flex: 0 0 clamp(300px, 28vw, 360px);
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -1521,6 +1520,7 @@ textarea {
   align-content: center;
   justify-items: center;
   gap: 6px;
+  flex: 0 0 72px;
   justify-self: start;
   width: 72px;
   min-width: 72px;
@@ -3979,7 +3979,11 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .boards-lanes {
-    grid-auto-columns: minmax(270px, 85vw);
+    align-items: stretch;
+  }
+
+  .board-lane {
+    flex-basis: min(270px, 85vw);
   }
 
   .public-jobs-header {
