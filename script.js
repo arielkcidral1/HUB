@@ -2438,6 +2438,52 @@ function showConfirmActionModal({ title, text, confirmText = "Confirmar", danger
   overlay.querySelector('[data-action="modal-confirm"]').focus();
 }
 
+function showTextInputModal({ title, label, initialValue = "", placeholder = "", confirmText = "Salvar", errorText = "Preencha este campo.", validate, onConfirm }) {
+  const existing = document.getElementById("custom-modal");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "custom-modal";
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header info">${escapeHtml(title)}</div>
+      <form id="modal-text-input-form">
+        <div class="modal-body">
+          <label>${escapeHtml(label)}
+            <input name="modal_text_value" value="${escapeHtml(initialValue)}" placeholder="${escapeHtml(placeholder)}" autocomplete="off" required />
+          </label>
+          <p class="form-feedback error" id="modal-text-input-error" hidden>${escapeHtml(errorText)}</p>
+        </div>
+        <div class="modal-footer modal-footer-split">
+          <button class="secondary-link" type="button" data-action="close-modal">Cancelar</button>
+          <button class="primary-button" type="submit">${escapeHtml(confirmText)}</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  const close = () => overlay.remove();
+  const input = overlay.querySelector("input[name='modal_text_value']");
+  const error = overlay.querySelector("#modal-text-input-error");
+  overlay.querySelector('[data-action="close-modal"]').addEventListener("click", close);
+  overlay.querySelector("#modal-text-input-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const value = String(input.value || "").trim();
+    if (!value || (typeof validate === "function" && !validate(value))) {
+      if (error) error.hidden = false;
+      input.focus();
+      return;
+    }
+    await onConfirm(value);
+    close();
+  });
+
+  document.body.appendChild(overlay);
+  input.focus();
+  input.select();
+}
+
 function showPublicVagaFiltersModal() {
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
@@ -11443,20 +11489,22 @@ document.addEventListener('click', async (event) => {
       const listIndex = Number(target.dataset.listIndex);
       const list = board?.listas?.[listIndex];
       if (!board || !list) break;
-      const nextTitle = prompt("Novo nome da coluna:", list.titulo || "");
-      if (nextTitle === null) break;
-      const cleanTitle = nextTitle.trim();
-      if (!cleanTitle) break;
-      const hasDuplicateTitle = board.listas.some((item, index) =>
-        index !== listIndex && normalizeSettingsText(item.titulo) === normalizeSettingsText(cleanTitle)
-      );
-      if (hasDuplicateTitle) {
-        showModal("Nome repetido", "Ja existe uma coluna com esse nome neste quadro.", "error");
-        break;
-      }
-      list.titulo = cleanTitle;
-      closeBoardLaneContextMenu();
-      await persistBoards(board);
+      showTextInputModal({
+        title: "Renomear coluna",
+        label: "Novo nome da coluna",
+        initialValue: list.titulo || "",
+        placeholder: "Nome da coluna",
+        confirmText: "Salvar",
+        errorText: "Informe um nome diferente para a coluna.",
+        validate: (value) => !board.listas.some((item, index) =>
+          index !== listIndex && normalizeSettingsText(item.titulo) === normalizeSettingsText(value)
+        ),
+        onConfirm: async (value) => {
+          list.titulo = value;
+          closeBoardLaneContextMenu();
+          await persistBoards(board);
+        },
+      });
       break;
     }
     case 'duplicate-board-lane': {
@@ -11500,14 +11548,19 @@ document.addEventListener('click', async (event) => {
     case 'rename-board': {
       const board = data.quadros?.find((item) => String(item.id) === String(id));
       if (!board) break;
-      const nextName = prompt("Novo nome do quadro:", board.nome || "");
-      if (nextName === null) break;
-      const cleanName = nextName.trim();
-      if (!cleanName) break;
-      board.nome = cleanName;
-      closeBoardContextMenu();
-      resetBoardCardFormIfEditing();
-      await persistBoards(board);
+      showTextInputModal({
+        title: "Renomear quadro",
+        label: "Novo nome do quadro",
+        initialValue: board.nome || "",
+        placeholder: "Nome do quadro",
+        confirmText: "Salvar",
+        onConfirm: async (value) => {
+          board.nome = value;
+          closeBoardContextMenu();
+          resetBoardCardFormIfEditing();
+          await persistBoards(board);
+        },
+      });
       break;
     }
     case 'duplicate-board': {
