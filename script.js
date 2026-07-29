@@ -11483,11 +11483,18 @@ document.addEventListener('click', async (event) => {
       const message = cardCount
         ? `Apagar "${list.titulo || "esta coluna"}"? Os ${cardCount} cartao(oes) desta coluna tambem serao removidos.`
         : `Apagar "${list.titulo || "esta coluna"}"?`;
-      if (!confirm(message)) break;
-      resetBoardCardFormIfEditing();
-      board.listas.splice(listIndex, 1);
-      closeBoardLaneContextMenu();
-      await persistBoards(board);
+      showConfirmActionModal({
+        title: "Apagar coluna",
+        text: message,
+        confirmText: "Apagar",
+        danger: true,
+        onConfirm: async () => {
+          resetBoardCardFormIfEditing();
+          board.listas.splice(listIndex, 1);
+          closeBoardLaneContextMenu();
+          await persistBoards(board);
+        },
+      });
       break;
     }
     case 'rename-board': {
@@ -11534,26 +11541,33 @@ document.addEventListener('click', async (event) => {
     case 'delete-board': {
       ensureBoardsData();
       if (data.quadros.length <= 1) {
-        alert("E preciso manter pelo menos um quadro.");
+        showModal("Quadro obrigatorio", "E preciso manter pelo menos um quadro.", "error");
         closeBoardContextMenu();
         break;
       }
       const boardIndex = data.quadros.findIndex((item) => String(item.id) === String(id));
       if (boardIndex < 0) break;
       const boardName = data.quadros[boardIndex].nome || "este quadro";
-      if (!confirm(`Apagar "${boardName}"? Os cartoes deste quadro tambem serao removidos.`)) break;
-      closeBoardContextMenu();
-      resetBoardCardFormIfEditing();
-      if (isAuthenticated()) {
-        const deleted = await deleteItem("quadros", id);
-        if (!deleted) break;
-        activeBoardId = data.quadros[Math.max(0, boardIndex - 1)]?.id || data.quadros[0]?.id || "";
-        renderBoards();
-        break;
-      }
-      data.quadros.splice(boardIndex, 1);
-      activeBoardId = data.quadros[Math.max(0, boardIndex - 1)]?.id || data.quadros[0]?.id || "";
-      await persistBoards(getActiveBoard());
+      showConfirmActionModal({
+        title: "Apagar quadro",
+        text: `Apagar "${boardName}"? Os cartoes deste quadro tambem serao removidos.`,
+        confirmText: "Apagar",
+        danger: true,
+        onConfirm: async () => {
+          closeBoardContextMenu();
+          resetBoardCardFormIfEditing();
+          if (isAuthenticated()) {
+            const deleted = await deleteItem("quadros", id);
+            if (!deleted) return;
+            activeBoardId = data.quadros[Math.max(0, boardIndex - 1)]?.id || data.quadros[0]?.id || "";
+            renderBoards();
+            return;
+          }
+          data.quadros.splice(boardIndex, 1);
+          activeBoardId = data.quadros[Math.max(0, boardIndex - 1)]?.id || data.quadros[0]?.id || "";
+          await persistBoards(getActiveBoard());
+        },
+      });
       break;
     }
     case 'move-board-card': {
@@ -12754,26 +12768,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const feedbackId = button.dataset.feedbackDeleteId;
         if (!feedbackId) return;
 
-        const confirmed = window.confirm("Deseja excluir este envio? Esta ação não poderá ser desfeita.");
-        if (!confirmed) return;
+        showConfirmActionModal({
+          title: "Excluir envio",
+          text: "Deseja excluir este envio? Esta acao nao podera ser desfeita.",
+          confirmText: "Excluir",
+          danger: true,
+          onConfirm: async () => {
+            const originalText = button.textContent || "Excluir envio";
+            button.disabled = true;
+            button.textContent = "Excluindo...";
 
-        const originalText = button.textContent || "Excluir envio";
-        button.disabled = true;
-        button.textContent = "Excluindo...";
+            const result = await deleteFeedback(feedbackId);
 
-        const result = await deleteFeedback(feedbackId);
+            showModal?.(
+              "Envio excluido",
+              result.deletedOnSupabase
+                ? "Seu envio foi excluido com sucesso."
+                : "O envio foi removido localmente. Se ele ainda aparecer em outro dispositivo, confirme a permissao DELETE no Supabase.",
+              result.deletedOnSupabase ? "success" : "info"
+            );
 
-        showModal?.(
-          "Envio excluído",
-          result.deletedOnSupabase
-            ? "Seu envio foi excluído com sucesso."
-            : "O envio foi removido localmente. Se ele ainda aparecer em outro dispositivo, confirme a permissão DELETE no Supabase.",
-          result.deletedOnSupabase ? "success" : "info"
-        );
-
-        button.disabled = false;
-        button.textContent = originalText;
-        renderFeedbackPanel();
+            button.disabled = false;
+            button.textContent = originalText;
+            renderFeedbackPanel();
+          },
+        });
       });
     });
   }
