@@ -154,6 +154,7 @@ const USER_SETTINGS_DEFAULTS = Object.freeze({
   desktopNotifications: true,
   dashboardNotificationBadges: true,
   keyboardShortcuts: true,
+  hidePersonalBoard: false,
   boardOrder: [],
 });
 const DEFAULT_HUB_SUPABASE = {
@@ -6097,6 +6098,7 @@ function updateUserSetting(key, rawValue) {
   applyUserSettings();
   renderAccountSettings();
   if (key === "dashboardNotificationBadges") renderDashboard();
+  if (key === "hidePersonalBoard") renderBoards();
   if (key === "desktopNotifications" && nextSettings.desktopNotifications) requestDesktopNotificationPermission();
 }
 
@@ -7081,14 +7083,33 @@ function getBoardCardCount(board) {
   return (board?.listas || []).reduce((total, list) => total + (list.cartoes || []).length, 0);
 }
 
+function isCurrentUserPersonalBoard(board = {}) {
+  const boardName = normalizeSettingsText(board.nome);
+  const currentName = normalizeSettingsText(getCurrentUserName());
+  return Boolean(boardName && currentName && boardName === currentName);
+}
+
+function getVisibleBoards() {
+  ensureBoardsData();
+  return currentUserSettings.hidePersonalBoard
+    ? data.quadros.filter((board) => !isCurrentUserPersonalBoard(board))
+    : data.quadros;
+}
+
+function getVisibleActiveBoard() {
+  const visibleBoards = getVisibleBoards();
+  return visibleBoards.find((board) => String(board.id) === String(activeBoardId)) || visibleBoards[0] || null;
+}
+
 function getOrderedBoards() {
   ensureBoardsData();
+  const visibleBoards = getVisibleBoards();
   const order = Array.isArray(currentUserSettings.boardOrder) ? currentUserSettings.boardOrder.map(String) : [];
   if (!order.length) {
-    return [...data.quadros].sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" }));
+    return [...visibleBoards].sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" }));
   }
   const orderIndex = new Map(order.map((id, index) => [String(id), index]));
-  return [...data.quadros].sort((a, b) => {
+  return [...visibleBoards].sort((a, b) => {
     const aIndex = orderIndex.has(String(a.id)) ? orderIndex.get(String(a.id)) : Number.MAX_SAFE_INTEGER;
     const bIndex = orderIndex.has(String(b.id)) ? orderIndex.get(String(b.id)) : Number.MAX_SAFE_INTEGER;
     if (aIndex !== bIndex) return aIndex - bIndex;
@@ -7325,7 +7346,12 @@ function resetBoardCardFormIfEditing(listIndex = null, cardIndex = null) {
 
 function renderBoards() {
   ensureBoardsData();
-  const board = getActiveBoard();
+  const visibleBoards = getVisibleBoards();
+  if (!visibleBoards.some((board) => String(board.id) === String(activeBoardId))) {
+    activeBoardId = visibleBoards[0]?.id || "";
+    resetBoardCardFormIfEditing();
+  }
+  const board = getVisibleActiveBoard();
   const tabs = document.getElementById("board-tabs");
   const lanes = document.getElementById("boards-lanes");
   if (!tabs || !lanes) return;
@@ -7340,7 +7366,9 @@ function renderBoards() {
 
   renderBoardListOptions(board);
   if (!board) {
-    lanes.innerHTML = '<p class="empty-state">Crie um quadro para comecar.</p>';
+    lanes.innerHTML = currentUserSettings.hidePersonalBoard
+      ? '<p class="empty-state">Seu quadro esta privado nesta conta.</p>'
+      : '<p class="empty-state">Crie um quadro para comecar.</p>';
     return;
   }
 
@@ -8587,8 +8615,11 @@ document.getElementById("board-form")?.addEventListener("submit", async (event) 
 
 document.getElementById("board-card-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const board = getActiveBoard();
-  if (!board) return;
+  const board = getVisibleActiveBoard();
+  if (!board) {
+    showModal("Quadro privado", "Seu quadro esta oculto nesta conta. Desative a privacidade do quadro ou selecione outro quadro visivel.", "info");
+    return;
+  }
   const form = event.currentTarget;
   const values = new FormData(form);
   const editListValue = String(values.get("edit_list_index") || "");
