@@ -154,7 +154,6 @@ const USER_SETTINGS_DEFAULTS = Object.freeze({
   desktopNotifications: true,
   dashboardNotificationBadges: true,
   keyboardShortcuts: true,
-  hidePersonalBoard: false,
   boardOrder: [],
 });
 const DEFAULT_HUB_SUPABASE = {
@@ -757,6 +756,9 @@ const AuthHelper = {
   isManager() {
     return normalizeLoginName(this.getRole()) === "gerente";
   },
+  isRh() {
+    return normalizeLoginName(this.getRole()) === "rh";
+  },
   isCashier() {
     const role = normalizeLoginName(this.getRole()).replace(/\s+/g, "");
     return role === "caixa/crediarista" || role === "caixa/credista";
@@ -773,6 +775,10 @@ function getCurrentUserRole() {
 
 function isManagerUser() {
   return AuthHelper.isManager();
+}
+
+function isRhUser() {
+  return AuthHelper.isRh();
 }
 
 function isCashierUser() {
@@ -2858,6 +2864,7 @@ if (collection === "malotes") {
       id: row.id,
       nome: row.nome || "Quadro",
       listas: Array.isArray(row.listas) ? row.listas : [],
+      ownerName: row.owner_name || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
       updatedBy: row.updated_by || "",
       createdAt: formatDate(row.created_at),
@@ -3237,6 +3244,7 @@ function toDbPayload(collection, values) {
     const payload = {
       nome: values.nome || "Quadro",
       listas: values.listas || [],
+      owner_name: values.ownerName || values.owner_name || getCurrentUserName(),
       created_by: values.createdBy || getCurrentUserName(),
       updated_by: values.updatedBy || null,
     };
@@ -6138,7 +6146,6 @@ function updateUserSetting(key, rawValue) {
   applyUserSettings();
   renderAccountSettings();
   if (key === "dashboardNotificationBadges") renderDashboard();
-  if (key === "hidePersonalBoard") renderBoards();
   if (key === "desktopNotifications" && nextSettings.desktopNotifications) requestDesktopNotificationPermission();
 }
 
@@ -7089,10 +7096,11 @@ function renderChamadosSection() {
   }
 }
 
-function createDefaultBoard(nome, createdBy = getCurrentUserName()) {
+function createDefaultBoard(nome, createdBy = getCurrentUserName(), ownerName = getCurrentUserName()) {
   return {
     id: generateUUID(),
     nome: String(nome || "Quadro").trim() || "Quadro",
+    ownerName: String(ownerName || getCurrentUserName()).trim() || getCurrentUserName(),
     listas: [
       { id: generateUUID(), titulo: "A fazer", cartoes: [] },
       { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
@@ -7122,18 +7130,25 @@ function ensureBoardsData() {
 function hasBoardNamed(nome) {
   const normalizedName = normalizeSettingsText(nome);
   if (!normalizedName) return true;
-  return (data.quadros || []).some((board) => normalizeSettingsText(board.nome) === normalizedName);
+  return (data.quadros || []).some((board) =>
+    normalizeSettingsText(board.ownerName || board.nome) === normalizedName ||
+    (!board.ownerName && normalizeSettingsText(board.nome) === normalizedName)
+  );
 }
 
 async function ensurePersonalBoardsForUsers({ persist = isAuthenticated(), render = false } = {}) {
   ensureRequiredTeamUsers();
   ensureBoardsData();
-  const missingBoards = (data.usuarios || [])
+  const currentUserName = normalizeSettingsText(getCurrentUserName());
+  const usersForBoards = isRhUser()
+    ? (data.usuarios || [])
+    : (data.usuarios || []).filter((user) => normalizeSettingsText(user.nome) === currentUserName);
+  const missingBoards = usersForBoards
     .map((user) => String(user.nome || "").trim())
     .filter(Boolean)
     .filter((nome, index, names) => names.findIndex((item) => normalizeSettingsText(item) === normalizeSettingsText(nome)) === index)
     .filter((nome) => !hasBoardNamed(nome))
-    .map((nome) => createDefaultBoard(nome, "Auto-Sync"));
+    .map((nome) => createDefaultBoard(nome, "Auto-Sync", nome));
 
   if (!missingBoards.length) return [];
 
@@ -7167,27 +7182,20 @@ function getBoardCardCount(board) {
   return (board?.listas || []).reduce((total, list) => total + (list.cartoes || []).length, 0);
 }
 
+function getBoardOwnerName(board = {}) {
+  const createdBy = normalizeSettingsText(board.createdBy);
+  return board.ownerName || (!["auto-sync", "sistema", "system"].includes(createdBy) ? board.createdBy : "") || board.nome;
+}
+
 function isCurrentUserPersonalBoard(board = {}) {
-  const boardName = normalizeSettingsText(board.nome);
+  const boardName = normalizeSettingsText(getBoardOwnerName(board));
   const currentName = normalizeSettingsText(getCurrentUserName());
   return Boolean(boardName && currentName && boardName === currentName);
 }
 
-function findBoardOwnerUser(board = {}) {
-  const boardName = normalizeSettingsText(board.nome);
-  if (!boardName) return null;
-  return (data.usuarios || []).find((user) => normalizeSettingsText(user.nome) === boardName) || null;
-}
-
-function isBoardHiddenByOwnerPrivacy(board = {}) {
-  if (isCurrentUserPersonalBoard(board)) return false;
-  const owner = findBoardOwnerUser(board);
-  return Boolean(owner?.configuracoes?.hidePersonalBoard);
-}
-
 function getVisibleBoards() {
   ensureBoardsData();
-  return data.quadros.filter((board) => !isBoardHiddenByOwnerPrivacy(board));
+  return data.quadros.filter((board) => isCurrentUserPersonalBoard(board));
 }
 
 function getVisibleActiveBoard() {

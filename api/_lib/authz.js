@@ -1,6 +1,10 @@
 
 export function normalizeName(value) {
-  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-");
 }
 
 export function isRh(user) {
@@ -33,6 +37,12 @@ export function canAccessChatChannel(user, channelId) {
 const rhOnly = { read: (user) => isRh(user), write: (user) => isRh(user) };
 const rhOrManager = { read: (user) => isRh(user) || isManager(user), write: (user) => isRh(user) || isManager(user) };
 
+function isOwnedBoard(user, row) {
+  const createdBy = normalizeName(row?.created_by);
+  const ownerName = row?.owner_name || (!["auto-sync", "sistema", "system"].includes(createdBy) ? row?.created_by : "") || row?.nome;
+  return normalizeName(ownerName) === normalizeName(user?.nome);
+}
+
 export const RECORD_RULES = {
   denuncias: { table: "hub_denuncias", ...rhOnly },
   comunicados: {
@@ -44,7 +54,7 @@ export const RECORD_RULES = {
   },
   malotes: { table: "hub_malotes", jsonbColumns: ["colaboradores"], ...rhOnly },
   chamados: { table: "hub_chamados", ...rhOnly },
-  quadros: { table: "hub_quadros", jsonbColumns: ["listas"], ...rhOrManager },
+  quadros: { table: "hub_quadros", jsonbColumns: ["listas"], ...rhOrManager, canReadRow: isOwnedBoard },
   vagas: { table: "hub_vagas", ...rhOnly },
   eventos: { table: "hub_eventos", ...rhOnly },
   vtRegistros: { table: "hub_vt_registros", ...rhOnly },

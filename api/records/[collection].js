@@ -1,7 +1,7 @@
 import { sql } from "../_lib/db.js";
 import { json, corsHeaders } from "../_lib/cors.js";
 import { requireUser } from "../_lib/jwt.js";
-import { RECORD_RULES } from "../_lib/authz.js";
+import { RECORD_RULES, isRh, normalizeName } from "../_lib/authz.js";
 
 export const config = { runtime: "edge" };
 
@@ -29,6 +29,7 @@ async function ensureCollectionTable(rule) {
       id uuid primary key default gen_random_uuid(),
       nome text not null check (char_length(btrim(nome)) between 1 and 120),
       listas jsonb not null default '[]'::jsonb,
+      owner_name text,
       created_by text,
       updated_by text,
       created_at timestamptz not null default now()
@@ -36,10 +37,12 @@ async function ensureCollectionTable(rule) {
   `, []);
   await sql(`alter table public.hub_quadros add column if not exists nome text`, []);
   await sql(`alter table public.hub_quadros add column if not exists listas jsonb not null default '[]'::jsonb`, []);
+  await sql(`alter table public.hub_quadros add column if not exists owner_name text`, []);
   await sql(`alter table public.hub_quadros add column if not exists created_by text`, []);
   await sql(`alter table public.hub_quadros add column if not exists updated_by text`, []);
   await sql(`alter table public.hub_quadros add column if not exists created_at timestamptz not null default now()`, []);
   await sql(`create index if not exists idx_hub_quadros_created_at on public.hub_quadros (created_at desc)`, []);
+  await sql(`create index if not exists idx_hub_quadros_owner_name on public.hub_quadros (lower(owner_name))`, []);
 }
 
 export default async function handler(request) {
@@ -64,6 +67,12 @@ export default async function handler(request) {
   if (request.method === "POST") {
     let body;
     try { body = await request.json(); } catch { return json(request, 400, { error: "Requisicao invalida." }); }
+    if (collection === "quadros") {
+      body.owner_name = isRh(user) && body.owner_name ? body.owner_name : user.nome;
+      const existingRows = await sql(`select * from ${rule.table} where lower(nome) = lower($1)`, [body.nome || "Quadro"]);
+      const existingBoard = existingRows.find((row) => normalizeName(row.owner_name || row.nome) === normalizeName(body.owner_name));
+      if (existingBoard) return json(request, 200, { data: existingBoard });
+    }
     if (!rule.write(user, body)) return json(request, 403, { error: "Sem permissao para criar este registro." });
 
     const columns = safeColumns(body);

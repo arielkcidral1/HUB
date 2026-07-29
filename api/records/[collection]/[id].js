@@ -29,6 +29,7 @@ async function ensureCollectionTable(rule) {
       id uuid primary key default gen_random_uuid(),
       nome text not null check (char_length(btrim(nome)) between 1 and 120),
       listas jsonb not null default '[]'::jsonb,
+      owner_name text,
       created_by text,
       updated_by text,
       created_at timestamptz not null default now()
@@ -36,10 +37,12 @@ async function ensureCollectionTable(rule) {
   `, []);
   await sql(`alter table public.hub_quadros add column if not exists nome text`, []);
   await sql(`alter table public.hub_quadros add column if not exists listas jsonb not null default '[]'::jsonb`, []);
+  await sql(`alter table public.hub_quadros add column if not exists owner_name text`, []);
   await sql(`alter table public.hub_quadros add column if not exists created_by text`, []);
   await sql(`alter table public.hub_quadros add column if not exists updated_by text`, []);
   await sql(`alter table public.hub_quadros add column if not exists created_at timestamptz not null default now()`, []);
   await sql(`create index if not exists idx_hub_quadros_created_at on public.hub_quadros (created_at desc)`, []);
+  await sql(`create index if not exists idx_hub_quadros_owner_name on public.hub_quadros (lower(owner_name))`, []);
 }
 
 export default async function handler(request) {
@@ -59,9 +62,16 @@ export default async function handler(request) {
   const canWrite = rule.updateDelete ? rule.updateDelete(user) : rule.write(user);
   if (!canWrite) return json(request, 403, { error: "Sem permissao para alterar este registro." });
 
+  if (rule.canReadRow) {
+    const existingRows = await sql(`select * from ${rule.table} where id = $1 limit 1`, [id]);
+    if (!existingRows.length) return json(request, 404, { error: "Registro nao encontrado." });
+    if (!rule.canReadRow(user, existingRows[0])) return json(request, 403, { error: "Sem permissao para alterar este registro." });
+  }
+
   if (request.method === "PATCH") {
     let body;
     try { body = await request.json(); } catch { return json(request, 400, { error: "Requisicao invalida." }); }
+    if (collection === "quadros") delete body.owner_name;
     const columns = safeColumns(body);
     if (!columns.length) return json(request, 400, { error: "Nenhum campo para atualizar." });
     const assignments = columns.map((column, index) => `${column} = ${sqlPlaceholder(column, index, rule)}`).join(", ");
