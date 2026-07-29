@@ -31,6 +31,7 @@ export function canAccessChatChannel(user, channelId) {
 }
 
 const rhOnly = { read: (user) => isRh(user), write: (user) => isRh(user) };
+const rhOrManager = { read: (user) => isRh(user) || isManager(user), write: (user) => isRh(user) || isManager(user) };
 
 export const RECORD_RULES = {
   denuncias: { table: "hub_denuncias", ...rhOnly },
@@ -43,7 +44,7 @@ export const RECORD_RULES = {
   },
   malotes: { table: "hub_malotes", jsonbColumns: ["colaboradores"], ...rhOnly },
   chamados: { table: "hub_chamados", ...rhOnly },
-  quadros: { table: "hub_quadros", jsonbColumns: ["listas"], ...rhOnly },
+  quadros: { table: "hub_quadros", jsonbColumns: ["listas"], ...rhOrManager },
   vagas: { table: "hub_vagas", ...rhOnly },
   eventos: { table: "hub_eventos", ...rhOnly },
   vtRegistros: { table: "hub_vt_registros", ...rhOnly },
@@ -51,8 +52,7 @@ export const RECORD_RULES = {
   documentos: {
     table: "hub_documentos",
     jsonbColumns: ["dados"],
-    read: (user) => isRh(user) || isManager(user),
-    write: (user) => isRh(user) || isManager(user),
+    ...rhOrManager,
   },
   candidaturas: { table: "hub_candidaturas", ...rhOnly },
   atestados: { table: "hub_atestados", ...rhOnly },

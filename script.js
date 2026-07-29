@@ -3108,6 +3108,11 @@ function renderRealtimeUpdate(collection) {
 
   if (collection === "usuarios") {
     ensureRequiredTeamUsers();
+    if (!isCashierUser()) {
+      ensurePersonalBoardsForUsers({ persist: true, render: true }).catch((error) => {
+        console.error("Erro ao criar quadros pessoais:", error);
+      });
+    }
     renderDashboard();
     renderTeamUsers();
     renderChatChannels();
@@ -3421,6 +3426,7 @@ async function loadFromSupabase(options = {}) {
       if (ok) data[collection] = rows;
     });
     ensureRequiredTeamUsers();
+    if (!isCashierUser()) await ensurePersonalBoardsForUsers({ persist: true, render: false });
     saveLocalData();
     if (setupLive) {
       setupAutoRefresh();
@@ -4402,6 +4408,7 @@ async function saveTeamUser(values) {
 
   if (!isAuthenticated()) {
     upsertLocalUser({ nome, email, cargo, syncStatus: "active" });
+    await ensurePersonalBoardsForUsers({ persist: false, render: true });
     return true;
   }
 
@@ -4420,12 +4427,14 @@ async function saveTeamUser(values) {
 
     const mapped = mapRows("usuarios", [saved])[0] || { nome, email, cargo, createdAt: todayLabel() };
     upsertLocalUser({ ...mapped, email: mapped.email || email, cpf: mapped.cpf || cpf, cargo: mapped.cargo || cargo, syncStatus: "active" });
+    await ensurePersonalBoardsForUsers({ persist: true, render: true });
     setSyncStatus("HUB online", true);
     showModal("Perfil salvo", "Defina uma senha para esse usuario (via fluxo de redefinicao de senha) para liberar o login.", "info");
     return true;
   } catch (error) {
     console.error("Erro ao salvar usuario:", error);
     upsertLocalUser({ nome, email, cargo, syncStatus: "local" });
+    await ensurePersonalBoardsForUsers({ persist: false, render: true });
     setSyncStatus("Usuario salvo local", false);
     showModal("Aviso de Banco de Dados", "O perfil foi salvo localmente. Tente novamente mais tarde.", "error");
     return true;
@@ -5301,7 +5310,7 @@ function applyRoleAccess() {
   const allowedViews = isCashierUser()
     ? new Set(["comunicacao", "conta"])
     : isManagerUser()
-    ? new Set(["comunicacao", "documentos", "advertencias-suspensoes", "conta"])
+    ? new Set(["comunicacao", "quadros", "documentos", "conta"])
     : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
@@ -7080,19 +7089,24 @@ function renderChamadosSection() {
   }
 }
 
+function createDefaultBoard(nome, createdBy = getCurrentUserName()) {
+  return {
+    id: generateUUID(),
+    nome: String(nome || "Quadro").trim() || "Quadro",
+    listas: [
+      { id: generateUUID(), titulo: "A fazer", cartoes: [] },
+      { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
+      { id: generateUUID(), titulo: "Concluido", cartoes: [] },
+    ],
+    createdAt: todayLabel(),
+    createdBy,
+  };
+}
+
 function ensureBoardsData() {
   if (!Array.isArray(data.quadros)) data.quadros = [];
   if (!data.quadros.length) {
-    data.quadros.push({
-      id: generateUUID(),
-      nome: "Quadro principal",
-      listas: [
-        { id: generateUUID(), titulo: "A fazer", cartoes: [] },
-        { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
-        { id: generateUUID(), titulo: "Concluido", cartoes: [] },
-      ],
-      createdAt: todayLabel(),
-    });
+    data.quadros.push(createDefaultBoard("Quadro principal"));
   }
   data.quadros.forEach((board) => {
     if (!Array.isArray(board.listas)) board.listas = [];
@@ -7103,6 +7117,45 @@ function ensureBoardsData() {
   if (!activeBoardId || !data.quadros.some((board) => String(board.id) === String(activeBoardId))) {
     activeBoardId = data.quadros[0]?.id || "";
   }
+}
+
+function hasBoardNamed(nome) {
+  const normalizedName = normalizeSettingsText(nome);
+  if (!normalizedName) return true;
+  return (data.quadros || []).some((board) => normalizeSettingsText(board.nome) === normalizedName);
+}
+
+async function ensurePersonalBoardsForUsers({ persist = isAuthenticated(), render = false } = {}) {
+  ensureRequiredTeamUsers();
+  ensureBoardsData();
+  const missingBoards = (data.usuarios || [])
+    .map((user) => String(user.nome || "").trim())
+    .filter(Boolean)
+    .filter((nome, index, names) => names.findIndex((item) => normalizeSettingsText(item) === normalizeSettingsText(nome)) === index)
+    .filter((nome) => !hasBoardNamed(nome))
+    .map((nome) => createDefaultBoard(nome, "Auto-Sync"));
+
+  if (!missingBoards.length) return [];
+
+  data.quadros.push(...missingBoards);
+  saveLocalData();
+
+  if (persist && !isCashierUser()) {
+    const results = await Promise.allSettled(
+      missingBoards.map((board) => hubApi.insert("quadros", toDbPayload("quadros", board)))
+    );
+    results.forEach((result, index) => {
+      if (result.status !== "fulfilled") return;
+      const mapped = mapRows("quadros", [result.value])[0];
+      if (!mapped) return;
+      const localIndex = data.quadros.findIndex((board) => String(board.id) === String(missingBoards[index].id));
+      if (localIndex >= 0) data.quadros[localIndex] = mapped;
+    });
+    saveLocalData();
+  }
+
+  if (render) renderBoards();
+  return missingBoards;
 }
 
 function getActiveBoard() {
@@ -8423,7 +8476,7 @@ document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
       closeMobileMenu();
       return;
     }
-    if (isManagerUser() && !["comunicacao", "documentos", "advertencias-suspensoes", "conta"].includes(button.dataset.view)) {
+    if (isManagerUser() && !["comunicacao", "quadros", "documentos", "conta"].includes(button.dataset.view)) {
       activateView("documentos");
       closeMobileMenu();
       return;
@@ -8619,17 +8672,7 @@ document.getElementById("board-form")?.addEventListener("submit", async (event) 
   const nome = String(new FormData(form).get("nome") || "").trim();
   if (!nome) return;
   ensureBoardsData();
-  const board = {
-    id: generateUUID(),
-    nome,
-    listas: [
-      { id: generateUUID(), titulo: "A fazer", cartoes: [] },
-      { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
-      { id: generateUUID(), titulo: "Concluido", cartoes: [] },
-    ],
-    createdAt: todayLabel(),
-    createdBy: getCurrentUserName(),
-  };
+  const board = createDefaultBoard(nome);
   if (isAuthenticated()) {
     try {
       const inserted = await hubApi.insert("quadros", toDbPayload("quadros", board));
@@ -10157,6 +10200,7 @@ function setupPresencePolling() {
       const rows = await hubApi.list("usuarios");
       const fresh = mapRows("usuarios", rows || []);
       data.usuarios = mergeUsersByName(data.usuarios || [], fresh);
+      if (!isCashierUser()) await ensurePersonalBoardsForUsers({ persist: true, render: false });
       renderChatChannels();
       const visibleBoardIdsAfter = getVisibleBoards().map((board) => String(board.id)).join("|");
       if (visibleBoardIdsBefore !== visibleBoardIdsAfter) renderBoards();
