@@ -3694,14 +3694,33 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 .disciplinary-filter-bar {
-  grid-template-columns: auto auto auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: end;
+  gap: 8px;
   width: 100%;
 }
 
 .disciplinary-filter-fields {
-  grid-template-columns: 110px 150px 120px 140px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  width: max-content;
+  max-width: 100%;
+}
+
+.disciplinary-filter-fields input,
+.disciplinary-filter-fields select {
+  width: 150px;
+}
+
+.disciplinary-filter-fields #disciplinary-filter-name {
+  width: 110px;
+}
+
+.disciplinary-filter-fields #disciplinary-filter-unit {
+  width: 120px;
 }
 
 .disciplinary-filter-bar + #disciplinary-records {
