@@ -1520,16 +1520,18 @@ textarea {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 10px;
-  min-width: 0;
+  gap: 6px;
+  justify-self: start;
+  width: 72px;
+  min-width: 72px;
   min-height: 420px;
   border: 1px dashed var(--teal-border);
   border-radius: 12px;
-  background: var(--surface-2);
+  background: transparent;
   color: var(--teal-text);
   cursor: pointer;
-  opacity: 0.58;
-  padding: 12px;
+  opacity: 0.22;
+  padding: 8px;
   text-align: center;
   transition: opacity 0.18s ease, border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
 }
@@ -1538,7 +1540,7 @@ textarea {
 .board-add-lane-button:focus-visible {
   border-color: var(--teal);
   background: var(--teal-surface);
-  opacity: 0.9;
+  opacity: 0.68;
   outline: none;
   transform: translateY(-1px);
 }
@@ -1546,18 +1548,26 @@ textarea {
 .board-add-lane-button span {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--teal-border);
   border-radius: 999px;
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1;
 }
 
 .board-add-lane-button strong {
   color: var(--ink);
-  font-size: 14px;
+  font-size: 11px;
+  line-height: 1.15;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.board-add-lane-button:hover strong,
+.board-add-lane-button:focus-visible strong {
+  opacity: 1;
 }
 
 .board-lane.drag-over {
