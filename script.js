@@ -7538,6 +7538,56 @@ function resetBoardCardFormIfEditing(listIndex = null, cardIndex = null) {
   if (shouldReset) resetBoardCardForm();
 }
 
+function showAddBoardLaneModal() {
+  const board = getVisibleActiveBoard();
+  if (!board) {
+    showModal("Nenhum quadro visivel", "Nao ha quadro disponivel para adicionar colunas no momento.", "info");
+    return;
+  }
+
+  document.getElementById("custom-modal")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "custom-modal";
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-card board-lane-modal">
+      <div class="modal-header info">Nova coluna</div>
+      <form id="board-lane-form">
+        <div class="modal-body">
+          <label>Nome da coluna
+            <input name="titulo" placeholder="Ex.: Revisao" autocomplete="off" required />
+          </label>
+          <p class="form-feedback error" id="board-lane-error" hidden>Informe um nome diferente para a coluna.</p>
+        </div>
+        <div class="modal-footer modal-footer-split">
+          <button class="secondary-link" type="button" data-action="close-modal">Cancelar</button>
+          <button class="primary-button" type="submit">Adicionar</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  overlay.querySelector("#board-lane-form")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const title = String(new FormData(form).get("titulo") || "").trim();
+    const error = overlay.querySelector("#board-lane-error");
+    const hasDuplicateTitle = (board.listas || []).some((list) =>
+      normalizeSettingsText(list.titulo) === normalizeSettingsText(title)
+    );
+    if (!title || hasDuplicateTitle) {
+      if (error) error.hidden = false;
+      return;
+    }
+    board.listas.push({ id: generateUUID(), titulo: title, cartoes: [] });
+    overlay.remove();
+    await persistBoards(board);
+  });
+
+  document.body.appendChild(overlay);
+  overlay.querySelector("input[name='titulo']")?.focus();
+}
+
 function renderBoards() {
   ensureBoardsData();
   const visibleBoards = getVisibleBoards();
@@ -7564,6 +7614,13 @@ function renderBoards() {
     return;
   }
 
+  const addLaneButton = `
+    <button class="board-add-lane-button" type="button" data-action="open-add-board-lane" aria-label="Adicionar coluna">
+      <span aria-hidden="true">+</span>
+      <strong>Nova coluna</strong>
+    </button>
+  `;
+
   lanes.innerHTML = (board.listas || []).map((list, listIndex) => `
     <section class="board-lane" data-list-id="${escapeHtml(list.id)}" data-list-index="${listIndex}">
       <div class="board-lane-header">
@@ -7582,7 +7639,7 @@ function renderBoards() {
         `).join("") || '<p class="empty-state">Nenhum cartao nesta lista.</p>'}
       </div>
     </section>
-  `).join("");
+  `).join("") + addLaneButton;
   renderBoardCardActionMenu();
 }
 
@@ -11316,6 +11373,9 @@ document.addEventListener('click', async (event) => {
       closeBoardContextMenu();
       activeBoardId = id;
       renderBoards();
+      break;
+    case 'open-add-board-lane':
+      showAddBoardLaneModal();
       break;
     case 'rename-board': {
       const board = data.quadros?.find((item) => String(item.id) === String(id));
