@@ -12178,9 +12178,19 @@ function setupMalotesFormScrollGrid() {
   });
 }
 
+function setupEquipeFormScrollGrid() {
+  setupFormScrollGrid({
+    listId: "usuarios-list",
+    formId: "usuario-form",
+    expandedWorkspaceClass: "equipe-workspace-expanded",
+    expandedListClass: "equipe-two-col",
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setupVagasFormScrollGrid();
   setupMalotesFormScrollGrid();
+  setupEquipeFormScrollGrid();
 });
 
 window.addEventListener("storage", (event) => {
