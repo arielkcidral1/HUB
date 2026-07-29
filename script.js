@@ -2915,6 +2915,7 @@ if (collection === "malotes") {
       cpf: row.cpf || "",
       cargo: row.cargo || "",
       foto_perfil: row.foto_perfil || "",
+      configuracoes: row.configuracoes || {},
       lastSeen: row.last_seen || "",
       isOnline: Boolean(row.is_online),
       createdBy: row.created_by || getSystemFallbackAuthor(),
@@ -3086,6 +3087,7 @@ function renderRealtimeUpdate(collection) {
     renderTeamUsers();
     renderChatChannels();
     renderChat();
+    renderBoards();
     return;
   }
 
@@ -6095,6 +6097,10 @@ function updateUserSetting(key, rawValue) {
   const value = typeof USER_SETTINGS_DEFAULTS[key] === "boolean" ? Boolean(rawValue) : rawValue;
   const nextSettings = normalizeUserSettings({ ...currentUserSettings, [key]: value });
   saveUserSettings(nextSettings);
+  const currentUserKey = normalizeLoginName(getCurrentUserName());
+  data.usuarios = (data.usuarios || []).map((user) =>
+    normalizeLoginName(user.nome) === currentUserKey ? { ...user, configuracoes: nextSettings } : user
+  );
   applyUserSettings();
   renderAccountSettings();
   if (key === "dashboardNotificationBadges") renderDashboard();
@@ -7089,11 +7095,21 @@ function isCurrentUserPersonalBoard(board = {}) {
   return Boolean(boardName && currentName && boardName === currentName);
 }
 
+function findBoardOwnerUser(board = {}) {
+  const boardName = normalizeSettingsText(board.nome);
+  if (!boardName) return null;
+  return (data.usuarios || []).find((user) => normalizeSettingsText(user.nome) === boardName) || null;
+}
+
+function isBoardHiddenByOwnerPrivacy(board = {}) {
+  if (isCurrentUserPersonalBoard(board)) return false;
+  const owner = findBoardOwnerUser(board);
+  return Boolean(owner?.configuracoes?.hidePersonalBoard);
+}
+
 function getVisibleBoards() {
   ensureBoardsData();
-  return currentUserSettings.hidePersonalBoard
-    ? data.quadros.filter((board) => !isCurrentUserPersonalBoard(board))
-    : data.quadros;
+  return data.quadros.filter((board) => !isBoardHiddenByOwnerPrivacy(board));
 }
 
 function getVisibleActiveBoard() {
@@ -7366,9 +7382,7 @@ function renderBoards() {
 
   renderBoardListOptions(board);
   if (!board) {
-    lanes.innerHTML = currentUserSettings.hidePersonalBoard
-      ? '<p class="empty-state">Seu quadro esta privado nesta conta.</p>'
-      : '<p class="empty-state">Crie um quadro para comecar.</p>';
+    lanes.innerHTML = '<p class="empty-state">Nenhum quadro visivel no momento.</p>';
     return;
   }
 
@@ -8617,7 +8631,7 @@ document.getElementById("board-card-form")?.addEventListener("submit", async (ev
   event.preventDefault();
   const board = getVisibleActiveBoard();
   if (!board) {
-    showModal("Quadro privado", "Seu quadro esta oculto nesta conta. Desative a privacidade do quadro ou selecione outro quadro visivel.", "info");
+    showModal("Nenhum quadro visivel", "Nao ha quadro disponivel para adicionar cartoes no momento.", "info");
     return;
   }
   const form = event.currentTarget;
@@ -10098,10 +10112,13 @@ function setupPresencePolling() {
   const poll = async () => {
     if (!isAuthenticated()) return;
     try {
+      const visibleBoardIdsBefore = getVisibleBoards().map((board) => String(board.id)).join("|");
       const rows = await hubApi.list("usuarios");
       const fresh = mapRows("usuarios", rows || []);
       data.usuarios = mergeUsersByName(data.usuarios || [], fresh);
       renderChatChannels();
+      const visibleBoardIdsAfter = getVisibleBoards().map((board) => String(board.id)).join("|");
+      if (visibleBoardIdsBefore !== visibleBoardIdsAfter) renderBoards();
     } catch (_) {
       // mantem o ultimo estado conhecido se a requisicao falhar
     }
