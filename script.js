@@ -5069,7 +5069,7 @@ function createVtReportXlsxBlob(rows) {
 
 function buildDisciplinaryReportWorksheet(rows, type = getActiveDisciplinaryType()) {
   const typeLabel = getDisciplinaryTypeLabel(type);
-  const headers = ["Nome", "Data", "Unidade", "Observacao"];
+  const headers = ["Nome", "Data", "Unidade"];
   const sheetRows = [
     worksheetRowXml([`Relatorio de ${typeLabel}`], 1, 2),
     worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
@@ -5078,20 +5078,18 @@ function buildDisciplinaryReportWorksheet(rows, type = getActiveDisciplinaryType
       item.nome,
       item.dataMedida,
       item.unidade,
-      item.observacoes,
     ], index + 6)),
   ];
   const lastRow = rows.length + 5;
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="A1:D${lastRow}"/>
+  <dimension ref="A1:C${lastRow}"/>
   <cols>
     <col min="1" max="1" width="30" customWidth="1"/>
     <col min="2" max="3" width="18" customWidth="1"/>
-    <col min="4" max="4" width="42" customWidth="1"/>
   </cols>
   <sheetData>${sheetRows.join("")}</sheetData>
-  <mergeCells count="2"><mergeCell ref="A1:D1"/><mergeCell ref="A2:D2"/></mergeCells>
+  <mergeCells count="2"><mergeCell ref="A1:C1"/><mergeCell ref="A2:C2"/></mergeCells>
 </worksheet>`;
 }
 
@@ -7972,7 +7970,6 @@ function getDisciplinaryFilterValues() {
     nome: String(document.getElementById("disciplinary-filter-name")?.value || "").trim().toLowerCase(),
     data: String(document.getElementById("disciplinary-filter-date")?.value || "").trim().toLowerCase(),
     unidade: String(document.getElementById("disciplinary-filter-unit")?.value || "").trim(),
-    observacoes: String(document.getElementById("disciplinary-filter-notes")?.value || "").trim().toLowerCase(),
   };
 }
 
@@ -7980,7 +7977,7 @@ function updateDisciplinaryFilterClearButton() {
   const clearButton = document.getElementById("clear-disciplinary-filters");
   if (!clearButton) return;
   const filters = getDisciplinaryFilterValues();
-  clearButton.hidden = !Boolean(filters.nome || filters.data || filters.unidade || filters.observacoes);
+  clearButton.hidden = !Boolean(filters.nome || filters.data || filters.unidade);
 }
 
 function matchesDisciplinaryMonthFilter(rawDate, filter) {
@@ -8001,7 +7998,6 @@ function filterDisciplinaryRecords(items = []) {
     if (filters.nome && !String(formData.colaborador || item.summary || "").toLowerCase().includes(filters.nome)) return false;
     if (filters.data && !matchesDisciplinaryMonthFilter(formData.data_medida, filters.data)) return false;
     if (filters.unidade && String(formData.unidade || "") !== filters.unidade) return false;
-    if (filters.observacoes && !String(formData.observacoes || "").toLowerCase().includes(filters.observacoes)) return false;
     return true;
   });
 }
@@ -8013,7 +8009,6 @@ function getDisciplinaryReportFilterLabel(useFilters = true) {
   if (filters.nome) parts.push(`Nome: ${filters.nome}`);
   if (filters.data) parts.push(`Mes: ${filters.data}`);
   if (filters.unidade) parts.push(`Unidade: ${filters.unidade}`);
-  if (filters.observacoes) parts.push(`Observacoes: ${filters.observacoes}`);
   return parts.length ? parts.join(" | ") : "Sem filtros ativos";
 }
 
@@ -8026,7 +8021,6 @@ function getDisciplinaryReportRows(useFilters = true, type = getActiveDisciplina
       nome: formData.colaborador || item.summary || "Funcionario nao informado",
       dataMedida: formatFormDate(formData.data_medida || ""),
       unidade: formData.unidade || "Unidade nao informada",
-      observacoes: formData.observacoes || "",
     };
   });
 }
@@ -8102,7 +8096,6 @@ function renderDisciplinaryRecords() {
     const dateLabel = formData.data_medida ? formatFormDate(formData.data_medida) : "Data nao informada";
     const unidade = formData.unidade || "Unidade nao informada";
     const motivo = formData.motivo || "";
-    const observacoes = formData.observacoes || "Sem observacoes.";
 
     return `
       <article class="item-card">
@@ -8119,7 +8112,6 @@ function renderDisciplinaryRecords() {
         <p><strong>${escapeHtml(item.summary || "Funcionario nao informado")}</strong></p>
         <p class="item-meta">Data: ${escapeHtml(dateLabel)} | Unidade: ${escapeHtml(unidade)}</p>
         ${motivo ? `<p class="item-meta">Motivo: ${escapeHtml(motivo)}</p>` : ""}
-        <p class="item-meta">${escapeHtml(observacoes)}</p>
         ${attachmentUpload}
         <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}${item.updatedAt ? ` em ${escapeHtml(item.updatedAt)}` : ""}</p>
       </article>
@@ -8653,9 +8645,8 @@ document.getElementById("clear-document-filters")?.addEventListener("click", () 
 document.getElementById("disciplinary-filter-name")?.addEventListener("input", renderDisciplinaryRecords);
 document.getElementById("disciplinary-filter-date")?.addEventListener("change", renderDisciplinaryRecords);
 document.getElementById("disciplinary-filter-unit")?.addEventListener("change", renderDisciplinaryRecords);
-document.getElementById("disciplinary-filter-notes")?.addEventListener("input", renderDisciplinaryRecords);
 document.getElementById("clear-disciplinary-filters")?.addEventListener("click", () => {
-  ["disciplinary-filter-name", "disciplinary-filter-date", "disciplinary-filter-unit", "disciplinary-filter-notes"].forEach((id) => {
+  ["disciplinary-filter-name", "disciplinary-filter-date", "disciplinary-filter-unit"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
@@ -8975,9 +8966,8 @@ function editDisciplinaryDocument(id) {
         setFieldValue(form.elements.colaborador, item.formData?.colaborador || item.summary || "");
         setFieldValue(form.elements.data_medida, item.formData?.data_medida || "");
         setFieldValue(form.elements.unidade, item.formData?.unidade || "");
-        setFieldValue(form.elements.local, item.formData?.local || getUnitCity(item.formData?.unidade) || "");
+        setFieldValue(form.elements.local, getUnitCity(item.formData?.unidade) || item.formData?.local || "");
         setFieldValue(form.elements.motivo, item.formData?.motivo || item.formData?.observacoes || "");
-        setFieldValue(form.elements.observacoes, item.formData?.observacoes || "");
         const submitButton = form.querySelector("button[type='submit']");
         if (submitButton) {
           if (!submitButton.dataset.originalText) submitButton.dataset.originalText = submitButton.textContent;
@@ -9025,9 +9015,7 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
   const unitSelect = formElement.querySelector("[name='unidade']");
   const localInput = formElement.querySelector("[name='local']");
   unitSelect?.addEventListener("change", () => {
-    if (localInput && !String(localInput.value || "").trim()) {
-      localInput.value = getUnitCity(unitSelect.value) || "";
-    }
+    if (localInput) localInput.value = getUnitCity(unitSelect.value) || "";
   });
 
   formElement.addEventListener("submit", async (event) => {
@@ -9040,7 +9028,6 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
     const unidade = String(form.get("unidade") || "").trim();
     const local = String(form.get("local") || "").trim();
     const motivo = String(form.get("motivo") || "").trim();
-    const observacoes = String(form.get("observacoes") || "").trim();
     if (!colaborador || !dataMedida || !unidade || !local || !motivo) {
       showModal("Campos obrigatorios", "Informe funcionario, data, unidade, local e motivo para salvar o registro.", "error");
       return;
@@ -9058,8 +9045,8 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
       unidade,
       local,
       motivo,
-      observacoes,
     };
+    delete nextFormData.observacoes;
 
     const success = editingItem
       ? await updateItem("documentos", editingId, {
