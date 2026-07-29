@@ -2,6 +2,9 @@
   "name": "hub",
   "private": true,
   "type": "module",
+  "scripts": {
+    "migrate:supabase-auth-to-neon": "python3 scripts/migrate_supabase_auth_to_neon.py"
+  },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "@vercel/blob": "^0.27.1",
