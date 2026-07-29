@@ -11361,7 +11361,7 @@ document.addEventListener('click', async (event) => {
   if (!event.target.closest("#board-card-action-menu") && !event.target.closest("[data-board-card]")) {
     closeBoardCardActionMenu();
   }
-  if (!event.target.closest("#board-lane-context-menu") && !event.target.closest(".board-lane")) {
+  if (!event.target.closest("#board-lane-context-menu")) {
     closeBoardLaneContextMenu();
   }
   if (!event.target.closest("#record-context-menu") && !event.target.closest("[data-context-type]")) {
