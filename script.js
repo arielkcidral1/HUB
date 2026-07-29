@@ -5317,11 +5317,7 @@ function applyRoleAccess() {
 
   const chamadosUrls = new Set(["chamados.html", "https://hub-opal-nine.vercel.app/chamados.html"]);
   const denunciaUrls = new Set(["denuncia.html", "https://hub-opal-nine.vercel.app/denuncia.html"]);
-  const allowedViews = isCashierUser()
-    ? new Set(["comunicacao", "conta"])
-    : isManagerUser()
-    ? new Set(["comunicacao", "quadros", "documentos", "conta"])
-    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
+  const allowedViews = getAllowedViewsForCurrentUser();
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : isManagerUser()
@@ -5345,6 +5341,18 @@ function applyRoleAccess() {
   if (!activeView || !allowedViews.has(activeView.id)) {
     activateView(isCashierUser() ? "comunicacao" : isManagerUser() ? "documentos" : "dashboard");
   }
+}
+
+function getAllowedViewsForCurrentUser() {
+  if (isCashierUser()) return new Set(["comunicacao", "conta"]);
+  if (isManagerUser()) return new Set(["comunicacao", "quadros", "documentos", "conta"]);
+  return new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
+}
+
+function canCurrentUserAccessView(viewId = "") {
+  const view = String(viewId || "").trim();
+  if (!view) return true;
+  return getAllowedViewsForCurrentUser().has(view);
 }
 
 function isArchivedRecord(item) {
@@ -5417,6 +5425,40 @@ function getDashboardNotificationId(kind, item = {}) {
   return `${kind || "geral"}-${id}`;
 }
 
+function getNotificationViewForType(type = "") {
+  const views = {
+    denuncia: "denuncias",
+    notificacao: "comunicacao",
+    mensagem: "comunicacao",
+    malote: "malotes",
+    chamado: "chamados",
+    vaga: "vagas",
+    evento: "calendario",
+    documento: "documentos",
+    documentoContratado: "documentos-contratados",
+  };
+  return views[type] || "";
+}
+
+function getNotificationViewForCollection(collection = "") {
+  const views = {
+    comunicados: "comunicacao",
+    denuncias: "denuncias",
+    chamados: "chamados",
+    malotes: "malotes",
+    vagas: "vagas",
+    documentos: "documentos",
+    documentosContratados: "documentos-contratados",
+    eventos: "calendario",
+  };
+  return views[collection] || "";
+}
+
+function canCurrentUserAccessNotification(item = {}) {
+  const view = item.view || getNotificationViewForType(item.type || item.kind);
+  return canCurrentUserAccessView(view);
+}
+
 function isDashboardNotificationRead(item = {}) {
   if (!item.notificationId) return false;
   return readNotificationIds.has(String(item.notificationId));
@@ -5470,6 +5512,7 @@ function renderDashboard() {
     const hasUnread = unreadMessageIds.length > 0;
     groupedMessages.push({
       kind: "notificacao",
+      view: "comunicacao",
       notificationId: "mensagens-rh",
       messageIds,
       chatMessages: sortedRhMessagesOldestFirst,
@@ -5496,6 +5539,7 @@ function renderDashboard() {
       .filter(item => item.status === "Aberta" || item.status === "Urgente")
       .map((item) => ({
         kind: "denuncia",
+        view: "denuncias",
         notificationId: getDashboardNotificationId("denuncia", item),
         title: "Denúncia anônima",
         text: item.descricao || "Nova denúncia recebida.",
@@ -5515,6 +5559,7 @@ function renderDashboard() {
           : item.epis || "Não informados";
         return {
           kind: "chamado",
+          view: "chamados",
           notificationId: getDashboardNotificationId("chamado", item),
           title: `Chamado · ${item.unidade}`,
           text: item.epis || "Itens não informados.",
@@ -5535,6 +5580,7 @@ function renderDashboard() {
           : item.epis || "Não informados";
         return {
           kind: "malote",
+          view: "malotes",
           notificationId: getDashboardNotificationId("malote", item),
           title: `Malote · ${item.destino}`,
           text: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
@@ -5550,6 +5596,7 @@ function renderDashboard() {
       .filter((item) => !isArchivedRecord(item))
       .map((item) => ({
         kind: "vaga",
+        view: "vagas",
         notificationId: getDashboardNotificationId("vaga", item),
         title: `Vaga · ${item.cargo}`,
         text: item.descricao || "Vaga atualizada.",
@@ -5564,6 +5611,7 @@ function renderDashboard() {
       .filter((item) => !isArchivedRecord(item))
       .map((item) => ({
         kind: "documento",
+        view: "documentos",
         notificationId: getDashboardNotificationId("documento", item),
         title: `Documento · ${documentLabels[item.type] || item.type}`,
         text: item.summary || "Documento registrado.",
@@ -5576,7 +5624,8 @@ function renderDashboard() {
       })),
   ];
 
-  const sortedDashboardItems = dashboardItems.map((item, index) => ({ ...item, _sortIndex: index }));
+  const accessibleDashboardItems = dashboardItems.filter((item) => canCurrentUserAccessNotification(item));
+  const sortedDashboardItems = accessibleDashboardItems.map((item, index) => ({ ...item, _sortIndex: index }));
   sortedDashboardItems.sort((a, b) => {
     const aRead = isDashboardActivityReadForOrdering(a);
     const bRead = isDashboardActivityReadForOrdering(b);
@@ -6561,6 +6610,7 @@ function updateHubAppBadge(count = 0) {
 const hubNotifiedMessageIds = new Set();
 
 function showHubCrossPageNotification(title, message, options = {}) {
+  if (options.view && !canCurrentUserAccessView(options.view)) return;
 
   const messageIds = options.messageIds || [];
   if (messageIds.length) {
@@ -6673,7 +6723,7 @@ function getRealtimeNotificationText(collection, item = {}) {
       icon: "📄",
       type: "documento",
       tag: `hub-rh-documento-${item.id || Date.now()}`,
-      view: "documentos",
+      view: "documentos-contratados",
     };
   }
 
@@ -6685,6 +6735,8 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
   if (collection === "usuarios" || collection === "eventos" || collection === "vtRegistros") return false;
+  const notificationView = getNotificationViewForCollection(collection);
+  if (notificationView && !canCurrentUserAccessView(notificationView)) return false;
 
   const signature = [collection, action, item.id || "", item.updatedAt || item.updated_at || item.createdAt || item.created_at || ""].join("|");
   if (signature && signature === lastRealtimeNotificationSignature) return false;
@@ -6711,6 +6763,8 @@ function getNotificationPollingCandidates() {
   const allowedCollections = ["comunicados", "denuncias", "chamados", "malotes", "vagas", "documentosContratados"];
 
   allowedCollections.forEach((collection) => {
+    const notificationView = getNotificationViewForCollection(collection);
+    if (notificationView && !canCurrentUserAccessView(notificationView)) return;
     const rows = Array.isArray(sourceData[collection]) ? sourceData[collection] : [];
     rows.forEach((item) => {
       if (!item) return;
@@ -11502,6 +11556,8 @@ class NotificationTracker {
 
     const pushNotification = (item = {}) => {
       const type = item.type || "geral";
+      const view = item.view || this.getViewForType(type);
+      if (!canCurrentUserAccessView(view)) return;
       const originalStatus = item.status || "pending";
       const time = item.time || item.date || item.createdAt || "Recentemente";
       const rawDateTime = item.sortAt || item.updatedSortAt || item.updatedAt || item.createdSortAt || item.createdAt || item.dateTime || item.date || time;
@@ -11520,7 +11576,7 @@ class NotificationTracker {
         dateTime: this.getTimeValue(rawDateTime),
         unread,
         status,
-        view: item.view || this.getViewForType(type),
+        view,
         icon: item.icon || this.getIconForType(type),
         badgeText: unread ? (item.badgeText || this.getBadgeText(status)) : (status === "urgent" ? this.getBadgeText(status) : ""),
         sequence: notifications.length,
@@ -11720,16 +11776,7 @@ class NotificationTracker {
   }
 
   getViewForType(type) {
-    const views = {
-      denuncia: "denuncias",
-      mensagem: "comunicacao",
-      malote: "malotes",
-      chamado: "chamados",
-      vaga: "vagas",
-      evento: "calendario",
-      documento: "documentos",
-    };
-    return views[type] || "dashboard";
+    return getNotificationViewForType(type) || "dashboard";
   }
 
   getIconForType(type) {
