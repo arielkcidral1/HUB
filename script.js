@@ -3370,7 +3370,9 @@ async function loadFromSupabase(options = {}) {
 
   serverDataReady = false;
   try {
-    const localQuadrosBeforeLoad = (data.quadros || []).filter((board) => board?.nome && Array.isArray(board.listas));
+    const localQuadrosBeforeLoad = (data.quadros || [])
+      .filter((board) => board?.nome && Array.isArray(board.listas))
+      .filter((board) => isCurrentUserPersonalBoard(board));
     const userRows = await hubApi.list("usuarios");
     const mappedUsers = mapRows("usuarios", userRows || []);
     const dbNames = mappedUsers.map((user) => normalizeLoginName(user.nome));
@@ -7183,11 +7185,18 @@ function getBoardCardCount(board) {
 }
 
 function getBoardOwnerName(board = {}) {
-  const createdBy = normalizeSettingsText(board.createdBy);
-  return board.ownerName || (!["auto-sync", "sistema", "system"].includes(createdBy) ? board.createdBy : "") || board.nome;
+  return board.ownerName || board.nome;
+}
+
+function isBoardNamedForAnotherUser(board = {}) {
+  const boardName = normalizeSettingsText(board.nome);
+  const currentName = normalizeSettingsText(getCurrentUserName());
+  if (!boardName || boardName === currentName) return false;
+  return (data.usuarios || []).some((user) => normalizeSettingsText(user.nome) === boardName && boardName !== currentName);
 }
 
 function isCurrentUserPersonalBoard(board = {}) {
+  if (isBoardNamedForAnotherUser(board)) return false;
   const boardName = normalizeSettingsText(getBoardOwnerName(board));
   const currentName = normalizeSettingsText(getCurrentUserName());
   return Boolean(boardName && currentName && boardName === currentName);

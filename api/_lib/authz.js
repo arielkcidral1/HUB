@@ -38,8 +38,7 @@ const rhOnly = { read: (user) => isRh(user), write: (user) => isRh(user) };
 const rhOrManager = { read: (user) => isRh(user) || isManager(user), write: (user) => isRh(user) || isManager(user) };
 
 function isOwnedBoard(user, row) {
-  const createdBy = normalizeName(row?.created_by);
-  const ownerName = row?.owner_name || (!["auto-sync", "sistema", "system"].includes(createdBy) ? row?.created_by : "") || row?.nome;
+  const ownerName = row?.owner_name || row?.nome;
   return normalizeName(ownerName) === normalizeName(user?.nome);
 }
 
