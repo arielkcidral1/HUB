@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.public.blob.vercel-storage.com; media-src 'self' blob: https://*.public.blob.vercel-storage.com; connect-src 'self' https://challenges.cloudflare.com https://*.public.blob.vercel-storage.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
     <title>Denuncia Anonima | HUB RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=restauracao-v9" />
+    <link rel="stylesheet" href="style.css?v=restauracao-v8" />
   </head>
   <body>
     <div class="public-layout">
@@ -31,16 +31,18 @@
           <label class="bot-field" aria-hidden="true" tabindex="-1">Nao preencha este campo
             <input name="website" type="text" autocomplete="off" tabindex="-1" />
           </label>
-          <p class="public-description">Este canal não solicita nome, documento, telefone ou e-mail. Sua denuncia é totalmente anonima e segura.</p>
+          <p class="public-description">Este canal nÃ£o solicita nome, documento, telefone ou e-mail. Sua denuncia Ã© totalmente anonima e segura.</p>
           <label>Mensagem da denuncia
-            <textarea name="mensagem" rows="7" maxlength="4000" placeholder="Descreva sua situação" required></textarea>
+            <textarea name="mensagem" rows="7" maxlength="4000" placeholder="Descreva sua situaÃ§Ã£o" required></textarea>
           </label>
           <p class="form-feedback" id="denuncia-feedback" role="status"></p>
           <button class="primary-button" type="submit">Enviar denuncia anonima</button>
         </form>
       </div>
     </div>
-
-    <script src="script.js?v=restauracao-v9"></script>
+    <script src="hub-postgres-client.js"></script>
+    <script src="script.js?v=restauracao-v8"></script>
   </body>
 </html>
+
+
