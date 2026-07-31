@@ -2285,10 +2285,10 @@ function getEventListMeta(item = {}) {
   return `${formatEventDate(item.data)} | ${getEventScheduleMeta(item)}`;
 }
 
-function getUpcomingEvents() {
+function getUpcomingEvents(daysAhead = 14) {
   const today = getLocalDateKey();
   const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + 14);
+  maxDate.setDate(maxDate.getDate() + daysAhead);
   const maxDateKey = getLocalDateKey(maxDate);
   return getSortedEvents().filter((item) => !isArchivedRecord(item) && item.data && item.data >= today && item.data <= maxDateKey);
 }
@@ -5568,7 +5568,7 @@ function renderDashboard() {
   }
   const upcomingEvents = getUpcomingEvents();
   if (document.getElementById("metric-eventos")) {
-    document.getElementById("metric-eventos").textContent = upcomingEvents.length;
+    document.getElementById("metric-eventos").textContent = getUpcomingEvents(7).length;
   }
   if (document.getElementById("metric-documentos")) {
     document.getElementById("metric-documentos").textContent = (data.documentos || []).filter((item) => !isArchivedRecord(item)).length;
