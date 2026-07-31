@@ -5420,8 +5420,8 @@ function applyRoleAccess() {
 }
 
 function getAllowedViewsForCurrentUser() {
-  if (isCashierUser()) return new Set(["comunicacao", "conta"]);
-  if (isManagerUser()) return new Set(["comunicacao", "quadros", "documentos", "conta"]);
+  if (isCashierUser()) return new Set(["comunicacao", "calendario", "conta"]);
+  if (isManagerUser()) return new Set(["comunicacao", "quadros", "calendario", "documentos", "conta"]);
   return new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
 }
 
@@ -8705,12 +8705,12 @@ document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
       window.location.href = button.dataset.externalUrl;
       return;
     }
-    if (isCashierUser() && !["comunicacao", "conta"].includes(button.dataset.view)) {
+    if (isCashierUser() && !["comunicacao", "calendario", "conta"].includes(button.dataset.view)) {
       activateView("comunicacao");
       closeMobileMenu();
       return;
     }
-    if (isManagerUser() && !["comunicacao", "quadros", "documentos", "conta"].includes(button.dataset.view)) {
+    if (isManagerUser() && !["comunicacao", "quadros", "calendario", "documentos", "conta"].includes(button.dataset.view)) {
       activateView("documentos");
       closeMobileMenu();
       return;
