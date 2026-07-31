@@ -8355,6 +8355,7 @@ function renderChat() {
   const title = document.getElementById("chat-title");
   const subtitle = document.getElementById("chat-subtitle");
   const messageInput = document.querySelector('#chat-form textarea[name="mensagem"]');
+  const chatPanel = document.querySelector("#comunicacao .chat-panel");
   const sendButton = document.querySelector("#chat-form .send-button");
   const fileButton = document.getElementById("chat-attach-menu-button");
   const fileInput = document.getElementById("chat-file");
@@ -8364,6 +8365,7 @@ function renderChat() {
   const filterInput = document.getElementById("chat-message-filter");
   const pollMenuOption = document.querySelector('[data-attach-type="poll"]');
   if (!activeChannel) {
+    chatPanel?.classList.add("chat-panel-empty");
     clearChatMessageFilter();
     if (title) title.textContent = "Comunicação interna";
     if (subtitle) subtitle.textContent = "Selecione um canal para abrir a conversa";
@@ -8392,10 +8394,17 @@ function renderChat() {
     }
     closeChatAttachMenu();
     closeChatEmojiMenu();
-    target.innerHTML = '<p class="empty-state">Selecione um canal de comunicação para visualizar as mensagens.</p>';
+    target.innerHTML = `
+      <div class="chat-empty-state">
+        <img src="assets/logo.svg" alt="HUB" />
+        <h3>Comunicação interna</h3>
+        <p>Selecione um canal de comunicação para visualizar as mensagens.</p>
+      </div>
+    `;
     return;
   }
 
+  chatPanel?.classList.remove("chat-panel-empty");
   if (title) title.textContent = activeChannel.label;
   if (subtitle) subtitle.textContent = activeChannel.subtitle;
   if (messageInput) {

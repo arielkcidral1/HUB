@@ -1700,6 +1700,15 @@ textarea {
   min-height: 380px;
 }
 
+.chat-panel.chat-panel-empty {
+  grid-template-rows: auto 1fr;
+}
+
+.chat-panel.chat-panel-empty .chat-message-filter,
+.chat-panel.chat-panel-empty .chat-composer {
+  display: none;
+}
+
 .chat-message-filter {
   display: flex;
   align-items: center;
@@ -1777,6 +1786,39 @@ textarea {
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   background: transparent;
   padding: 18px;
+}
+
+.chat-panel.chat-panel-empty .chat-feed {
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+.chat-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(100%, 360px);
+  color: var(--muted);
+  text-align: center;
+}
+
+.chat-empty-state img {
+  width: 72px;
+  height: 72px;
+  filter: drop-shadow(0 10px 18px rgba(5, 26, 22, 0.18));
+}
+
+.chat-empty-state h3 {
+  margin: 8px 0 0;
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.chat-empty-state p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .chat-date-separator {
