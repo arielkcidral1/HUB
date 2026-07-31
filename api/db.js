@@ -59,6 +59,15 @@ export function json(res, status, body) {
 }
 
 export function getBody(req) {
+  if (Buffer.isBuffer(req.body)) {
+    const raw = req.body.toString("utf8");
+    if (!raw) return Promise.resolve({});
+    try {
+      return Promise.resolve(JSON.parse(raw));
+    } catch {
+      return Promise.reject(Object.assign(new Error("JSON invalido."), { statusCode: 400 }));
+    }
+  }
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
   if (typeof req.body === "string") {
     try {

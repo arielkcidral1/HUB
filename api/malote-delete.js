@@ -21,6 +21,6 @@ export default async function handler(req, res) {
     if (!deleted.rows.length) return json(res, 404, { error: "Malote nao encontrado." });
     return json(res, 200, { data: deleted.rows[0] });
   } catch (error) {
-    return json(res, 500, { error: error.message || "Nao foi possivel deletar o malote." });
+    return json(res, error.statusCode || 500, { error: error.message || "Nao foi possivel deletar o malote." });
   }
 }
