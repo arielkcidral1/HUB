@@ -9055,6 +9055,7 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
     if (button.dataset.disciplinaryDoc) return;
     document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
     document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
+    document.getElementById("documentos-selection-state")?.classList.remove("active");
     button.classList.add("active");
     document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
 
@@ -9083,6 +9084,7 @@ document.querySelectorAll(".disciplinary-tab").forEach((button) => {
     }
     document.querySelectorAll(".disciplinary-tab").forEach((item) => item.classList.remove("active"));
     document.querySelectorAll(".disciplinary-view").forEach((view) => view.classList.remove("active"));
+    document.getElementById("disciplinary-selection-state")?.classList.remove("active");
     button.classList.add("active");
     document.getElementById(`disciplinary-${button.dataset.disciplinaryDoc}`)?.classList.add("active");
   });
@@ -9171,6 +9173,7 @@ function editDisciplinaryDocument(id) {
         button.classList.toggle("active", button.dataset.disciplinaryDoc === item.type);
       });
       document.querySelectorAll(".disciplinary-view").forEach((view) => view.classList.remove("active"));
+      document.getElementById("disciplinary-selection-state")?.classList.remove("active");
       document.getElementById(`disciplinary-${item.type}`)?.classList.add("active");
 
       const form = document.querySelector(`[data-disciplinary-form="${item.type}"]`);
@@ -10560,6 +10563,7 @@ function editarDocumento(id) {
 
   document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
   document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
+  document.getElementById("documentos-selection-state")?.classList.remove("active");
 
   const tabButton = document.querySelector(`.doc-tab[data-doc="${doc.type}"]`);
   if (tabButton) tabButton.classList.add("active");

@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://cdn.jsdelivr.net; media-src 'self' blob: https://*.public.blob.vercel-storage.com; connect-src 'self' https://challenges.cloudflare.com https://*.public.blob.vercel-storage.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
     <title>HUB | RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
-    <link rel="stylesheet" href="style.css?v=restauracao-v26" />
+    <link rel="stylesheet" href="style.css?v=restauracao-v27" />
        <link rel="stylesheet" href="message-size-enhancement.css?v=restauracao-v18" />
     <link rel="stylesheet" href="vagas-format.css?v=restauracao-v18" />
     <link rel="stylesheet" href="vagas-admin-enhance.css?v=restauracao-v19" />
@@ -616,7 +616,7 @@
                   <p class="item-meta">Formularios digitais</p>
                 </div>
               </div>
-              <button class="doc-tab active" data-doc="admissao" type="button">Checklist de Admissao</button>
+              <button class="doc-tab" data-doc="admissao" type="button">Checklist de Admissao</button>
               <button class="doc-tab" data-doc="ausencia" type="button">Entrevista ausencia</button>
               <button class="doc-tab" data-doc="desligamento" type="button">Entrevista desligamento</button>
               <button class="doc-tab" data-doc="beneficios" type="button">Plano saude e odonto</button>
@@ -629,7 +629,14 @@
             </aside>
 
             <div class="doc-content">
-              <section class="doc-view active" id="doc-admissao">
+              <section class="doc-selection-state active" id="documentos-selection-state">
+                <div class="doc-selection-card">
+                  <img src="assets/logo.svg" alt="HUB" />
+                  <h3>Documentos RH</h3>
+                  <p>Selecione um tipo de documento para abrir o formulario.</p>
+                </div>
+              </section>
+              <section class="doc-view" id="doc-admissao">
                 <form class="panel doc-form" data-doc-form="admissao">
                   <div class="panel-header split-header">
                     <div>
@@ -1043,12 +1050,19 @@
                   <p class="item-meta">Advertencias e suspensoes</p>
                 </div>
               </div>
-              <button class="doc-tab disciplinary-tab active" data-disciplinary-doc="advertencia" type="button">Advertencia</button>
+              <button class="doc-tab disciplinary-tab" data-disciplinary-doc="advertencia" type="button">Advertencia</button>
               <button class="doc-tab disciplinary-tab" data-disciplinary-doc="suspensao" type="button">Suspensao</button>
             </aside>
 
             <div class="doc-content">
-              <section class="doc-view disciplinary-view active" id="disciplinary-advertencia">
+              <section class="doc-selection-state active" id="disciplinary-selection-state">
+                <div class="doc-selection-card">
+                  <img src="assets/logo.svg" alt="HUB" />
+                  <h3>Advertencias e Suspensoes</h3>
+                  <p>Selecione uma medida disciplinar para abrir o formulario.</p>
+                </div>
+              </section>
+              <section class="doc-view disciplinary-view" id="disciplinary-advertencia">
                 <form class="panel doc-form disciplinary-form" data-disciplinary-form="advertencia" autocomplete="off">
                   <div class="panel-header split-header">
                     <div>
