@@ -7,6 +7,16 @@ const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
 const BOOT_FETCH_TIMEOUT_MS = 9000;
+const TEMP_INDEX_LOGIN_BYPASS = true;
+const TEMP_INDEX_BYPASS_USER = Object.freeze({
+  id: "temp-index-bypass",
+  nome: "Acesso Temporario",
+  email: "acesso.temporario@hub.local",
+  cargo: "RH",
+  foto_perfil: "",
+  syncStatus: "local",
+  createdAt: "Temporario",
+});
 
 const SENSITIVE_CLIENT_CACHE_KEYS = [
   STORAGE_KEY,
@@ -1019,6 +1029,33 @@ function isPublicPage() {
   );
 }
 
+function isIndexAppPage() {
+  const page = window.location.pathname.split("/").pop() || "index.html";
+  return page === "index.html" && Boolean(document.getElementById("app-shell"));
+}
+
+function isTemporaryIndexLoginBypassEnabled() {
+  return Boolean(TEMP_INDEX_LOGIN_BYPASS && isIndexAppPage());
+}
+
+function applyTemporaryIndexLoginBypass() {
+  currentAuthUser = {
+    id: TEMP_INDEX_BYPASS_USER.id,
+    email: TEMP_INDEX_BYPASS_USER.email,
+    app_metadata: { cargo: TEMP_INDEX_BYPASS_USER.cargo },
+    user_metadata: { nome: TEMP_INDEX_BYPASS_USER.nome, name: TEMP_INDEX_BYPASS_USER.nome },
+    configuracoes: currentUserSettings || {},
+  };
+  currentUserProfile = { ...TEMP_INDEX_BYPASS_USER, configuracoes: currentUserSettings || {} };
+  storageService.removeSessionItem(SESSION_KEY);
+  storageService.setSessionItem(`${SESSION_KEY}-user`, TEMP_INDEX_BYPASS_USER.nome);
+  storageService.setSessionItem(`${SESSION_KEY}-email`, TEMP_INDEX_BYPASS_USER.email);
+  storageService.setSessionItem(`${SESSION_KEY}-role`, TEMP_INDEX_BYPASS_USER.cargo);
+  reloadUserSettingsForCurrentUser();
+  refreshAuthenticatedShell();
+  setSyncStatus("Acesso temporario local", false);
+}
+
 function isPublicSubmissionFormPage() {
   return Boolean(
     document.querySelector("[data-public-denuncia]") ||
@@ -1062,6 +1099,10 @@ async function setupLogin() {
   const settingsLogoutButton = document.getElementById("settings-logout-button");
   clearLegacyTeamCredentials();
   supabaseClient = supabaseClient || getSupabaseClient();
+  if (isTemporaryIndexLoginBypassEnabled()) {
+    applyTemporaryIndexLoginBypass();
+    return true;
+  }
   const hasAuthSession = await restoreAuthenticatedSession();
 
   if (hasAuthSession) {
