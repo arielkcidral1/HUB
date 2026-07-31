@@ -5391,7 +5391,7 @@ function renderDocumentosContratados() {
       <p><strong>E-mail:</strong> ${escapeHtml(item.email || "Não informado")}</p>
       <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || "Não informado")}</p>
       <p><strong>Origem:</strong> ${escapeHtml(getContractorSourceLabel(item.origemHtml, item.empresa) || "Não informada")}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Enviado por ${escapeHtml(item.nome || "Contratado não informado")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())}</p>
       <div class="contractor-file-list">
         ${formatContractorDocumentList(item.documentos || [])}
       </div>
