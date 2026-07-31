@@ -8339,7 +8339,7 @@ function renderDocumentRecords() {
           </div>
         </div>
         <p>${escapeHtml(item.summary)}</p>
-        <p class="item-meta">Registro: ${escapeHtml(item.createdAt || "Data e horario nao informados")}${item.updatedBy || item.updatedAt ? ` | Edicao: ${escapeHtml(item.updatedAt || "Data e horario nao informados")}` : ""}</p>
+        <p class="item-meta">${escapeHtml(item.createdAt || "Data e horario nao informados")}${item.updatedBy || item.updatedAt ? ` | Edicao: ${escapeHtml(item.updatedAt || "Data e horario nao informados")}` : ""}</p>
         <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy || item.updatedAt ? ` | Editado por ${escapeHtml(item.updatedBy || getSystemFallbackAuthor())}` : ""}</p>
       </article>
     `)
