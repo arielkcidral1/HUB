@@ -1,5 +1,6 @@
 #vagas .panel:has(#vagas-list),
-#malotes .panel:has(#malotes-list) {
+#malotes .panel:has(#malotes-list),
+#equipe .panel:has(#usuarios-list) {
   overflow: visible;
 }
 
@@ -31,7 +32,8 @@
 }
 
 #vagas .workspace,
-#malotes .workspace {
+#malotes .workspace,
+#equipe .workspace {
   grid-template-columns: minmax(300px, 0.75fr) minmax(0, 1.25fr);
   overflow-x: hidden;
   overflow-anchor: none;
@@ -39,25 +41,29 @@
 }
 
 #vagas .workspace > .form-panel,
-#malotes .workspace > .form-panel {
+#malotes .workspace > .form-panel,
+#equipe .workspace > .form-panel {
   grid-column: 1;
   grid-row: 1;
 }
 
 #vagas .workspace > .panel:has(#vagas-list),
-#malotes .workspace > .panel:has(#malotes-list) {
+#malotes .workspace > .panel:has(#malotes-list),
+#equipe .workspace > .panel:has(#usuarios-list) {
   grid-column: 2;
   grid-row: 1;
   align-self: start;
 }
 
 #vagas .workspace.vagas-workspace-expanded,
-#malotes .workspace.malotes-workspace-expanded {
+#malotes .workspace.malotes-workspace-expanded,
+#equipe .workspace.equipe-workspace-expanded {
   grid-template-columns: minmax(0, 0fr) minmax(0, 1fr);
 }
 
 #vagas .workspace.vagas-workspace-expanded > .form-panel,
-#malotes .workspace.malotes-workspace-expanded > .form-panel {
+#malotes .workspace.malotes-workspace-expanded > .form-panel,
+#equipe .workspace.equipe-workspace-expanded > .form-panel {
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
@@ -65,7 +71,8 @@
 }
 
 #vagas-list.vagas-admin-grid,
-#malotes-list.malotes-admin-grid {
+#malotes-list.malotes-admin-grid,
+#usuarios-list {
   display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
@@ -74,18 +81,21 @@
 }
 
 #vagas-list.vagas-admin-grid.vagas-two-col,
-#malotes-list.malotes-admin-grid.malotes-two-col {
+#malotes-list.malotes-admin-grid.malotes-two-col,
+#usuarios-list.equipe-two-col {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 #vagas-list.vagas-admin-grid .item-card,
-#malotes-list.malotes-admin-grid .item-card {
+#malotes-list.malotes-admin-grid .item-card,
+#usuarios-list .item-card {
   padding: 11px 13px;
   gap: 5px;
 }
 
 #vagas-list.vagas-admin-grid .item-card p,
-#malotes-list.malotes-admin-grid .item-card p {
+#malotes-list.malotes-admin-grid .item-card p,
+#usuarios-list .item-card p {
   line-height: 1.35;
 }
 
@@ -157,7 +167,8 @@
 
 @media (max-width: 640px) {
   #vagas-list.vagas-admin-grid.vagas-two-col,
-  #malotes-list.malotes-admin-grid.malotes-two-col {
+  #malotes-list.malotes-admin-grid.malotes-two-col,
+  #usuarios-list.equipe-two-col {
     grid-template-columns: 1fr;
   }
 }
@@ -165,15 +176,19 @@
 @media (max-width: 900px) {
   #vagas .workspace,
   #malotes .workspace,
+  #equipe .workspace,
   #vagas .workspace.vagas-workspace-expanded,
-  #malotes .workspace.malotes-workspace-expanded {
+  #malotes .workspace.malotes-workspace-expanded,
+  #equipe .workspace.equipe-workspace-expanded {
     grid-template-columns: 1fr;
   }
 
   #vagas .workspace > .form-panel,
   #malotes .workspace > .form-panel,
+  #equipe .workspace > .form-panel,
   #vagas .workspace > .panel:has(#vagas-list),
-  #malotes .workspace > .panel:has(#malotes-list) {
+  #malotes .workspace > .panel:has(#malotes-list),
+  #equipe .workspace > .panel:has(#usuarios-list) {
     grid-column: 1;
     grid-row: auto;
   }
