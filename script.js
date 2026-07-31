@@ -7074,7 +7074,7 @@ function handleSettingsKeyboardShortcut(event) {
   }
   if (!currentUserSettings.keyboardShortcuts) return;
   if (!event.ctrlKey || event.altKey || event.metaKey) return;
-  if (event.key.toLowerCase() === "k") {
+  if (event.key.toLowerCase() === "f") {
     event.preventDefault();
     focusChatMessageFilter();
     return;
