@@ -1803,10 +1803,24 @@ textarea {
   text-align: center;
 }
 
-.chat-empty-state img {
+.chat-empty-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.chat-empty-brand img {
   width: 72px;
   height: 72px;
   filter: drop-shadow(0 10px 18px rgba(5, 26, 22, 0.18));
+}
+
+.chat-empty-brand strong {
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 .chat-empty-state h3 {

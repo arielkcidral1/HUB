@@ -8396,7 +8396,10 @@ function renderChat() {
     closeChatEmojiMenu();
     target.innerHTML = `
       <div class="chat-empty-state">
-        <img src="assets/logo.svg" alt="HUB" />
+        <div class="chat-empty-brand">
+          <img src="assets/logo.svg" alt="HUB" />
+          <strong>HUB</strong>
+        </div>
         <h3>Comunicação interna</h3>
         <p>Selecione um canal de comunicação para visualizar as mensagens.</p>
       </div>
