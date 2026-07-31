@@ -6979,7 +6979,6 @@ function clearChatMessageFilter() {
 }
 
 function focusChatMessageFilter() {
-  activateView("comunicacao");
   if (!activeChatChannel) {
     renderChat();
     return;
@@ -7075,6 +7074,7 @@ function handleSettingsKeyboardShortcut(event) {
   if (!currentUserSettings.keyboardShortcuts) return;
   if (!event.ctrlKey || event.altKey || event.metaKey) return;
   if (event.key.toLowerCase() === "f") {
+    if (!document.getElementById("comunicacao")?.classList.contains("active") || !activeChatChannel) return;
     event.preventDefault();
     focusChatMessageFilter();
     return;
