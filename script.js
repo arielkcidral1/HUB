@@ -2224,9 +2224,34 @@ function getHolidayForDate(date) {
 }
 
 function getSortedEvents() {
-  return (data.eventos || [])
+  return getVisibleEvents()
     .slice()
     .sort((a, b) => `${a.data || ""}T${a.horario || "00:00"}`.localeCompare(`${b.data || ""}T${b.horario || "00:00"}`));
+}
+
+function getCurrentEventOwnerKeys() {
+  return new Set([
+    getCurrentUserName(),
+    currentUserProfile?.nome,
+    currentUserProfile?.email,
+    currentUserProfile?.email ? String(currentUserProfile.email).split("@")[0] : "",
+    currentAuthUser?.email,
+    currentAuthUser?.email ? String(currentAuthUser.email).split("@")[0] : "",
+    currentAuthUser ? getAuthUserDisplayName(currentAuthUser) : "",
+  ].map((value) => normalizeLoginName(value)).filter(Boolean));
+}
+
+function isCurrentUserEventOwner(item = {}) {
+  const owner = normalizeLoginName(item.createdBy || item.created_by || "");
+  return Boolean(owner && getCurrentEventOwnerKeys().has(owner));
+}
+
+function canCurrentUserViewEvent(item = {}) {
+  return isRhUser() || isCurrentUserEventOwner(item);
+}
+
+function getVisibleEvents(items = data.eventos || []) {
+  return isRhUser() ? (items || []) : (items || []).filter((item) => canCurrentUserViewEvent(item));
 }
 
 function normalizeEventType(value = "") {
@@ -5789,7 +5814,7 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
     : "";
   strip.innerHTML = monthHeader + leadingCells + visibleDates
     .map((date) => {
-      const dayEvents = (data.eventos || []).filter((item) => item.data === date);
+      const dayEvents = getVisibleEvents().filter((item) => item.data === date);
       const holiday = getHolidayForDate(date);
       const isToday = date === todayKey;
       const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
@@ -5838,7 +5863,7 @@ function renderCalendar() {
 
   for (let day = 1; day <= totalDays; day += 1) {
     const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const dayEvents = (data.eventos || []).filter((item) => item.data === date);
+    const dayEvents = getVisibleEvents().filter((item) => item.data === date);
     const holiday = getHolidayForDate(date);
     const isToday = date === todayKey;
     const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
@@ -9712,6 +9737,11 @@ if (eventoForm) {
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     const id = form.get("id");
+    const editingEvent = id ? (data.eventos || []).find((item) => String(item.id) === String(id)) : null;
+    if (id && (!editingEvent || !canCurrentUserViewEvent(editingEvent))) {
+      showModal("Acesso restrito", "Voce so pode editar eventos registrados por voce.", "error");
+      return;
+    }
 
     const dataDisplay = String(form.get("data") || "");
     const dataIso = eventoDateToIso(dataDisplay);
@@ -9737,7 +9767,7 @@ if (eventoForm) {
       responsavel: isBirthday ? "" : form.get("responsavel"),
       tipo: isBirthday ? "Aniversário" : form.get("tipo"),
       descricao: isBirthday ? aniversariante : form.get("descricao"),
-      createdBy: getCurrentUserName(),
+      createdBy: editingEvent?.createdBy || getCurrentUserName(),
     };
     const success = id ? await updateItem("eventos", id, { ...payload, updatedBy: getCurrentUserName() }) : await addItem("eventos", payload);
     if (success) {
@@ -10606,9 +10636,12 @@ async function excluirVaga(id) {
 };
 
 function editarEvento(id) {
-  const evento = (data.eventos || []).find((item) => String(item.id) === String(id));
+  const evento = getVisibleEvents().find((item) => String(item.id) === String(id));
   const form = document.getElementById("evento-form");
-  if (!evento || !form) return;
+  if (!evento || !form) {
+    showModal("Acesso restrito", "Voce so pode editar eventos registrados por voce.", "error");
+    return;
+  }
 
   form.elements.id.value = evento.id;
   form.elements.titulo.value = evento.titulo || "";
@@ -10626,8 +10659,11 @@ function editarEvento(id) {
 };
 
 async function excluirEvento(id) {
-  const evento = (data.eventos || []).find((item) => String(item.id) === String(id));
-  if (!evento) return;
+  const evento = getVisibleEvents().find((item) => String(item.id) === String(id));
+  if (!evento) {
+    showModal("Acesso restrito", "Voce so pode deletar eventos registrados por voce.", "error");
+    return;
+  }
 
   showConfirmActionModal({
     title: "Deletar evento",
