@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://cdn.jsdelivr.net; media-src 'self' blob: https://*.public.blob.vercel-storage.com; connect-src 'self' https://challenges.cloudflare.com https://*.public.blob.vercel-storage.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
     <title>HUB | RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
-    <link rel="stylesheet" href="style.css?v=restauracao-v26" />
-       <link rel="stylesheet" href="message-size-enhancement.css?v=restauracao-v18" />
-    <link rel="stylesheet" href="vagas-format.css?v=restauracao-v18" />
-    <link rel="stylesheet" href="vagas-admin-enhance.css?v=restauracao-v19" />
+    <link rel="stylesheet" href="style.css" />
+       <link rel="stylesheet" href="message-size-enhancement.css" />
+    <link rel="stylesheet" href="vagas-format.css" />
+    <link rel="stylesheet" href="vagas-admin-enhance.css" />
   </head>
   <body>
     <div class="app-shell" id="app-shell">
@@ -28,15 +28,14 @@
           <button class="nav-item" data-view="comunicacao" type="button">Comunicacao RH</button>
           <button class="nav-item" data-view="malotes" type="button">Malotes de EPI</button>
           <button class="nav-item" data-view="chamados" type="button">Chamados</button>
-          <button class="nav-item" data-view="quadros" type="button">Quadros</button>
           <button class="nav-item" data-view="vagas" type="button">Vagas e Projetos</button>
           <button class="nav-item" data-view="calendario" type="button">Calendario</button>
           <button class="nav-item" data-view="documentos" type="button">Documentos RH</button>
-          <button class="nav-item" data-view="advertencias-suspensoes" type="button">Advertencias e Suspensoes</button>
           <button class="nav-item" data-view="documentos-contratados" type="button">Documentos de Contratados</button>
+          <button class="nav-item" data-view="atestados" type="button">Atestados</button>
           <button class="nav-item" data-view="gerenciamento-vt" type="button">Gerenciamento VT</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/chamados.html" type="button">Solicitar EPIs</button>
-          <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/denuncia.html" type="button">Canal de Denúncia</button>
+          <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/denuncia.html" type="button">Canal de DenÃºncia</button>
           <button class="nav-item" data-view="equipe" type="button">Equipe</button>
         </nav>
       </aside>
@@ -44,7 +43,7 @@
       <main class="main-content">
         <header class="topbar">
           <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-controls="primary-sidebar" aria-expanded="false">
-            <span aria-hidden="true">☰</span>
+            <span aria-hidden="true">â˜°</span>
             Menu
           </button>
           <div>
@@ -56,7 +55,6 @@
               <button type="button" class="user-chip" id="user-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu-dropdown">
                 <img id="current-user-avatar" class="user-avatar hidden" src="" alt="Avatar">
                 <span id="current-user">Usuario</span>
-                <span class="presence-dot is-online" id="current-user-presence"></span>
               </button>
 
               <div class="user-menu-dropdown" id="user-menu-dropdown" role="menu" aria-label="Menu do usuario" hidden>
@@ -71,31 +69,15 @@
                 <div class="user-menu-divider"></div>
 
                 <button type="button" class="user-menu-item" data-view="conta" role="menuitem">
-                  <span class="user-menu-icon" aria-hidden="true">⚙️</span>
+                  <span class="user-menu-icon" aria-hidden="true">âš¿</span>
                   <span class="user-menu-item-text">
                     <strong>Minha conta</strong>
                     <small>Dados, foto de perfil e senha</small>
                   </span>
                 </button>
 
-                <button type="button" class="user-menu-item" data-view="conta" data-settings-target="settings-privacy-panel" role="menuitem">
-                  <span class="user-menu-icon" aria-hidden="true">🔒</span>
-                  <span class="user-menu-item-text">
-                    <strong>Privacidade</strong>
-                    <small>Contatos, presenca e conversas</small>
-                  </span>
-                </button>
-
-                <button type="button" class="user-menu-item" data-view="conta" data-settings-target="settings-chats-panel" role="menuitem">
-                  <span class="user-menu-icon" aria-hidden="true">💬</span>
-                  <span class="user-menu-item-text">
-                    <strong>Conversas</strong>
-                    <small>Tema e preferencias do chat</small>
-                  </span>
-                </button>
-
                 <button type="button" class="user-menu-item" data-view="conta" data-settings-target="settings-notifications-panel" role="menuitem">
-                  <span class="user-menu-icon" aria-hidden="true">🔔</span>
+                  <span class="user-menu-icon" aria-hidden="true">â—Œ</span>
                   <span class="user-menu-item-text">
                     <strong>Notificacoes</strong>
                     <small>Preferencias de avisos</small>
@@ -103,7 +85,7 @@
                 </button>
 
                 <button type="button" class="user-menu-item" data-view="conta" data-settings-target="settings-shortcuts-panel" role="menuitem">
-                  <span class="user-menu-icon" aria-hidden="true">⌨️</span>
+                  <span class="user-menu-icon" aria-hidden="true">âŒ¨</span>
                   <span class="user-menu-item-text">
                     <strong>Atalhos de teclado</strong>
                     <small>Acoes rapidas do sistema</small>
@@ -113,7 +95,7 @@
                 <div class="user-menu-divider"></div>
 
                 <button type="button" class="user-menu-item user-menu-item-danger" id="user-menu-logout" role="menuitem">
-                  <span class="user-menu-icon" aria-hidden="true">🚪</span>
+                  <span class="user-menu-icon" aria-hidden="true">â†ª</span>
                   <span class="user-menu-item-text"><strong>Sair</strong></span>
                 </button>
               </div>
@@ -130,23 +112,23 @@
 
         <section class="view active" id="dashboard">
           <div class="metric-grid">
-            <article class="metric-card metric-card-link" data-view="chamados" role="button" tabindex="0">
-              <span>Chamados em aberto</span>
-              <strong id="metric-chamados">0</strong>
+            <article class="metric-card">
+              <span>Denuncias abertas</span>
+              <strong id="metric-denuncias">0</strong>
             </article>
-            <article class="metric-card metric-card-link" data-view="comunicacao" role="button" tabindex="0">
+            <article class="metric-card">
               <span>Mensagens do RH</span>
               <strong id="metric-comunicados">0</strong>
             </article>
-            <article class="metric-card metric-card-link" data-view="malotes" role="button" tabindex="0">
+            <article class="metric-card">
               <span>Malotes feitos hoje</span>
               <strong id="metric-malotes">0</strong>
             </article>
-            <article class="metric-card metric-card-link" data-view="vagas" role="button" tabindex="0">
+            <article class="metric-card">
               <span>Vagas abertas</span>
               <strong id="metric-vagas">0</strong>
             </article>
-            <article class="metric-card metric-card-link" data-view="calendario" role="button" tabindex="0">
+            <article class="metric-card">
               <span>Eventos proximos</span>
               <strong id="metric-eventos">0</strong>
             </article>
@@ -156,7 +138,7 @@
             <div class="panel-header">
               <div>
                 <h2>Acompanhamento</h2>
-                <p class="item-meta">Notificações e pendências recentes</p>
+                <p class="item-meta">NotificaÃ§Ãµes e pendÃªncias recentes</p>
               </div>
               <div class="job-actions flush-top">
                 <button class="primary-button" id="dashboard-notifications-tracker" type="button">Acompanhar</button>
@@ -164,13 +146,15 @@
             </div>
             <ul class="activity-list" id="dashboard-list"></ul>
           </article>
+
+          <!-- Modal de Acompanhamento -->
           <div class="tracker-modal" id="tracker-modal" hidden aria-modal="true" aria-labelledby="tracker-modal-title">
             <div class="tracker-modal-overlay" id="tracker-modal-overlay"></div>
             <div class="tracker-modal-content">
               <div class="tracker-modal-header">
                 <h2 id="tracker-modal-title">Acompanhamento Completo</h2>
-                <p class="item-meta">Todas as notificações e pendências</p>
-                <button class="tracker-modal-close" id="tracker-modal-close" type="button" aria-label="Fechar" title="Fechar (Esc)">✕</button>
+                <p class="item-meta">Todas as notificaÃ§Ãµes e pendÃªncias</p>
+                <button class="tracker-modal-close" id="tracker-modal-close" type="button" aria-label="Fechar" title="Fechar (Esc)">âœ•</button>
               </div>
               
               <div class="tracker-modal-filters">
@@ -178,7 +162,7 @@
                   <label for="tracker-filter-type">Filtrar por tipo:</label>
                   <select id="tracker-filter-type" class="tracker-filter-select">
                     <option value="">Todos os tipos</option>
-                    <option value="denuncia">Denúncias</option>
+                    <option value="denuncia">DenÃºncias</option>
                     <option value="mensagem">Mensagens RH</option>
                     <option value="malote">Malotes de EPI</option>
                     <option value="chamado">Chamados</option>
@@ -191,7 +175,7 @@
                 
                 <div class="tracker-filter-group">
                   <label for="tracker-search">Buscar:</label>
-                  <input type="search" id="tracker-search" class="tracker-search-input" placeholder="Buscar notificações..." />
+                  <input type="search" id="tracker-search" class="tracker-search-input" placeholder="Buscar notificaÃ§Ãµes..." />
                 </div>
 
                 <div class="tracker-filter-group">
@@ -211,7 +195,7 @@
                   <strong class="stat-value" id="tracker-stat-total">0</strong>
                 </div>
                 <div class="stat-item">
-                  <span class="stat-label">Não lidas</span>
+                  <span class="stat-label">NÃ£o lidas</span>
                   <strong class="stat-value unread" id="tracker-stat-unread">0</strong>
                 </div>
                 <div class="stat-item">
@@ -223,7 +207,7 @@
               <div class="tracker-modal-list">
                 <ul class="tracker-notifications" id="tracker-notifications-list"></ul>
                 <div class="tracker-empty" id="tracker-empty" hidden>
-                  <p>Nenhuma notificação encontrada</p>
+                  <p>Nenhuma notificaÃ§Ã£o encontrada</p>
                 </div>
               </div>
 
@@ -248,11 +232,13 @@
           <div class="panel panel-spaced">
             <div class="panel-header split-header flush-bottom">
               <div>
-                <h2>Gestão de Denúncias Anônimas</h2>
-                <p class="item-meta">Clique numa denúncia para ler o conteúdo e movê-la para a lista de Lidas</p>
+                <h2>GestÃ£o de DenÃºncias AnÃ´nimas</h2>
+                <p class="item-meta">Clique numa denÃºncia para ler o conteÃºdo e movÃª-la para a lista de Lidas</p>
               </div>
               <div class="job-actions flush-top">
+                <button class="secondary-link" id="select-denuncias" type="button">Selecionar denÃºncias</button>
                 <button class="secondary-link" id="toggle-archived-denuncias" type="button">Mostrar arquivadas</button>
+                <button class="secondary-link" id="exit-denuncias-selection" type="button" hidden>Sair da seleÃ§Ã£o</button>
                 <a class="secondary-link" id="open-denuncia-public" href="denuncia.html" target="_blank" rel="noreferrer">Abrir canal publico</a>
               </div>
             </div>
@@ -261,7 +247,7 @@
           <div class="workspace">
             <div class="panel">
               <div class="panel-header">
-                <h2 id="denuncias-primary-title">Não Lidas</h2>
+                <h2 id="denuncias-primary-title">NÃ£o Lidas</h2>
               </div>
               <div class="card-list denuncia-list" id="denuncias-nao-lidas"></div>
             </div>
@@ -292,9 +278,9 @@
                 </div>
               </div>
               <div class="chat-message-filter" id="chat-message-filter-wrap" hidden>
-                <span aria-hidden="true">🔍</span>
+                <span aria-hidden="true">âŒ•</span>
                 <input id="chat-message-filter" type="search" placeholder="Filtrar mensagens deste chat" autocomplete="off" />
-                <button class="chat-message-filter-close" id="chat-message-filter-close" type="button" title="Fechar filtro" aria-label="Fechar filtro de mensagens">✕</button>
+                <button class="chat-message-filter-close" id="chat-message-filter-close" type="button" title="Fechar filtro" aria-label="Fechar filtro de mensagens">âœ•</button>
               </div>
               <div class="chat-feed" id="chat-feed" aria-live="polite"></div>
               <form class="chat-composer" id="chat-form">
@@ -302,9 +288,9 @@
                 <div class="chat-attach-menu-wrap">
                   <button class="chat-attach-button" id="chat-attach-menu-button" type="button" data-action="toggle-chat-attach-menu" aria-label="Adicionar anexo" aria-expanded="false">+</button>
                   <div class="chat-attach-menu" id="chat-attach-menu" hidden>
-                    <button type="button" data-action="chat-attach-option" data-attach-type="document"><span aria-hidden="true">▣</span>Documento</button>
-                    <button type="button" data-action="chat-attach-option" data-attach-type="media"><span aria-hidden="true">▧</span>Fotos e v&iacute;deos</button>
-                    <button type="button" data-action="chat-attach-option" data-attach-type="poll"><span aria-hidden="true">◈</span>Enquete</button>
+                    <button type="button" data-action="chat-attach-option" data-attach-type="document"><span aria-hidden="true">â–£</span>Documento</button>
+                    <button type="button" data-action="chat-attach-option" data-attach-type="media"><span aria-hidden="true">â–§</span>Fotos e v&iacute;deos</button>
+                    <button type="button" data-action="chat-attach-option" data-attach-type="poll"><span aria-hidden="true">â—ˆ</span>Enquete</button>
                   </div>
                 </div>
                 <input id="chat-file" name="arquivo" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/webm,audio/mp4,.m4a,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
@@ -312,10 +298,9 @@
                   <button class="chat-emoji-button" id="chat-emoji-button" type="button" data-action="toggle-chat-emoji-menu" aria-label="Abrir emojis" aria-expanded="false">&#128522;</button>
                   <div class="chat-emoji-menu" id="chat-emoji-menu" hidden aria-label="Emojis do chat"></div>
                 </div>
-                <div id="chat-message-editor" class="chat-message-editor" contenteditable="true" data-placeholder="Escreva uma mensagem para o RH" role="textbox" aria-multiline="true" aria-label="Escreva uma mensagem"></div>
-                <textarea name="mensagem" rows="1" class="chat-message-textarea-hidden" tabindex="-1" aria-hidden="true"></textarea>
+                <textarea name="mensagem" rows="1" placeholder="Escreva uma mensagem para o RH" autocomplete="off"></textarea>
                 <button class="secondary-link poll-button" id="create-poll-button" type="button" data-action="open-chat-poll" hidden>Enquete</button>
-                <button class="record-audio-button" id="record-audio-button" type="button" aria-label="Gravar áudio" title="Gravar áudio">
+                <button class="record-audio-button" id="record-audio-button" type="button" aria-label="Gravar Ã¡udio" title="Gravar Ã¡udio">
                   <img src="assets/microphone-icon.png" alt="" aria-hidden="true" />
                   <span class="recording-duration" id="recording-duration" aria-live="polite">00:00</span>
                 </button>
@@ -332,7 +317,7 @@
                 <h2>Cadastrar malote</h2>
               </div>
               <input name="id" type="hidden" />
-              <label>Código da Solicitação
+              <label>CÃ³digo da SolicitaÃ§Ã£o
                 <input name="codigo_solicitacao" type="text" inputmode="numeric" maxlength="6" pattern="\d{4}-\d" placeholder="xxxx-x" required />
               </label>
               <label>Destino
@@ -349,8 +334,8 @@
                 <div class="epi-list" id="epi-list">
                   <div class="malote-collaborator" data-malote-collaborator>
                     <div class="item-topline">
-                      <label>Colaborador que irá receber
-                        <input name="malote_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\S+\s+\S+.*" title="digite o nome completo" placeholder="Nome e sobrenome" autocomplete="off" required />
+                      <label>Colaborador que irÃ¡ receber
+                        <input name="malote_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\S+\s+\S+.*" placeholder="Nome e sobrenome" autocomplete="off" required />
                       </label>
                       <button class="danger-button remove-malote-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
                     </div>
@@ -394,12 +379,12 @@
               </div>
               <label>Status
                 <select name="status">
-                  <option>Separação</option>
+                  <option>SeparaÃ§Ã£o</option>
                   <option>Entrega</option>
                 </select>
               </label>
-              <label>Observações
-                <textarea name="observacoes" rows="3" maxlength="1000" placeholder="Informações adicionais (opcional)"></textarea>
+              <label>ObservaÃ§Ãµes
+                <textarea name="observacoes" rows="3" maxlength="1000" placeholder="InformaÃ§Ãµes adicionais (opcional)"></textarea>
               </label>
               <button class="primary-button" type="submit">Salvar malote</button>
               <button class="secondary-link full-width-action" id="cancelar-edicao-malote" type="button" hidden>Cancelar edicao</button>
@@ -413,21 +398,14 @@
                   <option value="">Todos os destinos</option>
                 </select>
               </label>
-              <label>Filtrar por status
-                <select id="malote-status-filter">
-                  <option value="">Todos os status</option>
-                  <option value="Separação">Em separação</option>
-                  <option value="Entrega">Entregues</option>
-                </select>
-              </label>
               <label>Filtrar por colaborador
                 <input id="malote-filter-colaborador" type="search" placeholder="Colaborador" autocomplete="off" />
               </label>
-              <label>Buscar por Código da Solicitação
+              <label>Buscar por CÃ³digo da SolicitaÃ§Ã£o
                 <input id="malote-code-search" type="search" inputmode="numeric" maxlength="6" placeholder="xxxx-x" autocomplete="off" />
               </label>
               <div class="malote-report" id="malote-report"></div>
-              <div class="card-list malotes-admin-grid" id="malotes-list"></div>
+              <div class="card-list" id="malotes-list"></div>
             </div>
           </div>
         </section>
@@ -440,7 +418,9 @@
                 <p class="item-meta">Solicitacoes abertas pelos colaboradores</p>
               </div>
               <div class="job-actions flush-top">
+                <button class="secondary-link" id="select-chamados" type="button">Selecionar chamados</button>
                 <button class="secondary-link" id="toggle-archived-chamados" type="button">Mostrar arquivados</button>
+                <button class="secondary-link" id="exit-chamados-selection" type="button" hidden>Sair da seleÃ§Ã£o</button>
                 <a class="secondary-link" id="open-chamados-public" href="chamados.html" target="_blank" rel="noreferrer">Abrir solicitacao</a>
               </div>
             </div>
@@ -451,12 +431,13 @@
               <div class="chamados-filter-bar" aria-label="Filtros de chamados">
                 <div class="chamados-filter-fields">
                   <input id="chamado-filter-colaborador" type="search" placeholder="Colaborador" autocomplete="off" aria-label="Filtrar chamados por colaborador" />
+                  <input id="chamado-filter-codigo" type="search" inputmode="numeric" maxlength="6" placeholder="xxxx-x" autocomplete="off" aria-label="Filtrar chamados por codigo da solicitacao" />
                   <select id="chamado-filter-destino" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar chamados por destino"></select>
                   <select id="chamado-filter-mes" aria-label="Filtrar chamados por mes">
-                    <option value="">Mês</option>
+                    <option value="">MÃªs</option>
                     <option>Janeiro</option>
                     <option>Fevereiro</option>
-                    <option>Março</option>
+                    <option>MarÃ§o</option>
                     <option>Abril</option>
                     <option>Maio</option>
                     <option>Junho</option>
@@ -472,50 +453,6 @@
               </div>
             </div>
             <div class="card-list chamado-list" id="chamados-list"></div>
-          </div>
-        </section>
-
-        <section class="view" id="quadros">
-          <div class="boards-workspace">
-            <div class="panel boards-toolbar">
-              <div class="panel-header split-header flush-bottom">
-                <div>
-                  <h2>Quadros</h2>
-                  <p class="item-meta">Organize tarefas em listas, cartoes e prioridades</p>
-                </div>
-                <form class="boards-create-form" id="board-form">
-                  <input name="nome" placeholder="Novo quadro" autocomplete="off" required />
-                  <button class="primary-button" type="submit">Criar quadro</button>
-                </form>
-              </div>
-              <div class="board-tabs" id="board-tabs"></div>
-            </div>
-
-            <div class="boards-main" id="boards-main">
-              <aside class="panel board-side-panel">
-                <form class="board-card-form" id="board-card-form">
-                  <h3>Novo cartao</h3>
-                  <input name="edit_list_index" type="hidden" />
-                  <input name="edit_card_index" type="hidden" />
-                  <label>Titulo
-                    <input name="titulo" placeholder="Titulo do cartao" autocomplete="off" required />
-                  </label>
-                  <label>Descricao
-                    <textarea name="descricao" rows="4" placeholder="Detalhes, checklist ou contexto"></textarea>
-                  </label>
-                  <label>Prioridade
-                    <select name="prioridade">
-                      <option>Normal</option>
-                      <option>Alta</option>
-                      <option>Urgente</option>
-                    </select>
-                  </label>
-                  <button class="primary-button" type="submit">Adicionar cartao</button>
-                  <button class="secondary-link full-width-action" id="cancelar-edicao-board-card" type="button" hidden>Cancelar edicao</button>
-                </form>
-              </aside>
-              <div class="boards-lanes" id="boards-lanes"></div>
-            </div>
           </div>
         </section>
 
@@ -562,7 +499,7 @@
                   <button class="secondary-link compact-filter-button" id="limpar-filtros-vagas" type="button" hidden>Limpar</button>
                 </div>
               </div>
-              <div class="card-list vagas-admin-grid" id="vagas-list"></div>
+              <div class="card-list" id="vagas-list"></div>
             </div>
           </div>
         </section>
@@ -574,19 +511,16 @@
                 <h2>Novo evento</h2>
               </div>
               <input name="id" type="hidden" />
-              <label data-event-title-field="true">Atividade
+              <label>Atividade
                 <input name="titulo" placeholder="Ex: Treinamento de seguranca" required />
               </label>
               <label>Data
                 <input name="data" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" required />
               </label>
-              <label data-event-birthday-field="true" hidden>Aniversariante
-                <input name="aniversariante" placeholder="Nome do aniversariante" />
-              </label>
-              <label data-event-required-field="true">Horario
+              <label>Horario
                 <input name="horario" type="time" required />
               </label>
-              <label data-event-required-field="true">Responsavel
+              <label>Responsavel
                 <input name="responsavel" placeholder="Nome ou area responsavel" required />
               </label>
               <label>Tipo
@@ -595,11 +529,9 @@
                   <option>Treinamento</option>
                   <option>Reuniao</option>
                   <option>Atividade</option>
-                  <option>Aniversário</option>
-                  <option>Entrevista</option>
                 </select>
               </label>
-              <label data-event-optional-field="true">Observacoes
+              <label>Observacoes
                 <textarea name="descricao" rows="4" placeholder="Detalhes, local ou participantes"></textarea>
               </label>
               <button class="primary-button" type="submit">Registrar evento</button>
@@ -650,7 +582,7 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>Checklist de Admissao</h2>
-                      <p class="item-meta">Novas Admissões</p>
+                      <p class="item-meta">Novas AdmissÃµes</p>
                     </div>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
@@ -659,8 +591,8 @@
                     <label>Cargo<input name="cargo" required /></label>
                   </div>
                   <div class="form-grid">
-                    <label>Salário<input name="salario" placeholder="R$ 0,00" inputmode="numeric" /></label>
-                    <label>Horário de Trabalho<input name="horario_trabalho" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
+                    <label>SalÃ¡rio<input name="salario" placeholder="R$ 0,00" inputmode="numeric" /></label>
+                    <label>HorÃ¡rio de Trabalho<input name="horario_trabalho" placeholder="00:00 Ã s 00:00" maxlength="14" inputmode="numeric" /></label>
                     <label>Centro de Custo<input name="centro_custo" /></label>
                   </div>
                   <div class="form-grid">
@@ -668,12 +600,12 @@
                     <label>Data de admissao<input name="data" type="date" required /></label>
                   </div>
                   <div class="form-grid">
-                    <label>Estado Civil<select name="estado_civil"><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option><option>União Estável</option></select></label>
-                    <label>Grau de Instrução<select name="grau_instrucao"><option>Ensino Fundamental</option><option>Ensino Médio</option><option>Ensino Superior Incompleto</option><option>Ensino Superior Completo</option></select></label>
+                    <label>Estado Civil<select name="estado_civil"><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>ViÃºvo(a)</option><option>UniÃ£o EstÃ¡vel</option></select></label>
+                    <label>Grau de InstruÃ§Ã£o<select name="grau_instrucao"><option>Ensino Fundamental</option><option>Ensino MÃ©dio</option><option>Ensino Superior Incompleto</option><option>Ensino Superior Completo</option></select></label>
                   </div>
                   <div class="form-grid">
-                    <label>Vale Transporte?<select name="vale_transporte"><option>Não</option><option>Sim</option></select></label>
-                    <label>Dependentes (IR/Salário Família)?<select name="dependentes"><option>Não</option><option>Sim</option></select></label>
+                    <label>Vale Transporte?<select name="vale_transporte"><option>NÃ£o</option><option>Sim</option></select></label>
+                    <label>Dependentes (IR/SalÃ¡rio FamÃ­lia)?<select name="dependentes"><option>NÃ£o</option><option>Sim</option></select></label>
                   </div>
                   <div class="form-grid">
                     <label>Exame Admissional<select name="exame_admissional"><option>Pendente</option><option>Apto</option><option>Inapto</option></select></label>
@@ -698,8 +630,8 @@
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
                   <div class="form-grid">
-                    <label>Função<input name="funcao" /></label>
-                    <label>Admissão<input name="admissao" type="date" /></label>
+                    <label>FunÃ§Ã£o<input name="funcao" /></label>
+                    <label>AdmissÃ£o<input name="admissao" type="date" /></label>
                     <label>Superior<input name="superior" /></label>
                   </div>
                   <div class="form-grid">
@@ -708,17 +640,17 @@
                   </div>
                   <div class="form-grid">
                     <label>Data da Entrevista<input name="data_entrevista" type="date" required /></label>
-                    <label>Horário/Período do Atraso<input name="horario_atraso" placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
+                    <label>HorÃ¡rio/PerÃ­odo do Atraso<input name="horario_atraso" placeholder="00:00 Ã s 00:00" maxlength="14" inputmode="numeric" /></label>
                   </div>
                   <div class="form-grid">
                     <label>Tipo de ocorrencia<select name="tipo_ocorrencia"><option>Falta justificada (Atestado)</option><option>Falta injustificada</option><option>Atraso</option><option>Saida antecipada</option></select></label>
                     <label>Apresentou Comprovante?<select name="apresentou_comprovante"><option>Sim</option><option>Nao</option><option>Nao se aplica</option></select></label>
                   </div>
                   <label>Motivo detalhado (Justificativa)<textarea name="motivo" rows="3" required></textarea></label>
-                  <label>Impacto da ausência para a empresa<textarea name="impacto" rows="3"></textarea></label>
+                  <label>Impacto da ausÃªncia para a empresa<textarea name="impacto" rows="3"></textarea></label>
                   <label>Medida Adotada<select name="medida_adotada"><option>Orientacao verbal</option><option>Advertencia verbal</option><option>Advertencia escrita</option><option>Suspensao</option><option>Apenas registro (Abonado)</option></select></label>
                   <label>Observacoes do Gestor / RH<textarea name="acao" rows="2"></textarea></label>
-                  <label>Colaborador Ciente/Assinou?<select name="colaborador_ciente"><option>Sim</option><option>Não quis assinar</option></select></label>
+                  <label>Colaborador Ciente/Assinou?<select name="colaborador_ciente"><option>Sim</option><option>NÃ£o quis assinar</option></select></label>
                   <button class="primary-button" type="submit">Salvar entrevista</button>
                 </form>
               </section>
@@ -728,7 +660,7 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>Entrevista de Desligamento</h2>
-                      <p class="item-meta">Entrevista de desligamento na recisão (Obrigatório)</p>
+                      <p class="item-meta">Entrevista de desligamento na recisÃ£o (ObrigatÃ³rio)</p>
                     </div>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
@@ -746,10 +678,10 @@
                   </div>
                   <div class="form-grid">
                     <label>Entrevistador (RH)<input name="entrevistador" required /></label>
-                    <label>Avaliação da Liderança<select name="aval_lideranca"><option>Ótima</option><option>Boa</option><option>Regular</option><option>Ruim</option></select></label>
+                    <label>AvaliaÃ§Ã£o da LideranÃ§a<select name="aval_lideranca"><option>Ã“tima</option><option>Boa</option><option>Regular</option><option>Ruim</option></select></label>
                   </div>
                   <div class="form-grid">
-                    <label>Avaliação de Salário e Benefícios<select name="aval_beneficios"><option>Ótima</option><option>Boa</option><option>Regular</option><option>Ruim</option></select></label>
+                    <label>AvaliaÃ§Ã£o de SalÃ¡rio e BenefÃ­cios<select name="aval_beneficios"><option>Ã“tima</option><option>Boa</option><option>Regular</option><option>Ruim</option></select></label>
                   </div>
                   <label>O que mais gostava na empresa?<textarea name="pontos_positivos" rows="2"></textarea></label>
                   <label>O que poderia ser melhorado? (Ambiente, processos, lideranca)<textarea name="pontos_melhoria" rows="2"></textarea></label>
@@ -766,7 +698,7 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>Adesao plano de saude e odonto</h2>
-                      <p class="item-meta">Adesão de beneficios</p>
+                      <p class="item-meta">AdesÃ£o de beneficios</p>
                     </div>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
@@ -776,7 +708,7 @@
                     <label>Data de Nasc.<input name="data_nasc" type="date" required /></label>
                   </div>
                   <div class="form-grid">
-                    <label>Nome da Mãe<input name="nome_mae" required /></label>
+                    <label>Nome da MÃ£e<input name="nome_mae" required /></label>
                     <label>Celular / Telefone<input name="celular" required placeholder="(00) 00000-0000" maxlength="15" inputmode="numeric" /></label>
                   </div>
                   <div class="form-grid form-grid-sm">
@@ -784,7 +716,7 @@
                     <label>Altura<input name="altura" /></label>
                     <label>E-mail Pessoal<input name="email" type="email" /></label>
                   </div>
-                  <label>CEP / Endereço Completo<input name="endereco" required placeholder="Rua, Número, Bairro, Cidade - UF, CEP" /></label>
+                  <label>CEP / EndereÃ§o Completo<input name="endereco" required placeholder="Rua, NÃºmero, Bairro, Cidade - UF, CEP" /></label>
                   <div class="form-grid">
                     <label>Tipo de Solicitacao<select name="tipo_solicitacao"><option>Inclusao Novo Titular</option><option>Inclusao de Dependente</option><option>Cancelamento/Exclusao</option></select></label>
                     <label>Plano Solicitado<select name="plano"><option>Plano de Saude</option><option>Plano Odontologico</option><option>Saude + Odonto</option></select></label>
@@ -823,8 +755,8 @@
                     <label>Seguranca e uso de EPIs<select name="aval_seguranca"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
                   </div>
                   <div class="form-grid">
-                    <label>Comportamento e Respeito às Regras<select name="aval_comportamento"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
-                    <label>Organização e Limpeza (5S)<select name="aval_organizacao"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                    <label>Comportamento e Respeito Ã s Regras<select name="aval_comportamento"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
+                    <label>OrganizaÃ§Ã£o e Limpeza (5S)<select name="aval_organizacao"><option>Atende as expectativas</option><option>Supera as expectativas</option><option>Abaixo do esperado</option></select></label>
                   </div>
                   <label>Principais Pontos Fortes (O que o colaborador faz bem?)<textarea name="positivos" rows="3" required></textarea></label>
                   <label>Pontos a Desenvolver (O que precisa melhorar?)<textarea name="melhorias" rows="3" required></textarea></label>
@@ -838,7 +770,7 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>Feedback Fredy Pneus</h2>
-                      <p class="item-meta">Feedback para cargos estratégicos</p>
+                      <p class="item-meta">Feedback para cargos estratÃ©gicos</p>
                     </div>
                   </div>
                   <label>Colaborador<input name="colaborador" required /></label>
@@ -850,14 +782,14 @@
                     <label>Gestor Aplicador<input name="gestor_aplicador" required /></label>
                     <label>Cargo<input name="cargo" /></label>
                     <label>Tempo de Empresa<input name="tempo_empresa" /></label>
-                    <label>Acompanhamento do RH?<select name="acompanhamento_rh"><option>Não</option><option>Sim</option></select></label>
+                    <label>Acompanhamento do RH?<select name="acompanhamento_rh"><option>NÃ£o</option><option>Sim</option></select></label>
                   </div>
                   <label>Tipo de Feedback<select name="tipo_feedback"><option>Orientacao / Alinhamento de rotina</option><option>Elogio / Reconhecimento</option><option>Correcao Disciplinar</option></select></label>
                   <label>Situacao / Comportamento Observado (Descreva o fato)<textarea name="situacao" rows="4" required></textarea></label>
                   <label>Pontos positivos / fortalezas<textarea name="positivos" rows="3"></textarea></label>
                   <label>Pontos de melhoria / desenvolvimento<textarea name="melhorias" rows="3"></textarea></label>
                   <label>Expectativa do colaborador<textarea name="expectativa_colaborador" rows="3"></textarea></label>
-                  <label>Plano de ação<textarea name="plano_acao" rows="3"></textarea></label>
+                  <label>Plano de aÃ§Ã£o<textarea name="plano_acao" rows="3"></textarea></label>
                   <label>Acompanhamento<textarea name="acompanhamento" rows="3"></textarea></label>
                   <label>Reacao do Colaborador e Compromisso Assumido<textarea name="observacoes" rows="4" required></textarea></label>
                   <button class="primary-button" type="submit">Salvar feedback</button>
@@ -869,25 +801,25 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>Solicitacao de Ferias</h2>
-                      <p class="item-meta">Solicitação de Ferias</p>
+                      <p class="item-meta">SolicitaÃ§Ã£o de Ferias</p>
                     </div>
                   </div>
                   <div class="form-grid">
                     <label>Setor requisitante<select name="filial" data-unit-select required></select></label>
                     <label>Requisitante<input name="requisitante" required /></label>
                   </div>
-                  <label>Funcionário<input name="colaborador" required /></label>
+                  <label>FuncionÃ¡rio<input name="colaborador" required /></label>
                   <div class="form-grid form-grid-sm">
                     <label>Dias para gozo<input name="dias_gozo" type="number" min="1" required /></label>
-                    <label>Data de início<input name="data_inicio" type="date" required /></label>
-                    <label>Abono pecuniário<select name="abono"><option>Nao</option><option>Sim</option></select></label>
+                    <label>Data de inÃ­cio<input name="data_inicio" type="date" required /></label>
+                    <label>Abono pecuniÃ¡rio<select name="abono"><option>Nao</option><option>Sim</option></select></label>
                   </div>
                   <div class="form-grid">
-                    <label>Período Aquisitivo (Início)<input name="periodo_aquisitivo_inicio" type="date" required /></label>
-                    <label>Período Aquisitivo (Fim)<input name="periodo_aquisitivo_fim" type="date" required /></label>
+                    <label>PerÃ­odo Aquisitivo (InÃ­cio)<input name="periodo_aquisitivo_inicio" type="date" required /></label>
+                    <label>PerÃ­odo Aquisitivo (Fim)<input name="periodo_aquisitivo_fim" type="date" required /></label>
                   </div>
                   <div class="form-grid">
-                    <label>Adiantamento 1ª Parcela 13º?<select name="adiantamento_13"><option>Não</option><option>Sim</option></select></label>
+                    <label>Adiantamento 1Âª Parcela 13Âº?<select name="adiantamento_13"><option>NÃ£o</option><option>Sim</option></select></label>
                   </div>
                   <label>Calcular abono com data anterior as ferias<select name="abono_data_anterior"><option>Nao</option><option>Sim</option></select></label>
                   <label>Responsavel pelas atividades<input name="responsavel_atividades" required /></label>
@@ -905,7 +837,7 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>MP - Movimentacao Pessoal</h2>
-                      <p class="item-meta">Movimentação de histórico promocional e aditivos contratuais</p>
+                      <p class="item-meta">MovimentaÃ§Ã£o de histÃ³rico promocional e aditivos contratuais</p>
                     </div>
                   </div>
                   <div class="form-grid form-grid-md">
@@ -935,9 +867,9 @@
                     <label>Salario proposto<input name="salario_proposto" placeholder="R$ 0,00" inputmode="numeric" /></label>
                     <label>% reajuste<input name="reajuste" /></label>
                   </div>
-                  <label>Justificativa Detalhada da Movimentação<textarea name="justificativa_movimentacao" rows="2" required></textarea></label>
+                  <label>Justificativa Detalhada da MovimentaÃ§Ã£o<textarea name="justificativa_movimentacao" rows="2" required></textarea></label>
                   <div class="form-grid">
-                    <label>Status de Aprovação<select name="status_aprovacao"><option>Pendente</option><option>Aprovado</option><option>Recusado</option></select></label>
+                    <label>Status de AprovaÃ§Ã£o<select name="status_aprovacao"><option>Pendente</option><option>Aprovado</option><option>Recusado</option></select></label>
                   </div>
                   <label>Observacoes<textarea name="observacoes" rows="3"></textarea></label>
                   <button class="primary-button" type="submit">Salvar movimentacao</button>
@@ -949,7 +881,7 @@
                   <div class="panel-header split-header">
                     <div>
                       <h2>RP - Requisicao Pessoal</h2>
-                      <p class="item-meta">Contratação de novas vagas</p>
+                      <p class="item-meta">ContrataÃ§Ã£o de novas vagas</p>
                     </div>
                   </div>
                   <div class="form-grid">
@@ -969,12 +901,12 @@
                     <label>Estacao disponivel?<select name="estacao_disponivel"><option>Sim</option><option>Nao</option></select></label>
                   </div>
                   <div class="form-grid">
-                    <label>Horário de Trabalho / Turno<input name="horario_trabalho" required placeholder="00:00 às 00:00" maxlength="14" inputmode="numeric" /></label>
+                    <label>HorÃ¡rio de Trabalho / Turno<input name="horario_trabalho" required placeholder="00:00 Ã s 00:00" maxlength="14" inputmode="numeric" /></label>
                     <label>Equipamentos (Notebook, Celular, Frota)<input name="equipamentos" placeholder="Ex: Notebook, Acesso Sistema X" /></label>
                   </div>
                   <div class="form-grid form-grid-md">
-                    <label>Cargo/Função/Nível<input name="cargo" required /></label>
-                    <label>Nº de vagas<input name="numero_vagas" type="number" min="1" required /></label>
+                    <label>Cargo/FunÃ§Ã£o/NÃ­vel<input name="cargo" required /></label>
+                    <label>NÂº de vagas<input name="numero_vagas" type="number" min="1" required /></label>
                     <label>Faixa salarial<input name="faixa_salarial" placeholder="R$ 0,00" inputmode="numeric" /></label>
                   </div>
                   <label>Descricao da vaga<textarea name="descricao" rows="3" required></textarea></label>
@@ -1004,7 +936,7 @@
                   </div>
                   <div class="form-grid">
                     <label>Gestor Solicitante<input name="gestor_solicitante" required /></label>
-                    <label>Possui Estabilidade? (CIPA, Gestante, etc)<input name="estabilidade" placeholder="Não / Sim (Descrever)" required /></label>
+                    <label>Possui Estabilidade? (CIPA, Gestante, etc)<input name="estabilidade" placeholder="NÃ£o / Sim (Descrever)" required /></label>
                   </div>
                   <div class="form-grid">
                     <label>Exame Demissional<select name="exame_demissional"><option>Pendente de Agendamento</option><option>Agendado</option><option>Realizado (Apto)</option><option>Realizado (Inapto)</option></select></label>
@@ -1025,7 +957,7 @@
                   <h2>Registros salvos</h2>
                 </div>
                 <div class="vt-filter-bar" aria-label="Filtros de Documentos RH">
-                  <div class="vt-filter-fields document-filter-fields">
+                  <div class="vt-filter-fields">
                     <input id="document-filter-name" type="search" placeholder="Nome do colaborador" autocomplete="off" aria-label="Filtrar por nome do colaborador" />
                   <input id="document-filter-cpf" type="search" placeholder="CPF" inputmode="numeric" maxlength="14" autocomplete="off" aria-label="Filtrar por CPF" />
                   <select id="document-filter-type" aria-label="Filtrar por tipo de documento">
@@ -1050,97 +982,12 @@
           </div>
         </section>
 
-        <section class="view" id="advertencias-suspensoes">
-          <div class="document-workspace">
-            <aside class="panel doc-menu">
-              <div class="panel-header split-header">
-                <div>
-                  <h2>Medidas disciplinares</h2>
-                  <p class="item-meta">Advertencias e suspensoes</p>
-                </div>
-              </div>
-              <button class="doc-tab disciplinary-tab active" data-disciplinary-doc="advertencia" type="button">Advertencia</button>
-              <button class="doc-tab disciplinary-tab" data-disciplinary-doc="suspensao" type="button">Suspensao</button>
-            </aside>
-
-            <div class="doc-content">
-              <section class="doc-view disciplinary-view active" id="disciplinary-advertencia">
-                <form class="panel doc-form disciplinary-form" data-disciplinary-form="advertencia" autocomplete="off">
-                  <div class="panel-header split-header">
-                    <div>
-                      <h2>Advertencia</h2>
-                      <p class="item-meta">Salve o registro para gerar o documento e anexar depois</p>
-                    </div>
-                  </div>
-                  <label>Nome do funcionario<input name="colaborador" required /></label>
-                  <div class="form-grid">
-                    <label>Data da advertencia<input name="data_medida" type="date" required /></label>
-                    <label>Unidade do funcionario<select name="unidade" data-unit-select required></select></label>
-                    <label>Local<input name="local" placeholder="Cidade" autocomplete="off" required /></label>
-                  </div>
-                  <label>Motivo<textarea name="motivo" rows="4" required></textarea></label>
-                  <button class="primary-button" type="submit">Salvar advertencia</button>
-                </form>
-              </section>
-
-              <section class="doc-view disciplinary-view" id="disciplinary-suspensao">
-                <form class="panel doc-form disciplinary-form" data-disciplinary-form="suspensao" autocomplete="off">
-                  <div class="panel-header split-header">
-                    <div>
-                      <h2>Suspensao</h2>
-                      <p class="item-meta">Salve o registro para gerar o documento e anexar depois</p>
-                    </div>
-                  </div>
-                  <label>Nome do funcionario<input name="colaborador" required /></label>
-                  <div class="form-grid">
-                    <label>Data da suspensao<input name="data_medida" type="date" required /></label>
-                    <label>Unidade do funcionario<select name="unidade" data-unit-select required></select></label>
-                    <label>Local<input name="local" placeholder="Cidade" autocomplete="off" required /></label>
-                  </div>
-                  <label>Motivo<textarea name="motivo" rows="4" required></textarea></label>
-                  <button class="primary-button" type="submit">Salvar suspensao</button>
-                </form>
-              </section>
-
-              <div class="panel">
-                <div class="panel-header">
-                  <h2>Registros salvos</h2>
-                </div>
-                <div class="vt-filter-bar disciplinary-filter-bar" aria-label="Filtros de Advertencias e Suspensoes">
-                  <button class="secondary-link vt-report-button" id="abrir-relatorio-disciplinary" type="button">Relatorio</button>
-                  <div class="vt-filter-fields disciplinary-filter-fields">
-                    <input id="disciplinary-filter-name" type="search" placeholder="Nome" autocomplete="off" aria-label="Filtrar por nome" />
-                    <select id="disciplinary-filter-date" aria-label="Filtrar por mes">
-                      <option value="">Mes</option>
-                      <option value="01">Janeiro</option>
-                      <option value="02">Fevereiro</option>
-                      <option value="03">Marco</option>
-                      <option value="04">Abril</option>
-                      <option value="05">Maio</option>
-                      <option value="06">Junho</option>
-                      <option value="07">Julho</option>
-                      <option value="08">Agosto</option>
-                      <option value="09">Setembro</option>
-                      <option value="10">Outubro</option>
-                      <option value="11">Novembro</option>
-                      <option value="12">Dezembro</option>
-                    </select>
-                    <select id="disciplinary-filter-unit" aria-label="Filtrar por unidade" data-unit-select data-unit-placeholder="Unidade"></select>
-                  </div>
-                  <button class="secondary-link compact-filter-button" id="clear-disciplinary-filters" type="button" hidden>Limpar</button>
-                </div>
-                <div class="card-list" id="disciplinary-records"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section class="view" id="documentos-contratados">
           <div class="panel panel-spaced">
             <div class="panel-header split-header">
               <div>
                 <h2>Documentos de Contratados</h2>
-                <p class="item-meta">Envios recebidos pelos formulários das empresas</p>
+                <p class="item-meta">Envios recebidos pelos formulÃ¡rios das empresas</p>
               </div>
               <div class="job-actions flush-top">
                 <a class="secondary-link" href="documentos-fredy.html" target="_blank" rel="noreferrer">Fredy Pneus</a>
@@ -1154,7 +1001,7 @@
             <div class="panel-header">
               <div>
                 <h2>Recebidos</h2>
-                <p class="item-meta">Arquivos privados, acessíveis apenas por usuários autorizados do HUB</p>
+                <p class="item-meta">Arquivos privados, acessÃ­veis apenas por usuÃ¡rios autorizados do HUB</p>
               </div>
               <div class="vt-filter-bar" aria-label="Filtros de Documentos de Contratados">
                 <div class="vt-filter-fields">
@@ -1170,26 +1017,81 @@
         </section>
 
 
+        <section class="view" id="atestados">
+          <div class="panel panel-spaced">
+            <div class="panel-header split-header">
+              <div>
+                <h2>Atestados recebidos</h2>
+                <p class="item-meta">VisualizaÃ§Ã£o dos atestados enviados pelos colaboradores no formulÃ¡rio pÃºblico.</p>
+              </div>
+              <div class="job-actions flush-top">
+                <a class="secondary-link" href="atestados.html" target="_blank" rel="noreferrer">Abrir envio de atestado</a>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Recebidos</h2>
+                <p class="item-meta">Arquivos privados, acessÃ­veis apenas por usuÃ¡rios autorizados do HUB.</p>
+              </div>
+              <div class="vt-filter-bar" aria-label="Filtros de Atestados">
+                <div class="vt-filter-fields">
+                  <input id="atestado-filter-nome" type="search" placeholder="Nome do colaborador" autocomplete="off" aria-label="Filtrar por nome" />
+                  <input id="atestado-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF" autocomplete="off" aria-label="Filtrar por CPF" />
+                  <select id="atestado-filter-unidade" data-unit-select data-unit-placeholder="Todas as unidades" aria-label="Filtrar por unidade">
+                    <option value="">Todas as unidades</option>
+                    <option>1- MTZ</option>
+                    <option>2- SBS</option>
+                    <option>3- ITJ 1</option>
+                    <option>4- PLÃ‡</option>
+                    <option>5- GUA</option>
+                    <option>7- DPA JC</option>
+                    <option>9- DPA IRI</option>
+                    <option>10- JPL</option>
+                    <option>11- BC</option>
+                    <option>12- GCS GPO</option>
+                    <option>12- GCS JLLE</option>
+                    <option>13- JRG 1</option>
+                    <option>14- BRQ</option>
+                    <option>15- FLN</option>
+                    <option>17- FAC</option>
+                    <option>19- RNG 1</option>
+                    <option>20- BNU 1</option>
+                    <option>21- JRG 2</option>
+                    <option>22- TRINCA</option>
+                    <option>23- ITJ 2</option>
+                    <option>26- BNU 2</option>
+                    <option>28- ARA</option>
+                  </select>
+                </div>
+                <button class="secondary-link compact-filter-button" id="clear-atestado-filters" type="button" hidden>Limpar</button>
+              </div>
+            </div>
+            <div class="card-list" id="atestados-list"></div>
+          </div>
+        </section>
+
         <section class="view" id="gerenciamento-vt">
           <div class="single-workspace">
             <form class="panel form-panel" id="vt-form">
               <div class="panel-header">
                 <div>
                   <h2>Gerenciamento VT</h2>
-                  <p class="item-meta">Calcule o valor necessário de vale-transporte para o colaborador</p>
+                  <p class="item-meta">Calcule o valor necessÃ¡rio de vale-transporte para o colaborador</p>
                 </div>
               </div>
               <input name="id" type="hidden" />
               <label>Nome e sobrenome do colaborador
-                <input id="vt-colaborador" name="colaborador" type="text" minlength="3" maxlength="120" pattern="\S+\s+\S+.*" title="digite o nome completo" placeholder="Nome e sobrenome" autocomplete="off" required />
+                <input id="vt-colaborador" name="colaborador" type="text" minlength="3" maxlength="120" pattern="\S+\s+\S+.*" placeholder="Nome e sobrenome" autocomplete="off" required />
               </label>
               <div class="form-grid form-grid-md">
-                <label>Mês
+                <label>MÃªs
                   <select id="vt-mes" name="mes" required>
-                    <option value="" disabled selected>Selecione o mês</option>
+                    <option value="" disabled selected>Selecione o mÃªs</option>
                     <option>Janeiro</option>
                     <option>Fevereiro</option>
-                    <option>Março</option>
+                    <option>MarÃ§o</option>
                     <option>Abril</option>
                     <option>Maio</option>
                     <option>Junho</option>
@@ -1206,11 +1108,8 @@
                 </label>
               </div>
               <div class="form-grid form-grid-md">
-                <label>Dias úteis no mês
+                <label>Dias Ãºteis no mÃªs
                   <input id="vt-dias-uteis" name="dias_uteis" type="number" min="0" step="1" placeholder="Ex: 22" required />
-                </label>
-                <label>Passagens usadas no dia
-                  <input id="vt-passagens-dia" name="passagens_dia" type="number" min="1" step="1" placeholder="Ex: 2" value="2" required />
                 </label>
                 <label>Valor da passagem
                   <input id="vt-valor-passagem" name="valor_passagem" type="text" inputmode="numeric" pattern="\d+,\d{2}" maxlength="8" placeholder="Ex: 5,50" autocomplete="off" required />
@@ -1220,28 +1119,28 @@
                 </label>
               </div>
               <div class="vt-result-card" aria-live="polite">
-                <span>Valor necessário</span>
+                <span>Valor necessÃ¡rio</span>
                 <strong id="vt-valor-necessario">R$ 0,00</strong>
                 <p id="vt-calculo-detalhe">Informe os dados para calcular.</p>
               </div>
-              <button class="primary-button" type="submit">Registrar cálculo VT</button>
-              <button class="secondary-link full-width-action" id="cancelar-edicao-vt" type="button" hidden>Cancelar edição</button>
+              <button class="primary-button" type="submit">Registrar cÃ¡lculo VT</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-vt" type="button" hidden>Cancelar ediÃ§Ã£o</button>
             </form>
             <div class="panel">
               <div class="panel-header vt-records-header">
                 <div>
                   <h2>Registros de VT</h2>
-                  <p class="item-meta">Histórico dos cálculos registrados</p>
+                  <p class="item-meta">HistÃ³rico dos cÃ¡lculos registrados</p>
                 </div>
                 <div class="vt-filter-bar" aria-label="Filtros de registros de VT">
-                  <button class="secondary-link vt-report-button" id="abrir-relatorio-vt" type="button">Relatório</button>
+                  <button class="secondary-link vt-report-button" id="abrir-relatorio-vt" type="button">RelatÃ³rio</button>
                   <div class="vt-filter-fields">
                     <input id="vt-filter-nome" type="search" placeholder="Nome" autocomplete="off" aria-label="Filtrar por nome" />
-                    <select id="vt-filter-mes" aria-label="Filtrar por mês">
-                      <option value="">Mês</option>
+                    <select id="vt-filter-mes" aria-label="Filtrar por mÃªs">
+                      <option value="">MÃªs</option>
                       <option>Janeiro</option>
                       <option>Fevereiro</option>
-                      <option>Março</option>
+                      <option>MarÃ§o</option>
                       <option>Abril</option>
                       <option>Maio</option>
                       <option>Junho</option>
@@ -1305,7 +1204,7 @@
             <aside class="settings-panel" aria-label="Configuracoes do usuario">
               <h2>Configuracoes</h2>
               <label class="settings-search" aria-label="Pesquisar configuracoes">
-                <span aria-hidden="true">🔍</span>
+                <span aria-hidden="true">âŒ•</span>
                 <input id="settings-search-input" type="search" placeholder="Pesquisar configuracoes" autocomplete="off" />
               </label>
               <div class="settings-user-card">
@@ -1316,20 +1215,20 @@
                 </div>
               </div>
               <div class="settings-list" id="settings-list">
-                <button class="settings-item active" type="button" data-settings-target="settings-account-panel" data-settings-keywords="conta seguranca dados conta"><span aria-hidden="true">⚙️</span><span><strong>Conta</strong><small>Notificacoes de seguranca, dados da conta</small></span></button>
-                <button class="settings-item" type="button" data-settings-target="settings-privacy-panel" data-settings-keywords="privacidade contatos bloqueados mensagens temporarias"><span aria-hidden="true">🔒</span><span><strong>Privacidade</strong><small>Contatos bloqueados, mensagens temporarias</small></span></button>
-                <button class="settings-item" type="button" data-settings-target="settings-chats-panel" data-settings-keywords="conversas tema configuracoes conversas"><span aria-hidden="true">💬</span><span><strong>Conversas</strong><small>Tema, configuracoes de conversas</small></span></button>
-                <button class="settings-item" type="button" data-settings-target="settings-notifications-panel" data-settings-keywords="notificacoes mensagens avisos"><span aria-hidden="true">🔔</span><span><strong>Notificacoes</strong><small>Notificacoes de mensagens</small></span></button>
-                <button class="settings-item" type="button" data-settings-target="settings-shortcuts-panel" data-settings-keywords="atalhos teclado acoes rapidas"><span aria-hidden="true">⌨️</span><span><strong>Atalhos de teclado</strong><small>Acoes rapidas</small></span></button>
+                <button class="settings-item active" type="button" data-settings-target="settings-account-panel" data-settings-keywords="conta seguranca dados conta"><span aria-hidden="true">âš¿</span><span><strong>Conta</strong><small>Notificacoes de seguranca, dados da conta</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-privacy-panel" data-settings-keywords="privacidade contatos bloqueados mensagens temporarias"><span aria-hidden="true">â–£</span><span><strong>Privacidade</strong><small>Contatos bloqueados, mensagens temporarias</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-chats-panel" data-settings-keywords="conversas tema configuracoes conversas"><span aria-hidden="true">â–¤</span><span><strong>Conversas</strong><small>Tema, configuracoes de conversas</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-notifications-panel" data-settings-keywords="notificacoes mensagens avisos"><span aria-hidden="true">â—Œ</span><span><strong>Notificacoes</strong><small>Notificacoes de mensagens</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-shortcuts-panel" data-settings-keywords="atalhos teclado acoes rapidas"><span aria-hidden="true">âŒ¨</span><span><strong>Atalhos de teclado</strong><small>Acoes rapidas</small></span></button>
               </div>
-              <button class="settings-logout" id="settings-logout-button" type="button"><span aria-hidden="true">🚪</span>Desconectar</button>
+              <button class="settings-logout" id="settings-logout-button" type="button"><span aria-hidden="true">â†ª</span>Desconectar</button>
             </aside>
             <div class="settings-detail">
               <form class="panel form-panel settings-detail-panel active" id="conta-form" data-settings-panel="settings-account-panel">
               <div class="panel-header">
-                <h2>Configuração de conta</h2>
+                <h2>ConfiguraÃ§Ã£o de conta</h2>
               </div>
-              <label>Nome do Usuário
+              <label>Nome do UsuÃ¡rio
                 <input type="text" name="novo_nome" id="novo-nome" placeholder="Seu nome" />
               </label>
               <div class="account-photo-block">
@@ -1337,13 +1236,9 @@
                 <div class="avatar-upload-wrapper">
                   <img id="conta-avatar-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392a7a2'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar">
                   <div class="stack-sm">
-                    <label class="file-upload-field account-photo-upload">Foto
-                      <span class="file-upload-control">
-                        <span class="file-upload-button">Anexar foto</span>
-                        <span id="foto-perfil-filename" class="file-upload-name" data-empty-label="Nenhuma foto selecionada">Nenhuma foto selecionada</span>
-                      </span>
-                      <input class="file-upload-input" type="file" name="foto_perfil" id="foto-perfil-input" accept="image/png, image/jpeg, image/webp" />
-                    </label>
+                    <label class="secondary-link clickable fit-link flush-bottom" for="foto-perfil-input">Escolher nova foto</label>
+                    <input class="hidden" type="file" name="foto_perfil" id="foto-perfil-input" accept="image/png, image/jpeg, image/webp" />
+                    <span id="foto-perfil-filename" class="meta-sm">Nenhuma foto selecionada</span>
                   </div>
                 </div>
               </div>
@@ -1355,7 +1250,7 @@
               </form>
             <section class="panel settings-detail-panel" data-settings-panel="settings-privacy-panel">
               <div class="panel-header"><h2>Privacidade</h2></div>
-              <p class="item-meta">Configurações de privacidade da conta e das conversas.</p>
+              <p class="item-meta">ConfiguraÃ§Ãµes de privacidade da conta e das conversas.</p>
               <div class="settings-section">
                 <h3>Exibi&ccedil;&atilde;o</h3>
                 <label class="settings-option">
@@ -1377,13 +1272,9 @@
             </section>
             <section class="panel settings-detail-panel" data-settings-panel="settings-chats-panel">
               <div class="panel-header"><h2>Conversas</h2></div>
-              <p class="item-meta">Preferências visuais e comportamento das conversas.</p>
+              <p class="item-meta">PreferÃªncias visuais e comportamento das conversas.</p>
               <div class="settings-section">
                 <h3>Apar&ecirc;ncia</h3>
-                <label class="settings-option">
-                  <input type="checkbox" id="settings-appearance-dark-mode" data-user-setting="darkMode" />
-                  <span><strong>Modo escuro</strong><small>Aplica um tema escuro em todo o sistema.</small></span>
-                </label>
                 <label class="settings-option">
                   <input type="checkbox" id="settings-chat-compact" data-user-setting="compactMode" />
                   <span><strong>Modo compacto</strong><small>Reduz espa&ccedil;amentos do chat e listas para caber mais informa&ccedil;&atilde;o na tela.</small></span>
@@ -1410,8 +1301,8 @@
               </div>
             </section>
             <section class="panel settings-detail-panel" data-settings-panel="settings-notifications-panel">
-              <div class="panel-header"><h2>Notificações</h2></div>
-              <p class="item-meta">Preferências de avisos e mensagens do sistema.</p>
+              <div class="panel-header"><h2>NotificaÃ§Ãµes</h2></div>
+              <p class="item-meta">PreferÃªncias de avisos e mensagens do sistema.</p>
               <div class="settings-section">
                 <h3>Mensagens</h3>
                 <label class="settings-option">
@@ -1434,18 +1325,18 @@
                 <h3>Funcionamento</h3>
                 <label class="settings-option">
                   <input type="checkbox" id="settings-shortcuts-enabled" data-user-setting="keyboardShortcuts" />
-                  <span><strong>Ativar atalhos de teclado</strong><small>Permite usar Ctrl + n&uacute;mero, Ctrl + F e Escape nas telas do HUB.</small></span>
+                  <span><strong>Ativar atalhos de teclado</strong><small>Permite usar Ctrl + n&uacute;mero, Ctrl + K e Escape nas telas do HUB.</small></span>
                 </label>
               </div>
               <div class="settings-section">
-                <h3>Navegação</h3>
+                <h3>NavegaÃ§Ã£o</h3>
                 <div class="shortcuts-list">
                   <div class="shortcut-item">
                     <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>1</kbd> a <kbd>0</kbd></div>
-                    <span class="shortcut-desc">Alternar entre abas de visualização</span>
+                    <span class="shortcut-desc">Alternar entre abas de visualizaÃ§Ã£o</span>
                   </div>
                   <div class="shortcut-item">
-                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>F</kbd></div>
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>K</kbd></div>
                     <span class="shortcut-desc">Filtrar mensagens especificas no chat</span>
                   </div>
                   <div class="shortcut-item">
@@ -1466,13 +1357,13 @@
                     <span class="shortcut-desc">Quebra de linha na mensagem</span>
                   </div>
                   <div class="shortcut-item">
-                    <div class="shortcut-keys"><kbd>↑</kbd> / <kbd>↓</kbd></div>
-                    <span class="shortcut-desc">Navegar no histórico de mensagens</span>
+                    <div class="shortcut-keys"><kbd>â†‘</kbd> / <kbd>â†“</kbd></div>
+                    <span class="shortcut-desc">Navegar no histÃ³rico de mensagens</span>
                   </div>
                 </div>
               </div>
               <div class="settings-section">
-                <h3>Edição</h3>
+                <h3>EdiÃ§Ã£o</h3>
                 <div class="shortcuts-list">
                   <div class="shortcut-item">
                     <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>B</kbd></div>
@@ -1480,7 +1371,7 @@
                   </div>
                   <div class="shortcut-item">
                     <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>I</kbd></div>
-                    <span class="shortcut-desc">Itálico</span>
+                    <span class="shortcut-desc">ItÃ¡lico</span>
                   </div>
                   <div class="shortcut-item">
                     <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>U</kbd></div>
@@ -1493,8 +1384,10 @@
           </div>
         </section>
       </main>
-    </div>    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
-    <script src="script.js?v=restauracao-v19"></script>
+    </div>
+    <script src="hub-postgres-client.js"></script>
+    <script src="script.js"></script>
+    <script src="vagas-admin-filters.js"></script>
   </body>
 </html>
+

@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.public.blob.vercel-storage.com; media-src 'self' blob: https://*.public.blob.vercel-storage.com; connect-src 'self' https://challenges.cloudflare.com https://*.public.blob.vercel-storage.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
     <title>Login | HUB RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=restauracao-v9" />
+    <link rel="stylesheet" href="style.css?v=restauracao-v8" />
   </head>
   <body>
     <section class="login-screen" id="login-screen">
@@ -21,19 +21,21 @@
             <span>Acesso do RH</span>
           </div>
         </div>
-        <form id="login-form" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other">
+        <form id="login-form" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
           <label>E-mail ou CPF
-            <input name="hub_lookup" data-login-identifier type="text" autocomplete="one-time-code" inputmode="text" data-lpignore="true" data-1p-ignore="true" data-form-type="other" readonly required />
+            <input name="identificador" type="text" autocomplete="off" inputmode="text" data-lpignore="true" data-1p-ignore="true" required />
           </label>
           <label>Senha
-            <input name="hub_key" data-login-password class="masked-password-input" type="text" autocomplete="one-time-code" inputmode="text" data-lpignore="true" data-1p-ignore="true" data-form-type="other" readonly required />
+            <input name="senha" type="password" autocomplete="off" data-lpignore="true" data-1p-ignore="true" required />
           </label>
           <p class="login-error" id="login-error" role="alert"></p>
           <button class="primary-button" type="submit">Entrar</button>
         </form>
       </div>
     </section>
-
-    <script src="script.js?v=restauracao-v9"></script>
+    <script src="hub-postgres-client.js"></script>
+    <script src="script.js?v=restauracao-v8"></script>
   </body>
 </html>
+
+
