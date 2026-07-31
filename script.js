@@ -5548,9 +5548,9 @@ function isDashboardActivityReadForOrdering(item = {}) {
 }
 
 function renderDashboard() {
-  if (!document.getElementById("metric-denuncias")) return;
+  if (!document.getElementById("metric-chamados")) return;
 
-  document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status === "Aberta" || item.status === "Urgente").length;
+  document.getElementById("metric-chamados").textContent = (data.chamados || []).filter((item) => item.status !== "Arquivado").length;
   const unreadRhMessages = getUnreadRhMessages();
   if (notificationBaselineReady) {
     notifyUnreadRhMessages(unreadRhMessages.length);
@@ -8719,6 +8719,13 @@ document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
     closeMobileMenu();
     checkAndMarkChatAsRead();
   });
+  if (button.matches('[role="button"]')) {
+    button.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      button.click();
+    });
+  }
 });
 
 document.getElementById("mobile-menu-toggle")?.addEventListener("click", toggleMobileMenu);
