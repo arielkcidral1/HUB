@@ -8339,8 +8339,7 @@ function renderDocumentRecords() {
           </div>
         </div>
         <p>${escapeHtml(item.summary)}</p>
-        <p class="item-meta">${escapeHtml(item.details)}</p>
-        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}${item.updatedAt ? ` em ${escapeHtml(item.updatedAt)}` : ""}</p>
+        <p class="item-meta">Registro: ${escapeHtml(item.createdAt || "Data nao informada")} por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy || item.updatedAt ? ` | Edicao: ${escapeHtml(item.updatedAt || "Data nao informada")} por ${escapeHtml(item.updatedBy || getSystemFallbackAuthor())}` : ""}</p>
       </article>
     `)
     .join("");
