@@ -1,4 +1,5 @@
 const STORAGE_KEY = "hub-rh-data";
+const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const CONTRACTOR_PENDING_DOCUMENTS_KEY = "hub-contractor-pending-documents";
 const SESSION_KEY = "hub-rh-session";
 const PUBLIC_CLIENT_ID_KEY = "hub-public-client-id";
@@ -6,9 +7,12 @@ const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
-
+// IMPORTANTE: os IDs lidos nÃ£o entram no cache sensÃ­vel.
+// Assim, ao fechar/abrir o site ou perder a sessÃ£o, as notificaÃ§Ãµes jÃ¡ visualizadas
+// nÃ£o voltam como nÃ£o lidas.
 const SENSITIVE_CLIENT_CACHE_KEYS = [
   STORAGE_KEY,
+  DOCUMENT_RECORDS_KEY,
   TEAM_USERS_KEY,
   TEAM_CREDENTIALS_KEY,
 ];
@@ -21,6 +25,8 @@ const CHAT_POLL_PREFIX = "__HUB_POLL__:";
 const RESUME_BUCKET = "hub-curriculos";
 const RESUME_PUBLIC_PREFIX = "candidaturas";
 const CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos";
+const ATESTADOS_BUCKET = "hub-atestados";
+const ATESTADO_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 const CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 const RESUME_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const RESUME_ALLOWED_MIME_TYPES = new Set([
@@ -65,87 +71,85 @@ const CHAT_FILE_EXTENSION_MIME_TYPES = new Map([
   ["mov", "video/quicktime"],
 ]);
 const CHAT_EMOJIS = [
-  "😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍",
-  "🤩","😘","😗","😚","😙","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🫢","🫣",
-  "🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😏","😒","🙄","😬","🤥","😌",
-  "😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","🤯",
-  "🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","☹️","😮","😯","😲","😳",
-  "🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩",
-  "😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻",
-  "👽","🤖","😺","😸","😹","😻","😼","😽","🙀","😿","😾","👋","🤚","🖐️","✋",
-  "🖖","🫱","🫲","🫳","🫴","👌","🤌","🤏","✌️","🤞","🫰","🤟","🤘","🤙","👈",
-  "👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐",
-  "🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦵","🦿","🦶","👂","🦻","👃","🧠",
-  "🫀","🫁","🦷","🦴","👀","👁️","👅","👄","💋","❤️","🧡","💛","💚","💙","💜",
-  "🖤","🤍","🤎","💔","❤️‍🔥","❤️‍🩹","❣️","💕","💞","💓","💗","💖","💘","💝","💟",
-  "👶","🧒","👦","👧","🧑","👱","👨","🧔","👩","🧓","👴","👵","🙍","🙎","🙅",
-  "🙆","💁","🙋","🧏","🙇","🤦","🤷","👮","🕵️","💂","👷","🫅","🤴","👸","👳",
-  "👲","🧕","🤵","👰","🤰","🤱","👼","🎅","🤶","🦸","🦹","🧙","🧚","🧛","🧜",
-  "🧝","🧞","🧟","💆","💇","🚶","🧍","🧎","🏃","💃","🕺","🧖","🧗","🤺","🏇",
-  "⛷️","🏂","🏌️","🏄","🚣","🏊","⛹️","🏋️","🚴","🚵","🐶","🐱","🐭","🐹","🐰",
-  "🦊","🐻","🐼","🐻‍❄️","🐨","🐯","🦁","🐮","🐷","🐽","🐸","🐵","🙈","🙉","🙊",
-  "🐒","🐔","🐧","🐦","🐤","🐣","🐥","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄",
-  "🐝","🪱","🐛","🦋","🐌","🐞","🐜","🪰","🪲","🪳","🦟","🦗","🕷️","🕸️","🦂",
-  "🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳",
-  "🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🦣","🐘","🦛","🦏","🐪","🐫","🦒",
-  "🦘","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🐈","🐓",
-  "🦃","🦤","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁",
-  "🐀","🐿️","🦔","🐾","🐉","🐲","🌵","🎄","🌲","🌳","🌴","🌱","🌿","☘️","🍀",
-  "🎍","🪴","🎋","🍃","🍂","🍁","🍄","🐚","🪨","🌾","💐","🌷","🌹","🥀","🌺",
-  "🌸","🌼","🌻","☀️","🌤️","⛅","🌥️","☁️","🌦️","🌧️","⛈️","🌩️","🌨️","❄️","☃️",
-  "⛄","🌬️","💨","🌪️","🌈","☂️","☔","⚡","🔥","💧","🌊","🌙","⭐","🌟","✨",
-  "☄️","🌌","🍏","🍎","🍐","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍈","🍒","🍑",
-  "🥭","🍍","🥥","🥝","🍅","🍆","🥑","🥦","🥬","🥒","🌶️","🫑","🌽","🥕","🫒",
-  "🧄","🧅","🥔","🍠","🥐","🥯","🍞","🥖","🥨","🧀","🥚","🍳","🧈","🥞","🧇",
-  "🥓","🥩","🍗","🍖","🌭","🍔","🍟","🍕","🫓","🥪","🥙","🧆","🌮","🌯","🫔",
-  "🥗","🥘","🫕","🥫","🍝","🍜","🍲","🍛","🍣","🍱","🥟","🦪","🍤","🍙","🍚",
-  "🍘","🍥","🥠","🥮","🍢","🍡","🍧","🍨","🍦","🥧","🧁","🍰","🎂","🍮","🍭",
-  "🍬","🍫","🍿","🍩","🍪","🌰","🥜","🍯","🥛","🍼","☕","🫖","🍵","🧃","🥤",
-  "🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","🧊","🥄","🍴","🍽️",
-  "🥣","🥡","⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🎱","🪀","🏓","🏸","🏒",
-  "🏑","🥍","🏏","🥅","⛳","🪁","🏹","🎣","🤿","🥊","🥋","🎽","🛹","🛼","🛷",
-  "⛸️","🥌","🎿","🤼","🤸","🤾","🧘","🤽","🏆","🥇","🥈","🥉","🏅","🎖️","🎗️",
-  "🎫","🎟️","🎪","🤹","🎭","🎨","🎬","🎤","🎧","🎼","🎹","🥁","🪘","🎷","🎺",
-  "🎸","🪕","🎻","🎲","♟️","🎯","🎳","🎮","🎰","🧩","🚗","🚕","🚙","🚌","🚎",
-  "🏎️","🚓","🚑","🚒","🚐","🛻","🚚","🚛","🚜","🛵","🏍️","🛺","🚲","🛴","🚨",
-  "🚔","🚍","🚘","🚖","🚡","🚠","🚟","🚃","🚋","🚞","🚝","🚄","🚅","🚈","🚂",
-  "🚆","🚇","🚊","🚉","✈️","🛫","🛬","🛩️","💺","🛰️","🚀","🛸","🚁","🛶","⛵",
-  "🚤","🛥️","🛳️","⛴️","🚢","⚓","🪝","⛽","🚧","🚦","🚥","🗺️","🗿","🗽","🗼",
-  "🏰","🏯","🏟️","🎡","🎢","🎠","⛲","⛱️","🏖️","🏝️","🏜️","🌋","⛰️","🏔️","🗻",
-  "🏕️","⛺","🏠","🏡","🏘️","🏚️","🏗️","🏭","🏢","🏬","🏣","🏤","🏥","🏦","🏨",
-  "🏪","🏫","🏩","💒","🏛️","⛪","🕌","🕍","🛕","🕋","⌚","📱","💻","⌨️","🖥️",
-  "🖨️","🖱️","🖲️","🕹️","💽","💾","💿","📀","📼","📷","📸","📹","🎥","📞","☎️",
-  "📟","📠","📺","📻","🎙️","🎚️","🎛️","🧭","⏱️","⏲️","⏰","🕰️","⌛","⏳","📡",
-  "🔋","🔌","💡","🔦","🕯️","🪔","🧯","🛢️","💸","💵","💴","💶","💷","🪙","💰",
-  "💳","💎","⚖️","🪜","🧰","🪛","🔧","🔨","⚒️","🛠️","⛏️","🪚","🔩","⚙️","🪤",
-  "🧱","⛓️","🧲","🔫","💣","🧨","🪓","🔪","🗡️","⚔️","🛡️","🚬","⚰️","🪦","⚱️",
-  "🏺","🔮","📿","🧿","💈","⚗️","🔭","🔬","🕳️","🩹","🩺","💊","💉","🩸","🧬",
-  "🦠","🧫","🧪","🌡️","🧹","🪠","🧺","🧻","🚽","🚰","🚿","🛁","🛀","🧼","🪥",
-  "🪒","🧽","🪣","🧴","🛎️","🔑","🗝️","🚪","🪑","🛋️","🛏️","🛌","🧸","🪆","🖼️",
-  "🪞","🪟","🛍️","🛒","🎁","🎈","🎏","🎀","🪄","🪅","🎊","🎉","🎎","🏮","🎐",
-  "🧧","✉️","📩","📨","📧","💌","📥","📤","📦","🏷️","🪧","📪","📫","📬","📭",
-  "📮","📯","📜","📃","📄","📑","📊","📈","📉","🗒️","🗓️","📆","📅","🗑️","📇",
-  "🗃️","🗳️","🗄️","📋","📁","📂","🗂️","🗞️","📰","📓","📔","📒","📕","📗","📘",
-  "📙","📚","📖","🔖","🧷","🔗","📎","🖇️","📐","📏","🧮","📌","📍","✂️","🖊️",
-  "🖋️","✒️","🖌️","🖍️","📝","✏️","🔍","🔎","🔏","🔐","🔒","🔓","💬","💭","🗯️",
-  "💤","👣","🌀","🔔","🔕","📢","📣","🎵","🎶","➕","➖","➗","✖️","🟰","♾️",
-  "‼️","⁉️","❓","❔","❕","❗","〰️","💱","💲","🔱","📛","🔰","⭕","✅","☑️",
-  "✔️","❌","❎","➰","➿","〽️","✳️","✴️","❇️","©️","®️","™️","#️⃣","*️⃣","0️⃣",
-  "1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟","🔢","🔤","🔡","🔠","🆗",
-  "🆕","🆓","🆒","🆙","🆖","🈁","🈂️","🈚","🈯","🈲","🈳","🈴","🈵","🈶","🈷️",
-  "🉐","🉑","㊗️","㊙️","🔴","🟠","🟡","🟢","🔵","🟣","🟤","⚫","⚪","🟥","🟧",
-  "🟨","🟩","🟦","🟪","🟫","⬛","⬜","◼️","◻️","◾","◽","▪️","▫️","🔶","🔷",
-  "🔸","🔹","🔺","🔻","💠","🔘","🔳","🔲","🏁","🚩","🎌","🏴","🏳️","🏳️‍🌈","🏳️‍⚧️",
-  "🏴‍☠️","🇧🇷","🇺🇸","🇵🇹","🇪🇸","🇦🇷","🇮🇹","🇫🇷","🇩🇪","🇬🇧","🇯🇵","🇨🇳","🇨🇦","🇲🇽","🇨🇴",
-  "🇨🇱",
+  "ðŸ˜€","ðŸ˜ƒ","ðŸ˜„","ðŸ˜","ðŸ˜†","ðŸ˜…","ðŸ¤£","ðŸ˜‚","ðŸ™‚","ðŸ™ƒ","ðŸ˜‰","ðŸ˜Š","ðŸ˜‡","ðŸ¥°","ðŸ˜",
+  "ðŸ¤©","ðŸ˜˜","ðŸ˜—","ðŸ˜š","ðŸ˜™","ðŸ˜‹","ðŸ˜›","ðŸ˜œ","ðŸ¤ª","ðŸ˜","ðŸ¤‘","ðŸ¤—","ðŸ¤­","ðŸ«¢","ðŸ«£",
+  "ðŸ¤«","ðŸ¤”","ðŸ«¡","ðŸ¤","ðŸ¤¨","ðŸ˜","ðŸ˜‘","ðŸ˜¶","ðŸ«¥","ðŸ˜","ðŸ˜’","ðŸ™„","ðŸ˜¬","ðŸ¤¥","ðŸ˜Œ",
+  "ðŸ˜”","ðŸ˜ª","ðŸ¤¤","ðŸ˜´","ðŸ˜·","ðŸ¤’","ðŸ¤•","ðŸ¤¢","ðŸ¤®","ðŸ¤§","ðŸ¥µ","ðŸ¥¶","ðŸ¥´","ðŸ˜µ","ðŸ¤¯",
+  "ðŸ¤ ","ðŸ¥³","ðŸ¥¸","ðŸ˜Ž","ðŸ¤“","ðŸ§","ðŸ˜•","ðŸ«¤","ðŸ˜Ÿ","ðŸ™","â˜¹ï¸","ðŸ˜®","ðŸ˜¯","ðŸ˜²","ðŸ˜³",
+  "ðŸ¥º","ðŸ¥¹","ðŸ˜¦","ðŸ˜§","ðŸ˜¨","ðŸ˜°","ðŸ˜¥","ðŸ˜¢","ðŸ˜­","ðŸ˜±","ðŸ˜–","ðŸ˜£","ðŸ˜ž","ðŸ˜“","ðŸ˜©",
+  "ðŸ˜«","ðŸ¥±","ðŸ˜¤","ðŸ˜¡","ðŸ˜ ","ðŸ¤¬","ðŸ˜ˆ","ðŸ‘¿","ðŸ’€","â˜ ï¸","ðŸ’©","ðŸ¤¡","ðŸ‘¹","ðŸ‘º","ðŸ‘»",
+  "ðŸ‘½","ðŸ¤–","ðŸ˜º","ðŸ˜¸","ðŸ˜¹","ðŸ˜»","ðŸ˜¼","ðŸ˜½","ðŸ™€","ðŸ˜¿","ðŸ˜¾","ðŸ‘‹","ðŸ¤š","ðŸ–ï¸","âœ‹",
+  "ðŸ––","ðŸ«±","ðŸ«²","ðŸ«³","ðŸ«´","ðŸ‘Œ","ðŸ¤Œ","ðŸ¤","âœŒï¸","ðŸ¤ž","ðŸ«°","ðŸ¤Ÿ","ðŸ¤˜","ðŸ¤™","ðŸ‘ˆ",
+  "ðŸ‘‰","ðŸ‘†","ðŸ–•","ðŸ‘‡","â˜ï¸","ðŸ‘","ðŸ‘Ž","âœŠ","ðŸ‘Š","ðŸ¤›","ðŸ¤œ","ðŸ‘","ðŸ™Œ","ðŸ«¶","ðŸ‘",
+  "ðŸ¤²","ðŸ¤","ðŸ™","âœï¸","ðŸ’…","ðŸ¤³","ðŸ’ª","ðŸ¦¾","ðŸ¦µ","ðŸ¦¿","ðŸ¦¶","ðŸ‘‚","ðŸ¦»","ðŸ‘ƒ","ðŸ§ ",
+  "ðŸ«€","ðŸ«","ðŸ¦·","ðŸ¦´","ðŸ‘€","ðŸ‘ï¸","ðŸ‘…","ðŸ‘„","ðŸ’‹","â¤ï¸","ðŸ§¡","ðŸ’›","ðŸ’š","ðŸ’™","ðŸ’œ",
+  "ðŸ–¤","ðŸ¤","ðŸ¤Ž","ðŸ’”","â¤ï¸â€ðŸ”¥","â¤ï¸â€ðŸ©¹","â£ï¸","ðŸ’•","ðŸ’ž","ðŸ’“","ðŸ’—","ðŸ’–","ðŸ’˜","ðŸ’","ðŸ’Ÿ",
+  "ðŸ‘¶","ðŸ§’","ðŸ‘¦","ðŸ‘§","ðŸ§‘","ðŸ‘±","ðŸ‘¨","ðŸ§”","ðŸ‘©","ðŸ§“","ðŸ‘´","ðŸ‘µ","ðŸ™","ðŸ™Ž","ðŸ™…",
+  "ðŸ™†","ðŸ’","ðŸ™‹","ðŸ§","ðŸ™‡","ðŸ¤¦","ðŸ¤·","ðŸ‘®","ðŸ•µï¸","ðŸ’‚","ðŸ‘·","ðŸ«…","ðŸ¤´","ðŸ‘¸","ðŸ‘³",
+  "ðŸ‘²","ðŸ§•","ðŸ¤µ","ðŸ‘°","ðŸ¤°","ðŸ¤±","ðŸ‘¼","ðŸŽ…","ðŸ¤¶","ðŸ¦¸","ðŸ¦¹","ðŸ§™","ðŸ§š","ðŸ§›","ðŸ§œ",
+  "ðŸ§","ðŸ§ž","ðŸ§Ÿ","ðŸ’†","ðŸ’‡","ðŸš¶","ðŸ§","ðŸ§Ž","ðŸƒ","ðŸ’ƒ","ðŸ•º","ðŸ§–","ðŸ§—","ðŸ¤º","ðŸ‡",
+  "â›·ï¸","ðŸ‚","ðŸŒï¸","ðŸ„","ðŸš£","ðŸŠ","â›¹ï¸","ðŸ‹ï¸","ðŸš´","ðŸšµ","ðŸ¶","ðŸ±","ðŸ­","ðŸ¹","ðŸ°",
+  "ðŸ¦Š","ðŸ»","ðŸ¼","ðŸ»â€â„ï¸","ðŸ¨","ðŸ¯","ðŸ¦","ðŸ®","ðŸ·","ðŸ½","ðŸ¸","ðŸµ","ðŸ™ˆ","ðŸ™‰","ðŸ™Š",
+  "ðŸ’","ðŸ”","ðŸ§","ðŸ¦","ðŸ¤","ðŸ£","ðŸ¥","ðŸ¦†","ðŸ¦…","ðŸ¦‰","ðŸ¦‡","ðŸº","ðŸ—","ðŸ´","ðŸ¦„",
+  "ðŸ","ðŸª±","ðŸ›","ðŸ¦‹","ðŸŒ","ðŸž","ðŸœ","ðŸª°","ðŸª²","ðŸª³","ðŸ¦Ÿ","ðŸ¦—","ðŸ•·ï¸","ðŸ•¸ï¸","ðŸ¦‚",
+  "ðŸ¢","ðŸ","ðŸ¦Ž","ðŸ¦–","ðŸ¦•","ðŸ™","ðŸ¦‘","ðŸ¦","ðŸ¦ž","ðŸ¦€","ðŸ¡","ðŸ ","ðŸŸ","ðŸ¬","ðŸ³",
+  "ðŸ‹","ðŸ¦ˆ","ðŸŠ","ðŸ…","ðŸ†","ðŸ¦“","ðŸ¦","ðŸ¦§","ðŸ¦£","ðŸ˜","ðŸ¦›","ðŸ¦","ðŸª","ðŸ«","ðŸ¦’",
+  "ðŸ¦˜","ðŸƒ","ðŸ‚","ðŸ„","ðŸŽ","ðŸ–","ðŸ","ðŸ‘","ðŸ¦™","ðŸ","ðŸ¦Œ","ðŸ•","ðŸ©","ðŸˆ","ðŸ“",
+  "ðŸ¦ƒ","ðŸ¦¤","ðŸ¦š","ðŸ¦œ","ðŸ¦¢","ðŸ¦©","ðŸ•Šï¸","ðŸ‡","ðŸ¦","ðŸ¦¨","ðŸ¦¡","ðŸ¦«","ðŸ¦¦","ðŸ¦¥","ðŸ",
+  "ðŸ€","ðŸ¿ï¸","ðŸ¦”","ðŸ¾","ðŸ‰","ðŸ²","ðŸŒµ","ðŸŽ„","ðŸŒ²","ðŸŒ³","ðŸŒ´","ðŸŒ±","ðŸŒ¿","â˜˜ï¸","ðŸ€",
+  "ðŸŽ","ðŸª´","ðŸŽ‹","ðŸƒ","ðŸ‚","ðŸ","ðŸ„","ðŸš","ðŸª¨","ðŸŒ¾","ðŸ’","ðŸŒ·","ðŸŒ¹","ðŸ¥€","ðŸŒº",
+  "ðŸŒ¸","ðŸŒ¼","ðŸŒ»","â˜€ï¸","ðŸŒ¤ï¸","â›…","ðŸŒ¥ï¸","â˜ï¸","ðŸŒ¦ï¸","ðŸŒ§ï¸","â›ˆï¸","ðŸŒ©ï¸","ðŸŒ¨ï¸","â„ï¸","â˜ƒï¸",
+  "â›„","ðŸŒ¬ï¸","ðŸ’¨","ðŸŒªï¸","ðŸŒˆ","â˜‚ï¸","â˜”","âš¡","ðŸ”¥","ðŸ’§","ðŸŒŠ","ðŸŒ™","â­","ðŸŒŸ","âœ¨",
+  "â˜„ï¸","ðŸŒŒ","ðŸ","ðŸŽ","ðŸ","ðŸŠ","ðŸ‹","ðŸŒ","ðŸ‰","ðŸ‡","ðŸ“","ðŸ«","ðŸˆ","ðŸ’","ðŸ‘",
+  "ðŸ¥­","ðŸ","ðŸ¥¥","ðŸ¥","ðŸ…","ðŸ†","ðŸ¥‘","ðŸ¥¦","ðŸ¥¬","ðŸ¥’","ðŸŒ¶ï¸","ðŸ«‘","ðŸŒ½","ðŸ¥•","ðŸ«’",
+  "ðŸ§„","ðŸ§…","ðŸ¥”","ðŸ ","ðŸ¥","ðŸ¥¯","ðŸž","ðŸ¥–","ðŸ¥¨","ðŸ§€","ðŸ¥š","ðŸ³","ðŸ§ˆ","ðŸ¥ž","ðŸ§‡",
+  "ðŸ¥“","ðŸ¥©","ðŸ—","ðŸ–","ðŸŒ­","ðŸ”","ðŸŸ","ðŸ•","ðŸ«“","ðŸ¥ª","ðŸ¥™","ðŸ§†","ðŸŒ®","ðŸŒ¯","ðŸ«”",
+  "ðŸ¥—","ðŸ¥˜","ðŸ«•","ðŸ¥«","ðŸ","ðŸœ","ðŸ²","ðŸ›","ðŸ£","ðŸ±","ðŸ¥Ÿ","ðŸ¦ª","ðŸ¤","ðŸ™","ðŸš",
+  "ðŸ˜","ðŸ¥","ðŸ¥ ","ðŸ¥®","ðŸ¢","ðŸ¡","ðŸ§","ðŸ¨","ðŸ¦","ðŸ¥§","ðŸ§","ðŸ°","ðŸŽ‚","ðŸ®","ðŸ­",
+  "ðŸ¬","ðŸ«","ðŸ¿","ðŸ©","ðŸª","ðŸŒ°","ðŸ¥œ","ðŸ¯","ðŸ¥›","ðŸ¼","â˜•","ðŸ«–","ðŸµ","ðŸ§ƒ","ðŸ¥¤",
+  "ðŸ§‹","ðŸ¶","ðŸº","ðŸ»","ðŸ¥‚","ðŸ·","ðŸ¥ƒ","ðŸ¸","ðŸ¹","ðŸ§‰","ðŸ¾","ðŸ§Š","ðŸ¥„","ðŸ´","ðŸ½ï¸",
+  "ðŸ¥£","ðŸ¥¡","âš½","ðŸ€","ðŸˆ","âš¾","ðŸ¥Ž","ðŸŽ¾","ðŸ","ðŸ‰","ðŸŽ±","ðŸª€","ðŸ“","ðŸ¸","ðŸ’",
+  "ðŸ‘","ðŸ¥","ðŸ","ðŸ¥…","â›³","ðŸª","ðŸ¹","ðŸŽ£","ðŸ¤¿","ðŸ¥Š","ðŸ¥‹","ðŸŽ½","ðŸ›¹","ðŸ›¼","ðŸ›·",
+  "â›¸ï¸","ðŸ¥Œ","ðŸŽ¿","ðŸ¤¼","ðŸ¤¸","ðŸ¤¾","ðŸ§˜","ðŸ¤½","ðŸ†","ðŸ¥‡","ðŸ¥ˆ","ðŸ¥‰","ðŸ…","ðŸŽ–ï¸","ðŸŽ—ï¸",
+  "ðŸŽ«","ðŸŽŸï¸","ðŸŽª","ðŸ¤¹","ðŸŽ­","ðŸŽ¨","ðŸŽ¬","ðŸŽ¤","ðŸŽ§","ðŸŽ¼","ðŸŽ¹","ðŸ¥","ðŸª˜","ðŸŽ·","ðŸŽº",
+  "ðŸŽ¸","ðŸª•","ðŸŽ»","ðŸŽ²","â™Ÿï¸","ðŸŽ¯","ðŸŽ³","ðŸŽ®","ðŸŽ°","ðŸ§©","ðŸš—","ðŸš•","ðŸš™","ðŸšŒ","ðŸšŽ",
+  "ðŸŽï¸","ðŸš“","ðŸš‘","ðŸš’","ðŸš","ðŸ›»","ðŸšš","ðŸš›","ðŸšœ","ðŸ›µ","ðŸï¸","ðŸ›º","ðŸš²","ðŸ›´","ðŸš¨",
+  "ðŸš”","ðŸš","ðŸš˜","ðŸš–","ðŸš¡","ðŸš ","ðŸšŸ","ðŸšƒ","ðŸš‹","ðŸšž","ðŸš","ðŸš„","ðŸš…","ðŸšˆ","ðŸš‚",
+  "ðŸš†","ðŸš‡","ðŸšŠ","ðŸš‰","âœˆï¸","ðŸ›«","ðŸ›¬","ðŸ›©ï¸","ðŸ’º","ðŸ›°ï¸","ðŸš€","ðŸ›¸","ðŸš","ðŸ›¶","â›µ",
+  "ðŸš¤","ðŸ›¥ï¸","ðŸ›³ï¸","â›´ï¸","ðŸš¢","âš“","ðŸª","â›½","ðŸš§","ðŸš¦","ðŸš¥","ðŸ—ºï¸","ðŸ—¿","ðŸ—½","ðŸ—¼",
+  "ðŸ°","ðŸ¯","ðŸŸï¸","ðŸŽ¡","ðŸŽ¢","ðŸŽ ","â›²","â›±ï¸","ðŸ–ï¸","ðŸï¸","ðŸœï¸","ðŸŒ‹","â›°ï¸","ðŸ”ï¸","ðŸ—»",
+  "ðŸ•ï¸","â›º","ðŸ ","ðŸ¡","ðŸ˜ï¸","ðŸšï¸","ðŸ—ï¸","ðŸ­","ðŸ¢","ðŸ¬","ðŸ£","ðŸ¤","ðŸ¥","ðŸ¦","ðŸ¨",
+  "ðŸª","ðŸ«","ðŸ©","ðŸ’’","ðŸ›ï¸","â›ª","ðŸ•Œ","ðŸ•","ðŸ›•","ðŸ•‹","âŒš","ðŸ“±","ðŸ’»","âŒ¨ï¸","ðŸ–¥ï¸",
+  "ðŸ–¨ï¸","ðŸ–±ï¸","ðŸ–²ï¸","ðŸ•¹ï¸","ðŸ’½","ðŸ’¾","ðŸ’¿","ðŸ“€","ðŸ“¼","ðŸ“·","ðŸ“¸","ðŸ“¹","ðŸŽ¥","ðŸ“ž","â˜Žï¸",
+  "ðŸ“Ÿ","ðŸ“ ","ðŸ“º","ðŸ“»","ðŸŽ™ï¸","ðŸŽšï¸","ðŸŽ›ï¸","ðŸ§­","â±ï¸","â²ï¸","â°","ðŸ•°ï¸","âŒ›","â³","ðŸ“¡",
+  "ðŸ”‹","ðŸ”Œ","ðŸ’¡","ðŸ”¦","ðŸ•¯ï¸","ðŸª”","ðŸ§¯","ðŸ›¢ï¸","ðŸ’¸","ðŸ’µ","ðŸ’´","ðŸ’¶","ðŸ’·","ðŸª™","ðŸ’°",
+  "ðŸ’³","ðŸ’Ž","âš–ï¸","ðŸªœ","ðŸ§°","ðŸª›","ðŸ”§","ðŸ”¨","âš’ï¸","ðŸ› ï¸","â›ï¸","ðŸªš","ðŸ”©","âš™ï¸","ðŸª¤",
+  "ðŸ§±","â›“ï¸","ðŸ§²","ðŸ”«","ðŸ’£","ðŸ§¨","ðŸª“","ðŸ”ª","ðŸ—¡ï¸","âš”ï¸","ðŸ›¡ï¸","ðŸš¬","âš°ï¸","ðŸª¦","âš±ï¸",
+  "ðŸº","ðŸ”®","ðŸ“¿","ðŸ§¿","ðŸ’ˆ","âš—ï¸","ðŸ”­","ðŸ”¬","ðŸ•³ï¸","ðŸ©¹","ðŸ©º","ðŸ’Š","ðŸ’‰","ðŸ©¸","ðŸ§¬",
+  "ðŸ¦ ","ðŸ§«","ðŸ§ª","ðŸŒ¡ï¸","ðŸ§¹","ðŸª ","ðŸ§º","ðŸ§»","ðŸš½","ðŸš°","ðŸš¿","ðŸ›","ðŸ›€","ðŸ§¼","ðŸª¥",
+  "ðŸª’","ðŸ§½","ðŸª£","ðŸ§´","ðŸ›Žï¸","ðŸ”‘","ðŸ—ï¸","ðŸšª","ðŸª‘","ðŸ›‹ï¸","ðŸ›ï¸","ðŸ›Œ","ðŸ§¸","ðŸª†","ðŸ–¼ï¸",
+  "ðŸªž","ðŸªŸ","ðŸ›ï¸","ðŸ›’","ðŸŽ","ðŸŽˆ","ðŸŽ","ðŸŽ€","ðŸª„","ðŸª…","ðŸŽŠ","ðŸŽ‰","ðŸŽŽ","ðŸ®","ðŸŽ",
+  "ðŸ§§","âœ‰ï¸","ðŸ“©","ðŸ“¨","ðŸ“§","ðŸ’Œ","ðŸ“¥","ðŸ“¤","ðŸ“¦","ðŸ·ï¸","ðŸª§","ðŸ“ª","ðŸ“«","ðŸ“¬","ðŸ“­",
+  "ðŸ“®","ðŸ“¯","ðŸ“œ","ðŸ“ƒ","ðŸ“„","ðŸ“‘","ðŸ“Š","ðŸ“ˆ","ðŸ“‰","ðŸ—’ï¸","ðŸ—“ï¸","ðŸ“†","ðŸ“…","ðŸ—‘ï¸","ðŸ“‡",
+  "ðŸ—ƒï¸","ðŸ—³ï¸","ðŸ—„ï¸","ðŸ“‹","ðŸ“","ðŸ“‚","ðŸ—‚ï¸","ðŸ—žï¸","ðŸ“°","ðŸ““","ðŸ“”","ðŸ“’","ðŸ“•","ðŸ“—","ðŸ“˜",
+  "ðŸ“™","ðŸ“š","ðŸ“–","ðŸ”–","ðŸ§·","ðŸ”—","ðŸ“Ž","ðŸ–‡ï¸","ðŸ“","ðŸ“","ðŸ§®","ðŸ“Œ","ðŸ“","âœ‚ï¸","ðŸ–Šï¸",
+  "ðŸ–‹ï¸","âœ’ï¸","ðŸ–Œï¸","ðŸ–ï¸","ðŸ“","âœï¸","ðŸ”","ðŸ”Ž","ðŸ”","ðŸ”","ðŸ”’","ðŸ”“","ðŸ’¬","ðŸ’­","ðŸ—¯ï¸",
+  "ðŸ’¤","ðŸ‘£","ðŸŒ€","ðŸ””","ðŸ”•","ðŸ“¢","ðŸ“£","ðŸŽµ","ðŸŽ¶","âž•","âž–","âž—","âœ–ï¸","ðŸŸ°","â™¾ï¸",
+  "â€¼ï¸","â‰ï¸","â“","â”","â•","â—","ã€°ï¸","ðŸ’±","ðŸ’²","ðŸ”±","ðŸ“›","ðŸ”°","â­•","âœ…","â˜‘ï¸",
+  "âœ”ï¸","âŒ","âŽ","âž°","âž¿","ã€½ï¸","âœ³ï¸","âœ´ï¸","â‡ï¸","Â©ï¸","Â®ï¸","â„¢ï¸","#ï¸âƒ£","*ï¸âƒ£","0ï¸âƒ£",
+  "1ï¸âƒ£","2ï¸âƒ£","3ï¸âƒ£","4ï¸âƒ£","5ï¸âƒ£","6ï¸âƒ£","7ï¸âƒ£","8ï¸âƒ£","9ï¸âƒ£","ðŸ”Ÿ","ðŸ”¢","ðŸ”¤","ðŸ”¡","ðŸ” ","ðŸ†—",
+  "ðŸ†•","ðŸ†“","ðŸ†’","ðŸ†™","ðŸ†–","ðŸˆ","ðŸˆ‚ï¸","ðŸˆš","ðŸˆ¯","ðŸˆ²","ðŸˆ³","ðŸˆ´","ðŸˆµ","ðŸˆ¶","ðŸˆ·ï¸",
+  "ðŸ‰","ðŸ‰‘","ãŠ—ï¸","ãŠ™ï¸","ðŸ”´","ðŸŸ ","ðŸŸ¡","ðŸŸ¢","ðŸ”µ","ðŸŸ£","ðŸŸ¤","âš«","âšª","ðŸŸ¥","ðŸŸ§",
+  "ðŸŸ¨","ðŸŸ©","ðŸŸ¦","ðŸŸª","ðŸŸ«","â¬›","â¬œ","â—¼ï¸","â—»ï¸","â—¾","â—½","â–ªï¸","â–«ï¸","ðŸ”¶","ðŸ”·",
+  "ðŸ”¸","ðŸ”¹","ðŸ”º","ðŸ”»","ðŸ’ ","ðŸ”˜","ðŸ”³","ðŸ”²","ðŸ","ðŸš©","ðŸŽŒ","ðŸ´","ðŸ³ï¸","ðŸ³ï¸â€ðŸŒˆ","ðŸ³ï¸â€âš§ï¸",
+  "ðŸ´â€â˜ ï¸","ðŸ‡§ðŸ‡·","ðŸ‡ºðŸ‡¸","ðŸ‡µðŸ‡¹","ðŸ‡ªðŸ‡¸","ðŸ‡¦ðŸ‡·","ðŸ‡®ðŸ‡¹","ðŸ‡«ðŸ‡·","ðŸ‡©ðŸ‡ª","ðŸ‡¬ðŸ‡§","ðŸ‡¯ðŸ‡µ","ðŸ‡¨ðŸ‡³","ðŸ‡¨ðŸ‡¦","ðŸ‡²ðŸ‡½","ðŸ‡¨ðŸ‡´",
+  "ðŸ‡¨ðŸ‡±",
 ];
 const USER_SETTINGS_STORAGE_KEY = "hub-user-settings-v1";
-const CLEARED_TRACKER_NOTIFICATIONS_KEY = "hub-cleared-tracker-notification-ids";
 const USER_SETTINGS_DEFAULTS = Object.freeze({
   hidePresence: false,
   blurChatPreviews: false,
   localPrivacyMode: false,
-  darkMode: false,
   compactMode: false,
   messageSize: "normal",
   showEmojiButton: true,
@@ -154,11 +158,8 @@ const USER_SETTINGS_DEFAULTS = Object.freeze({
   desktopNotifications: true,
   dashboardNotificationBadges: true,
   keyboardShortcuts: true,
-  boardOrder: [],
 });
-const DEFAULT_HUB_SUPABASE = {
-  url: "https://nblfwesptlpetbwfmdqf.supabase.co",
-  anonKey: "sb_publishable_zHawhaceNuAtRyTn3MRbmw_g_LFUGov",
+const DEFAULT_HUB_POSTGRES = {
   chatFilesBucket: "hub-chat-files",
   turnstileSiteKey: "",
 };
@@ -167,16 +168,14 @@ const TABLES = {
   comunicados: "hub_chat_messages",
   malotes: "hub_malotes",
   chamados: "hub_chamados",
-  quadros: "hub_quadros",
   vagas: "hub_vagas",
   eventos: "hub_eventos",
   vtRegistros: "hub_vt_registros",
   documentosContratados: "hub_documentos_contratados",
-  documentos: "hub_documentos",
   candidaturas: "hub_candidaturas",
+  atestados: "hub_atestados",
   usuarios: USERS_TABLE,
 };
-const READ_RECEIPTS_TABLE = "hub_read_receipts";
 let publicVagaCargoFilter = "";
 let publicVagaUnidadeFilter = "";
 let chatAudioRecorder = null;
@@ -188,12 +187,11 @@ let chatAttachmentPreviewUrl = "";
 let chatAttachmentPreviewUrls = [];
 let chatSelectedFiles = [];
 let chatAttachmentPreviewIndex = 0;
-let chatComposerEmojiTimer = null;
 
-function getHubSupabaseConfig() {
+function getHubPostgreSQLConfig() {
   return {
-    ...DEFAULT_HUB_SUPABASE,
-    ...(window.HUB_SUPABASE || {}),
+    ...DEFAULT_HUB_POSTGRES,
+    ...(window.HUB_POSTGRES || {}),
   };
 }
 
@@ -252,7 +250,7 @@ const defaultData = {
     {
       id: generateUUID(),
       autor: "Marina Souza",
-      mensagem: "Revisar pendencias de benefícios, vagas e entregas de EPI.",
+      mensagem: "Revisar pendencias de benefÃ­cios, vagas e entregas de EPI.",
       canal: GENERAL_CHANNEL,
       arquivo: null,
       createdAt: "Hoje",
@@ -269,18 +267,6 @@ const defaultData = {
     },
   ],
   chamados: [],
-  quadros: [
-    {
-      id: generateUUID(),
-      nome: "Quadro principal",
-      listas: [
-        { id: generateUUID(), titulo: "A fazer", cartoes: [] },
-        { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
-        { id: generateUUID(), titulo: "Concluido", cartoes: [] },
-      ],
-      createdAt: "Hoje",
-    },
-  ],
   vagas: [],
   eventos: [
     {
@@ -298,16 +284,17 @@ const defaultData = {
   vtRegistros: [],
   documentosContratados: [],
   candidaturas: [],
-  documentos: [],
+  atestados: [],
   usuarios: [],
 };
 
 let data = loadLocalData();
-let supabaseClient = null;
+let postgresClient = null;
 let realtimeChannel = null;
 let activeChatChannel = "";
 let refreshTimer = null;
 let refreshInProgress = false;
+let documentRecords = loadDocumentRecords();
 let readRhMessageIds = loadReadRhMessageIds();
 let readNotificationIds = loadReadNotificationIds();
 let currentAuthUser = null;
@@ -320,16 +307,12 @@ let chamadosSelectionMode = false;
 let showArchivedChamados = false;
 let denunciasSelectionMode = false;
 let showArchivedDenuncias = false;
-const selectedDenunciaIds = new Set();
 let dashboardCalendarViewMode = "week";
 let visibleCalendarDate = new Date();
 let dashboardNotificationOffset = 0;
 let visibleDashboardActivityItems = [];
 let currentUserSettings = loadUserSettings();
 let lastUnreadNotificationCount = 0;
-let notificationBaselineReady = false;
-let serverDataReady = !isAuthenticated();
-let presenceHeartbeatStarted = false;
 let hubNotificationServiceWorkerRegistration = null;
 let lastRealtimeNotificationSignature = "";
 let hubPollingNotificationKeys = new Set();
@@ -337,13 +320,6 @@ let hubPollingNotificationsReady = false;
 const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
-let activeBoardId = "";
-let boardContextMenu = null;
-let boardCardActionMenu = null;
-let draggedBoardCard = null;
-let draggedBoardTabId = "";
-let suppressBoardCardClick = false;
-let recordContextMenu = null;
 window.editingDocId = null;
 
 const documentLabels = {
@@ -357,24 +333,13 @@ const documentLabels = {
   "movimentacao-pessoal": "MP - Movimentacao Pessoal",
   "requisicao-pessoal": "RP - Requisicao Pessoal",
   "solicitacao-desligamento": "SD - Solicitacao de Desligamento",
-  advertencia: "Advertencia",
-  suspensao: "Suspensao",
 };
-
-const DISCIPLINARY_DOCUMENT_TYPES = new Set(["advertencia", "suspensao"]);
-const DISCIPLINARY_ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "webp", "pdf", "doc", "docx"]);
-const DISCIPLINARY_ALLOWED_MIME_TYPES = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
-const DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 
 const UNIT_OPTIONS = [
   "1- MTZ",
   "2- SBS",
   "3- ITJ 1",
-  "4- PLÇ",
+  "4- PLÃ‡",
   "5- GUA",
   "7- DPA JC",
   "9- DPA IRI",
@@ -395,6 +360,7 @@ const UNIT_OPTIONS = [
   "28- ARA",
 ];
 
+// Normaliza texto para comparaÃ§Ã£o: remove acentos, caixa e espaÃ§os extras.
 function normalizeUnitText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -403,11 +369,15 @@ function normalizeUnitText(value) {
     .trim();
 }
 
+// Vagas antigas podem ter sido gravadas com texto livre (ex: "JRG", "JGR").
+// Aqui mapeamos esses valores legados para a opÃ§Ã£o oficial correspondente.
 const UNIT_ALIASES = {
   jrg: "13- JRG 1",
   jgr: "13- JRG 1",
 };
 
+// Retorna o valor oficial da unidade (UNIT_OPTIONS) a partir de um valor
+// gravado, mesmo que tenha sido salvo com grafia diferente ou sem o prefixo.
 function getCanonicalUnit(value) {
   const raw = String(value || "").trim();
   if (!raw) return raw;
@@ -417,39 +387,6 @@ function getCanonicalUnit(value) {
   if (UNIT_ALIASES[normalized]) return UNIT_ALIASES[normalized];
   return raw;
 }
-
-const UNIT_CITY_MAP = {
-  "1- MTZ": "Joinville",
-  "2- SBS": "São Bento do Sul",
-  "3- ITJ 1": "Itajaí",
-  "4- PLÇ": "Palhoça",
-  "5- GUA": "Joinville",
-  "7- DPA JC": "Joinville",
-  "9- DPA IRI": "Joinville",
-  "10- JPL": "Joinville",
-  "11- BC": "Balneário Camboriú",
-  "12- GCS GPO": "Araquari",
-  "12- GCS JLLE": "Joinville",
-  "13- JRG 1": "Jaraguá do Sul",
-  "14- BRQ": "Brusque",
-  "15- FLN": "Florianópolis",
-  "17- FAC": "Joinville",
-  "19- RNG 1": "Rio Negrinho",
-  "20- BNU 1": "Blumenau",
-  "21- JRG 2": "Jaraguá do Sul",
-  "22- TRINCA": "Joinville",
-  "23- ITJ 2": "Itajaí",
-  "26- BNU 2": "Blumenau",
-  "28- ARA": "Araranguá",
-};
-
-function getUnitCity(value) {
-  return UNIT_CITY_MAP[getCanonicalUnit(value)] || "";
-}
-
-const UNIT_CITIES = [...new Set(Object.values(UNIT_CITY_MAP))].sort((a, b) =>
-  a.localeCompare(b, "pt-BR")
-);
 
 const EPI_OPTIONS = [
   "Luva PU",
@@ -463,27 +400,27 @@ const EPI_OPTIONS = [
   "Protetor Auricular",
   "Protetor Auricular tipo concha",
   "Avental de Raspa",
-  "Sapatão",
+  "SapatÃ£o",
   "Luva de Vaqueta",
-  "Creme de Proteção",
+  "Creme de ProteÃ§Ã£o",
 ];
 
 const UNIFORM_OPTIONS = [
   "Camiseta Operacional Fredy - Pneus",
-  "Camiseta Chefe de Pátio - Fredy Pneus",
+  "Camiseta Chefe de PÃ¡tio - Fredy Pneus",
   "Moletom Operacional - Fredy Pneus",
   "Camisa Social Azul - Fredy Pneus",
   "Camisa Social Branca Fredy - Pneus",
-  "Calça Operacional Fredy - Pneus",
+  "CalÃ§a Operacional Fredy - Pneus",
   "Camiseta Operacional - GCS",
   "Camiseta Cinza Claro - GCS",
   "Camisa Polo - GCS",
-  "Calça Operacional - GCS",
+  "CalÃ§a Operacional - GCS",
   "Bermuda Operacional - GCS",
   "Camiseta Operacional - JPL",
   "Camisa Polo - JPL",
   "Moletom Operacional - JPL",
-  "Calça Operacional - JPL",
+  "CalÃ§a Operacional - JPL",
   "Camiseta - FAC",
 ];
 
@@ -639,18 +576,18 @@ function getChatChannels() {
 
   let channels = isCashierUser()
     ? [
-        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunicação geral entre caixas/crediaristas e equipe de RH", isGroup: true },
+        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "ComunicaÃ§Ã£o geral entre caixas/crediaristas e equipe de RH", isGroup: true },
         ...directChannels,
       ]
     : isManagerUser()
     ? [
-        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
+        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "ComunicaÃ§Ã£o geral entre gerentes e equipe de RH", isGroup: true },
         ...directChannels,
       ]
     : [
         { id: GENERAL_CHANNEL, label: "Chat geral RH", subtitle: "Mensagens compartilhadas apenas pela equipe de RH", isGroup: true },
-        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
-        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunicação geral entre caixas/crediaristas e equipe de RH", isGroup: true },
+        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "ComunicaÃ§Ã£o geral entre gerentes e equipe de RH", isGroup: true },
+        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "ComunicaÃ§Ã£o geral entre caixas/crediaristas e equipe de RH", isGroup: true },
         ...directChannels,
       ];
 
@@ -711,12 +648,14 @@ function isAuthenticated() {
 
 function getCurrentUserName() {
   if (!isAuthenticated() && isPublicPage()) return "Publico";
-  const hydratedName = currentUserProfile?.nome || (currentAuthUser ? getAuthUserDisplayName(currentAuthUser) : "");
-  return storageService.getSessionItem(`${SESSION_KEY}-user`) ||
-    (hydratedName ? getLoginDisplayName(hydratedName) : "") ||
-    "Voce";
+  return storageService.getSessionItem(`${SESSION_KEY}-user`) || "Voce";
 }
 
+/**
+ * [ALERTA DE SEGURANÃ‡A] A verificaÃ§Ã£o de permissÃ£o real DEVE ser feita no backend
+ * com Row Level Security (RLS) do PostgreSQL. Estas funÃ§Ãµes sÃ£o apenas para controle de UI.
+ * A 'role' Ã© lida do token JWT para maior seguranÃ§a no frontend, mas a RLS Ã© indispensÃ¡vel.
+ */
 const AuthHelper = {
   _getClaim(claim) {
     return currentAuthUser?.app_metadata?.[claim] || "";
@@ -741,10 +680,18 @@ function getCurrentUserRole() {
   return AuthHelper.getRole();
 }
 
+/**
+ * Controle de UI baseado no usuario autenticado carregado do PostgreSQL.
+ * A verificacao de permissao real continua sendo feita no backend por RLS.
+ */
 function isManagerUser() {
   return AuthHelper.isManager();
 }
 
+/**
+ * Controle de UI baseado no usuario autenticado carregado do PostgreSQL.
+ * A verificacao de permissao real continua sendo feita no backend por RLS.
+ */
 function isCashierUser() {
   return AuthHelper.isCashier();
 }
@@ -770,18 +717,7 @@ function setAuthenticatedUser(authUser, profile = null) {
   const displayName = profile?.nome || getAuthUserDisplayName(authUser);
   storageService.setSessionItem(SESSION_KEY, "active");
   storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
-  storageService.setSessionItem(`${SESSION_KEY}-email`, profile?.email || authUser?.email || "");
-  storageService.setSessionItem(`${SESSION_KEY}-role`, profile?.cargo || authUser?.cargo || authUser?.app_metadata?.cargo || "");
   reloadUserSettingsForCurrentUser();
-  refreshAuthenticatedShell();
-}
-
-function refreshAuthenticatedShell() {
-  if (isPublicPage()) return;
-  renderCurrentUser?.();
-  updateUserMenuHeader?.();
-  renderAccountSettings?.();
-  applyRoleAccess?.();
 }
 
 function clearSensitiveClientCache() {
@@ -803,46 +739,33 @@ function clearAuthenticatedUser() {
   applyUserSettings();
 }
 
-async function fetchHubApiSession() {
-  try {
-    let response = await fetch("/api/auth/session", { credentials: "include" });
-    if (response.status === 401) {
-      const refreshed = await fetch("/api/auth/refresh", { method: "POST", credentials: "include" });
-      if (refreshed.ok) response = await fetch("/api/auth/session", { credentials: "include" });
-    }
-    if (!response.ok) return null;
-    const result = await response.json().catch(() => ({}));
-    return result?.user || null;
-  } catch {
-    return null;
-  }
-}
-
 async function getCurrentAuthUser() {
-  return fetchHubApiSession();
+  const client = postgresClient || getPostgreSQLClient();
+  if (!client?.auth) return null;
+  const { data, error } = await client.auth.getUser();
+  if (error) return null;
+  return data?.user || null;
 }
 
 async function getAuthSession() {
-  const user = await fetchHubApiSession();
-  return user ? { user } : null;
+  const client = postgresClient || getPostgreSQLClient();
+  if (!client?.auth) return null;
+  const { data, error } = await client.auth.getSession();
+  if (error) return null;
+  return data?.session || null;
 }
 
 async function loadUserProfile(authUser) {
-  if (!authUser) return null;
-  if (authUser.nome !== undefined && authUser.cargo !== undefined) {
-    upsertLocalUser({ ...authUser, syncStatus: "active" });
-    return authUser;
-  }
-  if (!supabaseClient) return null;
+  if (!authUser || !postgresClient) return null;
   const email = normalizeLoginName(authUser.email);
   const displayName = normalizeLoginName(getAuthUserDisplayName(authUser));
 
   try {
-    let query = supabaseClient.from(USERS_TABLE).select("id, nome, email, cpf, cargo, foto_perfil, created_by, created_at");
+    let query = postgresClient.from(USERS_TABLE).select("id, nome, email, cpf, cargo, foto_perfil, created_by, created_at");
     const { data: profiles, error } = await query.or(`email.ilike.${email},nome.ilike.${displayName}`).limit(1);
 
     if (error && isMissingColumn(error, "email")) {
-      const fallback = await supabaseClient
+      const fallback = await postgresClient
         .from(USERS_TABLE)
         .select("id, nome, cargo, foto_perfil, created_by, created_at")
         .ilike("nome", displayName)
@@ -906,43 +829,72 @@ async function restoreAuthenticatedSession() {
 }
 
 async function validateLogin(identifier, password) {
+  const client = postgresClient || getPostgreSQLClient();
   const normalizedIdentifier = String(identifier || "").trim();
   const normalizedPassword = String(password || "").trim();
 
-  const response = await fetch("/api/auth/login", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      cpf: isValidCpf(normalizedIdentifier) ? normalizeCpf(normalizedIdentifier) : "",
-      email: normalizedIdentifier.includes("@") ? normalizedIdentifier.toLowerCase() : "",
-      password: normalizedPassword,
-    }),
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
+  if (!client?.auth) {
     const errorMsg = document.getElementById("login-error");
-    if (errorMsg) errorMsg.textContent = result.error || "E-mail ou senha incorretos.";
+    if (errorMsg) errorMsg.textContent = "Erro de conexÃ£o com o PostgreSQL.";
     return false;
   }
 
-  const profile = await loadUserProfile(result.user);
-  setAuthenticatedUser(result.user, profile);
+  let authData;
+  let error;
+  if (isValidCpf(normalizedIdentifier) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedIdentifier)) {
+    const response = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-hub-client-id": getPublicClientId() },
+      body: JSON.stringify({
+        identifier: normalizedIdentifier,
+        password: normalizedPassword,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const errorMsg = document.getElementById("login-error");
+      if (response.status === 429 && errorMsg) errorMsg.textContent = result.error || "Muitas tentativas. Tente novamente mais tarde.";
+      return false;
+    }
+    const session = result.session;
+    const setSession = await client.auth.setSession(session || {});
+    authData = { ...setSession.data, user: session?.user };
+    error = setSession.error;
+  } else {
+    const result = await client.auth.signInWithPassword({ email: normalizedIdentifier, password: normalizedPassword });
+    authData = result.data;
+    error = result.error;
+  }
+
+  if (error || !authData?.user) {
+    console.error("Erro no login PostgreSQL Auth:", error);
+    return false;
+  }
+
+  const profile = await loadUserProfile(authData.user);
+  setAuthenticatedUser(authData.user, profile);
   return true;
 }
 
 async function verifyCurrentPassword(password) {
   if (!password) return false;
+
+  // Verifica a senha via endpoint REST sem substituir a sessao ativa.
+  // signInWithPassword sobrescreve o token em memoria e pode causar
+  // redirecionamentos antes do onConfirm ser chamado.
+  const authUser = await getCurrentAuthUser();
+  const email = authUser?.email || "";
+  if (!email) return false;
+
   try {
-    const res = await fetch("/api/auth/verify-password", {
+    const res = await fetch("/api/auth", {
       method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: String(password).trim() }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ identifier: email, password: String(password).trim() }),
     });
-    if (!res.ok) return false;
-    const result = await res.json().catch(() => ({}));
-    return Boolean(result.ok);
+    return res.ok;
   } catch {
     return false;
   }
@@ -952,7 +904,8 @@ function isPublicPage() {
   return Boolean(
     document.querySelector("[data-public-denuncia]") ||
     document.querySelector("[data-public-vagas]") ||
-    document.querySelector("[data-public-contratados]")
+    document.querySelector("[data-public-contratados]") ||
+    document.querySelector("[data-public-atestados]")
   );
 }
 
@@ -961,7 +914,8 @@ function isPublicSubmissionFormPage() {
     document.querySelector("[data-public-denuncia]") ||
     document.querySelector("[data-public-vagas]") ||
     document.querySelector("[data-public-chamados]") ||
-    document.querySelector("[data-public-contratados]")
+    document.querySelector("[data-public-contratados]") ||
+    document.querySelector("[data-public-atestados]")
   );
 }
 
@@ -976,7 +930,7 @@ function isLoginPage() {
 function getLoginRedirectTarget() {
   const params = new URLSearchParams(window.location.search);
   const next = params.get("next");
-  const allowedTargets = new Set(["index.html", "denuncia.html", "chamados.html", "vagas.html", "candidatura.html"]);
+  const allowedTargets = new Set(["index.html", "denuncia.html", "chamados.html", "vagas.html", "candidatura.html", "atestados.html"]);
   if (!next) return "index.html";
   if (/^https?:\/\//i.test(next)) return "index.html";
   const target = next.startsWith("/") ? next.slice(1) : next;
@@ -985,11 +939,7 @@ function getLoginRedirectTarget() {
 }
 
 async function logout() {
-  try {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-  } catch {
-
-  }
+  if (postgresClient?.auth) await postgresClient.auth.signOut();
   clearAuthenticatedUser();
   window.location.href = "login.html";
 }
@@ -998,9 +948,10 @@ async function setupLogin() {
   const loginForm = document.getElementById("login-form");
   const settingsLogoutButton = document.getElementById("settings-logout-button");
   clearLegacyTeamCredentials();
-  supabaseClient = supabaseClient || getSupabaseClient();
+  postgresClient = postgresClient || getPostgreSQLClient();
   const hasAuthSession = await restoreAuthenticatedSession();
 
+  // Redirecionamentos Inteligentes
   if (hasAuthSession) {
     if (isLoginPage()) {
       window.location.replace(getLoginRedirectTarget());
@@ -1014,7 +965,7 @@ async function setupLogin() {
     }
   }
 
-  loginForm?.querySelector("[data-login-identifier]")?.addEventListener("input", (event) => {
+  loginForm?.querySelector('[name="identificador"]')?.addEventListener("input", (event) => {
     const input = event.currentTarget;
     const value = String(input.value || "");
     if (/^[\d.\-\s]*$/.test(value)) input.value = formatCpf(value);
@@ -1023,10 +974,10 @@ async function setupLogin() {
   if (loginForm) {
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const identifier = event.currentTarget.querySelector("[data-login-identifier]")?.value || "";
-      const password = event.currentTarget.querySelector("[data-login-password]")?.value || "";
-      const loginOk = await validateLogin(identifier, password);
-
+      const form = new FormData(event.currentTarget);
+      const identifier = form.get("identificador") || form.get("email") || form.get("nome");
+      const loginOk = await validateLogin(identifier, form.get("senha"));
+  
       if (!loginOk) {
         const errorEl = document.getElementById("login-error");
         if (errorEl && !errorEl.textContent.trim()) {
@@ -1034,7 +985,7 @@ async function setupLogin() {
         }
         return;
       }
-
+  
       window.location.replace(getLoginRedirectTarget());
     });
   }
@@ -1044,135 +995,9 @@ async function setupLogin() {
   return hasAuthSession || isPublicPage();
 }
 
-function getSupabaseClient() {
-  const config = getHubSupabaseConfig();
-  const hasConfig =
-    config &&
-    config.url &&
-    config.anonKey &&
-    !config.url.includes("COLE_AQUI") &&
-    !config.anonKey.includes("COLE_AQUI") &&
-    window.supabase;
-
-  if (!hasConfig) return null;
-  return window.supabase.createClient(config.url, config.anonKey, {
-    auth: {
-      storage: window.sessionStorage,
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  });
-}
-
-const hubApi = {
-  async list(collection) {
-    const response = await fetch(`/api/records/${collection}`, { credentials: "include" });
-    if (!response.ok) throw await hubApi._error(response);
-    const result = await response.json();
-    return result.data || [];
-  },
-  async insert(collection, payload) {
-    const response = await fetch(`/api/records/${collection}`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) throw await hubApi._error(response);
-    const result = await response.json();
-    return result.data;
-  },
-  async update(collection, id, payload) {
-    const response = await fetch(`/api/records/${collection}/${id}`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) throw await hubApi._error(response);
-    const result = await response.json();
-    return result.data;
-  },
-  async remove(collection, id) {
-    const response = await fetch(`/api/records/${collection}/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (!response.ok) throw await hubApi._error(response);
-    const result = await response.json();
-    return result.data;
-  },
-  async _error(response) {
-    const body = await response.json().catch(() => ({}));
-    const error = new Error(body.error || `Erro HTTP ${response.status}`);
-    error.status = response.status;
-    return error;
-  },
-};
-
-async function hubUpload(file, category) {
-  const response = await fetch(`/api/blob/upload?category=${encodeURIComponent(category)}&filename=${encodeURIComponent(file.name || "arquivo")}`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": file.type || "application/octet-stream" },
-    body: file,
-  });
-  const rawBody = await response.text().catch(() => "");
-  let result = {};
-  try {
-    result = rawBody ? JSON.parse(rawBody) : {};
-  } catch {
-    result = {};
-  }
-  if (!response.ok) {
-    const details = result.error || rawBody.trim() || `HTTP ${response.status}`;
-    throw new Error(details.length > 220 ? `${details.slice(0, 220)}...` : details);
-  }
-  return result;
-}
-
-let vercelBlobClientPromise = null;
-
-async function getVercelBlobClient() {
-  if (!vercelBlobClientPromise) {
-    vercelBlobClientPromise = import("https://cdn.jsdelivr.net/npm/@vercel/blob@0.27.1/client/+esm");
-  }
-  return vercelBlobClientPromise;
-}
-
-function safeBlobPathname(file, prefix = "") {
-  const safeName = String(file?.name || "arquivo").replace(/[^a-z0-9_.-]/gi, "-") || "arquivo";
-  return `${prefix}${Date.now()}-${generateUUID()}-${safeName}`;
-}
-
-async function hubClientUpload(file, category, clientPayload = {}) {
-  if (category !== "contratado") return hubUpload(file, category);
-  const { upload } = await getVercelBlobClient();
-  try {
-    return await upload(safeBlobPathname(file, "contratados/"), file, {
-      access: "public",
-      handleUploadUrl: "/api/blob/client-upload",
-      clientPayload: JSON.stringify(clientPayload),
-      multipart: file.size > 5 * 1024 * 1024,
-      contentType: file.type || "application/octet-stream",
-    });
-  } catch (error) {
-    throw new Error(error.message || "Nao foi possivel enviar o arquivo.");
-  }
-}
-
-async function hubDeleteBlob(url) {
-  if (!url) return;
-  try {
-    await fetch("/api/blob/delete", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
-  } catch (error) {
-    console.warn("Nao foi possivel remover o arquivo do storage:", error);
-  }
+function getPostgreSQLClient() {
+  if (!window.HubPostgresClient?.createClient) return null;
+  return window.HubPostgresClient.createClient();
 }
 
 function setSyncStatus(text, isOnline = false) {
@@ -1194,13 +1019,11 @@ function loadLocalData() {
     arquivo: item.arquivo || null,
     createdAt: item.createdAt || "Hoje",
   }));
-
   return {
     denuncias: parsed.denuncias || [],
     comunicados: parsed.comunicados || [],
     malotes: parsed.malotes || [],
     chamados: parsed.chamados || [],
-    quadros: parsed.quadros || [],
     vagas: parsed.vagas || [],
     eventos: parsed.eventos || [],
     vtRegistros: parsed.vtRegistros || [],
@@ -1208,44 +1031,21 @@ function loadLocalData() {
       .filter((item) => !String(item.id || "").startsWith("local-") && !item.pendingSync)
       .map(mapContractorDocumentRow),
     candidaturas: parsed.candidaturas || [],
-    documentos: parsed.documentos || [],
+    atestados: (parsed.atestados || []).map(mapAtestadoRow),
     usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
   };
 }
 
-function disableSensitiveFieldAutofill() {
-  document.querySelectorAll('input[type="password"], input[type="email"], input[name="cpf"], input[name="identificador"], [data-login-identifier], [data-login-password], [data-action-password]').forEach((input) => {
-    input.autocomplete = input.hasAttribute("data-login-identifier") || input.hasAttribute("data-login-password") || input.hasAttribute("data-action-password") ? "one-time-code" : "off";
-    input.dataset.lpignore = "true";
-    input.dataset["1pIgnore"] = "true";
-    input.dataset.formType = "other";
-    input.setAttribute("autocapitalize", "off");
-    input.setAttribute("spellcheck", "false");
-    if (input.type === "password" || input.hasAttribute("data-login-identifier") || input.hasAttribute("data-login-password") || input.hasAttribute("data-action-password")) {
-      if (document.activeElement !== input) input.setAttribute("readonly", "readonly");
-      if (input.dataset.autofillGuarded === "true") return;
-      input.dataset.autofillGuarded = "true";
-      const unlockPasswordField = () => input.removeAttribute("readonly");
-      input.addEventListener("focus", unlockPasswordField);
-      input.addEventListener("pointerdown", unlockPasswordField);
-      input.addEventListener("keydown", unlockPasswordField);
-    }
-  });
+function loadDocumentRecords() {
+  return storageService.getSessionItem(DOCUMENT_RECORDS_KEY, []);
 }
 
-function setupFullNameValidationMessage() {
-  const fullNamePattern = "\\S+\\s+\\S+.*";
-  const message = "digite o nome completo";
-
-  const updateMessage = (target) => {
-    if (!(target instanceof HTMLInputElement) || target.pattern !== fullNamePattern) return;
-    target.title = message;
-    target.setCustomValidity(target.validity.patternMismatch ? message : "");
-  };
-
-  document.addEventListener("invalid", (event) => updateMessage(event.target), true);
-  document.addEventListener("input", (event) => updateMessage(event.target), true);
-  document.querySelectorAll("input[pattern]").forEach(updateMessage);
+function disableSensitiveFieldAutofill() {
+  document.querySelectorAll('input[type="password"], input[type="email"], input[name="cpf"], input[name="identificador"]').forEach((input) => {
+    input.autocomplete = "off";
+    input.dataset.lpignore = "true";
+    input.dataset["1pIgnore"] = "true";
+  });
 }
 
 function getPublicClientId() {
@@ -1255,6 +1055,10 @@ function getPublicClientId() {
     sessionStorage.setItem(PUBLIC_CLIENT_ID_KEY, clientId);
   }
   return clientId;
+}
+
+function saveDocumentRecords() {
+  storageService.setSessionItem(DOCUMENT_RECORDS_KEY, documentRecords);
 }
 
 function saveLocalData() {
@@ -1268,8 +1072,9 @@ function saveLocalData() {
 let _saveLocalDataTimer = null;
 function saveLocalDataDebounced() {
   if (_saveLocalDataTimer) clearTimeout(_saveLocalDataTimer);
-  _saveLocalDataTimer = setTimeout(() => { saveLocalData(); }, 80);
+  _saveLocalDataTimer = setTimeout(() => { saveLocalData(); }, 300);
 }
+
 
 function ensureRequiredTeamUsers() {
   if (!data.usuarios) data.usuarios = [];
@@ -1309,59 +1114,10 @@ function saveReadNotificationIds() {
   storageService.setLocalItem(READ_NOTIFICATIONS_KEY, [...readNotificationIds]);
 }
 
-function getCurrentUserId() {
-  return currentAuthUser?.id || null;
-}
-
-async function pushReadReceiptsToServer(newNotificationIds, newMessageIds) {
-  const userId = getCurrentUserId();
-  if (!userId) return;
-
-  const rows = [
-    ...newNotificationIds.map((id) => ({ item_type: "notification", item_id: id })),
-    ...newMessageIds.map((id) => ({ item_type: "message", item_id: id })),
-  ];
-  if (!rows.length) return;
-
-  try {
-    await fetch("/api/read-receipts", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rows }),
-    });
-  } catch (error) {
-    console.error("Erro ao sincronizar leitura de notificacoes:", error);
-  }
-}
-
-async function syncReadReceiptsFromServer() {
-  const userId = getCurrentUserId();
-  if (!userId) return;
-
-  try {
-    const response = await fetch("/api/read-receipts", { credentials: "include" });
-    if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
-    const result = await response.json();
-    const rows = result.data || [];
-
-    rows.forEach((row) => {
-      if (row.item_type === "notification") readNotificationIds.add(String(row.item_id));
-      else if (row.item_type === "message") readRhMessageIds.add(String(row.item_id));
-    });
-
-    saveReadNotificationIds();
-    saveReadRhMessageIds();
-  } catch (error) {
-    console.error("Erro ao carregar leitura de notificacoes do servidor:", error);
-  }
-}
-
 function markNotificationsRead(notificationIds = [], messageIds = []) {
   const normalizedNotificationIds = Array.isArray(notificationIds) ? notificationIds : [notificationIds];
   const normalizedMessageIds = Array.isArray(messageIds) ? messageIds : [messageIds];
-  const newNotificationIds = [];
-  const newMessageIds = [];
+  let changed = false;
 
   normalizedNotificationIds
     .filter((id) => id !== undefined && id !== null && String(id).trim())
@@ -1369,7 +1125,7 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
     .forEach((id) => {
       if (!readNotificationIds.has(id)) {
         readNotificationIds.add(id);
-        newNotificationIds.push(id);
+        changed = true;
       }
     });
 
@@ -1379,15 +1135,14 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
     .forEach((id) => {
       if (!readRhMessageIds.has(id)) {
         readRhMessageIds.add(id);
-        newMessageIds.push(id);
+        changed = true;
       }
     });
 
-  if (!newNotificationIds.length && !newMessageIds.length) return false;
+  if (!changed) return false;
 
   saveReadNotificationIds();
   saveReadRhMessageIds();
-  pushReadReceiptsToServer(newNotificationIds, newMessageIds);
 
   try { lastUnreadNotificationCount = getUnreadRhMessages().length; } catch (_) {}
   try { renderDashboard?.(); } catch (_) {}
@@ -1411,20 +1166,18 @@ function markRhMessagesRead() {
   const currentChannel = activeChatChannel;
   const unread = getUnreadRhMessages().filter((item) => normalizeChatChannel(item.canal) === currentChannel);
   if (!unread.length) return;
-  const newMessageIds = unread.map((item) => String(item.id));
-  newMessageIds.forEach((id) => readRhMessageIds.add(id));
+  unread.forEach((item) => readRhMessageIds.add(String(item.id)));
   saveReadRhMessageIds();
-  pushReadReceiptsToServer([], newMessageIds);
 }
 
 function checkAndMarkChatAsRead() {
   const communicationView = document.getElementById("comunicacao");
   if (!communicationView?.classList.contains("active") || !canAccessChatChannel(activeChatChannel)) return;
-
+  
   const currentChannel = activeChatChannel;
   const unread = getUnreadRhMessages().filter((item) => normalizeChatChannel(item.canal) === currentChannel);
   if (!unread.length) return;
-
+  
   markRhMessagesRead();
   renderDashboard();
   renderChatChannels();
@@ -1441,8 +1194,8 @@ function renderCurrentUser() {
     if (user?.foto_perfil && isHttpUrl(user.foto_perfil)) {
       avatar.src = user.foto_perfil;
       avatar.style.display = "block";
-    } else if (user?.foto_perfil) {
-      createPrivateStorageUrl(getHubSupabaseConfig().chatFilesBucket || "hub-chat-files", user.foto_perfil)
+    } else if (user?.foto_perfil && postgresClient) {
+      createPrivateStorageUrl(getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files", user.foto_perfil)
         .then((signedUrl) => {
           avatar.src = signedUrl;
           avatar.style.display = "block";
@@ -1491,7 +1244,6 @@ function getSelectedMaloteDestino() {
 function getMaloteFilterValues() {
   return {
     destino: String(document.getElementById("malote-destino-filter")?.value || "").trim().toLowerCase(),
-    status: String(document.getElementById("malote-status-filter")?.value || "").trim(),
     colaborador: String(document.getElementById("malote-filter-colaborador")?.value || "").trim().toLowerCase(),
     codigo: String(document.getElementById("malote-code-search")?.value || "").trim(),
   };
@@ -1514,14 +1266,12 @@ function getMaloteCodeSearch() {
 function getFilteredMalotes() {
   const filters = getMaloteFilterValues();
   const selectedDestino = filters.destino;
-  const selectedStatus = filters.status;
   const selectedColaborador = filters.colaborador;
   const search = filters.codigo;
   const searchDigits = search.replace(/\D/g, "");
 
   return data.malotes.filter((item) => {
     if (selectedDestino && String(item.destino || "").toLowerCase() !== selectedDestino) return false;
-    if (selectedStatus && String(item.status || "") !== selectedStatus) return false;
     if (selectedColaborador && !getMaloteCollaboratorSearchText(item).includes(selectedColaborador)) return false;
     if (!searchDigits) return true;
 
@@ -1545,14 +1295,14 @@ function renderMaloteReport() {
     return acc;
   }, {});
   const topDestino = Object.entries(byDestino).sort((a, b) => b[1] - a[1])[0];
-  const separacao = source.filter((item) => item.status === "Separação").length;
+  const separacao = source.filter((item) => item.status === "SeparaÃ§Ã£o").length;
   const entrega = source.filter((item) => item.status === "Entrega").length;
 
   target.innerHTML = `
     <article class="report-chip">
       <span>${selectedDestino || search ? "Resultado filtrado" : "Total geral"}</span>
       <strong>${source.length}</strong>
-      <small>${escapeHtml([selectedDestino, search ? `Código: ${search}` : ""].filter(Boolean).join(" | ") || "Todos os destinos")}</small>
+      <small>${escapeHtml([selectedDestino, search ? `CÃ³digo: ${search}` : ""].filter(Boolean).join(" | ") || "Todos os destinos")}</small>
     </article>
     <article class="report-chip">
       <span>Em separacao</span>
@@ -1706,6 +1456,7 @@ function formatMaskedDate(value) {
   return `${day}/${month}/${year}`;
 }
 
+// aliases para compatibilidade com chamadas existentes
 const formatDocumentDate = formatMaskedDate;
 const formatEventoDate   = formatMaskedDate;
 
@@ -1722,15 +1473,15 @@ function applyDateMask(input) {
   input.maxLength = 10;
   input.placeholder = "dd/mm/aaaa";
   input.dataset.dateMask = "true";
-  input.dataset.docDate = "true";
+  input.dataset.docDate = "true"; // mantÃ©m compatibilidade
   input.dataset.dateMaskApplied = "true";
   input.value = formatMaskedDate(input.value);
 }
 
 function normalizeDocumentDateInputs(root = document) {
-
+  // cobre doc-forms e o campo de data do evento-form
   root.querySelectorAll('[data-doc-form] input[type="date"], #evento-form input[type="date"]').forEach(applyDateMask);
-
+  // reinicializa campos que jÃ¡ foram convertidos mas podem ter recebido valor ISO novo
   root.querySelectorAll('[data-date-mask="true"]').forEach((input) => {
     input.value = formatMaskedDate(input.value);
   });
@@ -1755,8 +1506,8 @@ function formatTimeRange(value) {
 
   if (digits.length <= 2) return firstHour;
   if (digits.length <= 4) return `${firstHour}:${firstMinute}`;
-  if (digits.length <= 6) return `${firstHour}:${firstMinute} às ${secondHour}`;
-  return `${firstHour}:${firstMinute} às ${secondHour}:${secondMinute}`;
+  if (digits.length <= 6) return `${firstHour}:${firstMinute} Ã s ${secondHour}`;
+  return `${firstHour}:${firstMinute} Ã s ${secondHour}:${secondMinute}`;
 }
 
 function formatCpf(value) {
@@ -1893,8 +1644,8 @@ function createMaloteCollaboratorBlock(group = {}) {
   return `
     <div class="malote-collaborator" data-malote-collaborator>
       <div class="item-topline">
-        <label>Colaborador que irá receber
-          <input name="malote_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" title="digite o nome completo" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
+        <label>Colaborador que irÃ¡ receber
+          <input name="malote_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
         </label>
         <button class="danger-button remove-malote-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
       </div>
@@ -1911,8 +1662,8 @@ function createChamadoCollaboratorBlock(group = {}) {
   return `
     <div class="malote-collaborator" data-chamado-collaborator>
       <div class="item-topline">
-        <label>Colaborador que irá receber
-          <input name="chamado_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" title="digite o nome completo" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
+        <label>Colaborador que irÃ¡ receber
+          <input name="chamado_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
         </label>
         <button class="danger-button remove-chamado-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
       </div>
@@ -2048,8 +1799,8 @@ function renderMaloteCollaboratorsDetails(malote = {}) {
           ${group.itens.map((item) => `
             <li>
               ${escapeHtml(item.nome || "Nao informado")}
-              — Tamanho: ${escapeHtml(item.tamanho || "Nao se aplica")}
-              — Quantidade: ${escapeHtml(item.quantidade || "1")}
+              â€” Tamanho: ${escapeHtml(item.tamanho || "Nao se aplica")}
+              â€” Quantidade: ${escapeHtml(item.quantidade || "1")}
             </li>
           `).join("")}
         </ul>
@@ -2064,9 +1815,9 @@ function renderMaloteCardContent(item, options = {}) {
     <div class="item-topline"><p class="item-title">Malote de EPI</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
     <p><strong>Destino:</strong> ${escapeHtml(item.destino || "Nao informado")}</p>
       <p><strong>Origem:</strong> ${escapeHtml(item.origem || "Nao informada")}</p>
-      <p><strong>Código da Solicitação:</strong> ${escapeHtml(item.codigoSolicitacao || "Nao informado")}</p>
+      <p><strong>CÃ³digo da SolicitaÃ§Ã£o:</strong> ${escapeHtml(item.codigoSolicitacao || "Nao informado")}</p>
     ${renderMaloteCollaboratorsDetails(item)}
-    ${item.observacoes ? `<p><strong>Observações:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
+    ${item.observacoes ? `<p><strong>ObservaÃ§Ãµes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
     ${showAudit ? `<p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}</p>` : ""}
     ${showActions ? `
       <div class="job-actions">
@@ -2166,68 +1917,9 @@ function getSortedEvents() {
     .sort((a, b) => `${a.data || ""}T${a.horario || "00:00"}`.localeCompare(`${b.data || ""}T${b.horario || "00:00"}`));
 }
 
-function normalizeEventType(value = "") {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
-}
-
-function getEventTypeClass(item = {}) {
-  const type = normalizeEventType(item.tipo);
-  if (type === "aniversario") return "event-type-birthday";
-  if (type === "entrevista") return "event-type-interview";
-  return "";
-}
-
-function getEventTagClass(item = {}) {
-  const typeClass = getEventTypeClass(item);
-  return typeClass ? `event-tag ${typeClass}` : "";
-}
-
-function dayHasEventType(events = [], type) {
-  return events.some((item) => normalizeEventType(item.tipo) === type);
-}
-
-function getEventScheduleMeta(item = {}) {
-  const isBirthday = normalizeEventType(item.tipo) === "aniversario";
-  if (isBirthday) return "Dia inteiro";
-  return `${formatEventTime(item.horario)} | Responsavel: ${item.responsavel || "Nao informado"}`;
-}
-
-function getBirthdayPerson(item = {}) {
-  return String(item.aniversariante || item.descricao || "").trim();
-}
-
-function renderEventTitle(item = {}) {
-  const isBirthday = normalizeEventType(item.tipo) === "aniversario";
-  const title = isBirthday ? item.tipo || "Aniversário" : item.titulo;
-  return `<p class="item-title">${escapeHtml(title || "Evento")}</p>`;
-}
-
-function renderEventDescription(item = {}, className = "") {
-  if (normalizeEventType(item.tipo) === "aniversario") {
-    const aniversariante = getBirthdayPerson(item);
-    return aniversariante ? `<p${className ? ` class="${className}"` : ""}>Aniversariante: ${escapeHtml(aniversariante)}</p>` : "";
-  }
-  const description = String(item.descricao || "").trim();
-  const text = description || "Sem observacoes adicionais.";
-  const classAttribute = className ? ` class="${className}"` : "";
-  return `<p${classAttribute}>${escapeHtml(text).replace(/\n/g, "<br>")}</p>`;
-}
-
-function getEventListMeta(item = {}) {
-  if (normalizeEventType(item.tipo) === "aniversario") return `Data: ${formatEventDate(item.data)}`;
-  return `${formatEventDate(item.data)} | ${getEventScheduleMeta(item)}`;
-}
-
 function getUpcomingEvents() {
   const today = getLocalDateKey();
-  const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + 14);
-  const maxDateKey = getLocalDateKey(maxDate);
-  return getSortedEvents().filter((item) => !isArchivedRecord(item) && item.data && item.data >= today && item.data <= maxDateKey);
+  return getSortedEvents().filter((item) => !isArchivedRecord(item) && (!item.data || item.data >= today));
 }
 
 function renderEventAudit(item) {
@@ -2308,7 +2000,7 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
       <div class="modal-body">
         <p>${escapeHtml(text)}</p>
         <label class="modal-password-label">Senha de autorizacao
-          <input id="modal-action-password" name="hub_action_key" class="masked-password-input" data-action-password type="text" autocomplete="one-time-code" inputmode="text" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Digite a senha" />
+          <input id="modal-action-password" type="password" autocomplete="current-password" placeholder="Digite a senha" />
         </label>
         <p class="form-feedback error" id="modal-action-error" hidden>Senha incorreta.</p>
       </div>
@@ -2342,7 +2034,6 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
   });
 
   document.body.appendChild(overlay);
-  disableSensitiveFieldAutofill();
   overlay.querySelector("#modal-action-password").focus();
 }
 
@@ -2387,7 +2078,7 @@ function showPublicVagaFiltersModal() {
       <div class="modal-header info">Filtrar vagas</div>
       <div class="modal-body public-filter-modal-body">
         <button class="secondary-link public-filter-option" type="button" data-action="open-cargo-filter">Filtrar por Cargo</button>
-        <button class="secondary-link public-filter-option" type="button" data-action="open-unidade-filter">Filtrar por Cidade</button>
+        <button class="secondary-link public-filter-option" type="button" data-action="open-unidade-filter">Filtrar por Unidade</button>
       </div>
       <div class="modal-footer modal-footer-split">
         <button class="secondary-link" type="button" data-action="clear-vaga-filters">Limpar</button>
@@ -2422,23 +2113,10 @@ function showPublicVagaFiltersModal() {
 
 function showPublicVagaSingleFilterModal(type) {
   const isCargo = type === "cargo";
-  const title = isCargo ? "Filtrar por Cargo" : "Filtrar por Cidade";
-  const label = isCargo ? "Cargo" : "Cidade";
+  const title = isCargo ? "Filtrar por Cargo" : "Filtrar por Unidade";
+  const label = isCargo ? "Cargo" : "Unidade destinada";
   const inputId = isCargo ? "modal-vaga-cargo-filter" : "modal-vaga-unidade-filter";
   const currentValue = isCargo ? publicVagaCargoFilter : publicVagaUnidadeFilter;
-
-  const cargoOptions = [...new Set(data.vagas.filter((v) => v.status === "Aberta").map((v) => v.cargo).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-  const fieldHtml = isCargo
-    ? `<select id="${inputId}">
-        <option value="">Todos os cargos</option>
-        ${cargoOptions.map((option) => `<option value="${escapeHtml(option)}" ${option === currentValue ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
-      </select>`
-    : `<select id="${inputId}">
-        <option value="">Todas as cidades</option>
-        ${UNIT_CITIES.map((city) => `<option value="${escapeHtml(city)}" ${city === currentValue ? "selected" : ""}>${escapeHtml(city)}</option>`).join("")}
-      </select>`;
 
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
@@ -2451,7 +2129,7 @@ function showPublicVagaSingleFilterModal(type) {
       <div class="modal-header info">${escapeHtml(title)}</div>
       <div class="modal-body public-filter-modal-body">
         <label>${escapeHtml(label)}
-          ${fieldHtml}
+          <input id="${inputId}" type="search" placeholder="Digite para filtrar" autocomplete="off" value="${escapeHtml(currentValue)}" />
         </label>
       </div>
       <div class="modal-footer modal-footer-split">
@@ -2475,6 +2153,12 @@ function showPublicVagaSingleFilterModal(type) {
   });
   overlay.querySelector('[data-action="back-vaga-filters"]')?.addEventListener("click", close);
   overlay.querySelector('[data-action="apply-vaga-filter"]')?.addEventListener("click", apply);
+  overlay.querySelector(`#${inputId}`)?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      apply();
+    }
+  });
 
   document.body.appendChild(overlay);
   overlay.querySelector(`#${inputId}`)?.focus();
@@ -2492,13 +2176,13 @@ function showDayEventsModal(date) {
   const eventContent = dayEvents.length
     ? dayEvents
         .map((item) => `
-          <article class="day-event-card ${getEventTypeClass(item)}">
+          <article class="day-event-card">
             <div class="item-topline">
-              ${renderEventTitle(item)}
-              <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
+              <p class="item-title">${escapeHtml(item.titulo)}</p>
+              <span class="tag">${escapeHtml(item.tipo)}</span>
             </div>
-            ${renderEventDescription(item, "day-event-description")}
-            <p class="item-meta">${escapeHtml(getEventListMeta(item))}</p>
+            <p class="day-event-description">${escapeHtml(item.descricao || "Sem observacoes adicionais.").replace(/\n/g, "<br>")}</p>
+            <p class="item-meta">${escapeHtml(formatEventTime(item.horario))} | Responsavel: ${escapeHtml(item.responsavel)}</p>
             <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
           </article>
         `)
@@ -2557,9 +2241,19 @@ function getStoragePath(value, bucket) {
 }
 
 async function createPrivateStorageUrl(bucket, value) {
+  if (String(value || "").startsWith("data:")) return value;
+  if (!postgresClient) throw new Error("PostgreSQL indisponivel.");
+  if (isHttpUrl(value)) {
+    const path = getStoragePath(value, bucket);
+    if (path && path !== value) value = path;
+  }
 
-  if (isHttpUrl(value)) return value;
-  throw new Error("Arquivo indisponivel.");
+  const path = getStoragePath(value, bucket);
+  const { data: signedData, error } = await postgresClient.storage
+    .from(bucket)
+    .createSignedUrl(path, 60 * 5);
+  if (error) throw error;
+  return signedData.signedUrl;
 }
 
 function replacePrivateAvatarPlaceholders(path, signedUrl) {
@@ -2577,7 +2271,7 @@ function replacePrivateAvatarPlaceholders(path, signedUrl) {
 function requestPrivateAvatarUrl(path) {
   if (!path || isHttpUrl(path) || privateAvatarUrlCache.has(path) || privateAvatarUrlRequests.has(path)) return;
 
-  const bucket = getHubSupabaseConfig().chatFilesBucket || "hub-chat-files";
+  const bucket = getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files";
   const request = createPrivateStorageUrl(bucket, path)
     .then((signedUrl) => {
       privateAvatarUrlCache.set(path, signedUrl);
@@ -2635,15 +2329,6 @@ function openChatImageModal(bucket, path, name) {
       console.error("Nao foi possivel carregar imagem do chat:", error);
       image.alt = "Nao foi possivel carregar a imagem.";
     });
-}
-
-function getResumeDownloadName(candidatura) {
-  const url = String(candidatura?.curriculo_url || "");
-  const cleanUrl = url.split("?")[0];
-  const match = cleanUrl.match(/\.([a-z0-9]+)$/i);
-  const extension = match ? match[1] : "pdf";
-  const nome = String(candidatura?.nome || "candidato").trim() || "candidato";
-  return `Curriculo - ${nome}.${extension}`;
 }
 
 async function downloadPrivateStorageFile(bucket, value, filename = "documento") {
@@ -2740,7 +2425,7 @@ function renderChatPoll(item, poll) {
           <strong>${percent}%</strong>
         </span>
         <span class="chat-poll-bar" aria-hidden="true"><span style="width: ${percent}%"></span></span>
-        <span class="item-meta">${count} voto${count === 1 ? "" : "s"}${selected ? " • seu voto" : ""}</span>
+        <span class="item-meta">${count} voto${count === 1 ? "" : "s"}${selected ? " â€¢ seu voto" : ""}</span>
       </button>
     `;
   }).join("");
@@ -2755,6 +2440,25 @@ function renderChatPoll(item, poll) {
   `;
 }
 
+
+function mapAtestadoRow(row = {}) {
+  return {
+    id: row.id || generateUUID(),
+    nome: row.nome || row.nome_completo || "",
+    cpf: row.cpf || "",
+    telefone: row.telefone || "",
+    unidade: row.unidade || "",
+    arquivoNome: row.arquivo_nome || row.arquivoNome || row.file_name || "Atestado",
+    arquivoTamanho: Number(row.arquivo_tamanho || row.arquivoTamanho || 0),
+    arquivoTipo: row.arquivo_tipo || row.arquivoTipo || "application/octet-stream",
+    arquivoUrl: row.arquivo_url || row.arquivoUrl || row.storage_path || "",
+    status: row.status || "Recebido",
+    createdBy: row.created_by || "Publico",
+    createdAt: row.created_at ? formatDateTime(row.created_at) : row.createdAt || todayLabel(),
+    sortAt: row.created_at || row.sortAt || new Date().toISOString(),
+  };
+}
+
 function mapRows(collection, rows) {
   if (collection === "denuncias") {
     return rows.map((row) => ({
@@ -2762,7 +2466,7 @@ function mapRows(collection, rows) {
       identificacao: row.identificacao,
       categoria: row.categoria,
       descricao: row.descricao,
-      status: row.status || "Aberta",
+      status: row.status || "Aberta", // Garante o mapeamento do status
       createdBy: row.created_by || "Sistema",
       createdAt: formatDateTime(row.created_at),
       sortAt: row.created_at || "",
@@ -2816,21 +2520,10 @@ if (collection === "malotes") {
       unidade: row.unidade,
       setor: row.setor || "",
       epis: row.epis,
+      codigoSolicitacao: row.codigo_solicitacao || "",
       observacoes: row.observacoes || "",
       status: row.status || "Aberto",
       createdAt: formatDateTime(row.created_at),
-      sortAt: row.created_at || "",
-    }));
-  }
-
-  if (collection === "quadros") {
-    return rows.map((row) => ({
-      id: row.id,
-      nome: row.nome || "Quadro",
-      listas: Array.isArray(row.listas) ? row.listas : [],
-      createdBy: row.created_by || getSystemFallbackAuthor(),
-      updatedBy: row.updated_by || "",
-      createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
     }));
   }
@@ -2848,12 +2541,11 @@ if (collection === "malotes") {
       sortAt: row.created_at || "",
     }));
   }
-
-  if (collection === "eventos") {
+if (collection === "eventos") {
     return rows.map((row) => ({
       id: row.id,
       titulo: row.titulo,
-      data: typeof row.data === "string" ? row.data.slice(0, 10) : new Date(row.data).toISOString().slice(0, 10),
+      data: row.data,
       horario: row.horario,
       responsavel: row.responsavel,
       tipo: row.tipo || "Evento",
@@ -2872,7 +2564,6 @@ if (collection === "malotes") {
       unidade: row.unidade || "",
       mes: row.mes || "",
       diasUteis: row.dias_uteis || 0,
-      passagensDia: Number(row.passagens_dia) || 1,
       valorPassagem: Number(row.valor_passagem) || 0,
       saldoAtual: Number(row.saldo_atual) || 0,
       valorNecessario: Number(row.valor_necessario) || 0,
@@ -2882,24 +2573,23 @@ if (collection === "malotes") {
     }));
   }
 
-  if (collection === "documentosContratados") {
-    return rows.map(mapContractorDocumentRow);
+  if (collection === "atestados") {
+    return {
+      nome: values.nome || "",
+      cpf: values.cpf || "",
+      telefone: values.telefone || "",
+      unidade: values.unidade || "",
+      arquivo_nome: values.arquivoNome || "Atestado",
+      arquivo_tamanho: values.arquivoTamanho || 0,
+      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
+      arquivo_url: values.arquivoUrl || "",
+      status: values.status || "Recebido",
+      created_by: values.createdBy || "Publico",
+    };
   }
 
-  if (collection === "documentos") {
-    return rows.map((row) => ({
-      id: row.id,
-      type: row.tipo || "",
-      summary: row.resumo || "",
-      details: row.detalhes || "",
-      formData: row.dados || {},
-      createdBy: row.created_by || getSystemFallbackAuthor(),
-      createdAt: formatDate(row.created_at),
-      updatedBy: row.updated_by || "",
-      updatedAt: row.updated_at ? formatDate(row.updated_at) : "",
-      sortAt: row.created_at || "",
-      updatedSortAt: row.updated_at || "",
-    }));
+  if (collection === "documentosContratados") {
+    return rows.map(mapContractorDocumentRow);
   }
 
   if (collection === "usuarios") {
@@ -2910,8 +2600,6 @@ if (collection === "malotes") {
       cpf: row.cpf || "",
       cargo: row.cargo || "",
       foto_perfil: row.foto_perfil || "",
-      lastSeen: row.last_seen || "",
-      isOnline: Boolean(row.is_online),
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
@@ -3144,8 +2832,6 @@ function toDbPayload(collection, values) {
       arquivo_tamanho: values.arquivo?.size || null,
       arquivo_tipo: values.arquivo?.type || null,
       arquivo_url: values.arquivo?.url || null,
-
-      created_at: values.createdAt || undefined,
     };
   }
 
@@ -3163,6 +2849,10 @@ function toDbPayload(collection, values) {
     return {
       cargo: values.cargo,
       unidade: values.unidade || "",
+      projeto: JSON.stringify({
+        descricao: values.descricao || "",
+        requisitos: values.requisitos || "",
+      }),
       descricao: values.descricao || "",
       requisitos: values.requisitos || "",
       status: values.status || "Aberta",
@@ -3178,7 +2868,7 @@ function toDbPayload(collection, values) {
     colaboradores: values.colaboradores || [],
     codigo_solicitacao: values.codigoSolicitacao || "",
     observacoes: values.observacoes || "",
-    status: values.status || "Separação",
+    status: values.status || "SeparaÃ§Ã£o",
     created_by: values.createdBy || getCurrentUserName(),
     updated_by: values.updatedBy || null,
   };
@@ -3195,19 +2885,7 @@ function toDbPayload(collection, values) {
     payload.created_by = values.createdBy || getCurrentUserName();
     return payload;
   }
-
-  if (collection === "quadros") {
-    const payload = {
-      nome: values.nome || "Quadro",
-      listas: values.listas || [],
-      created_by: values.createdBy || getCurrentUserName(),
-      updated_by: values.updatedBy || null,
-    };
-    if (values.id) payload.id = values.id;
-    return payload;
-  }
-
-  if (collection === "eventos") {
+if (collection === "eventos") {
     return {
       titulo: values.titulo,
       data: values.data,
@@ -3226,11 +2904,25 @@ function toDbPayload(collection, values) {
       unidade: values.unidade,
       mes: values.mes,
       dias_uteis: values.diasUteis,
-      passagens_dia: values.passagensDia,
       valor_passagem: values.valorPassagem,
       saldo_atual: values.saldoAtual,
       valor_necessario: values.valorNecessario,
       created_by: values.createdBy || getCurrentUserName(),
+    };
+  }
+
+  if (collection === "atestados") {
+    return {
+      nome: values.nome || "",
+      cpf: values.cpf || "",
+      telefone: values.telefone || "",
+      unidade: values.unidade || "",
+      arquivo_nome: values.arquivoNome || "Atestado",
+      arquivo_tamanho: values.arquivoTamanho || 0,
+      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
+      arquivo_url: values.arquivoUrl || "",
+      status: values.status || "Recebido",
+      created_by: values.createdBy || "Publico",
     };
   }
 
@@ -3244,21 +2936,6 @@ function toDbPayload(collection, values) {
       documentos: values.documentos || [],
       created_by: values.createdBy || "Publico",
     };
-  }
-
-  if (collection === "documentos") {
-    const payload = {
-      tipo: values.type || "",
-      resumo: values.summary || "",
-      detalhes: values.details || "",
-      dados: values.formData || {},
-      created_by: values.createdBy || getCurrentUserName(),
-    };
-    if ("updatedBy" in values) {
-      payload.updated_by = values.updatedBy || null;
-      payload.updated_at = new Date().toISOString();
-    }
-    return payload;
   }
 
   const { createdBy, ...payload } = values;
@@ -3313,105 +2990,86 @@ function withoutOptionalApplicationColumns(payload) {
   return rest;
 }
 
-async function loadFromSupabase(options = {}) {
+async function loadFromPostgreSQL(options = {}) {
   const { setupLive = true } = options;
 
-  if (!isAuthenticated()) {
-    serverDataReady = true;
+  if (!postgresClient) {
     setSyncStatus("Modo local", false);
     renderAll();
     return;
   }
 
-  serverDataReady = false;
   try {
-    const localQuadrosBeforeLoad = (data.quadros || []).filter((board) => board?.nome && Array.isArray(board.listas));
-    const userRows = await hubApi.list("usuarios");
+    const { data: userRows, error: usersError } = await postgresClient
+      .from(USERS_TABLE)
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (usersError) throw usersError;
+
     const mappedUsers = mapRows("usuarios", userRows || []);
     const dbNames = mappedUsers.map((user) => normalizeLoginName(user.nome));
     data.usuarios = (data.usuarios || []).filter((localUser) => {
       const normalizedName = normalizeLoginName(localUser.nome);
       if (dbNames.includes(normalizedName)) return true;
       if (localUser.syncStatus === "local") {
-        hubApi.insert("usuarios", {
+        postgresClient.from(USERS_TABLE).insert({
           nome: localUser.nome,
           email: localUser.email || null,
           created_by: "Auto-Sync",
-        }).catch(() => {});
+        }).then();
         return true;
       }
       return false;
     });
     data.usuarios = mergeUsersByName(data.usuarios, mappedUsers);
 
-    const requests = await Promise.all(
-      Object.keys(TABLES)
-        .filter((collection) => collection !== "usuarios")
-        .map(async (collection) => {
-          try {
-            let rows = await hubApi.list(collection);
-            if (collection === "comunicados") {
-              const allowed = new Set(getAllowedChatChannelIds());
-              rows = rows.filter((row) => allowed.has(row.canal));
-            }
-            return { collection, rows: mapRows(collection, rows || []), ok: true };
-          } catch (error) {
-            if (collection === "vagas") {
-              try {
-                const rows = await fetchPublicVagasRows();
-                return { collection, rows: mapRows(collection, rows || []), ok: true };
-              } catch (fallbackError) {
-                console.error("Erro ao carregar vagas publicas como fallback:", fallbackError);
-              }
-            }
-            console.error(`Erro ao carregar colecao ${collection}:`, error);
-            return { collection, ok: false };
-          }
-        })
+    const requests = await Promise.allSettled(
+      Object.entries(TABLES)
+        .filter(([collection]) => collection !== "usuarios")
+        .map(async ([collection, table]) => {
+        let query = postgresClient.from(table).select("*").order("created_at", { ascending: false });
+        if (collection === "comunicados") {
+          query = query.in("canal", getAllowedChatChannelIds());
+        }
+
+        const { data: rows, error } = await query;
+        if (error) throw error;
+        return [collection, mapRows(collection, rows || [])];
+      })
     );
 
-    const quadrosResult = requests.find((result) => result.collection === "quadros");
-    if (quadrosResult?.ok && !quadrosResult.rows?.length && localQuadrosBeforeLoad.length) {
-      try {
-        const insertedBoards = await Promise.all(
-          localQuadrosBeforeLoad.map((board) => hubApi.insert("quadros", toDbPayload("quadros", {
-            ...board,
-            createdBy: board.createdBy || getCurrentUserName(),
-          })))
-        );
-        quadrosResult.rows = mapRows("quadros", insertedBoards || []);
-      } catch (error) {
-        console.error("Erro ao migrar quadros locais:", error);
-      }
-    }
+    requests.forEach((result) => {
+      if (result.status === "fulfilled") {
+        const [collection, rows] = result.value;
 
-    requests.forEach(({ collection, rows, ok }) => {
-      if (ok) data[collection] = rows;
+        data[collection] = rows;
+      } else {
+        console.error("Erro ao carregar colecao do PostgreSQL:", result.reason);
+      }
     });
     ensureRequiredTeamUsers();
     saveLocalData();
     if (setupLive) {
+      setupRealtime();
       setupAutoRefresh();
     }
-    const hasFailures = requests.some((result) => !result.ok);
-    setSyncStatus(hasFailures ? "Sincronizacao parcial" : "HUB online", !hasFailures);
-    serverDataReady = true;
+    const hasFailures = requests.some((result) => result.status === "rejected");
+    setSyncStatus(hasFailures ? "PostgreSQL parcial" : "PostgreSQL EIXO online", !hasFailures);
     renderAll();
     if (setupLive) rememberCurrentNotificationKeysForPolling();
   } catch (error) {
-    console.error("Erro ao carregar dados:", error);
-    setSyncStatus("Sincronizacao pendente", false);
-    serverDataReady = true;
+    console.error("Erro ao carregar PostgreSQL:", error);
+    setSyncStatus("PostgreSQL pendente", false);
     renderAll();
   }
 }
 
-async function refreshFromSupabase() {
-  if (!isAuthenticated() || refreshInProgress) return;
+async function refreshFromPostgreSQL() {
+  if (!postgresClient || refreshInProgress) return;
 
   refreshInProgress = true;
   try {
-    await loadFromSupabase({ setupLive: false });
+    await loadFromPostgreSQL({ setupLive: false });
     notifyNewItemsFromPolling();
   } finally {
     refreshInProgress = false;
@@ -3421,17 +3079,68 @@ async function refreshFromSupabase() {
 function setupAutoRefresh() {
   if (refreshTimer) return;
 
+  // Atualiza mesmo com a aba em segundo plano/minimizada, para que notificacoes
+  // de novas mensagens continuem chegando. O navegador pode limitar a frequencia
+  // de setInterval em abas ocultas, mas o timer continua rodando.
   refreshTimer = window.setInterval(() => {
-    refreshFromSupabase();
-  }, 2000);
+    refreshFromPostgreSQL();
+  }, 5000);
 }
 
-function setupRealtime() {}
+function setupRealtime() {
+  if (!postgresClient || realtimeChannel) return;
+
+  realtimeChannel = postgresClient.channel("hub-realtime-updates");
+
+  Object.entries(TABLES).forEach(([collection, table]) => {
+    realtimeChannel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table },
+      (payload) => {
+        const row = payload.eventType === "DELETE" ? payload.old : payload.new;
+        if (!row) return;
+        if (collection === "comunicados" && !canAccessChatChannel(row.canal)) return;
+
+        const mappedRealtimeItem = mapRows(collection, [row])[0] || row;
+        notifyRealtimeItem(collection, mappedRealtimeItem, payload.eventType);
+        mergeRealtimeRow(collection, row, payload.eventType);
+        renderRealtimeUpdate(collection);
+      }
+    );
+  });
+
+  realtimeChannel.subscribe((status) => {
+    if (status === "SUBSCRIBED") {
+      console.info("HUB realtime conectado");
+      setSyncStatus("Tempo real online", true);
+    } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+      console.warn("HUB realtime desconectado:", status);
+      setSyncStatus("Reconectando...", false);
+      // Remove canal atual e agenda reconexÃ£o
+      try { realtimeChannel.unsubscribe(); } catch (_) {}
+      realtimeChannel = null;
+      setTimeout(() => {
+        if (!realtimeChannel && postgresClient) {
+          console.info("HUB realtime tentando reconectar...");
+          setupRealtime();
+          refreshFromPostgreSQL();
+        }
+      }, 3000);
+    }
+  });
+}
 
 async function uploadChatFile(file) {
-  if (!file || !file.name) return null;
-  const uploaded = await hubUpload(file, "chat");
-  return uploaded.url;
+  if (!postgresClient || !file || !file.name) return null;
+
+  const bucket = getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files";
+  const safeName = file.name.replace(/[^a-z0-9_.-]/gi, "-");
+  const channel = normalizeChatChannel(activeChatChannel || GENERAL_CHANNEL);
+  const path = `chat/${channel}/${Date.now()}-${generateUUID()}-${safeName}`;
+  const { error } = await postgresClient.storage.from(bucket).upload(path, file, { contentType: getChatFileMimeType(file), upsert: false });
+  if (error) throw error;
+
+  return path;
 }
 
 function getChatFileMimeType(fileOrAttachment) {
@@ -3512,7 +3221,6 @@ function renderChatEmojiMenu() {
     <button type="button" class="chat-emoji-option" data-action="insert-chat-emoji" data-emoji="${escapeHtml(emoji)}" aria-label="Inserir ${escapeHtml(emoji)}">${escapeHtml(emoji)}</button>
   `).join("");
   menu.dataset.ready = "true";
-  applyEmojiImages(menu);
 }
 
 function toggleChatEmojiMenu() {
@@ -3526,106 +3234,16 @@ function toggleChatEmojiMenu() {
   if (nextOpen) closeChatAttachMenu();
 }
 
-function getChatComposerEditor() {
-  return document.getElementById("chat-message-editor");
-}
-
-function getChatComposerTextarea() {
-  return document.querySelector('#chat-form textarea[name="mensagem"]');
-}
-
-function serializeComposerNode(node) {
-  let text = "";
-  node.childNodes.forEach((child) => {
-    if (child.nodeType === Node.TEXT_NODE) {
-      text += child.nodeValue;
-    } else if (child.nodeType === Node.ELEMENT_NODE) {
-      if (child.tagName === "IMG" && (child.dataset.emoji || child.alt)) {
-        text += child.dataset.emoji || child.alt;
-      } else if (child.tagName === "BR") {
-        text += "\n";
-      } else {
-        text += serializeComposerNode(child);
-      }
-    }
-  });
-  return text;
-}
-
-function syncChatComposerToTextarea() {
-  const editor = getChatComposerEditor();
-  const textarea = getChatComposerTextarea();
-  if (!editor || !textarea) return;
-  textarea.value = serializeComposerNode(editor);
-}
-
-function buildEmojiImageElement(emoji) {
-  if (window.twemoji) {
-    const wrapper = document.createElement("span");
-    wrapper.innerHTML = window.twemoji.parse(emoji, {
-      base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-      folder: "svg",
-      ext: ".svg",
-      className: "emoji-image",
-    });
-    const img = wrapper.querySelector("img");
-    if (img) {
-      img.dataset.emoji = emoji;
-      return img;
-    }
-  }
-  return document.createTextNode(emoji);
-}
-
-function convertComposerEmojisPreservingCaret() {
-  const editor = getChatComposerEditor();
-  if (!editor || !window.twemoji) return;
-  const selection = window.getSelection();
-  let marker = null;
-  if (selection && selection.rangeCount && editor.contains(selection.anchorNode)) {
-    const range = selection.getRangeAt(0).cloneRange();
-    range.collapse(true);
-    marker = document.createElement("span");
-    marker.className = "chat-composer-caret-marker";
-    range.insertNode(marker);
-  }
-  applyEmojiImages(editor);
-  if (marker && marker.isConnected) {
-    const newRange = document.createRange();
-    newRange.setStartAfter(marker);
-    newRange.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-    marker.remove();
-  }
-  syncChatComposerToTextarea();
-}
-
-function getComposerSelectionRange(editor) {
-  const selection = window.getSelection();
-  if (selection && selection.rangeCount && editor.contains(selection.anchorNode)) {
-    return selection.getRangeAt(0);
-  }
-  const range = document.createRange();
-  range.selectNodeContents(editor);
-  range.collapse(false);
-  return range;
-}
-
 function insertChatEmoji(emoji) {
-  const editor = getChatComposerEditor();
-  if (!editor || editor.getAttribute("contenteditable") !== "true") return;
-  editor.focus();
-  const selection = window.getSelection();
-  const range = getComposerSelectionRange(editor);
-  range.deleteContents();
-  const node = buildEmojiImageElement(emoji);
-  range.insertNode(node);
-  range.setStartAfter(node);
-  range.collapse(true);
-  selection.removeAllRanges();
-  selection.addRange(range);
-  syncChatComposerToTextarea();
+  const input = document.querySelector('#chat-form textarea[name="mensagem"]');
+  if (!input || input.disabled) return;
+  const value = input.value || "";
+  const start = Number.isInteger(input.selectionStart) ? input.selectionStart : value.length;
+  const end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : start;
+  input.value = `${value.slice(0, start)}${emoji}${value.slice(end)}`;
+  const cursor = start + String(emoji).length;
+  input.focus();
+  input.setSelectionRange(cursor, cursor);
 }
 
 function openChatFilePicker({ accept = getChatDefaultFileAccept(), capture = "" } = {}) {
@@ -3640,7 +3258,7 @@ function openChatFilePicker({ accept = getChatDefaultFileAccept(), capture = "" 
 function handleChatAttachOption(type) {
   closeChatAttachMenu();
   if (!activeChatChannel || !canAccessChatChannel(activeChatChannel)) {
-    showModal("Selecione um chat", "Escolha um canal de comunicação antes de adicionar anexos.", "error");
+    showModal("Selecione um chat", "Escolha um canal de comunicaÃ§Ã£o antes de adicionar anexos.", "error");
     return;
   }
 
@@ -3745,15 +3363,15 @@ function renderChatAttachmentPreview(files) {
   } else if (mimeType.startsWith("audio/")) {
     body = `
       <div class="chat-preview-audio-card">
-        <button type="button" class="chat-preview-audio-trash" data-action="clear-chat-file" title="Remover audio" aria-label="Remover audio">🗑</button>
+        <button type="button" class="chat-preview-audio-trash" data-action="clear-chat-file" title="Remover audio" aria-label="Remover audio">ðŸ—‘</button>
         <audio class="chat-preview-audio-player" controls src="${chatAttachmentPreviewUrl}"></audio>
       </div>`;
     activeChip = `<span class="chat-preview-chip-icon" aria-hidden="true">AUD</span>`;
   } else {
     body = `
       <div class="chat-preview-unavailable">
-        <div class="chat-preview-file-icon" aria-hidden="true">▦</div>
-        <strong>Prévia indisponível</strong>
+        <div class="chat-preview-file-icon" aria-hidden="true">â–¦</div>
+        <strong>PrÃ©via indisponÃ­vel</strong>
         <span>${meta}</span>
       </div>`;
     activeChip = `<span class="chat-preview-chip-icon" aria-hidden="true">${escapeHtml(extension.slice(0, 3))}</span>`;
@@ -3775,12 +3393,12 @@ function renderChatAttachmentPreview(files) {
         <button type="button" class="chat-preview-chip ${index === chatAttachmentPreviewIndex ? "is-active" : ""}" data-action="preview-chat-file" data-index="${index}" title="Visualizar ${escapeHtml(item.name)}" aria-label="Visualizar ${escapeHtml(item.name)}">
           ${chipContent}
         </button>
-        <button type="button" class="chat-preview-chip-remove" data-action="remove-chat-file" data-index="${index}" title="Remover ${escapeHtml(item.name)}" aria-label="Remover ${escapeHtml(item.name)}">×</button>
+        <button type="button" class="chat-preview-chip-remove" data-action="remove-chat-file" data-index="${index}" title="Remover ${escapeHtml(item.name)}" aria-label="Remover ${escapeHtml(item.name)}">Ã—</button>
       </span>`;
   }).join("");
 
   preview.innerHTML = `
-    <button type="button" class="chat-preview-close" data-action="clear-chat-file" title="Remover anexo" aria-label="Remover anexo">×</button>
+    <button type="button" class="chat-preview-close" data-action="clear-chat-file" title="Remover anexo" aria-label="Remover anexo">Ã—</button>
     <div class="chat-preview-title">${fileName}${selectedFiles.length > 1 ? ` + ${selectedFiles.length - 1} arquivo(s)` : ""}</div>
     <div class="chat-preview-body">${body}</div>
     <div class="chat-preview-strip" aria-label="Anexo selecionado">
@@ -3794,8 +3412,8 @@ function renderChatAttachmentPreview(files) {
 function resetAudioRecordButton() {
   const button = document.getElementById("record-audio-button");
   if (!button) return;
-  button.title = "Gravar áudio";
-  button.setAttribute("aria-label", "Gravar áudio");
+  button.title = "Gravar Ã¡udio";
+  button.setAttribute("aria-label", "Gravar Ã¡udio");
   button.classList.remove("is-recording");
   button.classList.remove("is-processing");
   stopChatAudioTimer();
@@ -3864,8 +3482,8 @@ async function toggleChatAudioRecording() {
 
   if (chatAudioRecorder?.state === "recording") {
     chatAudioRecorder.stop();
-    button.title = "Processando áudio";
-    button.setAttribute("aria-label", "Processando áudio");
+    button.title = "Processando Ã¡udio";
+    button.setAttribute("aria-label", "Processando Ã¡udio");
     button.classList.remove("is-recording");
     button.classList.add("is-processing");
     button.disabled = true;
@@ -3873,7 +3491,7 @@ async function toggleChatAudioRecording() {
   }
 
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-    showModal("Gravação indisponível", "Seu navegador não suporta gravação de áudio neste canal.", "error");
+    showModal("GravaÃ§Ã£o indisponÃ­vel", "Seu navegador nÃ£o suporta gravaÃ§Ã£o de Ã¡udio neste canal.", "error");
     return;
   }
 
@@ -3895,21 +3513,21 @@ async function toggleChatAudioRecording() {
       stopChatAudioStream();
       resetAudioRecordButton();
       if (!blob.size) {
-        showModal("Áudio vazio", "A gravação não capturou áudio.", "error");
+        showModal("Ãudio vazio", "A gravaÃ§Ã£o nÃ£o capturou Ã¡udio.", "error");
         return;
       }
       const file = new File([blob], `audio-chat-${Date.now()}.${extension}`, { type });
       const error = validateChatFile(file);
       if (error) {
-        showModal("Anexo inválido", error, "error");
+        showModal("Anexo invÃ¡lido", error, "error");
         return;
       }
       setChatSelectedFile(file);
     });
     chatAudioRecorder.start();
     startChatAudioTimer();
-    button.title = "Parar gravação";
-    button.setAttribute("aria-label", "Parar gravação");
+    button.title = "Parar gravaÃ§Ã£o";
+    button.setAttribute("aria-label", "Parar gravaÃ§Ã£o");
     button.classList.add("is-recording");
     button.classList.remove("is-processing");
   } catch (error) {
@@ -3918,9 +3536,9 @@ async function toggleChatAudioRecording() {
     resetAudioRecordButton();
     const errorName = String(error?.name || "");
     const message = errorName === "NotAllowedError" || errorName === "SecurityError"
-      ? "Não foi possível acessar o microfone. Verifique se a permissão do navegador está liberada para este site."
-      : "Não foi possível iniciar a gravação de áudio. Verifique se há um microfone conectado e tente novamente.";
-    showModal("Microfone indisponível", message, "error");
+      ? "NÃ£o foi possÃ­vel acessar o microfone. Verifique se a permissÃ£o do navegador estÃ¡ liberada para este site."
+      : "NÃ£o foi possÃ­vel iniciar a gravaÃ§Ã£o de Ã¡udio. Verifique se hÃ¡ um microfone conectado e tente novamente.";
+    showModal("Microfone indisponÃ­vel", message, "error");
   }
 }
 
@@ -3950,7 +3568,7 @@ function validateResumeFile(file) {
 function validateContractorDocumentFile(file) {
   if (!file || !file.name) return "Anexe pelo menos um documento.";
   if (file.size <= 0) return "Um dos arquivos enviados parece estar vazio.";
-  if (file.size > CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES) return "Cada documento deve ter no máximo 10 MB.";
+  if (file.size > CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES) return "Cada documento deve ter no mÃ¡ximo 10 MB.";
   return null;
 }
 
@@ -3966,12 +3584,8 @@ function readFileAsDataUrl(file) {
 function createContractorDocumentField(required = false) {
   return `
     <div class="contractor-document-field">
-      <label class="file-upload-field">${required ? "Documentos" : "Documento adicional"}
-        <span class="file-upload-control">
-          <span class="file-upload-button">Anexar documento</span>
-          <span class="file-upload-name" data-empty-label="Nenhum arquivo escolhido">Nenhum arquivo escolhido</span>
-        </span>
-        <input class="file-upload-input" name="documentos" type="file" ${required ? "required" : ""} />
+      <label>${required ? "Documentos" : "Documento adicional"}
+        <input name="documentos" type="file" multiple ${required ? "required" : ""} />
       </label>
       ${required ? "" : '<button class="secondary-link contractor-remove-document-button" type="button" data-action="remover-documento-contratado">Remover</button>'}
     </div>
@@ -3995,6 +3609,23 @@ async function buildContractorDocumentPayload(documentos) {
     });
   }
   return embeddedDocuments;
+}
+
+async function uploadPublicFile(file) {
+  if (!file || !file.name) return null;
+  const response = await fetch("/api/files", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: file.name,
+      size: file.size,
+      type: file.type || "application/octet-stream",
+      dataUrl: await readFileAsDataUrl(file),
+    }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || "Nao foi possivel enviar o arquivo.");
+  return result;
 }
 
 function normalizeCpf(value) {
@@ -4055,7 +3686,7 @@ function loadTurnstileScript() {
 }
 
 function ensurePublicCaptchaNotice(formElement) {
-  const config = getHubSupabaseConfig();
+  const config = getHubPostgreSQLConfig();
   if (!formElement || !config.turnstileSiteKey || formElement.querySelector(".cf-turnstile")) return;
 
   loadTurnstileScript();
@@ -4066,14 +3697,12 @@ function ensurePublicCaptchaNotice(formElement) {
 }
 
 async function submitPublicRecord(collection, payload, turnstileToken = "") {
-  const response = await fetch("/api/public/submit", {
+  const table = TABLES[collection];
+  if (!table) throw new Error("Tipo de envio invalido.");
+  const response = await fetch(`/api/records?table=${encodeURIComponent(table)}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      type: collection,
-      payload,
-      turnstileToken,
-    }),
+    headers: { "Content-Type": "application/json", "x-hub-client-id": getPublicClientId() },
+    body: JSON.stringify({ rows: [{ ...payload, created_by: payload.created_by || "Publico" }] }),
   });
 
   const result = await response.json().catch(() => ({}));
@@ -4084,25 +3713,23 @@ async function submitPublicRecord(collection, payload, turnstileToken = "") {
     throw error;
   }
 
-  return result.data;
+  return Array.isArray(result.data) ? result.data[0] : result.data;
 }
 
 async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, curriculo, turnstileToken }) {
-  const uploaded = await hubUpload(curriculo, "curriculo");
-
-  const response = await fetch("/api/public/submit", {
+  const upload = await uploadPublicFile(curriculo);
+  const response = await fetch(`/api/records?table=${encodeURIComponent(TABLES.candidaturas)}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-hub-client-id": getPublicClientId() },
     body: JSON.stringify({
-      type: "candidaturas",
-      payload: {
+      rows: [{
         vaga_id,
         nome,
         telefone,
         cpf,
-        curriculo_url: uploaded.url,
-      },
-      turnstileToken,
+        curriculo_url: upload?.path || "",
+        created_by: "Publico",
+      }],
     }),
   });
 
@@ -4114,24 +3741,17 @@ async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, c
     throw error;
   }
 
-  return result.data;
+  return Array.isArray(result.data) ? result.data[0] : result.data;
 }
 
 async function submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, documentos, accessPassword, turnstileToken }) {
-  const uploadedDocuments = [];
-  try {
-    for (const file of Array.from(documentos || [])) {
-      const uploaded = await hubClientUpload(file, "contratado", { empresa, origemHtml, accessPassword });
-      uploadedDocuments.push({
-        name: String(file.name || "documento"),
-        size: Number(file.size || 0),
-        type: String(file.type || "application/octet-stream"),
-        path: uploaded.pathname || "",
-        url: uploaded.url || "",
-      });
-    }
+  const embeddedDocuments = await buildContractorDocumentPayload(documentos);
 
-    const response = await fetch("/api/contractor-documents", {
+  const attempts = [{ url: "/api/contractor-documents", type: "documentosContratados", localApi: true }];
+
+  let lastError = null;
+  for (const attempt of attempts) {
+    const response = await fetch(attempt.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -4141,27 +3761,30 @@ async function submitPublicContractorDocuments({ empresa, origemHtml, nome, tele
         telefone: String(telefone || ""),
         cpf: String(cpf || ""),
         accessPassword: String(accessPassword || ""),
-        documentos: uploadedDocuments,
+        documentos: embeddedDocuments,
         turnstileToken: String(turnstileToken || ""),
       }),
     });
+
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const error = new Error(result.error || `Nao foi possivel salvar os documentos enviados (HTTP ${response.status}).`);
-      error.code = result.code;
-      error.status = response.status;
-      throw error;
+    if (response.ok) {
+      const savedRecord = mapContractorDocumentRow(result.data || {});
+      if (savedRecord.id) {
+        data.documentosContratados = mergeContractorDocuments([savedRecord], data.documentosContratados || []);
+        saveLocalData();
+      }
+      return result.data;
     }
 
-    const savedRecord = mapContractorDocumentRow(result.data || {});
-    if (savedRecord.id) {
-      data.documentosContratados = mergeContractorDocuments([savedRecord], data.documentosContratados || []);
-      saveLocalData();
-    }
-    return result.data;
-  } catch (error) {
-    throw error;
+    lastError = new Error(result.error || "Envio publico bloqueado.");
+    lastError.code = result.code;
+    lastError.status = response.status;
+    const canTryNext = /tipo invalido|not found|not_found|funcao sem postgres_service_role_key|function not found|schema cache|row-level security/i.test(lastError.message)
+      || [400, 401, 404, 405, 500].includes(response.status);
+    if (!canTryNext) throw lastError;
   }
+
+  throw new Error(lastError?.message || "Nao foi possivel salvar os documentos no PostgreSQL. O envio nao foi registrado para o RH.");
 }
 
 function isPublicInsertOnlyCollection(collection) {
@@ -4204,7 +3827,7 @@ function appendLocalInsertedItem(collection, values) {
 }
 
 async function addItem(collection, values) {
-  if (!isAuthenticated() && !isPublicInsertOnlyCollection(collection)) {
+  if (!postgresClient) {
     appendLocalInsertedItem(collection, values);
     saveLocalData();
     renderAll();
@@ -4234,29 +3857,146 @@ async function addItem(collection, values) {
       return true;
     }
 
-    const inserted = await hubApi.insert(collection, payload);
+    const { data: inserted, error } = await postgresClient
+      .from(TABLES[collection])
+      .insert(payload)
+      .select("*")
+      .single();
+
+    if (error) {
+      if (isMissingCreatedByColumn(error)) {
+        const { data: insertedWithoutAuthor, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutCreatedBy(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedWithoutAuthor])[0],
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL sem autoria", false);
+        renderAll();
+        return true;
+      }
+
+      if (collection === "malotes" && isMissingColumn(error, "updated_by")) {
+        const { data: insertedWithoutEditor, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutUpdatedBy(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedWithoutEditor])[0],
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        renderAll();
+        return true;
+      }
+
+      if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos") || isMissingColumn(error, "unidade"))) {
+        const { data: insertedLegacy, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutOptionalJobColumns(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedLegacy])[0],
+          descricao: values.descricao || "",
+          requisitos: values.requisitos || "",
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        renderAll();
+        showModal("Banco precisa atualizar", "A vaga foi salva em modo compatibilidade. Rode o postgres-schema.sql atualizado para gravar descricao e requisitos em colunas proprias.", "info");
+        return true;
+      }
+
+      if (collection === "candidaturas" && isMissingColumn(error, "telefone")) {
+        const { data: insertedLegacy, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutOptionalApplicationColumns(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedLegacy])[0],
+          telefone: values.telefone || "",
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        renderAll();
+        showModal("Banco precisa atualizar", "A candidatura foi salva, mas rode o postgres-schema.sql atualizado para gravar telefone no banco.", "info");
+        return true;
+      }
+
+      throw error;
+    }
+
     data[collection].unshift(mapRows(collection, [inserted])[0]);
     saveLocalData();
-    setSyncStatus("HUB online", true);
+    setSyncStatus("PostgreSQL EIXO online", true);
     renderAll();
     return true;
   } catch (error) {
-    console.error("Erro ao salvar:", error);
-    setSyncStatus("Erro ao salvar", false);
+    console.error("Erro ao salvar no PostgreSQL:", error);
+if (collection === "eventos") {
+      data[collection].unshift({
+        id: generateUUID(),
+        createdAt: todayLabel(),
+        sortAt: new Date().toISOString(),
+        createdBy: values.createdBy || getCurrentUserName(),
+        ...values,
+      });
+      saveLocalData();
+      setSyncStatus("Evento salvo localmente", false);
+      renderAll();
+      showModal("Evento salvo localmente", "Rode o SQL do calendario no PostgreSQL para sincronizar esta agenda entre computadores.", "info");
+      return true;
+    }
+    setSyncStatus("Erro no PostgreSQL", false);
+    const isRlsBlock = error?.code === "42501" || error?.message?.includes("row-level security") || error?.code === "PGRST301";
+    const isNoRows = error?.code === "PGRST116";
     const message = isPublicInsertOnlyCollection(collection)
       ? (error?.message || "Nao foi possivel enviar o formulario publico.")
-      : error?.status === 403
-        ? "Sem permissao para salvar este registro."
-        : (error?.message || "Nao foi possivel salvar o registro.");
+      : collection === "chamados"
+        ? "Nao foi possivel abrir o chamado. Rode o arquivo fix-chamados-postgres.sql no PostgreSQL para criar a tabela hub_chamados."
+        : collection === "vagas" && (isRlsBlock || isNoRows)
+          ? "Sem permissao para salvar a vaga. Verifique se seu usuario tem cargo 'RH' na tabela hub_users e se o e-mail do perfil coincide com o e-mail do login. Rode o hub-vagas-fix.sql para corrigir."
+          : collection === "vagas"
+            ? `Nao foi possivel salvar a vaga. ${error?.message || "Confira se as colunas descricao, requisitos e created_by existem em hub_vagas (rode hub-vagas-fix.sql)."}`
+            : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
     showModal("Erro ao Salvar", message, "error");
     return false;
   }
 }
 
+/**
+ * [ALERTA DE SEGURANÃ‡A - IDOR] Esta funÃ§Ã£o recebe um 'id' diretamente do cliente.
+ * Sem uma polÃ­tica de Row Level Security (RLS) no PostgreSQL, um usuÃ¡rio autenticado
+ * poderia, teoricamente, alterar este 'id' para modificar ou deletar um registro
+ * que nÃ£o lhe pertence.
+ * SOLUÃ‡ÃƒO: Implemente polÃ­ticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuÃ¡rio sÃ³ possa operar nos registros que ele tem permissÃ£o (ex: que ele mesmo criou).
+ */
 async function updateItem(collection, id, values) {
   if (!id) return false;
 
-  if (!isAuthenticated()) {
+  if (!postgresClient) {
     data[collection] = (data[collection] || []).map((item) =>
       String(item.id) === String(id) ? { ...item, ...values } : item
     );
@@ -4267,35 +4007,129 @@ async function updateItem(collection, id, values) {
 
   try {
     const payload = toDbPayload(collection, values);
-    if (collection === "malotes" || collection === "eventos" || collection === "documentos") {
+    if (collection === "malotes") {
       delete payload.created_by;
       payload.updated_by = values.updatedBy || getCurrentUserName();
-      if (collection === "documentos") payload.updated_at = new Date().toISOString();
     }
-    if (collection === "chamados" || collection === "vagas") {
+if (collection === "eventos") {
+      delete payload.created_by;
+      payload.updated_by = values.updatedBy || getCurrentUserName();
+    }
+    if (collection === "chamados") {
       delete payload.created_by;
     }
+    if (collection === "vagas") {
+      delete payload.created_by;
+    }
+    const { data: updated, error } = await postgresClient
+      .from(TABLES[collection])
+      .update(payload)
+      .eq("id", id)
+      .select("*")
+      .single();
 
-    const updated = await hubApi.update(collection, id, payload);
+    if (error) {
+      if (isMissingCreatedByColumn(error)) {
+        const { data: updatedWithoutAuthor, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .update(withoutCreatedBy(payload))
+          .eq("id", id)
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+        mergeRealtimeRow(collection, updatedWithoutAuthor, "UPDATE");
+        renderRealtimeUpdate(collection);
+        setSyncStatus("PostgreSQL sem autoria", false);
+        return true;
+      }
+
+      if ((collection === "malotes" || collection === "eventos") && isMissingColumn(error, "updated_by")) {
+        const { data: updatedWithoutEditor, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .update(withoutUpdatedBy(payload))
+          .eq("id", id)
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+        mergeRealtimeRow(collection, {
+          ...updatedWithoutEditor,
+          updated_by: values.updatedBy || getCurrentUserName(),
+        }, "UPDATE");
+        renderRealtimeUpdate(collection);
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        return true;
+      }
+
+      if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos") || isMissingColumn(error, "unidade"))) {
+        const { data: updatedLegacy, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .update(withoutOptionalJobColumns(payload))
+          .eq("id", id)
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+        mergeRealtimeRow(collection, {
+          ...updatedLegacy,
+          descricao: values.descricao || "",
+          requisitos: values.requisitos || "",
+        }, "UPDATE");
+        renderRealtimeUpdate(collection);
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        showModal("Banco precisa atualizar", "A vaga foi atualizada em modo compatibilidade. Rode o postgres-schema.sql atualizado para gravar descricao e requisitos em colunas proprias.", "info");
+        return true;
+      }
+
+      throw error;
+    }
+
     mergeRealtimeRow(collection, updated, "UPDATE");
     renderRealtimeUpdate(collection);
-    setSyncStatus("HUB online", true);
+    setSyncStatus("PostgreSQL EIXO online", true);
     return true;
   } catch (error) {
-    console.error("Erro ao atualizar:", error);
-    setSyncStatus("Erro ao atualizar", false);
-    const message = error?.status === 403
-      ? "Sem permissao para editar este registro."
-      : (error?.message || "Nao foi possivel atualizar o registro.");
+    console.error("Erro ao atualizar no PostgreSQL:", error);
+if (collection === "eventos") {
+      data[collection] = (data[collection] || []).map((item) =>
+        String(item.id) === String(id)
+          ? { ...item, ...values, createdBy: item.createdBy || values.createdBy || getCurrentUserName(), updatedBy: values.updatedBy || getCurrentUserName() }
+          : item
+      );
+      saveLocalData();
+      setSyncStatus("Evento atualizado localmente", false);
+      renderAll();
+      showModal("Evento atualizado localmente", "Rode o SQL do calendario no PostgreSQL para sincronizar esta agenda entre computadores.", "info");
+      return true;
+    }
+    setSyncStatus("Erro no PostgreSQL", false);
+    const isRlsBlock = error?.code === "42501" || error?.message?.includes("row-level security") || error?.code === "PGRST301";
+    const isNoRows   = error?.code === "PGRST116";
+    const message =
+      collection === "chamados"
+        ? "O PostgreSQL bloqueou o arquivamento do chamado. Rode o arquivo fix-arquivar-chamados-postgres.sql no PostgreSQL para liberar UPDATE em hub_chamados."
+        : collection === "vagas" && (isRlsBlock || isNoRows)
+          ? "Sem permissao para editar a vaga. Verifique se seu usuario tem cargo 'RH' em hub_users com o mesmo e-mail do login."
+          : collection === "vagas"
+            ? `Nao foi possivel editar a vaga. ${error?.message || "Confira as colunas de hub_vagas (rode hub-vagas-fix.sql)."}`
+            : "Nao foi possivel atualizar o registro no PostgreSQL.";
     showModal("Erro ao Atualizar", message, "error");
     return false;
   }
 }
 
+/**
+ * [ALERTA DE SEGURANÃ‡A - IDOR] Esta funÃ§Ã£o recebe um 'id' diretamente do cliente para exclusÃ£o.
+ * Sem uma polÃ­tica de Row Level Security (RLS) no PostgreSQL, um usuÃ¡rio autenticado
+ * poderia, teoricamente, alterar este 'id' para deletar um registro
+ * que nÃ£o lhe pertence.
+ * SOLUÃ‡ÃƒO: Implemente polÃ­ticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuÃ¡rio sÃ³ possa deletar os registros que ele tem permissÃ£o.
+ */
 async function deleteItem(collection, id) {
   if (!id) return false;
 
-  if (!isAuthenticated()) {
+  if (!postgresClient) {
     data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
     if (collection === "vagas") {
       data.candidaturas = (data.candidaturas || []).filter((item) => String(item.vaga_id) !== String(id));
@@ -4306,22 +4140,41 @@ async function deleteItem(collection, id) {
   }
 
   try {
-    await hubApi.remove(collection, id);
+    if (collection === "vagas") {
+      const { error: candidaturaError } = await postgresClient.from(TABLES.candidaturas).delete().eq("vaga_id", id);
+      if (candidaturaError) throw candidaturaError;
+    }
+
+    const { data: deletedRows, error } = await postgresClient.from(TABLES[collection]).delete().eq("id", id).select("id");
+    if (error) throw error;
+
+    if (!deletedRows?.length) {
+      setSyncStatus("Delete pendente no PostgreSQL", false);
+      showModal("Permissao de Delete", "O PostgreSQL nao confirmou a exclusao da vaga. Rode o postgres-schema.sql atualizado para liberar DELETE em hub_vagas.", "error");
+      await refreshFromPostgreSQL();
+      return false;
+    }
+
     data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
     if (collection === "vagas") {
       data.candidaturas = (data.candidaturas || []).filter((item) => String(item.vaga_id) !== String(id));
     }
     saveLocalData();
     renderAll();
-    setSyncStatus("HUB online", true);
+    setSyncStatus("PostgreSQL EIXO online", true);
     return true;
   } catch (error) {
-    console.error("Erro ao deletar:", error);
-    setSyncStatus("Erro ao deletar", false);
-    const message = error?.status === 403
-      ? "Sem permissao para excluir este registro."
-      : "Nao foi possivel deletar o registro.";
-    showModal("Erro ao Deletar", message, "error");
+    console.error("Erro ao deletar no PostgreSQL:", error);
+if (collection === "eventos") {
+      data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
+      saveLocalData();
+      renderAll();
+      setSyncStatus("Evento deletado localmente", false);
+      showModal("Evento deletado localmente", "Rode o SQL do calendario no PostgreSQL para sincronizar esta agenda entre computadores.", "info");
+      return true;
+    }
+    setSyncStatus("Erro no PostgreSQL", false);
+    showModal("Erro ao Deletar", "Nao foi possivel deletar o registro no PostgreSQL.", "error");
     return false;
   }
 }
@@ -4368,50 +4221,80 @@ async function saveTeamUser(values) {
     return false;
   }
 
-  if (!isAuthenticated()) {
+  if (!postgresClient) {
     upsertLocalUser({ nome, email, cargo, syncStatus: "active" });
     return true;
   }
 
   try {
-    const normalizedEmail = normalizeLoginName(email);
-    const normalizedCpf = normalizeCpf(cpf);
-    const existing = (data.usuarios || []).find((row) =>
-      (normalizedEmail && normalizeLoginName(row.email) === normalizedEmail) ||
-      (normalizedCpf && normalizeCpf(row.cpf) === normalizedCpf)
-    );
+    const { data: existingRows, error: findError } = await postgresClient
+      .from(USERS_TABLE)
+      .select("id, nome, email, cpf")
+      .or(`email.ilike.${email},cpf.eq.${cpf}`)
+      .limit(1);
 
-    const payload = { nome, email, cpf, cargo, created_by: getCurrentUserName() };
-    const saved = existing
-      ? await hubApi.update("usuarios", existing.id, payload)
-      : await hubApi.insert("usuarios", payload);
+    let existing = null;
+    if (findError && isMissingColumn(findError, "email")) {
+      const fallback = await postgresClient
+        .from(USERS_TABLE)
+        .select("id, nome")
+        .ilike("nome", nome)
+        .limit(1);
+      if (fallback.error) throw fallback.error;
+      existing = fallback.data?.[0] || null;
+    } else if (findError) {
+      throw findError;
+    } else {
+      existing = existingRows?.[0] || null;
+    }
 
-    const mapped = mapRows("usuarios", [saved])[0] || { nome, email, cargo, createdAt: todayLabel() };
-    upsertLocalUser({ ...mapped, email: mapped.email || email, cpf: mapped.cpf || cpf, cargo: mapped.cargo || cargo, syncStatus: "active" });
-    setSyncStatus("HUB online", true);
-    showModal("Perfil salvo", "Defina uma senha para esse usuario (via fluxo de redefinicao de senha) para liberar o login.", "info");
+    let query = existing
+      ? postgresClient.from(USERS_TABLE).update({ nome, email, cpf, cargo, created_by: getCurrentUserName() }).eq("id", existing.id)
+      : postgresClient.from(USERS_TABLE).insert({ nome, email, cpf, cargo, created_by: getCurrentUserName() });
+
+    let result = await query.select("*");
+
+    if (result.error && isMissingCreatedByColumn(result.error)) {
+      query = existing
+      ? postgresClient.from(USERS_TABLE).update({ nome, email, cpf, cargo }).eq("id", existing.id)
+      : postgresClient.from(USERS_TABLE).insert({ nome, email, cpf, cargo });
+      result = await query.select("*");
+    }
+
+    if (result.error && isMissingColumn(result.error, "email")) {
+      query = existing
+        ? postgresClient.from(USERS_TABLE).update({ nome, cargo, created_by: getCurrentUserName() }).eq("id", existing.id)
+        : postgresClient.from(USERS_TABLE).insert({ nome, cargo, created_by: getCurrentUserName() });
+      result = await query.select("*");
+    }
+
+    if (result.error) throw result.error;
+    const savedRows = result.data;
+
+    const saved = mapRows("usuarios", savedRows || [])[0] || { nome, email, cargo, createdAt: todayLabel() };
+    upsertLocalUser({ ...saved, email: saved.email || email, cpf: saved.cpf || cpf, cargo: saved.cargo || cargo, syncStatus: "active" });
+    setSyncStatus("PostgreSQL EIXO online", true);
+    showModal("Perfil salvo", "Crie ou atualize o usuÃ¡rio correspondente no PostgreSQL Auth para liberar o login.", "info");
     return true;
   } catch (error) {
-    console.error("Erro ao salvar usuario:", error);
+    console.error("Erro ao salvar usuario no PostgreSQL:", error);
     upsertLocalUser({ nome, email, cargo, syncStatus: "local" });
     setSyncStatus("Usuario salvo local", false);
-    showModal("Aviso de Banco de Dados", "O perfil foi salvo localmente. Tente novamente mais tarde.", "error");
+    showModal("Aviso de Banco de Dados", "O perfil foi salvo localmente. Crie o usuario no PostgreSQL Auth e confira a tabela hub_users.", "error");
     return true;
   }
-}
-
-async function fetchPublicVagasRows() {
-  const response = await fetch("/api/public/vagas");
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || "Nao foi possivel carregar vagas publicas.");
-  return result.data || [];
 }
 
 async function loadPublicData() {
   if (!isPublicJobsPage()) return;
 
   try {
-    const rows = await fetchPublicVagasRows();
+    const response = await fetch(`/api/records?table=${encodeURIComponent(TABLES.vagas)}&select=*&order=${encodeURIComponent(JSON.stringify([{ column: "created_at", ascending: false }]))}`);
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Nao foi possivel carregar vagas publicas.");
+
+    const rows = result.data || [];
     data.vagas = mapRows("vagas", rows || []);
     renderPublicVagas();
   } catch (error) {
@@ -4435,58 +4318,52 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
     syncStatus: user.syncStatus || "active",
   };
 
-  if (newPassword) {
-    if (!currentPassword) {
-      showModal("Senha atual necessaria", "Informe a senha atual para definir uma nova senha.", "error");
-      return false;
+  if (newPassword && postgresClient?.auth) {
+    if (currentPassword) {
+      const isPasswordValid = await verifyCurrentPassword(currentPassword);
+      if (!isPasswordValid) {
+        showModal("Senha incorreta", "A senha atual informada nao confere.", "error");
+        return false;
+      }
     }
-    const changeResponse = await fetch("/api/auth/change-password", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-    const changeResult = await changeResponse.json().catch(() => ({}));
-    if (!changeResponse.ok) {
-      showModal("Erro", changeResult.error || "Nao foi possivel atualizar a senha.", "error");
+    const { error: authError } = await postgresClient.auth.updateUser({ password: newPassword });
+    if (authError) {
+      console.error("Erro ao atualizar senha no PostgreSQL Auth:", authError);
+      showModal("Erro", "Nao foi possivel atualizar a senha no PostgreSQL Auth.", "error");
       return false;
     }
   }
 
-  if (!isAuthenticated()) {
+  if (!postgresClient) {
     upsertLocalUser(updatedUser);
     if (newName) storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
     return true;
   }
 
   try {
-    const response = await fetch("/api/users/me", {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nome: updatedUser.nome,
-        foto_perfil: newFotoUrl || null,
-      }),
-    });
+    const { data: rows, error } = await postgresClient
+      .from(USERS_TABLE)
+      .update({ nome: updatedUser.nome, foto_perfil: newFotoUrl || updatedUser.foto_perfil || null })
+      .eq("id", updatedUser.id)
+      .select("*");
+    if (error) throw error;
 
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "Nao foi possivel atualizar o perfil.");
-
-    const saved = mapRows("usuarios", result.data ? [result.data] : [])[0] || updatedUser;
+    const saved = mapRows("usuarios", rows || [])[0] || updatedUser;
     const persistedUser = { ...updatedUser, ...saved };
     upsertLocalUser(persistedUser);
 
+    // Rendering prioritizes this in-memory profile over the local user list.
+    // Keep it in sync so a newly uploaded avatar is shown immediately.
     currentUserProfile = { ...(currentUserProfile || {}), ...persistedUser };
     if (newName) storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
-    setSyncStatus("HUB online", true);
+    setSyncStatus("PostgreSQL EIXO online", true);
     return true;
   } catch (error) {
     console.error("Erro ao atualizar conta:", error);
     upsertLocalUser({ ...updatedUser, syncStatus: "local" });
     if (newName) storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
     setSyncStatus("Conta atualizada local", false);
-    showModal("Atualizacao local", "Os dados foram alterados localmente.", "info");
+    showModal("Atualizacao local", "Os dados foram alterados localmente. Rode os SQLs atualizados no PostgreSQL se o banco bloquear as colunas.", "info");
     return true;
   }
 }
@@ -4515,18 +4392,24 @@ async function deleteTeamUser(id) {
 
   const localUser = data.usuarios.find((u) => String(u.id) === String(id));
 
-  if (!isAuthenticated() || !localUser) {
+  if (!postgresClient || !localUser) {
     removeLocalUser(id);
     return true;
   }
 
   try {
-    await hubApi.remove("usuarios", localUser.id);
+    const { error } = await postgresClient
+      .from(USERS_TABLE)
+      .delete()
+      .eq("id", localUser.id);
+
+    if (error) throw error;
+
     removeLocalUser(id);
-    setSyncStatus("HUB online", true);
+    setSyncStatus("PostgreSQL EIXO online", true);
     return true;
   } catch (error) {
-    console.error("Erro ao excluir usuario:", error);
+    console.error("Erro ao excluir usuario no PostgreSQL:", error);
     removeLocalUser(id);
     setSyncStatus("Usuario removido local", false);
     return true;
@@ -4550,7 +4433,7 @@ function activateView(viewId) {
   document.querySelectorAll(".user-chip").forEach((chip) => chip.classList.toggle("active", viewId === "conta"));
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
   if (viewId === "documentos-contratados") {
-    refreshFromSupabase();
+    refreshFromPostgreSQL();
   }
 }
 
@@ -4595,8 +4478,8 @@ function updateUserMenuHeader() {
   if (avatarEl) {
     if (user?.foto_perfil && isHttpUrl(user.foto_perfil)) {
       avatarEl.src = user.foto_perfil;
-    } else if (user?.foto_perfil) {
-      createPrivateStorageUrl(getHubSupabaseConfig().chatFilesBucket || "hub-chat-files", user.foto_perfil)
+    } else if (user?.foto_perfil && postgresClient) {
+      createPrivateStorageUrl(getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files", user.foto_perfil)
         .then((signedUrl) => { avatarEl.src = signedUrl; })
         .catch(() => {});
     }
@@ -4665,38 +4548,36 @@ function formatCurrencyInput(value) {
   return `${reais},${centavos}`;
 }
 
-function calculateVtValue(diasUteis, valorPassagem, saldoAtual, passagensDia = 1) {
-  return Math.max(0, (Number(diasUteis) || 0) * (Number(passagensDia) || 1) * (Number(valorPassagem) || 0) - (Number(saldoAtual) || 0));
+function calculateVtValue(diasUteis, valorPassagem, saldoAtual) {
+  return Math.max(0, (Number(diasUteis) || 0) * (Number(valorPassagem) || 0) - (Number(saldoAtual) || 0));
 }
 
-const VT_MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const VT_MONTH_NAMES = ["Janeiro", "Fevereiro", "MarÃ§o", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 function formatVtMonth(value) {
   if (VT_MONTH_NAMES.includes(String(value || ""))) return String(value);
   const match = String(value || "").match(/^(\d{4})-(\d{2})$/);
-  if (!match) return "Não informado";
+  if (!match) return "NÃ£o informado";
   const date = new Date(Number(match[1]), Number(match[2]) - 1, 1);
   return new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(date);
 }
 
 function updateVtCalculation() {
   const diasUteis = Number(document.getElementById("vt-dias-uteis")?.value || 0);
-  const passagensDia = Number(document.getElementById("vt-passagens-dia")?.value || 0) || 1;
   const valorPassagem = parseBrazilianCurrency(document.getElementById("vt-valor-passagem")?.value || 0);
   const saldoAtual = Number(document.getElementById("vt-saldo-atual")?.value || 0);
-  const total = calculateVtValue(diasUteis, valorPassagem, saldoAtual, passagensDia);
+  const total = calculateVtValue(diasUteis, valorPassagem, saldoAtual);
   const result = document.getElementById("vt-valor-necessario");
   const detail = document.getElementById("vt-calculo-detalhe");
   if (result) result.textContent = formatCurrencyBRL(total);
   if (detail) {
-    detail.textContent = `${diasUteis || 0} dias × ${passagensDia} passagem(ns) × ${formatCurrencyBRL(valorPassagem)} - ${formatCurrencyBRL(saldoAtual)} = ${formatCurrencyBRL(total)}`;
+    detail.textContent = `${diasUteis || 0} dias Ã— ${formatCurrencyBRL(valorPassagem)} - ${formatCurrencyBRL(saldoAtual)} = ${formatCurrencyBRL(total)}`;
   }
 }
 
 function getVtFormValues(formElement) {
   const form = new FormData(formElement);
   const diasUteis = Number(form.get("dias_uteis") || 0);
-  const passagensDia = Number(form.get("passagens_dia") || 0) || 1;
   const valorPassagem = parseBrazilianCurrency(form.get("valor_passagem") || 0);
   const saldoAtual = Number(form.get("saldo_atual") || 0);
   return {
@@ -4704,10 +4585,9 @@ function getVtFormValues(formElement) {
     unidade: String(form.get("unidade") || "").trim(),
     mes: String(form.get("mes") || "").trim(),
     diasUteis,
-    passagensDia,
     valorPassagem,
     saldoAtual,
-    valorNecessario: calculateVtValue(diasUteis, valorPassagem, saldoAtual, passagensDia),
+    valorNecessario: calculateVtValue(diasUteis, valorPassagem, saldoAtual),
   };
 }
 
@@ -4733,7 +4613,7 @@ function getVtReportFilterLabel(useFilters = true) {
   const monthFilter = document.getElementById("vt-filter-mes")?.value || "";
   const unitFilter = document.getElementById("vt-filter-unidade")?.value || "";
   if (nameFilter) parts.push(`Nome: ${nameFilter}`);
-  if (monthFilter) parts.push(`Mês: ${monthFilter}`);
+  if (monthFilter) parts.push(`MÃªs: ${monthFilter}`);
   if (unitFilter) parts.push(`Unidade: ${unitFilter}`);
   return parts.length ? parts.join(" | ") : "Sem filtros ativos";
 }
@@ -4757,11 +4637,10 @@ function formatVtReportDateTime(value = new Date()) {
 function getVtReportRows(useFilters = true) {
   const registros = useFilters ? getFilteredVtRegistros() : (data.vtRegistros || []);
   return registros.map((item) => ({
-    colaborador: item.colaborador || "Colaborador não informado",
-    unidade: item.unidade || "Não informada",
+    colaborador: item.colaborador || "Colaborador nÃ£o informado",
+    unidade: item.unidade || "NÃ£o informada",
     mes: formatVtMonth(item.mes),
     diasUteis: Number(item.diasUteis) || 0,
-    passagensDia: Number(item.passagensDia) || 1,
     valorPassagem: Number(item.valorPassagem) || 0,
     saldoAtual: Number(item.saldoAtual) || 0,
     valorNecessario: Number(item.valorNecessario) || 0,
@@ -4779,13 +4658,13 @@ function showVtReportMenu() {
   overlay.className = "modal-overlay";
   overlay.innerHTML = `
     <div class="modal-card vt-report-modal">
-      <div class="modal-header info">Relatório de VT</div>
+      <div class="modal-header info">RelatÃ³rio de VT</div>
       <div class="modal-body">
         <p>Escolha quais registros deseja exportar em .xlsx.</p>
         <div class="vt-report-options">
           <button class="report-chip" type="button" data-action="gerar-relatorio-vt" data-scope="filtered">
             <span>Registros filtrados</span>
-            <small>${escapeHtml(String(filteredCount))} registro(s) · ${escapeHtml(getVtReportFilterLabel(true))}</small>
+            <small>${escapeHtml(String(filteredCount))} registro(s) Â· ${escapeHtml(getVtReportFilterLabel(true))}</small>
           </button>
           <button class="report-chip" type="button" data-action="gerar-relatorio-vt" data-scope="all">
             <span>Todos os registros</span>
@@ -4832,9 +4711,9 @@ function worksheetRowXml(values, rowIndex, styleId = 0) {
 }
 
 function buildVtReportWorksheet(rows) {
-  const headers = ["Colaborador", "Unidade", "Mês", "Dias úteis", "Passagens/dia", "Valor da passagem", "Saldo atual", "Valor necessário", "Registrado em"];
+  const headers = ["Colaborador", "Unidade", "MÃªs", "Dias Ãºteis", "Valor da passagem", "Saldo atual", "Valor necessÃ¡rio", "Registrado em"];
   const sheetRows = [
-    worksheetRowXml(["Relatório de Vale Transporte"], 1, 2),
+    worksheetRowXml(["RelatÃ³rio de Vale Transporte"], 1, 2),
     worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
     worksheetRowXml(headers, 5, 1),
     ...rows.map((item, index) => worksheetRowXml([
@@ -4842,7 +4721,6 @@ function buildVtReportWorksheet(rows) {
       item.unidade,
       item.mes,
       item.diasUteis,
-      item.passagensDia,
       item.valorPassagem,
       item.saldoAtual,
       item.valorNecessario,
@@ -4852,16 +4730,16 @@ function buildVtReportWorksheet(rows) {
   const lastRow = rows.length + 5;
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="A1:I${lastRow}"/>
+  <dimension ref="A1:H${lastRow}"/>
   <cols>
     <col min="1" max="1" width="30" customWidth="1"/>
     <col min="2" max="3" width="18" customWidth="1"/>
-    <col min="4" max="5" width="12" customWidth="1"/>
-    <col min="6" max="8" width="18" customWidth="1"/>
-    <col min="9" max="9" width="22" customWidth="1"/>
+    <col min="4" max="4" width="12" customWidth="1"/>
+    <col min="5" max="7" width="18" customWidth="1"/>
+    <col min="8" max="8" width="22" customWidth="1"/>
   </cols>
   <sheetData>${sheetRows.join("")}</sheetData>
-  <mergeCells count="2"><mergeCell ref="A1:I1"/><mergeCell ref="A2:I2"/></mergeCells>
+  <mergeCells count="2"><mergeCell ref="A1:H1"/><mergeCell ref="A2:H2"/></mergeCells>
 </worksheet>`;
 }
 
@@ -5016,118 +4894,11 @@ function createVtReportXlsxBlob(rows) {
   ]);
 }
 
-function buildDisciplinaryReportWorksheet(rows, type = getActiveDisciplinaryType()) {
-  const typeLabel = getDisciplinaryTypeLabel(type);
-  const headers = ["Nome", "Data", "Unidade", "Observacao"];
-  const sheetRows = [
-    worksheetRowXml([`Relatorio de ${typeLabel}`], 1, 2),
-    worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
-    worksheetRowXml(headers, 5, 1),
-    ...rows.map((item, index) => worksheetRowXml([
-      item.nome,
-      item.dataMedida,
-      item.unidade,
-      item.observacoes,
-    ], index + 6)),
-  ];
-  const lastRow = rows.length + 5;
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="A1:D${lastRow}"/>
-  <cols>
-    <col min="1" max="1" width="30" customWidth="1"/>
-    <col min="2" max="3" width="18" customWidth="1"/>
-    <col min="4" max="4" width="42" customWidth="1"/>
-  </cols>
-  <sheetData>${sheetRows.join("")}</sheetData>
-  <mergeCells count="2"><mergeCell ref="A1:D1"/><mergeCell ref="A2:D2"/></mergeCells>
-</worksheet>`;
-}
-
-function createDisciplinaryReportXlsxBlob(rows, type = getActiveDisciplinaryType()) {
-  const worksheet = buildDisciplinaryReportWorksheet(rows, type);
-  const sheetName = type === "suspensao" ? "Suspensoes" : "Advertencias";
-  return createZipBlob([
-    {
-      name: "[Content_Types].xml",
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-</Types>`,
-    },
-    {
-      name: "_rels/.rels",
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>`,
-    },
-    {
-      name: "xl/workbook.xml",
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="${sheetName}" sheetId="1" r:id="rId1"/></sheets>
-</workbook>`,
-    },
-    {
-      name: "xl/_rels/workbook.xml.rels",
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>`,
-    },
-    {
-      name: "xl/styles.xml",
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <fonts count="2">
-    <font><sz val="11"/><name val="Calibri"/></font>
-    <font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font>
-  </fonts>
-  <fills count="3">
-    <fill><patternFill patternType="none"/></fill>
-    <fill><patternFill patternType="gray125"/></fill>
-    <fill><patternFill patternType="solid"><fgColor rgb="FF2F7D6D"/><bgColor indexed="64"/></patternFill></fill>
-  </fills>
-  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
-  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="4">
-    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
-    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
-    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-  </cellXfs>
-  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
-</styleSheet>`,
-    },
-    { name: "xl/worksheets/sheet1.xml", content: worksheet },
-  ]);
-}
-
-function gerarRelatorioDisciplinary(scope = "filtered", type = getActiveDisciplinaryType()) {
-  const useFilters = scope !== "all";
-  const safeType = DISCIPLINARY_DOCUMENT_TYPES.has(type) ? type : getActiveDisciplinaryType();
-  const rows = getDisciplinaryReportRows(useFilters, safeType);
-  const typeLabel = getDisciplinaryTypeLabel(safeType).toLowerCase();
-  if (!rows.length) {
-    showModal("Relatorio vazio", `Nao ha registros de ${typeLabel} para gerar o relatorio.`, "error");
-    return;
-  }
-  const blob = createDisciplinaryReportXlsxBlob(rows, safeType);
-  downloadBlob(blob, safeDownloadName(`relatorio-${safeType}-${useFilters ? "filtrado" : "todos"}`, "xlsx"));
-  document.getElementById("custom-modal")?.remove();
-}
-
 function gerarRelatorioVt(scope = "filtered") {
   const useFilters = scope !== "all";
   const rows = getVtReportRows(useFilters);
   if (!rows.length) {
-    showModal("Relatório vazio", "Não há registros de VT para gerar o relatório.", "error");
+    showModal("RelatÃ³rio vazio", "NÃ£o hÃ¡ registros de VT para gerar o relatÃ³rio.", "error");
     return;
   }
   const blob = createVtReportXlsxBlob(rows);
@@ -5151,13 +4922,12 @@ function renderVtRegistros() {
   renderCards("vt-registros-list", getFilteredVtRegistros(), (item) => `
     <article class="item-card">
       <div class="item-topline">
-        <p class="item-title">${escapeHtml(item.colaborador || "Colaborador não informado")}</p>
+        <p class="item-title">${escapeHtml(item.colaborador || "Colaborador nÃ£o informado")}</p>
         <span class="tag">${escapeHtml(formatCurrencyBRL(item.valorNecessario))}</span>
       </div>
-      <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Não informada")}</p>
-      <p><strong>Mês:</strong> ${escapeHtml(formatVtMonth(item.mes))}</p>
-      <p><strong>Dias úteis:</strong> ${escapeHtml(String(item.diasUteis || 0))}</p>
-      <p><strong>Passagens usadas por dia:</strong> ${escapeHtml(String(item.passagensDia || 1))}</p>
+      <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "NÃ£o informada")}</p>
+      <p><strong>MÃªs:</strong> ${escapeHtml(formatVtMonth(item.mes))}</p>
+      <p><strong>Dias Ãºteis:</strong> ${escapeHtml(String(item.diasUteis || 0))}</p>
       <p><strong>Valor da passagem:</strong> ${escapeHtml(formatCurrencyBRL(item.valorPassagem))}</p>
       <p><strong>Saldo atual:</strong> ${escapeHtml(formatCurrencyBRL(item.saldoAtual))}</p>
       <p><strong>Valor registrado:</strong> ${escapeHtml(formatCurrencyBRL(item.valorNecessario))}</p>
@@ -5232,14 +5002,14 @@ function renderDocumentosContratados() {
   renderCards("documentos-contratados-list", filteredItems, (item) => `
     <article class="item-card">
       <div class="item-topline">
-        <p class="item-title">${escapeHtml(item.nome || "Contratado não informado")}</p>
-        <span class="tag">${escapeHtml(item.empresa || "Empresa não informada")}</span>
+        <p class="item-title">${escapeHtml(item.nome || "Contratado nÃ£o informado")}</p>
+        <span class="tag">${escapeHtml(item.empresa || "Empresa nÃ£o informada")}</span>
         ${item.pendingSync ? '<span class="tag alert">Pendente</span>' : ""}
       </div>
       <p><strong>CPF:</strong> ${escapeHtml(formatCpf(item.cpf || ""))}</p>
-      <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || "Não informado")}</p>
-      <p><strong>Origem:</strong> ${escapeHtml(getContractorSourceLabel(item.origemHtml, item.empresa) || "Não informada")}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Enviado por ${escapeHtml(item.nome || "Contratado não informado")}</p>
+      <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || "NÃ£o informado")}</p>
+      <p><strong>Origem:</strong> ${escapeHtml(getContractorSourceLabel(item.origemHtml, item.empresa) || "NÃ£o informada")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Enviado por ${escapeHtml(item.nome || "Contratado nÃ£o informado")}</p>
       <div class="contractor-file-list">
         ${formatContractorDocumentList(item.documentos || [])}
       </div>
@@ -5256,10 +5026,18 @@ function resetVtForm() {
   form.reset();
   form.elements.id.value = "";
   document.getElementById("cancelar-edicao-vt")?.setAttribute("hidden", "");
-  form.querySelector('button[type="submit"]').textContent = "Registrar cálculo VT";
+  form.querySelector('button[type="submit"]').textContent = "Registrar cÃ¡lculo VT";
   updateVtCalculation();
 }
 
+/**
+ * [ALERTA DE SEGURANÃ‡A] Esta funÃ§Ã£o controla a visibilidade dos elementos da UI
+ * com base na role do usuÃ¡rio armazenada no sessionStorage. Um usuÃ¡rio mal-intencionado
+ * pode facilmente alterar essa role no console do navegador para obter acesso visual
+ * a seÃ§Ãµes restritas.
+ * A seguranÃ§a real da aplicaÃ§Ã£o NÃƒO PODE depender desta funÃ§Ã£o. Ela deve ser garantida
+ * por polÃ­ticas de Row Level Security (RLS) no PostgreSQL, que filtram os dados no servidor.
+ */
 function applyRoleAccess() {
   if (!isAuthenticated() || isPublicPage() || !document.querySelector(".nav-list")) return;
   refreshCurrentUserRoleFromData();
@@ -5269,8 +5047,8 @@ function applyRoleAccess() {
   const allowedViews = isCashierUser()
     ? new Set(["comunicacao", "conta"])
     : isManagerUser()
-    ? new Set(["comunicacao", "documentos", "advertencias-suspensoes", "conta"])
-    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
+    ? new Set(["comunicacao", "documentos", "conta"])
+    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "calendario", "documentos", "documentos-contratados", "atestados", "gerenciamento-vt", "equipe", "conta"]);
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : isManagerUser()
@@ -5305,7 +5083,7 @@ function isSystemAuditAuthor(value) {
 }
 
 function getDashboardSystemUpdateMeta(item = {}) {
-  if (isSystemAuditAuthor(item.updatedBy)) return "Atualização do sistema";
+  if (isSystemAuditAuthor(item.updatedBy)) return "AtualizaÃ§Ã£o do sistema";
   if (isSystemAuditAuthor(item.createdBy)) return "Registro do sistema";
   return "";
 }
@@ -5383,11 +5161,7 @@ function renderDashboard() {
 
   document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status === "Aberta" || item.status === "Urgente").length;
   const unreadRhMessages = getUnreadRhMessages();
-  if (notificationBaselineReady) {
-    notifyUnreadRhMessages(unreadRhMessages.length);
-  } else {
-    lastUnreadNotificationCount = unreadRhMessages.length;
-  }
+  notifyUnreadRhMessages(unreadRhMessages.length);
   if (document.getElementById("metric-comunicados")) {
     document.getElementById("metric-comunicados").textContent = unreadRhMessages.length;
   }
@@ -5402,9 +5176,11 @@ function renderDashboard() {
     document.getElementById("metric-eventos").textContent = upcomingEvents.length;
   }
   if (document.getElementById("metric-documentos")) {
-    document.getElementById("metric-documentos").textContent = (data.documentos || []).filter((item) => !isArchivedRecord(item)).length;
+    document.getElementById("metric-documentos").textContent = documentRecords.filter((item) => !isArchivedRecord(item)).length;
   }
 
+  // Mensagens do RH aparecem como um Ãºnico bloco no acompanhamento.
+  // Quando ficam lidas, nÃ£o mudam de cor; apenas perdem prioridade para itens novos.
   const accessibleRhMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
   const sortedRhMessagesNewestFirst = [...accessibleRhMessages]
     .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
@@ -5428,9 +5204,9 @@ function renderDashboard() {
         : `${messageIds.length} mensagem(ns) no acompanhamento`,
       details: sortedRhMessagesOldestFirst
         .slice(-20)
-        .map((msg) => `${msg.createdAt || "Sem data"} · ${msg.autor || "Equipe"}: ${msg.mensagem || "Nova notificação recebida."}`)
+        .map((msg) => `${msg.createdAt || "Sem data"} Â· ${msg.autor || "Equipe"}: ${msg.mensagem || "Nova notificaÃ§Ã£o recebida."}`)
         .join("\n\n"),
-      detailsHeader: "Comunicação RH",
+      detailsHeader: "ComunicaÃ§Ã£o RH",
       tag: hasUnread ? "Nova" : "Lida",
       date: latestMessage.createdAt,
       dateTime: latestMessage.sortAt || latestMessage.createdAt,
@@ -5446,9 +5222,9 @@ function renderDashboard() {
       .map((item) => ({
         kind: "denuncia",
         notificationId: getDashboardNotificationId("denuncia", item),
-        title: "Denúncia anônima",
-        text: item.descricao || "Nova denúncia recebida.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "Não informado"}\n\n${item.descricao || "Sem descrição."}`,
+        title: "DenÃºncia anÃ´nima",
+        text: item.descricao || "Nova denÃºncia recebida.",
+        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "NÃ£o informado"}\n\n${item.descricao || "Sem descriÃ§Ã£o."}`,
         tag: item.status,
         date: item.createdAt,
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5460,14 +5236,14 @@ function renderDashboard() {
       .map((item) => {
         const items = parseEpiItems(item.epis);
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` Â· Tam. ${epi.tamanho}` : ""} Â· Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "NÃ£o informados";
         return {
           kind: "chamado",
           notificationId: getDashboardNotificationId("chamado", item),
-          title: `Chamado · ${item.unidade}`,
-          text: item.epis || "Itens não informados.",
-          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nSetor: ${item.setor || "Não informado"}\nItens solicitados:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "Não informada"}`,
+          title: `Chamado Â· ${item.unidade}`,
+          text: item.epis || "Itens nÃ£o informados.",
+          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "NÃ£o informado"}\nUnidade: ${item.unidade || "NÃ£o informada"}\nSetor: ${item.setor || "NÃ£o informado"}\nItens solicitados:\n${itemDetails}\nObservaÃ§Ãµes: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "NÃ£o informada"}`,
           tag: item.status,
           date: item.createdAt,
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5480,14 +5256,14 @@ function renderDashboard() {
       .map((item) => {
         const items = parseEpiItems(item.epis);
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` Â· Tam. ${epi.tamanho}` : ""} Â· Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "NÃ£o informados";
         return {
           kind: "malote",
           notificationId: getDashboardNotificationId("malote", item),
-          title: `Malote · ${item.destino}`,
-          text: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
-          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
+          title: `Malote Â· ${item.destino}`,
+          text: item.codigoSolicitacao ? `SolicitaÃ§Ã£o ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
+          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}CÃ³digo da SolicitaÃ§Ã£o: ${item.codigoSolicitacao || "NÃ£o informado"}\nOrigem: ${item.origem || "NÃ£o informada"}\nDestino: ${item.destino || "NÃ£o informado"}\nItens do malote:\n${itemDetails}\nObservaÃ§Ãµes: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "NÃ£o informado"}\nData: ${item.createdAt || "NÃ£o informada"}`,
           tag: item.status,
           date: item.createdAt,
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5500,29 +5276,40 @@ function renderDashboard() {
       .map((item) => ({
         kind: "vaga",
         notificationId: getDashboardNotificationId("vaga", item),
-        title: `Vaga · ${item.cargo}`,
+        title: `Vaga Â· ${item.cargo}`,
         text: item.descricao || "Vaga atualizada.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
+        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "NÃ£o informado"}\n\n${item.descricao || "Sem descriÃ§Ã£o."}\n\nRequisitos: ${item.requisitos || "NÃ£o informados"}`,
         tag: item.status,
         date: item.createdAt,
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
         systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
         meta: getDashboardSystemUpdateMeta(item),
       })),
-    ...(data.documentos || [])
+    ...documentRecords
       .filter((item) => !isArchivedRecord(item))
       .map((item) => ({
         kind: "documento",
         notificationId: getDashboardNotificationId("documento", item),
-        title: `Documento · ${documentLabels[item.type] || item.type}`,
+        title: `Documento Â· ${documentLabels[item.type] || item.type}`,
         text: item.summary || "Documento registrado.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${documentLabels[item.type] || item.type}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
+        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${documentLabels[item.type] || item.type}\nData: ${item.createdAt || "NÃ£o informada"}\n\n${item.summary || "Documento registrado."}`,
         tag: "Registro",
         date: item.createdAt,
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
         systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
         meta: getDashboardSystemUpdateMeta(item),
       })),
+    ...(data.atestados || [])
+      .map((item) => ({
+        kind: "atestado",
+        notificationId: getDashboardNotificationId("atestado", item),
+        title: `Atestado Â· ${item.nome || "Colaborador"}`,
+        text: `${item.unidade || "Unidade nÃ£o informada"} Â· ${item.arquivoNome || "Atestado anexado"}`,
+        details: `Colaborador: ${item.nome || "NÃ£o informado"}\nCPF: ${formatCpf(item.cpf || "") || "NÃ£o informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "NÃ£o informado"}\nUnidade: ${item.unidade || "NÃ£o informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "NÃ£o informado"}`,
+        tag: "Atestado",
+        date: item.createdAt,
+        dateTime: item.sortAt || item.createdAt,
+      }))
   ];
 
   const sortedDashboardItems = dashboardItems.map((item, index) => ({ ...item, _sortIndex: index }));
@@ -5536,6 +5323,8 @@ function renderDashboard() {
   const dashboardPageSize = 3;
   dashboardNotificationOffset = 0;
 
+  // Acompanhamento da tela principal deve exibir somente notificaÃ§Ãµes nÃ£o lidas.
+  // Quando todas estiverem lidas, a lista fica vazia.
   const unreadDashboardItems = sortedDashboardItems.filter((item) => !isDashboardActivityReadForOrdering(item));
   const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
   visibleDashboardActivityItems = visibleDashboardItems;
@@ -5544,32 +5333,31 @@ function renderDashboard() {
   if (previousDashboardButton) previousDashboardButton.hidden = true;
   if (nextDashboardButton) {
     nextDashboardButton.hidden = true;
-    nextDashboardButton.textContent = "Ver próximas";
+    nextDashboardButton.textContent = "Ver prÃ³ximas";
   }
 
   const dashboardTarget = document.getElementById("dashboard-list");
   if (dashboardTarget) {
     if (!currentUserSettings.dashboardNotificationBadges) {
       visibleDashboardActivityItems = [];
-      dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configurações.</p>';
+      dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configuraÃ§Ãµes.</p>';
       if (previousDashboardButton) previousDashboardButton.hidden = true;
       if (nextDashboardButton) nextDashboardButton.hidden = true;
       renderDashboardCalendar(upcomingEvents);
       return;
     }
     if (visibleDashboardItems.length === 0) {
-      dashboardTarget.innerHTML = '<p class="empty-state">Nenhuma pendência para acompanhar no momento.</p>';
+      dashboardTarget.innerHTML = '<p class="empty-state">Nenhuma pendÃªncia para acompanhar no momento.</p>';
     } else {
       dashboardTarget.innerHTML = visibleDashboardItems
         .map((item, index) => {
           const itemRead = isDashboardActivityReadForOrdering(item);
           const visualTag = itemRead && !item.systemUpdate ? "Lida" : item.tag;
           const visualBadgeClass = item.systemUpdate ? "tag" : badgeClass(item.tag || visualTag);
-          return `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}" data-read="${itemRead ? "true" : "false"}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${visualBadgeClass}">${escapeHtml(item.systemUpdate ? "Sistema" : visualTag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "…" : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`;
+          return `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}" data-read="${itemRead ? "true" : "false"}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${visualBadgeClass}">${escapeHtml(item.systemUpdate ? "Sistema" : visualTag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "â€¦" : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`;
         })
         .join("");
     }
-    applyEmojiImages(dashboardTarget);
   }
 
   renderDashboardCalendar(upcomingEvents);
@@ -5617,15 +5405,13 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
       const holiday = getHolidayForDate(date);
       const isToday = date === todayKey;
       const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
-      const hasBirthday = dayHasEventType(dayEvents, "aniversario");
-      const hasInterview = dayHasEventType(dayEvents, "entrevista");
       return `
-        <button class="calendar-day ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+        <button class="calendar-day ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
           <span class="calendar-weekday-label">${escapeHtml(formatWeekday(date))}</span>
           <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
           ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
           ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
-          ${dayEvents.slice(0, 2).map((item) => `<span class="calendar-event-preview ${getEventTypeClass(item)}">${escapeHtml(item.titulo)}</span>`).join("")}
+          ${dayEvents.slice(0, 2).map((item) => `<span class="calendar-event-preview">${escapeHtml(item.titulo)}</span>`).join("")}
         </button>
       `;
     })
@@ -5638,7 +5424,7 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
 
   list.innerHTML = visibleEvents
     .slice(0, dashboardCalendarViewMode === "week" ? 4 : 6)
-    .map((item) => `<li class="${getEventTypeClass(item)}"><div class="item-topline">${renderEventTitle(item)}<span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>${renderEventDescription(item)}<p>${escapeHtml(getEventListMeta(item))}</p></li>`)
+    .map((item) => `<li><div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag">${escapeHtml(item.tipo)}</span></div><p>${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(formatEventTime(item.horario))} | ${escapeHtml(item.responsavel)}</p></li>`)
     .join("");
 }
 
@@ -5666,14 +5452,12 @@ function renderCalendar() {
     const holiday = getHolidayForDate(date);
     const isToday = date === todayKey;
     const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
-    const hasBirthday = dayHasEventType(dayEvents, "aniversario");
-    const hasInterview = dayHasEventType(dayEvents, "entrevista");
     cells.push(`
-      <button class="calendar-cell ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+      <button class="calendar-cell ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
         <strong>${day}</strong>
         ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
         ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
-        ${dayEvents.slice(0, 2).map((item) => `<span class="${getEventTypeClass(item)}">${escapeHtml(item.titulo)}</span>`).join("")}
+        ${dayEvents.slice(0, 2).map((item) => `<span>${escapeHtml(item.titulo)}</span>`).join("")}
       </button>
     `);
   }
@@ -5689,10 +5473,10 @@ function renderCalendar() {
   `;
 
   renderCards("eventos-list", visibleEvents, (item) => `
-    <article class="item-card ${getEventTypeClass(item)}">
-      <div class="item-topline">${renderEventTitle(item)}<span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>
-      ${renderEventDescription(item)}
-      <p class="item-meta">${escapeHtml(getEventListMeta(item))}</p>
+    <article class="item-card">
+      <div class="item-topline"><p class="item-title">${escapeHtml(item.titulo)}</p><span class="tag">${escapeHtml(item.tipo)}</span></div>
+      <p>${escapeHtml(item.descricao || "Sem observacoes adicionais.")}</p>
+      <p class="item-meta">${escapeHtml(formatEventDate(item.data))} as ${escapeHtml(formatEventTime(item.horario))} | Responsavel: ${escapeHtml(item.responsavel)}</p>
       <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
       <div class="job-actions">
         <button class="secondary-link" type="button" data-action="editar-evento" data-id="${escapeHtml(item.id)}">Editar</button>
@@ -5702,30 +5486,41 @@ function renderCalendar() {
   `);
 }
 
+// LÃ³gica de abertura de denÃºncia para leitura e transiÃ§Ã£o de estado automÃ¡tica
 async function lerDenuncia(id) {
   const denuncia = data.denuncias.find(item => String(item.id) === String(id));
   if (!denuncia) return;
 
+  // Mostra o relato em formato de modal customizado
   showModal(
-    "Visualização da Denúncia",
+    "VisualizaÃ§Ã£o da DenÃºncia",
     `Categoria: ${denuncia.categoria}\nRecebida em: ${denuncia.createdAt}\nStatus Atual: ${denuncia.status}\n\nRelato:\n"${denuncia.descricao}"`,
     "info"
   );
 
+  // Se a denÃºncia ainda constar como NÃ£o lida ("Aberta"), movemos para "Lida"
   if (denuncia.status === "Aberta") {
-    if (!isAuthenticated()) {
+    if (!postgresClient) {
       denuncia.status = "Lida";
       saveLocalData();
       renderAll();
     } else {
       try {
-        await hubApi.update("denuncias", id, { status: "Lida" });
+        const { data: updated, error } = await postgresClient
+          .from(TABLES.denuncias)
+          .update({ status: "Lida" })
+          .eq("id", id)
+          .select()
+          .single();
+        
+        if (error || !updated) throw error || new Error("Nenhuma linha alterada.");
+        
         denuncia.status = "Lida";
         saveLocalData();
         renderAll();
       } catch (err) {
-        console.error("Erro ao atualizar status da denúncia:", err);
-        showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada.", "error");
+        console.error("Erro ao atualizar status da denÃºncia no PostgreSQL:", err);
+        showModal("Aviso de PermissÃ£o", "A denÃºncia nÃ£o pÃ´de ser atualizada. VocÃª precisa rodar o script SQL de UPDATE no painel do PostgreSQL para consertar as permissÃµes.", "error");
       }
     }
   }
@@ -5735,7 +5530,7 @@ async function atualizarStatusDenuncia(id, status) {
   const denuncia = data.denuncias.find((item) => String(item.id) === String(id));
   if (!denuncia) return false;
 
-  if (!isAuthenticated()) {
+  if (!postgresClient) {
     denuncia.status = status;
     saveLocalData();
     renderAll();
@@ -5743,56 +5538,37 @@ async function atualizarStatusDenuncia(id, status) {
   }
 
   try {
-    const updated = await hubApi.update("denuncias", id, { status });
+    const { data: updated, error } = await postgresClient
+      .from(TABLES.denuncias)
+      .update({ status })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !updated) throw error || new Error("Nenhuma linha alterada.");
+
     mergeRealtimeRow("denuncias", updated, "UPDATE");
     renderRealtimeUpdate("denuncias");
     return true;
   } catch (err) {
-    console.error("Erro ao atualizar status da denúncia:", err);
-    showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada.", "error");
+    console.error("Erro ao atualizar status da denÃºncia no PostgreSQL:", err);
+    showModal("Aviso de PermissÃ£o", "A denÃºncia nÃ£o pÃ´de ser atualizada. Rode o postgres-schema.sql atualizado para liberar UPDATE em hub_denuncias.", "error");
     return false;
   }
-}
-
-function renderPublicVagaActiveFilters() {
-  const container = document.getElementById("public-vaga-active-filters");
-  if (!container) return;
-
-  const chips = [];
-  if (publicVagaCargoFilter) chips.push({ key: "cargo", label: `Cargo: ${publicVagaCargoFilter}` });
-  if (publicVagaUnidadeFilter) chips.push({ key: "unidade", label: `Cidade: ${publicVagaUnidadeFilter}` });
-
-  if (!chips.length) {
-    container.innerHTML = "";
-    return;
-  }
-
-  container.innerHTML = chips.map((chip) => `
-    <button type="button" class="public-filter-chip" data-clear-filter="${escapeHtml(chip.key)}">${escapeHtml(chip.label)} <span aria-hidden="true">×</span></button>
-  `).join("");
-
-  container.querySelectorAll("[data-clear-filter]").forEach((button) => {
-    button.addEventListener("click", () => {
-      if (button.dataset.clearFilter === "cargo") publicVagaCargoFilter = "";
-      else publicVagaUnidadeFilter = "";
-      renderPublicVagas();
-    });
-  });
 }
 
 function renderPublicVagas() {
   const selectedInput = document.getElementById("vaga-id");
   const selectedPanel = document.getElementById("selected-public-job");
   const list = document.getElementById("public-vagas-list");
-  renderPublicVagaActiveFilters();
   if (!selectedInput && !selectedPanel && !list) return;
 
   const cargoFilter = normalizeUnitText(publicVagaCargoFilter);
   const unidadeFilter = normalizeUnitText(publicVagaUnidadeFilter);
   const openVagas = data.vagas
     .filter(v => v.status === "Aberta")
-    .filter(v => !cargoFilter || normalizeUnitText(v.cargo) === cargoFilter)
-    .filter(v => !unidadeFilter || normalizeUnitText(getUnitCity(v.unidade)) === unidadeFilter);
+    .filter(v => !cargoFilter || normalizeUnitText(v.cargo).includes(cargoFilter))
+    .filter(v => !unidadeFilter || normalizeUnitText(getCanonicalUnit(v.unidade)).includes(unidadeFilter));
   const selectedVaga = new URLSearchParams(window.location.search).get("vaga");
 
   if (!openVagas.length) {
@@ -5811,9 +5587,9 @@ function renderPublicVagas() {
           <p class="item-title">${escapeHtml(v.cargo)}</p>
           <span class="tag">${escapeHtml(v.status)}</span>
         </div>
-        <p><strong>Cidade:</strong> ${escapeHtml(getUnitCity(v.unidade) || "Nao informada.")}</p>
-        <p><strong>Descrição</strong><br><br>${escapeHtml(v.descricao || "Descricao nao informada.")}</p>
-        <p><strong>Requisitos</strong><br><br>${escapeHtml(v.requisitos || "Nao informado.")}</p>
+        <p><strong>Unidade destinada:</strong> ${escapeHtml(getCanonicalUnit(v.unidade) || "Nao informada.")}</p>
+        <p>${escapeHtml(v.descricao || "Descricao nao informada.")}</p>
+        <p><strong>Requisitos:</strong> ${escapeHtml(v.requisitos || "Nao informado.")}</p>
         <a class="primary-button button-link" href="candidatura.html?vaga=${encodeURIComponent(v.id)}">Candidatar-se</a>
       </article>
     `).join("");
@@ -5836,15 +5612,12 @@ function renderPublicVagas() {
           <p class="item-title">${escapeHtml(job.cargo)}</p>
           <span class="tag">${escapeHtml(job.status)}</span>
         </div>
-        <p><strong>Cidade:</strong> ${escapeHtml(getUnitCity(job.unidade) || "Nao informada.")}</p>
-        <p><strong>Descrição</strong><br><br>${escapeHtml(job.descricao || "Descricao nao informada.")}</p>
-        <p><strong>Requisitos</strong><br><br>${escapeHtml(job.requisitos || "Nao informado.")}</p>
+        <p><strong>Unidade destinada:</strong> ${escapeHtml(getCanonicalUnit(job.unidade) || "Nao informada.")}</p>
+        <p>${escapeHtml(job.descricao || "Descricao nao informada.")}</p>
+        <p><strong>Requisitos:</strong> ${escapeHtml(job.requisitos || "Nao informado.")}</p>
       `;
     }
   }
-
-  applyEmojiImages(list);
-  applyEmojiImages(selectedPanel);
 }
 
 function renderTeamUsers() {
@@ -5862,7 +5635,7 @@ function renderTeamUsers() {
           <button type="button" class="tag alert tag-button" data-action="excluir-usuario" data-id="${item.id}">Deletar</button>
         </div>
       </div>
-      <p class="item-meta section-top">E-mail: ${escapeHtml(item.email || "Cadastre no Supabase Auth")}</p>
+      <p class="item-meta section-top">E-mail: ${escapeHtml(item.email || "Cadastre no PostgreSQL Auth")}</p>
       <p class="item-meta">Cargo: ${escapeHtml(item.cargo || "Sem cargo definido")}</p>
       <p class="item-meta compact-top">Cadastro: ${escapeHtml(item.createdAt || "Hoje")}</p>
     </article>
@@ -5895,8 +5668,8 @@ function renderAccountSettings() {
     if (user?.foto_perfil && isHttpUrl(user.foto_perfil)) {
       avatarPreview.src = user.foto_perfil;
       if (settingsAvatar) settingsAvatar.src = user.foto_perfil;
-    } else if (user?.foto_perfil) {
-      createPrivateStorageUrl(getHubSupabaseConfig().chatFilesBucket || "hub-chat-files", user.foto_perfil)
+    } else if (user?.foto_perfil && postgresClient) {
+      createPrivateStorageUrl(getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files", user.foto_perfil)
         .then((signedUrl) => {
           avatarPreview.src = signedUrl;
           if (settingsAvatar) settingsAvatar.src = signedUrl;
@@ -5942,29 +5715,6 @@ function getUserSettingsStorageKey() {
   return `${USER_SETTINGS_STORAGE_KEY}:${userKey}`;
 }
 
-function getClearedTrackerNotificationsStorageKey() {
-  const userKey = currentAuthUser?.id || currentUserProfile?.email || currentUserProfile?.cpf || "local";
-  return `${CLEARED_TRACKER_NOTIFICATIONS_KEY}:${userKey}`;
-}
-
-function loadClearedTrackerNotificationIds() {
-  try {
-    const saved = localStorage.getItem(getClearedTrackerNotificationsStorageKey()) || "[]";
-    const parsed = JSON.parse(saved);
-    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function saveClearedTrackerNotificationIds(ids = new Set()) {
-  try {
-    localStorage.setItem(getClearedTrackerNotificationsStorageKey(), JSON.stringify(Array.from(ids).map(String)));
-  } catch {
-
-  }
-}
-
 function migrateUserSettingsToCurrentKey(settings) {
   const currentKey = getUserSettingsStorageKey();
   if (currentKey.endsWith(":local")) return;
@@ -5973,14 +5723,13 @@ function migrateUserSettingsToCurrentKey(settings) {
       localStorage.setItem(currentKey, JSON.stringify(normalizeUserSettings(settings)));
     }
   } catch {
-
+    // Mantem o fallback global se o navegador bloquear escrita na chave por usuario.
   }
 }
 
 function normalizeUserSettings(settings = {}) {
   const normalized = { ...USER_SETTINGS_DEFAULTS, ...settings };
   if (!["normal", "small", "large"].includes(normalized.messageSize)) normalized.messageSize = "normal";
-  if (!Array.isArray(normalized.boardOrder)) normalized.boardOrder = [];
   Object.keys(USER_SETTINGS_DEFAULTS).forEach((key) => {
     if (typeof USER_SETTINGS_DEFAULTS[key] === "boolean") normalized[key] = Boolean(normalized[key]);
   });
@@ -6006,38 +5755,10 @@ function saveUserSettings(settings = currentUserSettings) {
   } catch {
     localStorage.setItem(USER_SETTINGS_STORAGE_KEY, JSON.stringify(currentUserSettings));
   }
-  syncUserSettingsToServer(currentUserSettings);
-}
-
-async function syncUserSettingsToServer(settings) {
-  if (!isAuthenticated()) return;
-  try {
-    const response = await fetch("/api/auth/settings", {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ settings }),
-    });
-    if (response.ok && currentAuthUser) {
-      const result = await response.json().catch(() => ({}));
-      currentAuthUser.configuracoes = result.configuracoes || settings;
-    }
-  } catch {
-
-  }
 }
 
 function reloadUserSettingsForCurrentUser() {
-  const localSettings = loadUserSettings();
-  const serverSettings = currentAuthUser?.configuracoes;
-  currentUserSettings = serverSettings && Object.keys(serverSettings).length
-    ? normalizeUserSettings(serverSettings)
-    : localSettings;
-  try {
-    localStorage.setItem(getUserSettingsStorageKey(), JSON.stringify(currentUserSettings));
-  } catch {
-
-  }
+  currentUserSettings = loadUserSettings();
   applyUserSettings();
   renderAccountSettings();
 }
@@ -6056,9 +5777,6 @@ function syncUserSettingsControls() {
 
 function applyUserSettings() {
   currentUserSettings = normalizeUserSettings(currentUserSettings);
-
-  const isIndexPage = Boolean(document.getElementById("app-shell"));
-  document.documentElement.setAttribute("data-theme", isIndexPage && currentUserSettings.darkMode ? "dark" : "light");
   document.body?.classList.toggle("user-setting-compact", currentUserSettings.compactMode);
   document.body?.classList.toggle("user-setting-message-small", currentUserSettings.messageSize === "small");
   document.body?.classList.toggle("user-setting-message-large", currentUserSettings.messageSize === "large");
@@ -6077,7 +5795,7 @@ function applyUserSettings() {
   const nextDashboardButton = document.getElementById("dashboard-notifications-next");
   if (!currentUserSettings.dashboardNotificationBadges) {
     visibleDashboardActivityItems = [];
-    if (dashboardTarget) dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configurações.</p>';
+    if (dashboardTarget) dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configuraÃ§Ãµes.</p>';
     if (previousDashboardButton) previousDashboardButton.hidden = true;
     if (nextDashboardButton) nextDashboardButton.hidden = true;
   }
@@ -6117,14 +5835,14 @@ async function registerHubNotificationServiceWorker() {
     });
     return hubNotificationServiceWorkerRegistration;
   } catch (error) {
-    console.warn("Service Worker de notificações não pôde ser registrado:", error);
+    console.warn("Service Worker de notificaÃ§Ãµes nÃ£o pÃ´de ser registrado:", error);
     return null;
   }
 }
 
 async function requestDesktopNotificationPermission({ showSuccess = true } = {}) {
   if (!isBrowserNotificationSupported()) {
-    showModal("Notificações indisponíveis", "Este navegador não suporta notificações do sistema.", "error");
+    showModal("NotificaÃ§Ãµes indisponÃ­veis", "Este navegador nÃ£o suporta notificaÃ§Ãµes do sistema.", "error");
     currentUserSettings.desktopNotifications = false;
     saveUserSettings(currentUserSettings);
     syncUserSettingsControls();
@@ -6147,17 +5865,17 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
     if (permission === "granted") {
       removeDesktopNotificationPermissionPrompt();
       if (showSuccess) {
-        await showBrowserDesktopNotification("Notificações ativadas", "Agora o HUB pode avisar mesmo quando você estiver em outra aba.", {
+        await showBrowserDesktopNotification("NotificaÃ§Ãµes ativadas", "Agora o HUB pode avisar mesmo quando vocÃª estiver em outra aba.", {
           type: "geral",
-          icon: "🔔",
+          icon: "ðŸ””",
           tag: "hub-rh-notificacoes-ativadas",
           requireInteraction: true,
         });
-        showUserNotificationPopout("Notificações ativadas", "Avisos externos do HUB foram liberados neste navegador.", {
+        showUserNotificationPopout("NotificaÃ§Ãµes ativadas", "Avisos externos do HUB foram liberados neste navegador.", {
           type: "geral",
-          icon: "🔔",
+          icon: "ðŸ””",
           duration: 7000,
-          hint: "Você também receberá o aviso nativo do navegador",
+          hint: "VocÃª tambÃ©m receberÃ¡ o aviso nativo do navegador",
         });
       }
       return "granted";
@@ -6166,11 +5884,11 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
     currentUserSettings.desktopNotifications = false;
     saveUserSettings(currentUserSettings);
     syncUserSettingsControls();
-    removeDesktopNotificationPermissionPrompt();
+    showDesktopNotificationPermissionPrompt(true);
     return permission;
   } catch (error) {
-    console.warn("Permissão de notificações não pôde ser solicitada:", error);
-    removeDesktopNotificationPermissionPrompt();
+    console.warn("PermissÃ£o de notificaÃ§Ãµes nÃ£o pÃ´de ser solicitada:", error);
+    showDesktopNotificationPermissionPrompt(true);
     return "error";
   }
 }
@@ -6196,14 +5914,14 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
     prompt.className = "hub-notification-permission-prompt";
     prompt.setAttribute("role", "status");
     prompt.innerHTML = `
-      <div class="hub-notification-permission-icon">🔔</div>
+      <div class="hub-notification-permission-icon">ðŸ””</div>
       <div class="hub-notification-permission-text">
-        <strong>Ative as notificações do HUB</strong>
+        <strong>Ative as notificaÃ§Ãµes do HUB</strong>
         <p data-permission-message></p>
       </div>
       <button class="secondary-button" type="button" data-permission-dismiss>Depois</button>
       <button class="secondary-button" type="button" data-permission-test>Testar aviso</button>
-      <button class="primary-button" type="button" data-permission-enable>Permitir notificações</button>
+      <button class="primary-button" type="button" data-permission-enable>Permitir notificaÃ§Ãµes</button>
     `;
     document.body.appendChild(prompt);
     prompt.querySelector("[data-permission-enable]")?.addEventListener("click", () => requestDesktopNotificationPermission());
@@ -6213,28 +5931,28 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
         : await requestDesktopNotificationPermission({ showSuccess: false });
 
       if (permission !== "granted") {
-        showUserNotificationPopout("Permissão pendente", "O navegador ainda não liberou as notificações externas do HUB.", {
+        showUserNotificationPopout("PermissÃ£o pendente", "O navegador ainda nÃ£o liberou as notificaÃ§Ãµes externas do HUB.", {
           type: "geral",
-          icon: "⚠️",
+          icon: "âš ï¸",
           duration: 9000,
-          hint: "Libere no cadeado do navegador: Notificações > Permitir",
+          hint: "Libere no cadeado do navegador: NotificaÃ§Ãµes > Permitir",
         });
         return;
       }
 
-      const shown = await showBrowserDesktopNotification("Teste de notificação HUB", "Este é o aviso visual que aparecerá fora da aba do HUB.", {
+      const shown = await showBrowserDesktopNotification("Teste de notificaÃ§Ã£o HUB", "Este Ã© o aviso visual que aparecerÃ¡ fora da aba do HUB.", {
         type: "geral",
-        icon: "🔔",
+        icon: "ðŸ””",
         tag: `hub-rh-teste-${Date.now()}`,
         requireInteraction: true,
       });
       showUserNotificationPopout(shown ? "Teste enviado" : "Teste bloqueado", shown
-        ? "A notificação nativa do navegador foi disparada. Verifique o canto da tela ou a central de notificações."
-        : "O navegador bloqueou o aviso externo. Confira as permissões do site.", {
+        ? "A notificaÃ§Ã£o nativa do navegador foi disparada. Verifique o canto da tela ou a central de notificaÃ§Ãµes."
+        : "O navegador bloqueou o aviso externo. Confira as permissÃµes do site.", {
         type: "geral",
-        icon: shown ? "🔔" : "⚠️",
+        icon: shown ? "ðŸ””" : "âš ï¸",
         duration: 10000,
-        hint: shown ? "Se estiver em outra aba, o aviso aparecerá fora do HUB" : "Cadeado do navegador > Notificações > Permitir",
+        hint: shown ? "Se estiver em outra aba, o aviso aparecerÃ¡ fora do HUB" : "Cadeado do navegador > NotificaÃ§Ãµes > Permitir",
       });
     });
     prompt.querySelector("[data-permission-dismiss]")?.addEventListener("click", () => prompt.remove());
@@ -6243,16 +5961,31 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
   const message = prompt.querySelector("[data-permission-message]");
   if (message) {
     message.textContent = isBlocked || Notification.permission === "denied"
-      ? "O navegador bloqueou a permissão. Libere notificações do site nas configurações do navegador para receber avisos fora do HUB."
+      ? "O navegador bloqueou a permissÃ£o. Libere notificaÃ§Ãµes do site nas configuraÃ§Ãµes do navegador para receber avisos fora do HUB."
       : "Clique em Permitir para receber popout do navegador mesmo quando estiver em outra aba, como ChatGPT, e com som mais forte.";
   }
 }
 
 function armDesktopNotificationPermissionRequest() {
   if (!isAuthenticated() || !isBrowserNotificationSupported()) return;
-  removeDesktopNotificationPermissionPrompt();
-  if (!currentUserSettings.desktopNotifications) return;
-  if (Notification.permission === "granted") registerHubNotificationServiceWorker();
+  if (Notification.permission === "granted") return;
+
+  currentUserSettings.desktopNotifications = true;
+  currentUserSettings.notificationSound = true;
+  saveUserSettings(currentUserSettings);
+  showDesktopNotificationPermissionPrompt(Notification.permission === "denied");
+
+  if (hubNotificationPermissionInteractionBound || Notification.permission === "denied") return;
+  hubNotificationPermissionInteractionBound = true;
+
+  const askOnce = () => {
+    if (!isAuthenticated() || Notification.permission !== "default") return;
+    requestDesktopNotificationPermission();
+  };
+
+  document.addEventListener("click", askOnce, { once: true, capture: true });
+  document.addEventListener("keydown", askOnce, { once: true, capture: true });
+  document.addEventListener("touchstart", askOnce, { once: true, capture: true });
 }
 
 function playNotificationTone(audioContext, destination, frequency, startAt, duration, peakVolume, waveType = "square") {
@@ -6287,9 +6020,10 @@ function playUserNotificationSound() {
       try { audioContext.close?.(); } catch (_) {}
     }, 1700);
   } catch {
-
+    // Sem som quando o navegador bloquear autoplay/audio context.
   }
 }
+
 
 const HUB_NOTIFICATION_POPOUT_CONTAINER_ID = "hub-notification-popout-container";
 
@@ -6324,16 +6058,16 @@ function showUserNotificationPopout(title, message, options = {}) {
 
     const icon = document.createElement("div");
     icon.className = "hub-notification-popout-icon";
-    icon.textContent = options.icon || "🔔";
+    icon.textContent = options.icon || "ðŸ””";
 
     const content = document.createElement("div");
     content.className = "hub-notification-popout-content";
 
     const heading = document.createElement("strong");
-    heading.textContent = title || "Nova notificação";
+    heading.textContent = title || "Nova notificaÃ§Ã£o";
 
     const body = document.createElement("p");
-    body.textContent = message || "Você possui uma nova atualização no HUB.";
+    body.textContent = message || "VocÃª possui uma nova atualizaÃ§Ã£o no HUB.";
 
     const hint = document.createElement("span");
     hint.textContent = options.hint || "Clique para abrir o acompanhamento";
@@ -6343,12 +6077,11 @@ function showUserNotificationPopout(title, message, options = {}) {
     const closeButton = document.createElement("button");
     closeButton.type = "button";
     closeButton.className = "hub-notification-popout-close";
-    closeButton.setAttribute("aria-label", "Fechar notificação");
-    closeButton.textContent = "×";
+    closeButton.setAttribute("aria-label", "Fechar notificaÃ§Ã£o");
+    closeButton.textContent = "Ã—";
 
     popout.append(icon, content, closeButton);
     container.prepend(popout);
-    applyEmojiImages(popout);
 
     const timer = window.setTimeout(() => removeUserNotificationPopout(popout), options.duration || 12000);
 
@@ -6376,7 +6109,7 @@ function showUserNotificationPopout(title, message, options = {}) {
     const popouts = [...container.querySelectorAll(".hub-notification-popout")];
     popouts.slice(4).forEach(removeUserNotificationPopout);
   } catch (error) {
-    console.warn("Não foi possível exibir o popout de notificação:", error);
+    console.warn("NÃ£o foi possÃ­vel exibir o popout de notificaÃ§Ã£o:", error);
   }
 }
 
@@ -6399,7 +6132,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
   if (!isBrowserNotificationSupported()) return false;
 
   if (Notification.permission !== "granted") {
-    removeDesktopNotificationPermissionPrompt();
+    showDesktopNotificationPermissionPrompt(Notification.permission === "denied");
     return false;
   }
 
@@ -6409,7 +6142,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
   if (messageIds.length) targetUrl.searchParams.set("markMessages", messageIds.join(","));
 
   const notificationOptions = {
-    body: body || "Você tem uma nova notificação no HUB.",
+    body: body || "VocÃª tem uma nova notificaÃ§Ã£o no HUB.",
     icon: "assets/logo.svg",
     badge: "assets/logo.svg",
     tag: options.tag || `hub-rh-notificacao-${Date.now()}`,
@@ -6439,7 +6172,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
         return true;
       }
     } catch (swError) {
-      console.warn("Notificação via Service Worker bloqueada:", swError);
+      console.warn("NotificaÃ§Ã£o via Service Worker bloqueada:", swError);
     }
     return false;
   };
@@ -6455,7 +6188,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
       };
       return true;
     } catch (directError) {
-      console.warn("Notificação direta do navegador bloqueada:", directError);
+      console.warn("NotificaÃ§Ã£o direta do navegador bloqueada:", directError);
       return false;
     }
   };
@@ -6474,7 +6207,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
 let hubOriginalDocumentTitle = document.title;
 let hubNotificationTitleTimer = null;
 
-function flashHubDocumentTitle(title = "Nova notificação") {
+function flashHubDocumentTitle(title = "Nova notificaÃ§Ã£o") {
   try {
     hubOriginalDocumentTitle = hubOriginalDocumentTitle || document.title;
     if (hubNotificationTitleTimer) window.clearInterval(hubNotificationTitleTimer);
@@ -6483,7 +6216,7 @@ function flashHubDocumentTitle(title = "Nova notificação") {
     hubNotificationTitleTimer = window.setInterval(() => {
       ticks += 1;
       visible = !visible;
-      document.title = visible ? `🔔 ${title}` : hubOriginalDocumentTitle;
+      document.title = visible ? `ðŸ”” ${title}` : hubOriginalDocumentTitle;
       if (ticks >= 20 || document.visibilityState === "visible") {
         window.clearInterval(hubNotificationTitleTimer);
         hubNotificationTitleTimer = null;
@@ -6492,6 +6225,7 @@ function flashHubDocumentTitle(title = "Nova notificação") {
     }, 900);
   } catch (_) {}
 }
+
 
 function updateHubAppBadge(count = 0) {
   try {
@@ -6503,36 +6237,15 @@ function updateHubAppBadge(count = 0) {
   } catch (_) {}
 }
 
-const hubNotifiedMessageIds = new Set();
-
 function showHubCrossPageNotification(title, message, options = {}) {
-
-  const messageIds = options.messageIds || [];
-  if (messageIds.length) {
-    const hasNewId = messageIds.some((id) => !hubNotifiedMessageIds.has(id));
-    if (!hasNewId) return;
-    messageIds.forEach((id) => hubNotifiedMessageIds.add(id));
-  }
-
   playUserNotificationSound();
   updateHubAppBadge(1);
   if (document.visibilityState === "hidden" || !document.hasFocus?.()) {
-    flashHubDocumentTitle(title || "Nova notificação");
+    flashHubDocumentTitle(title || "Nova notificaÃ§Ã£o");
   }
 
   const openAndMark = () => {
     markNotificationsRead(options.notificationId ? [options.notificationId] : [], options.messageIds || []);
-    if (options.view) {
-      if (options.canal) {
-        activeChatChannel = normalizeChatChannel(options.canal);
-        try { clearChatMessageFilter?.(); } catch (_) {}
-        try { renderChatChannels?.(); } catch (_) {}
-        try { renderChat?.(); } catch (_) {}
-      }
-      activateView(options.view);
-      try { checkAndMarkChatAsRead?.(); } catch (_) {}
-      return;
-    }
     openNotificationTrackerFromPopout();
   };
 
@@ -6540,7 +6253,7 @@ function showHubCrossPageNotification(title, message, options = {}) {
     type: options.type,
     icon: options.icon,
     duration: options.duration || 15000,
-    hint: options.view ? "Clique para abrir" : "Clique para marcar como lida e abrir o acompanhamento",
+    hint: options.hint || "Clique para marcar como lida e abrir o acompanhamento",
     onClick: openAndMark,
   });
   showBrowserDesktopNotification(title, message, {
@@ -6554,71 +6267,79 @@ function showHubCrossPageNotification(title, message, options = {}) {
 
 function getRealtimeNotificationText(collection, item = {}) {
   if (collection === "comunicados") {
-    const author = item.autor || "Comunicação RH";
+    const author = item.autor || "ComunicaÃ§Ã£o RH";
     const text = item.mensagem || "Nova mensagem recebida.";
     return {
-      title: `Comunicação RH · ${author}`,
+      title: `ComunicaÃ§Ã£o RH Â· ${author}`,
       message: text.length > 110 ? `${text.slice(0, 107)}...` : text,
-      icon: "💬",
+      icon: "ðŸ’¬",
       type: "mensagem",
       tag: `hub-rh-comunicacao-${item.id || Date.now()}`,
-      view: "comunicacao",
-      canal: item.canal || "",
     };
   }
 
   if (collection === "denuncias") {
     return {
-      title: "Nova denúncia recebida",
-      message: item.descricao || "Uma nova denúncia foi registrada no HUB.",
-      icon: "🚨",
+      title: "Nova denÃºncia recebida",
+      message: item.descricao || "Uma nova denÃºncia foi registrada no HUB.",
+      icon: "ðŸš¨",
       type: "denuncia",
       tag: `hub-rh-denuncia-${item.id || Date.now()}`,
-      view: "denuncias",
     };
   }
 
   if (collection === "chamados") {
     return {
       title: "Novo chamado de EPI",
-      message: [item.solicitante, item.unidade, item.status].filter(Boolean).join(" · ") || "Um novo chamado foi registrado.",
-      icon: "🎫",
+      message: [item.solicitante, item.unidade, item.status].filter(Boolean).join(" Â· ") || "Um novo chamado foi registrado.",
+      icon: "ðŸŽ«",
       type: "chamado",
       tag: `hub-rh-chamado-${item.id || Date.now()}`,
-      view: "chamados",
     };
   }
 
   if (collection === "malotes") {
     return {
-      title: "Atualização de malote",
-      message: [item.codigoSolicitacao, item.destino, item.status].filter(Boolean).join(" · ") || "Um malote foi atualizado.",
-      icon: "📦",
+      title: "AtualizaÃ§Ã£o de malote",
+      message: [item.codigoSolicitacao, item.destino, item.status].filter(Boolean).join(" Â· ") || "Um malote foi atualizado.",
+      icon: "ðŸ“¦",
       type: "malote",
       tag: `hub-rh-malote-${item.id || Date.now()}`,
-      view: "malotes",
     };
   }
 
   if (collection === "vagas") {
     return {
-      title: "Atualização de vaga",
-      message: [item.cargo, item.unidade, item.status].filter(Boolean).join(" · ") || "Uma vaga foi atualizada.",
-      icon: "💼",
+      title: "AtualizaÃ§Ã£o de vaga",
+      message: [item.cargo, item.unidade, item.status].filter(Boolean).join(" Â· ") || "Uma vaga foi atualizada.",
+      icon: "ðŸ’¼",
       type: "vaga",
       tag: `hub-rh-vaga-${item.id || Date.now()}`,
-      view: "vagas",
+    };
+  }
+
+  if (collection === "atestados") {
+    return {
+      nome: values.nome || "",
+      cpf: values.cpf || "",
+      telefone: values.telefone || "",
+      unidade: values.unidade || "",
+      arquivo_nome: values.arquivoNome || "Atestado",
+      arquivo_tamanho: values.arquivoTamanho || 0,
+      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
+      arquivo_url: values.arquivoUrl || "",
+      status: values.status || "Recebido",
+      created_by: values.createdBy || "Publico",
     };
   }
 
   if (collection === "documentosContratados") {
     return {
       title: "Documentos recebidos",
-      message: [item.nome, item.empresa].filter(Boolean).join(" · ") || "Novos documentos foram enviados.",
-      icon: "📄",
+      message: [item.nome, item.empresa].filter(Boolean).join(" Â· ") || "Novos documentos foram enviados.",
+      icon: "ðŸ“„",
       type: "documento",
       tag: `hub-rh-documento-${item.id || Date.now()}`,
-      view: "documentos",
     };
   }
 
@@ -6636,7 +6357,8 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
 
   const currentName = normalizeLoginName(getCurrentUserName());
   const author = normalizeLoginName(item.autor || item.createdBy || item.updatedBy || item.solicitante || "");
-  if (collection === "comunicados" && author && author === currentName) return false;
+  const pageIsVisible = document.visibilityState === "visible" && document.hasFocus?.();
+  if (collection === "comunicados" && author && author === currentName && pageIsVisible) return false;
 
   lastRealtimeNotificationSignature = signature;
   return true;
@@ -6695,7 +6417,7 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
   const notification = getRealtimeNotificationText(collection, item);
   if (!notification) return;
 
-  const actionLabel = action === "UPDATE" ? "Atualização" : "Nova notificação";
+  const actionLabel = action === "UPDATE" ? "AtualizaÃ§Ã£o" : "Nova notificaÃ§Ã£o";
   showHubCrossPageNotification(notification.title, notification.message || actionLabel, {
     type: notification.type,
     icon: notification.icon,
@@ -6703,12 +6425,21 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
     requireInteraction: true,
     notificationId: `${notification.type || collection}-${item.id || Date.now()}`,
     messageIds: collection === "comunicados" && item.id ? [item.id] : [],
-    view: notification.view,
-    canal: notification.canal,
   });
 
   const pollingKey = getNotificationPollingKey(collection, item);
   if (pollingKey) hubPollingNotificationKeys.add(pollingKey);
+}
+
+function startAuthenticatedNotificationsOnAnyPage() {
+  if (!isAuthenticated() || !postgresClient) return;
+  currentUserSettings.desktopNotifications = true;
+  currentUserSettings.notificationSound = true;
+  saveUserSettings(currentUserSettings);
+  registerHubNotificationServiceWorker();
+  armDesktopNotificationPermissionRequest();
+  setupRealtime();
+  setupAutoRefresh();
 }
 
 function notifyUnreadRhMessages(count) {
@@ -6718,22 +6449,16 @@ function notifyUnreadRhMessages(count) {
   }
 
   const newMessageCount = count - lastUnreadNotificationCount;
-  const messageText = `${newMessageCount} nova(s) mensagem(ns) não lida(s).`;
+  const messageText = `${newMessageCount} nova(s) mensagem(ns) nÃ£o lida(s).`;
 
-  const unreadMessages = getUnreadRhMessages();
-  const unreadIds = unreadMessages.map((item) => item.id).filter(Boolean);
-  const mostRecent = [...unreadMessages].sort(
-    (a, b) => getChatMessageTime(b.sortAt || b.createdAt) - getChatMessageTime(a.sortAt || a.createdAt)
-  )[0];
-  showHubCrossPageNotification("Comunicação RH", messageText, {
+  const unreadIds = getUnreadRhMessages().map((item) => item.id).filter(Boolean);
+  showHubCrossPageNotification("ComunicaÃ§Ã£o RH", messageText, {
     type: "mensagem",
-    icon: "💬",
+    icon: "ðŸ’¬",
     tag: "hub-rh-comunicacao",
     requireInteraction: true,
     notificationId: `mensagem-rh-${unreadIds[0] || Date.now()}`,
     messageIds: unreadIds,
-    view: "comunicacao",
-    canal: mostRecent?.canal || "",
   });
 
   lastUnreadNotificationCount = count;
@@ -6787,8 +6512,6 @@ function resetChatComposerState() {
   const chatForm = document.getElementById("chat-form");
   const messageInput = chatForm?.querySelector('textarea[name="mensagem"]');
   if (messageInput) messageInput.value = "";
-  const editor = getChatComposerEditor();
-  if (editor) editor.innerHTML = "";
   clearChatSelectedFile();
 }
 
@@ -6805,21 +6528,17 @@ function closeActiveChat() {
 }
 
 function wrapChatSelection(prefix, suffix = prefix) {
-  const editor = getChatComposerEditor();
-  if (!editor || editor.getAttribute("contenteditable") !== "true") return false;
-  editor.focus();
-  const range = getComposerSelectionRange(editor);
-  const selectedText = range.toString();
-  range.deleteContents();
-  const textNode = document.createTextNode(`${prefix}${selectedText}${suffix}`);
-  range.insertNode(textNode);
-  const selection = window.getSelection();
-  const newRange = document.createRange();
-  newRange.setStart(textNode, prefix.length);
-  newRange.setEnd(textNode, prefix.length + selectedText.length);
-  selection.removeAllRanges();
-  selection.addRange(newRange);
-  syncChatComposerToTextarea();
+  const input = document.querySelector('#chat-form textarea[name="mensagem"]');
+  if (!input || input.disabled) return false;
+  const value = input.value || "";
+  const start = Number.isInteger(input.selectionStart) ? input.selectionStart : value.length;
+  const end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : start;
+  const selected = value.slice(start, end);
+  input.value = `${value.slice(0, start)}${prefix}${selected}${suffix}${value.slice(end)}`;
+  const cursorStart = start + prefix.length;
+  const cursorEnd = cursorStart + selected.length;
+  input.focus();
+  input.setSelectionRange(cursorStart, cursorEnd || cursorStart);
   return true;
 }
 
@@ -6839,20 +6558,10 @@ function renderFormattedChatText(message = "") {
   return html.replace(/\n/g, "<br>");
 }
 
-function applyEmojiImages(target) {
-  if (!target || !window.twemoji) return;
-  window.twemoji.parse(target, {
-    base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-    folder: "svg",
-    ext: ".svg",
-    className: "emoji-image",
-  });
-}
-
 function handleSettingsKeyboardShortcut(event) {
   if (event.defaultPrevented || event.isComposing) return;
   const target = event.target;
-  const isTyping = target && (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable);
+  const isTyping = target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
   if (event.key === "Escape") {
     closeChatAttachMenu();
     closeChatEmojiMenu();
@@ -6869,7 +6578,7 @@ function handleSettingsKeyboardShortcut(event) {
     focusChatMessageFilter();
     return;
   }
-  if (["b", "i", "u"].includes(event.key.toLowerCase()) && target?.matches?.('#chat-form textarea[name="mensagem"], #chat-message-editor')) {
+  if (["b", "i", "u"].includes(event.key.toLowerCase()) && target?.matches?.('#chat-form textarea[name="mensagem"]')) {
     event.preventDefault();
     applyChatEditingShortcut(event.key);
     return;
@@ -6904,13 +6613,12 @@ function renderChatChannels() {
     .map((channel) => {
       const unreadCount = getUnreadRhMessages().filter(item => normalizeChatChannel(item.canal) === channel.id).length;
       const badge = unreadCount > 0 ? `<span class="chat-badge">${unreadCount}</span>` : "";
-
+      
       let avatarHtml = "";
       if (channel.isGroup) {
         avatarHtml = `<div class="chat-avatar-fallback"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>`;
       } else if (channel.targetUser) {
-        const onlineClass = isUserOnline(channel.targetUser) ? "is-online" : "";
-        avatarHtml = `<span class="chat-avatar-wrap"><span class="presence-dot ${onlineClass}"></span>${getAuthorAvatar(channel.targetUser, channel.avatarPath)}</span>`;
+        avatarHtml = getAuthorAvatar(channel.targetUser, channel.avatarPath);
       }
 
       return `
@@ -6924,6 +6632,16 @@ function renderChatChannels() {
       `;
     })
     .join("");
+}
+
+
+function formatChamadoFilterCode(value = "") {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 5);
+  return digits.length > 4 ? `${digits.slice(0, 4)}-${digits.slice(4)}` : digits;
+}
+
+function getChamadoSearchCode(item = {}) {
+  return String(item.codigoSolicitacao || item.id || "").toLowerCase();
 }
 
 function getChamadoCollaboratorSearchText(item = {}) {
@@ -6943,6 +6661,7 @@ function getChamadosFilterValues() {
   return {
     destino: String(document.getElementById("chamado-filter-destino")?.value || "").trim(),
     colaborador: String(document.getElementById("chamado-filter-colaborador")?.value || "").trim().toLowerCase(),
+    codigo: String(document.getElementById("chamado-filter-codigo")?.value || "").trim().toLowerCase(),
     mes: document.getElementById("chamado-filter-mes")?.value || "",
   };
 }
@@ -6952,6 +6671,7 @@ function filterChamadosByCurrentFilters(items = []) {
   return items.filter((item) => {
     if (filters.destino && String(item.unidade || "") !== filters.destino) return false;
     if (filters.colaborador && !getChamadoCollaboratorSearchText(item).includes(filters.colaborador)) return false;
+    if (filters.codigo && !getChamadoSearchCode(item).includes(filters.codigo)) return false;
     if (filters.mes && getChamadoCreatedMonth(item) !== filters.mes) return false;
     return true;
   });
@@ -7002,28 +6722,47 @@ function updateChamadosFilterClearButton() {
 function renderChamadosSection() {
   const chamadosAbertos = filterChamadosByCurrentFilters((data.chamados || []).filter((item) => item.status !== "Arquivado"));
   const chamadosArquivados = filterChamadosByCurrentFilters((data.chamados || []).filter((item) => item.status === "Arquivado"));
+  const selectChamadosButton = document.getElementById("select-chamados");
   const primaryChamadosTitle = document.getElementById("chamados-primary-title");
   const toggleArchivedChamadosButton = document.getElementById("toggle-archived-chamados");
+  const exitChamadosSelectionButton = document.getElementById("exit-chamados-selection");
   const openChamadosPublicLink = document.getElementById("open-chamados-public");
   updateChamadosFilterClearButton();
 
+  if (chamadosSelectionMode) showArchivedChamados = false;
+
+  if (selectChamadosButton) {
+    selectChamadosButton.disabled = !chamadosAbertos.length && !chamadosArquivados.length;
+    selectChamadosButton.textContent = chamadosSelectionMode ? "Arquivar selecionados" : "Selecionar chamados";
+    selectChamadosButton.className = chamadosSelectionMode ? "danger-button" : "secondary-link";
+  }
   if (primaryChamadosTitle) primaryChamadosTitle.textContent = showArchivedChamados ? "Arquivados" : "Abertos";
   if (toggleArchivedChamadosButton) {
     toggleArchivedChamadosButton.textContent = showArchivedChamados ? "Ocultar arquivados" : "Mostrar arquivados";
     toggleArchivedChamadosButton.disabled = false;
+    toggleArchivedChamadosButton.hidden = chamadosSelectionMode;
+    toggleArchivedChamadosButton.style.display = chamadosSelectionMode ? "none" : "";
   }
-  if (openChamadosPublicLink) openChamadosPublicLink.hidden = false;
+  if (exitChamadosSelectionButton) {
+    exitChamadosSelectionButton.hidden = !chamadosSelectionMode;
+    exitChamadosSelectionButton.style.display = chamadosSelectionMode ? "" : "none";
+  }
+  if (openChamadosPublicLink) openChamadosPublicLink.hidden = chamadosSelectionMode;
 
   const chamadoCard = (item, archived = false) => `
-    <article class="item-card" ${!archived ? `data-context-type="chamado" data-id="${escapeHtml(item.id)}"` : ""}>
+    <article class="item-card ${chamadosSelectionMode && !archived ? "selectable-card clickable" : ""}"
+             ${chamadosSelectionMode && !archived ? `data-action="toggle-chamado-selection" data-id="${escapeHtml(item.id)}"` : ""}>
       <div class="item-topline">
         <p class="item-title">
+          ${!archived && chamadosSelectionMode ? `<input class="chamado-select" type="checkbox" value="${escapeHtml(item.id)}"
+                                                         aria-label="Selecionar chamado de ${escapeHtml(item.solicitante)}" data-action="no-op" />` : ""}
           ${escapeHtml(item.unidade)}
         </p>
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
       </div>
       <p><strong>Solicitante:</strong> ${escapeHtml(item.solicitante)}</p>
       ${item.setor ? `<p><strong>Setor:</strong> ${escapeHtml(item.setor)}</p>` : ""}
+      <p><strong>CÃ³digo da SolicitaÃ§Ã£o:</strong> ${escapeHtml(item.codigoSolicitacao || item.id || "Nao informado")}</p>
       <p><strong>EPIs:</strong> ${escapeHtml(item.epis)}</p>
       ${item.observacoes ? `<p><strong>Observacoes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
       <p class="item-meta">${escapeHtml(item.createdAt)}</p>
@@ -7043,325 +6782,6 @@ function renderChamadosSection() {
   }
 }
 
-function ensureBoardsData() {
-  if (!Array.isArray(data.quadros)) data.quadros = [];
-  if (!data.quadros.length) {
-    data.quadros.push({
-      id: generateUUID(),
-      nome: "Quadro principal",
-      listas: [
-        { id: generateUUID(), titulo: "A fazer", cartoes: [] },
-        { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
-        { id: generateUUID(), titulo: "Concluido", cartoes: [] },
-      ],
-      createdAt: todayLabel(),
-    });
-  }
-  data.quadros.forEach((board) => {
-    if (!Array.isArray(board.listas)) board.listas = [];
-    board.listas.forEach((list) => {
-      if (!Array.isArray(list.cartoes)) list.cartoes = [];
-    });
-  });
-  if (!activeBoardId || !data.quadros.some((board) => String(board.id) === String(activeBoardId))) {
-    activeBoardId = data.quadros[0]?.id || "";
-  }
-}
-
-function getActiveBoard() {
-  ensureBoardsData();
-  return data.quadros.find((board) => String(board.id) === String(activeBoardId)) || data.quadros[0] || null;
-}
-
-function getBoardCardCount(board) {
-  return (board?.listas || []).reduce((total, list) => total + (list.cartoes || []).length, 0);
-}
-
-function getOrderedBoards() {
-  ensureBoardsData();
-  const order = Array.isArray(currentUserSettings.boardOrder) ? currentUserSettings.boardOrder.map(String) : [];
-  if (!order.length) {
-    return [...data.quadros].sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" }));
-  }
-  const orderIndex = new Map(order.map((id, index) => [String(id), index]));
-  return [...data.quadros].sort((a, b) => {
-    const aIndex = orderIndex.has(String(a.id)) ? orderIndex.get(String(a.id)) : Number.MAX_SAFE_INTEGER;
-    const bIndex = orderIndex.has(String(b.id)) ? orderIndex.get(String(b.id)) : Number.MAX_SAFE_INTEGER;
-    if (aIndex !== bIndex) return aIndex - bIndex;
-    return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" });
-  });
-}
-
-function saveBoardOrderFromTabs() {
-  const ids = Array.from(document.querySelectorAll("#board-tabs [data-board-tab]"))
-    .map((tab) => String(tab.dataset.id || ""))
-    .filter(Boolean);
-  currentUserSettings = normalizeUserSettings({ ...currentUserSettings, boardOrder: ids });
-  saveUserSettings(currentUserSettings);
-}
-
-function getPriorityClass(value = "") {
-  const priority = String(value || "").toLowerCase();
-  if (priority === "urgente") return "priority-urgent";
-  if (priority === "alta") return "priority-high";
-  return "priority-normal";
-}
-
-async function persistBoards(board = getActiveBoard()) {
-  saveLocalData();
-  renderBoards();
-  if (!isAuthenticated() || !board) return true;
-  try {
-    const normalizedBoard = String(board.id || "").startsWith("local-")
-      ? { ...board, id: generateUUID() }
-      : board;
-    if (normalizedBoard.id !== board.id) {
-      board.id = normalizedBoard.id;
-      activeBoardId = normalizedBoard.id;
-    }
-    let updated;
-    try {
-      updated = await hubApi.update("quadros", normalizedBoard.id, toDbPayload("quadros", { ...normalizedBoard, updatedBy: getCurrentUserName() }));
-    } catch (error) {
-      if (error?.status !== 404) throw error;
-      updated = await hubApi.insert("quadros", toDbPayload("quadros", {
-        ...normalizedBoard,
-        createdBy: normalizedBoard.createdBy || getCurrentUserName(),
-        updatedBy: getCurrentUserName(),
-      }));
-    }
-    mergeRealtimeRow("quadros", updated, "UPDATE");
-    renderRealtimeUpdate("quadros");
-    setSyncStatus("HUB online", true);
-    return true;
-  } catch (error) {
-    console.error("Erro ao salvar quadro:", error);
-    setSyncStatus("Erro ao salvar quadro", false);
-    showModal("Erro ao Salvar", error?.message || "Nao foi possivel salvar o quadro no banco.", "error");
-    return false;
-  }
-}
-
-function closeBoardContextMenu() {
-  boardContextMenu = null;
-  document.getElementById("board-context-menu")?.remove();
-}
-
-function closeBoardCardActionMenu() {
-  boardCardActionMenu = null;
-  document.getElementById("board-card-action-menu")?.remove();
-}
-
-function closeRecordContextMenu() {
-  recordContextMenu = null;
-  document.getElementById("record-context-menu")?.remove();
-}
-
-function renderRecordContextMenu() {
-  document.getElementById("record-context-menu")?.remove();
-  if (!recordContextMenu) return;
-  const menu = document.createElement("div");
-  menu.id = "record-context-menu";
-  menu.className = "board-context-menu record-context-menu";
-  menu.style.left = `${recordContextMenu.x}px`;
-  menu.style.top = `${recordContextMenu.y}px`;
-  menu.innerHTML = `
-    <button type="button" data-action="${recordContextMenu.type === "denuncia" ? "arquivar-denuncia" : "arquivar-chamado"}" data-id="${escapeHtml(recordContextMenu.id)}">Arquivar</button>
-  `;
-  document.body.appendChild(menu);
-  const rect = menu.getBoundingClientRect();
-  const left = Math.min(recordContextMenu.x, window.innerWidth - rect.width - 10);
-  const top = Math.min(recordContextMenu.y, window.innerHeight - rect.height - 10);
-  menu.style.left = `${Math.max(10, left)}px`;
-  menu.style.top = `${Math.max(10, top)}px`;
-}
-
-function renderBoardContextMenu() {
-  document.getElementById("board-context-menu")?.remove();
-  if (!boardContextMenu) return;
-  const menu = document.createElement("div");
-  menu.id = "board-context-menu";
-  menu.className = "board-context-menu";
-  menu.style.left = `${boardContextMenu.x}px`;
-  menu.style.top = `${boardContextMenu.y}px`;
-  menu.innerHTML = `
-    <button type="button" data-action="rename-board" data-id="${escapeHtml(boardContextMenu.id)}">Renomear</button>
-    <button type="button" data-action="duplicate-board" data-id="${escapeHtml(boardContextMenu.id)}">Duplicar</button>
-    <button class="danger" type="button" data-action="delete-board" data-id="${escapeHtml(boardContextMenu.id)}">Apagar</button>
-  `;
-  document.body.appendChild(menu);
-  const rect = menu.getBoundingClientRect();
-  const left = Math.min(boardContextMenu.x, window.innerWidth - rect.width - 10);
-  const top = Math.min(boardContextMenu.y, window.innerHeight - rect.height - 10);
-  menu.style.left = `${Math.max(10, left)}px`;
-  menu.style.top = `${Math.max(10, top)}px`;
-}
-
-function renderBoardCardActionMenu() {
-  document.getElementById("board-card-action-menu")?.remove();
-  if (!boardCardActionMenu) return;
-  const menu = document.createElement("div");
-  menu.id = "board-card-action-menu";
-  menu.className = "board-context-menu board-card-action-menu";
-  menu.style.left = `${boardCardActionMenu.x}px`;
-  menu.style.top = `${boardCardActionMenu.y}px`;
-  menu.innerHTML = `
-    <button type="button" data-action="edit-board-card" data-list-index="${boardCardActionMenu.listIndex}" data-card-index="${boardCardActionMenu.cardIndex}">Editar</button>
-    <button type="button" data-action="duplicate-board-card" data-list-index="${boardCardActionMenu.listIndex}" data-card-index="${boardCardActionMenu.cardIndex}">Duplicar</button>
-    <button class="danger" type="button" data-action="delete-board-card" data-list-index="${boardCardActionMenu.listIndex}" data-card-index="${boardCardActionMenu.cardIndex}">Excluir</button>
-  `;
-  document.body.appendChild(menu);
-  const rect = menu.getBoundingClientRect();
-  const left = Math.min(boardCardActionMenu.x, window.innerWidth - rect.width - 10);
-  const top = Math.min(boardCardActionMenu.y, window.innerHeight - rect.height - 10);
-  menu.style.left = `${Math.max(10, left)}px`;
-  menu.style.top = `${Math.max(10, top)}px`;
-}
-
-function cloneBoard(board) {
-  return {
-    ...board,
-    id: generateUUID(),
-    nome: `${board.nome || "Quadro"} - copia`,
-    createdAt: todayLabel(),
-    listas: (board.listas || []).map((list) => ({
-      ...list,
-      id: generateUUID(),
-      cartoes: (list.cartoes || []).map((card) => ({
-        ...card,
-        id: generateUUID(),
-        createdAt: todayLabel(),
-        createdBy: getCurrentUserName(),
-        updatedAt: "",
-        updatedBy: "",
-      })),
-    })),
-  };
-}
-
-function cloneBoardCard(card) {
-  return {
-    ...card,
-    id: generateUUID(),
-    titulo: `${card.titulo || "Cartao"} - copia`,
-    createdAt: todayLabel(),
-    createdBy: getCurrentUserName(),
-    updatedAt: "",
-    updatedBy: "",
-  };
-}
-
-function renderBoardListOptions(board = getActiveBoard()) {
-  const select = document.querySelector("#board-card-form select[name='lista']");
-  if (!select) return;
-  select.innerHTML = (board?.listas || [])
-    .map((list) => `<option value="${escapeHtml(list.id)}">${escapeHtml(list.titulo)}</option>`)
-    .join("");
-  select.disabled = !(board?.listas || []).length;
-}
-
-function resetBoardCardForm() {
-  const form = document.getElementById("board-card-form");
-  if (!form) return;
-  form.reset();
-  form.elements.edit_list_index.value = "";
-  form.elements.edit_card_index.value = "";
-  form.querySelector("h3").textContent = "Novo cartao";
-  form.querySelector('button[type="submit"]').textContent = "Adicionar cartao";
-  document.getElementById("cancelar-edicao-board-card")?.setAttribute("hidden", "");
-  renderBoardListOptions();
-}
-
-function showBoardCardPreview(listIndex, cardIndex) {
-  const board = getActiveBoard();
-  const list = board?.listas?.[Number(listIndex)];
-  const card = list?.cartoes?.[Number(cardIndex)];
-  if (!board || !list || !card) return;
-  document.getElementById("custom-modal")?.remove();
-  const overlay = document.createElement("div");
-  overlay.id = "custom-modal";
-  overlay.className = "modal-overlay";
-  const description = card.descricao
-    ? escapeHtml(card.descricao).replace(/\n/g, "<br>")
-    : '<span class="empty-state">Sem descricao.</span>';
-  overlay.innerHTML = `
-    <div class="modal-card board-card-preview-modal">
-      <div class="modal-header info">${escapeHtml(card.titulo || "Cartao")}</div>
-      <div class="modal-body">
-        <div class="board-card-preview-text">${description}</div>
-      </div>
-      <div class="modal-footer">
-        <button class="primary-button" data-action="close-modal">Fechar</button>
-      </div>
-    </div>
-  `;
-  overlay.querySelector('[data-action="close-modal"]').addEventListener("click", () => overlay.remove());
-  document.body.appendChild(overlay);
-}
-
-function getEditingBoardCardIndexes() {
-  const form = document.getElementById("board-card-form");
-  if (!form) return null;
-  const listValue = String(form.elements.edit_list_index?.value || "");
-  const cardValue = String(form.elements.edit_card_index?.value || "");
-  if (listValue === "" || cardValue === "") return null;
-  return {
-    listIndex: Number(listValue),
-    cardIndex: Number(cardValue),
-  };
-}
-
-function resetBoardCardFormIfEditing(listIndex = null, cardIndex = null) {
-  const editing = getEditingBoardCardIndexes();
-  if (!editing) return;
-  const shouldReset = listIndex === null || cardIndex === null ||
-    (editing.listIndex === Number(listIndex) && editing.cardIndex === Number(cardIndex));
-  if (shouldReset) resetBoardCardForm();
-}
-
-function renderBoards() {
-  ensureBoardsData();
-  const board = getActiveBoard();
-  const tabs = document.getElementById("board-tabs");
-  const lanes = document.getElementById("boards-lanes");
-  if (!tabs || !lanes) return;
-
-  tabs.innerHTML = getOrderedBoards().map((item) => `
-    <button class="board-tab ${String(item.id) === String(activeBoardId) ? "active" : ""}" type="button" draggable="true" data-action="select-board" data-id="${escapeHtml(item.id)}" data-board-tab="true">
-      <span>${escapeHtml(item.nome)}</span>
-      <small>${getBoardCardCount(item)} cartao(oes)</small>
-    </button>
-  `).join("");
-  renderBoardContextMenu();
-
-  renderBoardListOptions(board);
-  if (!board) {
-    lanes.innerHTML = '<p class="empty-state">Crie um quadro para comecar.</p>';
-    return;
-  }
-
-  lanes.innerHTML = (board.listas || []).map((list, listIndex) => `
-    <section class="board-lane" data-list-id="${escapeHtml(list.id)}" data-list-index="${listIndex}">
-      <div class="board-lane-header">
-        <h3>${escapeHtml(list.titulo)}</h3>
-        <span class="tag">${(list.cartoes || []).length}</span>
-      </div>
-      <div class="board-card-list">
-        ${(list.cartoes || []).map((card, cardIndex) => `
-          <article class="board-card ${getPriorityClass(card.prioridade)}" draggable="true" data-board-card="true" data-list-index="${listIndex}" data-card-index="${cardIndex}">
-            <div class="item-topline">
-              <p class="item-title">${escapeHtml(card.titulo)}</p>
-              <span class="tag">${escapeHtml(card.prioridade || "Normal")}</span>
-            </div>
-            ${card.descricao ? `<p>${escapeHtml(card.descricao).replace(/\n/g, "<br>")}</p>` : ""}
-          </article>
-        `).join("") || '<p class="empty-state">Nenhum cartao nesta lista.</p>'}
-      </div>
-    </section>
-  `).join("");
-  renderBoardCardActionMenu();
-}
-
 function renderMalotesSection() {
   renderAll();
 }
@@ -7370,10 +6790,6 @@ function renderDenunciasSection() {
   const naoLidas = data.denuncias.filter(item => item.status === "Aberta" || item.status === "Urgente");
   const lidas = data.denuncias.filter(item => item.status === "Lida");
   const arquivadas = data.denuncias.filter(item => item.status === "Arquivada");
-  const selectableDenunciaIds = new Set([...naoLidas, ...lidas].map((item) => String(item.id)));
-  selectedDenunciaIds.forEach((id) => {
-    if (!selectableDenunciaIds.has(String(id))) selectedDenunciaIds.delete(id);
-  });
   const selectDenunciasButton = document.getElementById("select-denuncias");
   const primaryDenunciasTitle = document.getElementById("denuncias-primary-title");
   const toggleArchivedDenunciasButton = document.getElementById("toggle-archived-denuncias");
@@ -7383,10 +6799,10 @@ function renderDenunciasSection() {
 
   if (selectDenunciasButton) {
     selectDenunciasButton.disabled = !naoLidas.length && !lidas.length;
-    selectDenunciasButton.textContent = denunciasSelectionMode ? "Arquivar selecionadas" : "Selecionar denúncias";
+    selectDenunciasButton.textContent = denunciasSelectionMode ? "Arquivar selecionadas" : "Selecionar denÃºncias";
     selectDenunciasButton.className = denunciasSelectionMode ? "danger-button" : "secondary-link";
   }
-  if (primaryDenunciasTitle) primaryDenunciasTitle.textContent = showArchivedDenuncias ? "Arquivadas" : "Não Lidas";
+  if (primaryDenunciasTitle) primaryDenunciasTitle.textContent = showArchivedDenuncias ? "Arquivadas" : "NÃ£o Lidas";
   if (toggleArchivedDenunciasButton) {
     toggleArchivedDenunciasButton.textContent = showArchivedDenuncias ? "Ocultar arquivadas" : "Mostrar arquivadas";
     toggleArchivedDenunciasButton.disabled = false;
@@ -7402,11 +6818,10 @@ function renderDenunciasSection() {
   const cardTemplate = (item, archived = false) => `
     <article class="item-card clickable ${denunciasSelectionMode && !archived ? "selectable-card" : ""}"
              data-action="${denunciasSelectionMode && !archived ? 'toggle-denuncia-selection' : 'ler-denuncia'}"
-             data-id="${escapeHtml(item.id)}"
-             ${!archived ? 'data-context-type="denuncia"' : ""}>
+             data-id="${escapeHtml(item.id)}">
       <div class="item-topline">
         <p class="item-title">
-          ${!archived && denunciasSelectionMode ? `<input class="denuncia-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar denúncia de ${escapeHtml(item.createdAt)}" data-action="no-op" ${selectedDenunciaIds.has(String(item.id)) ? "checked" : ""} />` : ""}
+          ${!archived && denunciasSelectionMode ? `<input class="denuncia-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar denÃºncia de ${escapeHtml(item.createdAt)}" data-action="no-op" />` : ""}
           Denuncia anonima
         </p>
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
@@ -7431,8 +6846,6 @@ function renderDenunciasSection() {
 }
 
 function renderAll() {
-
-  document.getElementById("app-shell")?.classList.add("is-ready");
   renderCurrentUser();
   applyRoleAccess();
   renderAccountSettings();
@@ -7453,17 +6866,15 @@ function renderAll() {
 
   renderVtRegistros();
   renderDocumentosContratados();
-  renderDisciplinaryRecords();
 
   renderChamadosSection();
-  renderBoards();
 
   updateVagasFilterClearButton();
   const vagasFilters = getVagasFilterValues();
   renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
     const candidaturas = getVagaCandidaturas(item.id, vagasFilters);
     const totalCandidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id) === String(item.id)).length;
-    let candidaturasHtml = `<p class="empty-candidates">Nenhum currículo recebido.</p>`;
+    let candidaturasHtml = `<p class="empty-candidates">Nenhum currÃ­culo recebido.</p>`;
     if (totalCandidaturas > 0 && !candidaturas.length) {
       candidaturasHtml = `<p class="empty-candidates">Nenhum candidato encontrado para o filtro aplicado.</p>`;
     }
@@ -7476,7 +6887,7 @@ function renderAll() {
             <span class="meta-line">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
             <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
           </p>
-          <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}" data-private-storage-name="${escapeHtml(getResumeDownloadName(c))}">Ver Currículo</button>
+          <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver CurrÃ­culo</button>
         </div>
       `).join("");
     }
@@ -7485,39 +6896,21 @@ function renderAll() {
       <article class="item-card public-job-card">
         <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="tag">${escapeHtml(item.status)}</span></div>
         <p><strong>Unidade destinada:</strong> ${escapeHtml(getCanonicalUnit(item.unidade) || "Nao informada.")}</p>
-        <p><strong>Descrição</strong><br><br>${escapeHtml(item.descricao || "Descricao nao informada.")}</p>
-        <p><strong>Requisitos</strong><br><br>${escapeHtml(item.requisitos || "Nao informado.")}</p>
+        <p>${escapeHtml(item.descricao || "Descricao nao informada.")}</p>
+        <p><strong>Requisitos:</strong> ${escapeHtml(item.requisitos || "Nao informado.")}</p>
         <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</p>
         <div class="job-actions">
           <button class="secondary-link" type="button" data-action="editar-vaga" data-id="${escapeHtml(item.id)}">Editar</button>
           <button class="danger-button" type="button" data-action="excluir-vaga" data-id="${escapeHtml(item.id)}">Deletar</button>
         </div>
-        <div class="candidate-list"><p class="candidate-list-title">Currículos Recebidos (${candidaturas.length}${candidaturas.length !== totalCandidaturas ? ` de ${totalCandidaturas}` : ""})</p>${candidaturasHtml}</div>
+        <div class="candidate-list"><p class="candidate-list-title">CurrÃ­culos Recebidos (${candidaturas.length}${candidaturas.length !== totalCandidaturas ? ` de ${totalCandidaturas}` : ""})</p>${candidaturasHtml}</div>
       </article>
     `;
   });
 
-  applyEmojiImages(document.getElementById("vagas-list"));
-
   renderCalendar();
   renderDocumentRecords();
   renderTeamUsers();
-
-  try { window.notificationTracker?.loadNotifications(); } catch (_) {}
-}
-
-const PRESENCE_ONLINE_THRESHOLD_MS = 45000;
-
-function isUserOnline(authorName) {
-  const normalized = normalizeLoginName(authorName);
-  if (normalized === normalizeLoginName(getCurrentUserName())) return true;
-  const user = (data.usuarios || []).find((u) => normalizeLoginName(u.nome) === normalized);
-  if (!user?.isOnline) return false;
-  // Rede de seguranca: se o navegador fechou sem disparar o aviso de saida
-  // (crash, forcar fechar etc.), o "is_online" pode ficar preso em true -
-  // nesse caso, o last_seen desatualizado ainda derruba o status pra offline.
-  if (!user.lastSeen) return false;
-  return Date.now() - new Date(user.lastSeen).getTime() < PRESENCE_ONLINE_THRESHOLD_MS;
 }
 
 function getAuthorAvatar(authorName, knownAvatarPath = "") {
@@ -7544,6 +6937,7 @@ function getAuthorAvatar(authorName, knownAvatarPath = "") {
   return `<div class="chat-avatar-fallback">${initial}</div>`;
 }
 
+
 function renderNotificationChatThread(messages = [], options = {}) {
   const normalizedMessages = Array.isArray(messages) ? [...messages] : [];
   normalizedMessages.sort((a, b) => {
@@ -7553,7 +6947,7 @@ function renderNotificationChatThread(messages = [], options = {}) {
   });
 
   if (!normalizedMessages.length) {
-    return `<p class="empty-state">Nenhuma mensagem disponível para exibição.</p>`;
+    return `<p class="empty-state">Nenhuma mensagem disponÃ­vel para exibiÃ§Ã£o.</p>`;
   }
 
   const currentUser = typeof getCurrentUserName === "function" ? getCurrentUserName() : "";
@@ -7600,6 +6994,8 @@ function openDashboardActivity(index) {
 
   const hasChatMessages = Array.isArray(item.chatMessages) && item.chatMessages.length;
 
+  // Mensagens abertas pelo acompanhamento principal devem usar exatamente
+  // o mesmo modal/detalhe do painel completo de notificaÃ§Ãµes.
   if (hasChatMessages && window.notificationTracker && typeof window.notificationTracker.openModal === "function") {
     const tracker = window.notificationTracker;
     tracker.openModal();
@@ -7623,8 +7019,8 @@ function openDashboardActivity(index) {
       unread: Boolean(item.unread),
       status: item.unread ? "unread" : "pending",
       view: "comunicacao",
-      icon: "💬",
-      badgeText: item.unread ? "Não lido" : "",
+      icon: "ðŸ’¬",
+      badgeText: item.unread ? "NÃ£o lido" : "",
       messageIds: Array.isArray(item.messageIds) ? item.messageIds.map(String) : [],
       chatMessages: item.chatMessages,
     };
@@ -7652,7 +7048,7 @@ function openDashboardActivity(index) {
       <div class="tracker-notification-detail mensagem dashboard-message-detail-fallback">
         <div class="tracker-detail-card">
           <div class="tracker-detail-topline">
-            <div class="tracker-detail-icon">💬</div>
+            <div class="tracker-detail-icon">ðŸ’¬</div>
             <div>
               <span class="tracker-notification-type">Mensagem RH</span>
               <h3>${escapeHtml(item.title || "Mensagens do RH")}</h3>
@@ -7663,7 +7059,7 @@ function openDashboardActivity(index) {
         </div>
       </div>`;
   } else {
-    const details = String(item.details || item.text || "Sem detalhes disponíveis.")
+    const details = String(item.details || item.text || "Sem detalhes disponÃ­veis.")
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
@@ -7672,7 +7068,7 @@ function openDashboardActivity(index) {
       const detail = details[detailIndex];
       if (/^Itens (do malote|solicitados):$/i.test(detail)) {
         const itemLines = [];
-        while (details[detailIndex + 1] && !/^(Observações|Status|Data):/i.test(details[detailIndex + 1])) {
+        while (details[detailIndex + 1] && !/^(ObservaÃ§Ãµes|Status|Data):/i.test(details[detailIndex + 1])) {
           detailIndex += 1;
           itemLines.push(details[detailIndex]);
         }
@@ -7734,8 +7130,6 @@ function getDocumentRecordCpf(item = {}) {
 function filterDocumentRecords(items = []) {
   const filters = getDocumentFilterValues();
   return items.filter((item) => {
-    if (DISCIPLINARY_DOCUMENT_TYPES.has(item.type)) return false;
-
     if (filters.nome) {
       const collaboratorName = String(item.formData?.colaborador || item.summary || "").toLowerCase();
       if (!collaboratorName.includes(filters.nome)) return false;
@@ -7752,175 +7146,11 @@ function filterDocumentRecords(items = []) {
   });
 }
 
-function getDisciplinaryRecords() {
-  return (data.documentos || [])
-    .filter((item) => DISCIPLINARY_DOCUMENT_TYPES.has(item.type))
-    .sort((a, b) => new Date(b.updatedSortAt || b.sortAt || 0) - new Date(a.updatedSortAt || a.sortAt || 0));
-}
-
-function getActiveDisciplinaryType() {
-  const activeTab = document.querySelector(".disciplinary-tab.active");
-  const type = activeTab?.dataset.disciplinaryDoc;
-  return DISCIPLINARY_DOCUMENT_TYPES.has(type) ? type : "advertencia";
-}
-
-function getDisciplinaryTypeLabel(type = getActiveDisciplinaryType()) {
-  return type === "suspensao" ? "Suspensoes" : "Advertencias";
-}
-
-function getDisciplinaryRecordsByType(type = getActiveDisciplinaryType()) {
-  return getDisciplinaryRecords().filter((item) => item.type === type);
-}
-
-function getDisciplinaryFilterValues() {
-  return {
-    nome: String(document.getElementById("disciplinary-filter-name")?.value || "").trim().toLowerCase(),
-    data: String(document.getElementById("disciplinary-filter-date")?.value || "").trim().toLowerCase(),
-    unidade: String(document.getElementById("disciplinary-filter-unit")?.value || "").trim(),
-    observacoes: String(document.getElementById("disciplinary-filter-notes")?.value || "").trim().toLowerCase(),
-  };
-}
-
-function updateDisciplinaryFilterClearButton() {
-  const clearButton = document.getElementById("clear-disciplinary-filters");
-  if (!clearButton) return;
-  const filters = getDisciplinaryFilterValues();
-  clearButton.hidden = !Boolean(filters.nome || filters.data || filters.unidade || filters.observacoes);
-}
-
-function matchesDisciplinaryMonthFilter(rawDate, filter) {
-  if (!filter) return true;
-  const normalizedFilter = String(filter || "").replace(/\D/g, "");
-  if (!normalizedFilter) return true;
-  const formattedDate = formatFormDate(rawDate);
-  const parts = formattedDate.split("/");
-  const month = parts[1] || "";
-  const compactMonth = String(Number(month || 0));
-  return month === normalizedFilter.padStart(2, "0") || compactMonth === normalizedFilter;
-}
-
-function filterDisciplinaryRecords(items = []) {
-  const filters = getDisciplinaryFilterValues();
-  return items.filter((item) => {
-    const formData = item.formData || {};
-    if (filters.nome && !String(formData.colaborador || item.summary || "").toLowerCase().includes(filters.nome)) return false;
-    if (filters.data && !matchesDisciplinaryMonthFilter(formData.data_medida, filters.data)) return false;
-    if (filters.unidade && String(formData.unidade || "") !== filters.unidade) return false;
-    if (filters.observacoes && !String(formData.observacoes || "").toLowerCase().includes(filters.observacoes)) return false;
-    return true;
-  });
-}
-
-function getDisciplinaryReportFilterLabel(useFilters = true) {
-  if (!useFilters) return "Todos os registros";
-  const filters = getDisciplinaryFilterValues();
-  const parts = [];
-  if (filters.nome) parts.push(`Nome: ${filters.nome}`);
-  if (filters.data) parts.push(`Mes: ${filters.data}`);
-  if (filters.unidade) parts.push(`Unidade: ${filters.unidade}`);
-  if (filters.observacoes) parts.push(`Observacoes: ${filters.observacoes}`);
-  return parts.length ? parts.join(" | ") : "Sem filtros ativos";
-}
-
-function getDisciplinaryReportRows(useFilters = true, type = getActiveDisciplinaryType()) {
-  const typedRecords = getDisciplinaryRecordsByType(type);
-  const records = useFilters ? filterDisciplinaryRecords(typedRecords) : typedRecords;
-  return records.map((item) => {
-    const formData = item.formData || {};
-    return {
-      nome: formData.colaborador || item.summary || "Funcionario nao informado",
-      dataMedida: formatFormDate(formData.data_medida || ""),
-      unidade: formData.unidade || "Unidade nao informada",
-      observacoes: formData.observacoes || "",
-    };
-  });
-}
-
-function showDisciplinaryReportMenu() {
-  const existing = document.getElementById("custom-modal");
-  if (existing) existing.remove();
-  const type = getActiveDisciplinaryType();
-  const typeLabel = getDisciplinaryTypeLabel(type);
-  const typedRecords = getDisciplinaryRecordsByType(type);
-  const filteredCount = filterDisciplinaryRecords(typedRecords).length;
-  const totalCount = typedRecords.length;
-  const overlay = document.createElement("div");
-  overlay.id = "custom-modal";
-  overlay.className = "modal-overlay";
-  overlay.innerHTML = `
-    <div class="modal-card vt-report-modal">
-      <div class="modal-header info">Relatorio de ${escapeHtml(typeLabel)}</div>
-      <div class="modal-body">
-        <p>Escolha quais registros deseja exportar em .xlsx.</p>
-        <div class="vt-report-options">
-          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="filtered" data-type="${escapeHtml(type)}">
-            <span>Registros filtrados</span>
-            <small>${escapeHtml(String(filteredCount))} registro(s) - ${escapeHtml(getDisciplinaryReportFilterLabel(true))}</small>
-          </button>
-          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="all" data-type="${escapeHtml(type)}">
-            <span>Todos os registros</span>
-            <small>${escapeHtml(String(totalCount))} registro(s) cadastrados</small>
-          </button>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="secondary-link" type="button" data-action="close-modal">Cancelar</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-}
-
-function getDisciplinaryAttachment(formData = {}) {
-  const anexo = formData.anexo || formData.attachment || {};
-  return anexo && typeof anexo === "object" ? anexo : {};
-}
-
-function renderDisciplinaryRecords() {
-  const target = document.getElementById("disciplinary-records");
-  if (!target) return;
-
-  updateDisciplinaryFilterClearButton();
-  const records = filterDisciplinaryRecords(getDisciplinaryRecords());
-  if (!records.length) {
-    target.innerHTML = '<p class="empty-state">Nenhum registro encontrado.</p>';
-    return;
-  }
-
-  target.innerHTML = records.map((item) => {
-    const formData = item.formData || {};
-    const attachment = getDisciplinaryAttachment(formData);
-    const attachmentButton = attachment.url
-      ? `<button type="button" class="tag tag-button teal-tag-button" data-download-url="${escapeHtml(attachment.url)}" data-download-name="${escapeHtml(attachment.name || "anexo")}">Baixar anexo</button>`
-      : "";
-    const dateLabel = formData.data_medida ? formatFormDate(formData.data_medida) : "Data nao informada";
-    const unidade = formData.unidade || "Unidade nao informada";
-    const observacoes = formData.observacoes || "Sem observacoes.";
-
-    return `
-      <article class="item-card">
-        <div class="item-topline">
-          <p class="item-title">${escapeHtml(documentLabels[item.type] || item.type)}</p>
-          <div>
-            <span class="tag">${escapeHtml(item.createdAt)}</span>
-            ${attachmentButton}
-            <button type="button" class="tag alert tag-button" data-action="excluir-documento" data-id="${escapeHtml(item.id)}">Excluir</button>
-          </div>
-        </div>
-        <p><strong>${escapeHtml(item.summary || "Funcionario nao informado")}</strong></p>
-        <p class="item-meta">Data: ${escapeHtml(dateLabel)} | Unidade: ${escapeHtml(unidade)}</p>
-        <p class="item-meta">${escapeHtml(observacoes)}</p>
-        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}${item.updatedAt ? ` em ${escapeHtml(item.updatedAt)}` : ""}</p>
-      </article>
-    `;
-  }).join("");
-}
-
 function renderDocumentRecords() {
   const target = document.getElementById("document-records");
   if (!target) return;
 
-  const records = filterDocumentRecords(data.documentos || []);
+  const records = filterDocumentRecords(documentRecords);
 
   if (!records.length) {
     target.innerHTML = '<p class="empty-state">Nenhum registro salvo ainda.</p>';
@@ -7966,16 +7196,11 @@ function renderChat() {
   const pollMenuOption = document.querySelector('[data-attach-type="poll"]');
   if (!activeChannel) {
     clearChatMessageFilter();
-    if (title) title.textContent = "Comunicação interna";
+    if (title) title.textContent = "ComunicaÃ§Ã£o interna";
     if (subtitle) subtitle.textContent = "Selecione um canal para abrir a conversa";
     if (messageInput) {
       messageInput.placeholder = "Escolha um chat ao lado para enviar mensagens";
       messageInput.disabled = true;
-    }
-    const idleEditor = getChatComposerEditor();
-    if (idleEditor) {
-      idleEditor.dataset.placeholder = "Escolha um chat ao lado para enviar mensagens";
-      idleEditor.setAttribute("contenteditable", "false");
     }
     if (sendButton) sendButton.disabled = true;
     if (fileInput) fileInput.disabled = true;
@@ -7993,7 +7218,7 @@ function renderChat() {
     }
     closeChatAttachMenu();
     closeChatEmojiMenu();
-    target.innerHTML = '<p class="empty-state">Selecione um canal de comunicação para visualizar as mensagens.</p>';
+    target.innerHTML = '<p class="empty-state">Selecione um canal de comunicaÃ§Ã£o para visualizar as mensagens.</p>';
     return;
   }
 
@@ -8002,11 +7227,6 @@ function renderChat() {
   if (messageInput) {
     messageInput.placeholder = isGeneralChatChannel(activeChannel.id) ? `Escreva em ${activeChannel.label}` : `Mensagem para ${activeChannel.label}`;
     messageInput.disabled = false;
-  }
-  const activeEditor = getChatComposerEditor();
-  if (activeEditor) {
-    activeEditor.dataset.placeholder = isGeneralChatChannel(activeChannel.id) ? `Escreva em ${activeChannel.label}` : `Mensagem para ${activeChannel.label}`;
-    activeEditor.setAttribute("contenteditable", "true");
   }
   if (sendButton) sendButton.disabled = false;
   if (fileInput) fileInput.disabled = false;
@@ -8024,6 +7244,7 @@ function renderChat() {
     fileButton.disabled = false;
     fileButton.classList.remove("disabled");
   }
+
 
   const normalizedFilter = normalizeSettingsText(chatMessageFilterQuery);
   const messages = data.comunicados.filter((item) => {
@@ -8074,7 +7295,6 @@ function renderChat() {
   }).join("");
 
   target.innerHTML = chatHtml;
-  applyEmojiImages(target);
 
   target.scrollTop = target.scrollHeight;
   hydrateChatMediaPreviews();
@@ -8085,11 +7305,11 @@ function renderChat() {
 function renderChatAttachment(attachment) {
   if (!attachment) return "";
 
-  const bucket = escapeHtml(getHubSupabaseConfig().chatFilesBucket || "hub-chat-files");
+  const bucket = escapeHtml(getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files");
   const path = escapeHtml(attachment.url || "");
   const name = escapeHtml(attachment.name || "Arquivo");
   const size = escapeHtml(formatFileSize(attachment.size));
-  const chip = `<button class="attachment-chip" type="button" data-private-storage-bucket="${bucket}" data-private-storage-path="${path}" data-private-storage-name="${name}">Arquivo: ${name} ${size}</button>`;
+  const chip = `<button class="attachment-chip" type="button" data-private-storage-bucket="${bucket}" data-private-storage-path="${path}">Arquivo: ${name} ${size}</button>`;
 
   if (!attachment.url) return chip;
 
@@ -8129,10 +7349,10 @@ function createChatPollOptionField(index, required = false) {
   const canRemove = index > 2;
   return `
     <div class="chat-poll-option-editor" data-chat-poll-option>
-      <label>Opção ${index}
-        <input name="opcao" type="text" maxlength="80" placeholder="${required ? (index === 1 ? "Primeira opção" : "Segunda opção") : "Opcional"}" ${required ? "required" : ""} />
+      <label>OpÃ§Ã£o ${index}
+        <input name="opcao" type="text" maxlength="80" placeholder="${required ? (index === 1 ? "Primeira opÃ§Ã£o" : "Segunda opÃ§Ã£o") : "Opcional"}" ${required ? "required" : ""} />
       </label>
-      ${canRemove ? `<button class="secondary-link chat-poll-remove-option" type="button" data-action="remove-chat-poll-option" aria-label="Excluir opção ${index}">Excluir</button>` : ""}
+      ${canRemove ? `<button class="secondary-link chat-poll-remove-option" type="button" data-action="remove-chat-poll-option" aria-label="Excluir opÃ§Ã£o ${index}">Excluir</button>` : ""}
     </div>
   `;
 }
@@ -8145,16 +7365,16 @@ function refreshChatPollOptionFields(formElement) {
     const label = field.querySelector("label");
     const input = field.querySelector('input[name="opcao"]');
     const removeButton = field.querySelector('[data-action="remove-chat-poll-option"]');
-    if (label) label.firstChild.textContent = `Opção ${optionNumber}`;
+    if (label) label.firstChild.textContent = `OpÃ§Ã£o ${optionNumber}`;
     if (input) {
       input.required = optionNumber <= 2;
-      if (optionNumber === 1) input.placeholder = "Primeira opção";
-      else if (optionNumber === 2) input.placeholder = "Segunda opção";
+      if (optionNumber === 1) input.placeholder = "Primeira opÃ§Ã£o";
+      else if (optionNumber === 2) input.placeholder = "Segunda opÃ§Ã£o";
       else input.placeholder = "Opcional";
     }
     if (removeButton) {
       removeButton.hidden = optionNumber <= 2;
-      removeButton.setAttribute("aria-label", `Excluir opção ${optionNumber}`);
+      removeButton.setAttribute("aria-label", `Excluir opÃ§Ã£o ${optionNumber}`);
     }
   });
 }
@@ -8164,7 +7384,7 @@ function addChatPollOptionField(formElement) {
   if (!list) return;
   const currentTotal = list.querySelectorAll('input[name="opcao"]').length;
   if (currentTotal >= 8) {
-    showModal("Limite de opções", "A enquete pode ter no máximo 8 opções.", "info");
+    showModal("Limite de opÃ§Ãµes", "A enquete pode ter no mÃ¡ximo 8 opÃ§Ãµes.", "info");
     return;
   }
   list.insertAdjacentHTML("beforeend", createChatPollOptionField(currentTotal + 1));
@@ -8177,7 +7397,7 @@ function removeChatPollOptionField(button) {
   const list = formElement?.querySelector("#chat-poll-options");
   const fields = list?.querySelectorAll("[data-chat-poll-option]") || [];
   if (fields.length <= 2) {
-    showModal("Mínimo de opções", "A enquete precisa ter pelo menos 2 opções.", "info");
+    showModal("MÃ­nimo de opÃ§Ãµes", "A enquete precisa ter pelo menos 2 opÃ§Ãµes.", "info");
     return;
   }
   button.closest("[data-chat-poll-option]")?.remove();
@@ -8200,13 +7420,13 @@ function showChatPollModal() {
       <div class="modal-header info">Criar enquete</div>
       <form class="modal-body chat-poll-form" id="chat-poll-form">
         <label>Pergunta
-          <input name="pergunta" type="text" maxlength="180" placeholder="Ex: Qual melhor dia para reunião?" required />
+          <input name="pergunta" type="text" maxlength="180" placeholder="Ex: Qual melhor dia para reuniÃ£o?" required />
         </label>
         <div class="chat-poll-options-editor" id="chat-poll-options">
           ${createChatPollOptionField(1, true)}
           ${createChatPollOptionField(2, true)}
         </div>
-        <button class="secondary-link chat-poll-add-option" type="button" data-action="add-chat-poll-option">Adicionar opção</button>
+        <button class="secondary-link chat-poll-add-option" type="button" data-action="add-chat-poll-option">Adicionar opÃ§Ã£o</button>
       </form>
       <div class="modal-footer">
         <button class="secondary-link" type="button" data-action="close-modal">Cancelar</button>
@@ -8300,7 +7520,7 @@ async function votarEnqueteChat(messageId, optionIndex) {
 function hydrateChatMediaPreviews() {
   document.querySelectorAll("[data-chat-image-preview], [data-chat-audio-preview]").forEach((media) => {
     const path = media.dataset.chatImagePath || media.dataset.chatAudioPath || media.dataset.privateStoragePath || "";
-    const bucket = media.dataset.chatImageBucket || media.dataset.chatAudioBucket || media.dataset.privateStorageBucket || getHubSupabaseConfig().chatFilesBucket || "hub-chat-files";
+    const bucket = media.dataset.chatImageBucket || media.dataset.chatAudioBucket || media.dataset.privateStorageBucket || getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files";
     if (!path || media.dataset.previewLoaded === "true") return;
 
     const cacheKey = `${bucket}:${path}`;
@@ -8336,7 +7556,7 @@ document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
       closeMobileMenu();
       return;
     }
-    if (isManagerUser() && !["comunicacao", "documentos", "advertencias-suspensoes", "conta"].includes(button.dataset.view)) {
+    if (isManagerUser() && !["comunicacao", "documentos", "conta"].includes(button.dataset.view)) {
       activateView("documentos");
       closeMobileMenu();
       return;
@@ -8381,8 +7601,6 @@ document.getElementById("malote-destino-filter")?.addEventListener("change", () 
   renderAll();
 });
 
-document.getElementById("malote-status-filter")?.addEventListener("change", renderAll);
-
 document.getElementById("malote-filter-colaborador")?.addEventListener("input", renderAll);
 
 document.getElementById("malote-code-search")?.addEventListener("input", () => {
@@ -8393,9 +7611,13 @@ document.getElementById("malote-code-search")?.addEventListener("input", () => {
 
 document.getElementById("chamado-filter-destino")?.addEventListener("change", renderChamadosSection);
 document.getElementById("chamado-filter-colaborador")?.addEventListener("input", renderChamadosSection);
+document.getElementById("chamado-filter-codigo")?.addEventListener("input", (event) => {
+  event.currentTarget.value = formatChamadoFilterCode(event.currentTarget.value);
+  renderChamadosSection();
+});
 document.getElementById("chamado-filter-mes")?.addEventListener("change", renderChamadosSection);
 document.getElementById("limpar-filtros-chamados")?.addEventListener("click", () => {
-  ["chamado-filter-destino", "chamado-filter-colaborador", "chamado-filter-mes"].forEach((id) => {
+  ["chamado-filter-destino", "chamado-filter-colaborador", "chamado-filter-codigo", "chamado-filter-mes"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
@@ -8437,24 +7659,6 @@ document.getElementById("clear-document-filters")?.addEventListener("click", () 
   });
   renderDocumentRecords();
   updateDocumentFilterClearButton();
-});
-
-document.getElementById("disciplinary-filter-name")?.addEventListener("input", renderDisciplinaryRecords);
-document.getElementById("disciplinary-filter-date")?.addEventListener("change", renderDisciplinaryRecords);
-document.getElementById("disciplinary-filter-unit")?.addEventListener("change", renderDisciplinaryRecords);
-document.getElementById("disciplinary-filter-notes")?.addEventListener("input", renderDisciplinaryRecords);
-document.getElementById("clear-disciplinary-filters")?.addEventListener("click", () => {
-  ["disciplinary-filter-name", "disciplinary-filter-date", "disciplinary-filter-unit", "disciplinary-filter-notes"].forEach((id) => {
-    const field = document.getElementById(id);
-    if (field) field.value = "";
-  });
-  renderDisciplinaryRecords();
-});
-
-document.querySelectorAll(".file-upload-input, .disciplinary-file-input").forEach(updateFileUploadLabel);
-document.addEventListener("change", (event) => {
-  const input = event.target.closest?.(".file-upload-input, .disciplinary-file-input");
-  if (input) updateFileUploadLabel(input);
 });
 
 document.getElementById("contratado-filter-nome")?.addEventListener("input", () => {
@@ -8522,107 +7726,33 @@ document.getElementById("toggle-archived-chamados")?.addEventListener("click", (
   renderAll();
 });
 
-document.getElementById("board-form")?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const nome = String(new FormData(form).get("nome") || "").trim();
-  if (!nome) return;
-  ensureBoardsData();
-  const board = {
-    id: generateUUID(),
-    nome,
-    listas: [
-      { id: generateUUID(), titulo: "A fazer", cartoes: [] },
-      { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
-      { id: generateUUID(), titulo: "Concluido", cartoes: [] },
-    ],
-    createdAt: todayLabel(),
-    createdBy: getCurrentUserName(),
-  };
-  if (isAuthenticated()) {
-    try {
-      const inserted = await hubApi.insert("quadros", toDbPayload("quadros", board));
-      const mapped = mapRows("quadros", [inserted])[0];
-      data.quadros.unshift(mapped);
-      activeBoardId = mapped.id;
-      form.reset();
-      saveLocalData();
-      renderBoards();
-      setSyncStatus("HUB online", true);
-      return;
-    } catch (error) {
-      console.error("Erro ao criar quadro:", error);
-      setSyncStatus("Erro ao criar quadro", false);
-      showModal("Erro ao Salvar", error?.message || "Nao foi possivel criar o quadro no banco.", "error");
-      return;
-    }
-  }
-  data.quadros.push(board);
-  activeBoardId = board.id;
-  form.reset();
-  await persistBoards(board);
-});
-
-document.getElementById("board-card-form")?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const board = getActiveBoard();
-  if (!board) return;
-  const form = event.currentTarget;
-  const values = new FormData(form);
-  const editListValue = String(values.get("edit_list_index") || "");
-  const editCardValue = String(values.get("edit_card_index") || "");
-  const editListIndex = editListValue === "" ? -1 : Number(editListValue);
-  const editCardIndex = editCardValue === "" ? -1 : Number(editCardValue);
-  const isEditing = editListIndex >= 0 && editCardIndex >= 0 && board.listas?.[editListIndex]?.cartoes?.[editCardIndex];
-  const list = isEditing ? board.listas?.[editListIndex] : board.listas?.[0];
-  if (!list) return;
-  const cardPayload = {
-    id: isEditing ? board.listas[editListIndex].cartoes[editCardIndex].id : generateUUID(),
-    titulo: String(values.get("titulo") || "").trim(),
-    descricao: String(values.get("descricao") || "").trim(),
-    prioridade: String(values.get("prioridade") || "Normal"),
-    createdAt: isEditing ? board.listas[editListIndex].cartoes[editCardIndex].createdAt : todayLabel(),
-    createdBy: isEditing ? board.listas[editListIndex].cartoes[editCardIndex].createdBy : getCurrentUserName(),
-    updatedAt: isEditing ? todayLabel() : "",
-    updatedBy: isEditing ? getCurrentUserName() : "",
-  };
-  if (isEditing) {
-    board.listas[editListIndex].cartoes.splice(editCardIndex, 1);
-  }
-  list.cartoes.push(cardPayload);
-  resetBoardCardForm();
-  await persistBoards(board);
-});
-
-document.getElementById("cancelar-edicao-board-card")?.addEventListener("click", resetBoardCardForm);
-
 document.getElementById("select-denuncias")?.addEventListener("click", () => {
   if (!denunciasSelectionMode) {
     denunciasSelectionMode = true;
     showArchivedDenuncias = false;
-    selectedDenunciaIds.clear();
     renderAll();
     return;
   }
 
-  const selectedIds = Array.from(selectedDenunciaIds).filter(Boolean);
+  const selectedIds = Array.from(document.querySelectorAll(".denuncia-select:checked"))
+    .map((input) => input.value)
+    .filter(Boolean);
 
   if (!selectedIds.length) {
-    showModal("Nenhuma denúncia selecionada", "Selecione pelo menos uma denúncia para arquivar.", "error");
+    showModal("Nenhuma denÃºncia selecionada", "Selecione pelo menos uma denÃºncia para arquivar.", "error");
     return;
   }
 
   showConfirmActionModal({
-    title: "Arquivar denúncias",
-    text: `Deseja arquivar ${selectedIds.length} denúncia(s) selecionada(s)?`,
+    title: "Arquivar denÃºncias",
+    text: `Deseja arquivar ${selectedIds.length} denÃºncia(s) selecionada(s)?`,
     confirmText: "Arquivar",
     onConfirm: async () => {
       const results = await Promise.all(selectedIds.map((id) => atualizarStatusDenuncia(id, "Arquivada")));
       if (results.every(Boolean)) {
         denunciasSelectionMode = false;
-        selectedDenunciaIds.clear();
         renderAll();
-        showModal("Denúncias arquivadas", "As denúncias selecionadas foram movidas para Arquivadas.", "info");
+        showModal("DenÃºncias arquivadas", "As denÃºncias selecionadas foram movidas para Arquivadas.", "info");
       }
     },
   });
@@ -8630,7 +7760,6 @@ document.getElementById("select-denuncias")?.addEventListener("click", () => {
 
 document.getElementById("exit-denuncias-selection")?.addEventListener("click", () => {
   denunciasSelectionMode = false;
-  selectedDenunciaIds.clear();
   renderAll();
 });
 
@@ -8641,12 +7770,12 @@ document.getElementById("toggle-archived-denuncias")?.addEventListener("click", 
 
 document.querySelectorAll(".doc-tab").forEach((button) => {
   button.addEventListener("click", () => {
-    if (button.dataset.disciplinaryDoc) return;
     document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
     document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
     document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
 
+    // Cancela a ediÃ§Ã£o se o usuÃ¡rio trocar de aba de documento
     if (window.editingDocId) {
       window.editingDocId = null;
       document.querySelectorAll("[data-doc-form]").forEach(form => {
@@ -8655,115 +7784,6 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
         if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
       });
     }
-  });
-});
-
-document.querySelectorAll(".disciplinary-tab").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".disciplinary-tab").forEach((item) => item.classList.remove("active"));
-    document.querySelectorAll(".disciplinary-view").forEach((view) => view.classList.remove("active"));
-    button.classList.add("active");
-    document.getElementById(`disciplinary-${button.dataset.disciplinaryDoc}`)?.classList.add("active");
-  });
-});
-
-function validateDisciplinaryAttachment(file) {
-  if (!file || !file.name) return "Anexe uma imagem, PDF ou arquivo Word.";
-  if (file.size <= 0) return "O arquivo anexado esta vazio.";
-  if (file.size > DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES) return "O anexo deve ter ate 10 MB.";
-  const mimeType = String(file.type || "").toLowerCase();
-  const extension = String(file.name || "").split(".").pop()?.toLowerCase() || "";
-  if (mimeType.startsWith("image/")) return null;
-  if (DISCIPLINARY_ALLOWED_MIME_TYPES.has(mimeType)) return null;
-  if (DISCIPLINARY_ALLOWED_EXTENSIONS.has(extension)) return null;
-  return "Anexe somente imagem, PDF ou arquivo Word.";
-}
-
-function updateFileUploadLabel(input) {
-  const field = input?.closest(".file-upload-field, .disciplinary-file-field");
-  const label = field?.querySelector(".file-upload-name, .disciplinary-file-name");
-  if (!label) return;
-  const files = Array.from(input.files || []).filter((file) => file && file.name);
-  if (!files.length) {
-    label.textContent = label.dataset.emptyLabel || "Nenhum arquivo escolhido";
-    return;
-  }
-  label.textContent = files.length === 1 ? files[0].name : `${files.length} arquivos escolhidos`;
-}
-
-function resetFileUploadLabels(root = document) {
-  root.querySelectorAll?.(".file-upload-input, .disciplinary-file-input").forEach(updateFileUploadLabel);
-}
-
-function updateDisciplinaryFileLabel(input) {
-  updateFileUploadLabel(input);
-}
-
-function clearDisciplinaryFormDrafts() {
-  document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
-    formElement.reset();
-    formElement.querySelectorAll("input, select, textarea").forEach((field) => {
-      field.setCustomValidity?.("");
-      if (field.type === "file") field.value = "";
-    });
-    resetFileUploadLabels(formElement);
-  });
-}
-
-document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
-  formElement.querySelectorAll(".disciplinary-file-input").forEach((input) => {
-    updateDisciplinaryFileLabel(input);
-  });
-
-  formElement.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const type = event.currentTarget.dataset.disciplinaryForm;
-    const file = form.get("anexo");
-    const fileError = validateDisciplinaryAttachment(file);
-    if (fileError) {
-      showModal("Anexo invalido", fileError, "error");
-      return;
-    }
-
-    const colaborador = String(form.get("colaborador") || "").trim();
-    const dataMedida = String(form.get("data_medida") || "").trim();
-    const unidade = String(form.get("unidade") || "").trim();
-    const observacoes = String(form.get("observacoes") || "").trim();
-    if (!colaborador || !dataMedida || !unidade) {
-      showModal("Campos obrigatorios", "Informe funcionario, data e unidade para salvar o registro.", "error");
-      return;
-    }
-
-    let uploaded;
-    try {
-      uploaded = await hubUpload(file, "medidaDisciplinar");
-    } catch (error) {
-      showModal("Erro no Anexo", error?.message || "Nao foi possivel enviar o anexo.", "error");
-      return;
-    }
-
-    const success = await addItem("documentos", {
-      type,
-      summary: colaborador,
-      details: `${documentLabels[type] || type} | Data: ${formatFormDate(dataMedida)} | Unidade: ${unidade}`,
-      formData: {
-        colaborador,
-        data_medida: dataMedida,
-        unidade,
-        observacoes,
-        anexo: {
-          name: file.name || "anexo",
-          size: file.size || 0,
-          type: file.type || "application/octet-stream",
-          path: uploaded.pathname || "",
-          url: uploaded.url || "",
-        },
-      },
-      createdBy: getCurrentUserName(),
-    });
-
-    if (success) clearDisciplinaryFormDrafts();
   });
 });
 
@@ -8799,7 +7819,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
     }
   });
 
-  formElement.addEventListener("submit", async (event) => {
+  formElement.addEventListener("submit", (event) => {
     event.preventDefault();
     normalizeDocumentDateInputs(event.currentTarget);
     const form = new FormData(event.currentTarget);
@@ -8811,29 +7831,45 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
       .map(([key, value]) => `${key}: ${value}`)
       .join(" | ");
 
-    let success;
+    let savedDocId;
 
     if (window.editingDocId) {
-      success = await updateItem("documentos", window.editingDocId, {
-        summary: String(collaborator),
-        details: details || "Registro salvo",
-        formData: Object.fromEntries(entries),
-        updatedBy: getCurrentUserName(),
-      });
+      savedDocId = window.editingDocId;
+      // Atualiza o documento existente
+      const index = documentRecords.findIndex(d => d.id === window.editingDocId);
+      if (index > -1) {
+        documentRecords[index] = {
+          ...documentRecords[index],
+          summary: String(collaborator),
+          details: details || "Registro salvo",
+          formData: Object.fromEntries(entries),
+          updatedBy: getCurrentUserName(),
+          updatedAt: todayLabel(),
+          updatedSortAt: new Date().toISOString(),
+        };
+      }
       window.editingDocId = null;
       const btn = event.currentTarget.querySelector("button[type='submit']");
       if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
     } else {
-      success = await addItem("documentos", {
+      savedDocId = generateUUID();
+      // Cria um novo documento
+      documentRecords.unshift({
+        id: savedDocId,
         type: event.currentTarget.dataset.docForm,
         summary: String(collaborator),
         details: details || "Registro salvo",
         formData: Object.fromEntries(entries),
         createdBy: getCurrentUserName(),
+        createdAt: todayLabel(),
+        sortAt: new Date().toISOString(),
       });
     }
 
-    if (success) event.currentTarget.reset();
+    saveDocumentRecords();
+    renderDocumentRecords();
+
+    event.currentTarget.reset();
   });
 });
 
@@ -8871,7 +7907,7 @@ if (denunciaForm) {
       if (feedback) {
         feedback.textContent = "Denuncia enviada com sucesso. Obrigado pelo relato.";
       }
-      showModal("Denúncia enviada", "Seu relato foi enviado com sucesso e será analisado pela equipe responsável.", "info");
+      showModal("DenÃºncia enviada", "Seu relato foi enviado com sucesso e serÃ¡ analisado pela equipe responsÃ¡vel.", "info");
     }
   });
 }
@@ -8907,32 +7943,19 @@ document.addEventListener("click", (event) => {
 const chatForm = document.getElementById("chat-form");
 if (chatForm) {
   const chatMessageInput = chatForm.querySelector('textarea[name="mensagem"]');
-  const chatMessageEditor = document.getElementById("chat-message-editor");
-
-  chatMessageEditor?.addEventListener("keydown", (event) => {
+  chatMessageInput?.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
     event.preventDefault();
     chatForm.requestSubmit();
   });
 
-  chatMessageEditor?.addEventListener("input", () => {
-    syncChatComposerToTextarea();
-    window.clearTimeout(chatComposerEmojiTimer);
-    chatComposerEmojiTimer = window.setTimeout(convertComposerEmojisPreservingCaret, 80);
-  });
-
-  chatMessageEditor?.addEventListener("paste", (event) => {
-    event.preventDefault();
-    const text = (event.clipboardData || window.clipboardData).getData("text/plain");
-    document.execCommand("insertText", false, text);
-  });
-
+  // Garante que Enter em qualquer elemento do formulÃ¡rio (ex: apÃ³s anexar arquivo) tambÃ©m envia
   chatForm.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
-    if (event.target === chatMessageInput || event.target === chatMessageEditor) return;
-    if (event.target.tagName === "BUTTON") return;
+    if (event.target === chatMessageInput) return; // jÃ¡ tratado acima
+    if (event.target.tagName === "BUTTON") return; // deixa botÃµes funcionarem normalmente
     event.preventDefault();
     chatForm.requestSubmit();
   });
@@ -8962,6 +7985,7 @@ if (chatForm) {
       return;
     }
 
+    // â”€â”€ OTIMISMO: mostra a mensagem imediatamente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const pendingMessages = files.length
       ? files.map((file, index) => {
         const attachmentType = getChatFileMimeType(file);
@@ -8971,7 +7995,7 @@ if (chatForm) {
           canal: activeChatChannel,
           mensagem: index === 0 ? message : "",
           arquivo: { name: file.name, size: file.size, type: attachmentType, url: null },
-          createdAt: new Date().toISOString(),
+          createdAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
           _pending: true,
         };
       })
@@ -8981,18 +8005,17 @@ if (chatForm) {
         canal: activeChatChannel,
         mensagem: message,
         arquivo: null,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
         _pending: true,
       }];
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
     data.comunicados = [...pendingMessages, ...(data.comunicados || [])];
     renderChat();
-
+    // Limpa o formulÃ¡rio imediatamente
     formElement.reset();
-    const composerEditor = getChatComposerEditor();
-    if (composerEditor) composerEditor.innerHTML = "";
     clearChatSelectedFile();
 
+    // â”€â”€ UPLOAD de arquivos em background â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const uploadedFiles = [];
     try {
       for (const file of files) {
@@ -9002,14 +8025,15 @@ if (chatForm) {
       }
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
-
+      // Remove mensagens otimistas em caso de falha
       data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
       renderChat();
       setSyncStatus("Erro no anexo", false);
-      showModal("Erro no Anexo", error?.message || "Nao foi possivel enviar um dos arquivos. Tente novamente.", "error");
+      showModal("Erro no Anexo", "Nao foi possivel enviar um dos arquivos. Confira o bucket hub-chat-files no PostgreSQL.", "error");
       return;
     }
 
+    // â”€â”€ PERSISTÃŠNCIA: remove otimistas e deixa o realtime confirmar â”€â”€â”€â”€â”€â”€â”€
     data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
 
     const payloads = uploadedFiles.length
@@ -9018,14 +8042,12 @@ if (chatForm) {
         canal: activeChatChannel,
         mensagem: index === 0 ? message : "",
         arquivo,
-        createdAt: pendingMessages[index]?.createdAt,
       }))
       : [{
         autor: getCurrentUserName(),
         canal: activeChatChannel,
         mensagem: message,
         arquivo: null,
-        createdAt: pendingMessages[0]?.createdAt,
       }];
 
     const results = [];
@@ -9034,7 +8056,7 @@ if (chatForm) {
     }
 
     if (results.some((success) => !success)) {
-
+      // Restaura o campo se o envio falhar
       renderChat();
     }
   });
@@ -9106,7 +8128,7 @@ if (maloteForm) {
     const id = form.get("id");
     const codigoSolicitacao = String(form.get("codigo_solicitacao") || "").replace(/\D/g, "");
     if (!/^\d{5}$/.test(codigoSolicitacao)) {
-      showModal("Código inválido", "Informe o Código da Solicitação no formato 0000-0.", "error");
+      showModal("CÃ³digo invÃ¡lido", "Informe o CÃ³digo da SolicitaÃ§Ã£o no formato 0000-0.", "error");
       return;
     }
     const colaboradores = readMaloteCollaborators(formElement);
@@ -9155,6 +8177,7 @@ if (vagaForm) {
     const payload = {
       cargo: form.get("cargo"),
       unidade: form.get("unidade"),
+      projeto: "",
       descricao: form.get("descricao"),
       requisitos: form.get("requisitos"),
       status: form.get("status"),
@@ -9178,31 +8201,7 @@ document.getElementById("cancelar-edicao-vaga")?.addEventListener("click", () =>
 
 const eventoForm = document.getElementById("evento-form");
 if (eventoForm) {
-
-  const updateEventoFormByType = () => {
-    const isBirthday = normalizeEventType(eventoForm.elements.tipo?.value) === "aniversario";
-    eventoForm.querySelectorAll("[data-event-title-field], [data-event-required-field], [data-event-optional-field]").forEach((field) => {
-      field.hidden = isBirthday;
-      field.querySelectorAll("input, textarea, select").forEach((input) => {
-        if (input.name === "titulo" || input.name === "horario" || input.name === "responsavel") input.required = !isBirthday;
-        if (isBirthday) {
-          input.value = "";
-          input.setCustomValidity?.("");
-        }
-      });
-    });
-    eventoForm.querySelectorAll("[data-event-birthday-field]").forEach((field) => {
-      field.hidden = !isBirthday;
-      field.querySelectorAll("input").forEach((input) => {
-        input.required = isBirthday;
-        if (!isBirthday) {
-          input.value = "";
-          input.setCustomValidity?.("");
-        }
-      });
-    });
-  };
-
+  // inicializa o campo de data com mÃ¡scara (caso tenha valor default)
   const eventoDataInput = eventoForm.elements.data;
   if (eventoDataInput) {
     eventoDataInput.value = formatEventoDate(eventoDataInput.value);
@@ -9212,7 +8211,7 @@ if (eventoForm) {
       const prev = input.value;
       const next = formatEventoDate(prev);
       input.value = next;
-
+      // reposiciona cursor de forma inteligente
       const diff = next.length - prev.length;
       if (diff !== 0) input.setSelectionRange(pos + diff, pos + diff);
       input.setCustomValidity("");
@@ -9225,6 +8224,7 @@ if (eventoForm) {
     const form = new FormData(formElement);
     const id = form.get("id");
 
+    // converte dd/mm/aaaa â†’ yyyy-mm-dd para salvar
     const dataDisplay = String(form.get("data") || "");
     const dataIso = eventoDateToIso(dataDisplay);
     if (!dataIso) {
@@ -9234,21 +8234,19 @@ if (eventoForm) {
     }
     const year = Number(dataIso.split("-")[0]);
     if (year > 2026) {
-      eventoDataInput?.setCustomValidity("O ano não pode ser superior a 2026.");
+      eventoDataInput?.setCustomValidity("O ano nÃ£o pode ser superior a 2026.");
       eventoDataInput?.reportValidity();
       return;
     }
     eventoDataInput?.setCustomValidity("");
 
-    const isBirthday = normalizeEventType(form.get("tipo")) === "aniversario";
-    const aniversariante = String(form.get("aniversariante") || "").trim();
     const payload = {
-      titulo: isBirthday ? "Aniversário" : form.get("titulo"),
+      titulo: form.get("titulo"),
       data: dataIso,
-      horario: isBirthday ? "" : form.get("horario"),
-      responsavel: isBirthday ? "" : form.get("responsavel"),
-      tipo: isBirthday ? "Aniversário" : form.get("tipo"),
-      descricao: isBirthday ? aniversariante : form.get("descricao"),
+      horario: form.get("horario"),
+      responsavel: form.get("responsavel"),
+      tipo: form.get("tipo"),
+      descricao: form.get("descricao"),
       createdBy: getCurrentUserName(),
     };
     const success = id ? await updateItem("eventos", id, { ...payload, updatedBy: getCurrentUserName() }) : await addItem("eventos", payload);
@@ -9257,12 +8255,8 @@ if (eventoForm) {
       formElement.elements.id.value = "";
       document.getElementById("cancelar-edicao-evento")?.setAttribute("hidden", "");
       formElement.querySelector('button[type="submit"]').textContent = "Registrar evento";
-      updateEventoFormByType();
     }
   });
-
-  eventoForm.elements.tipo?.addEventListener("change", updateEventoFormByType);
-  updateEventoFormByType();
 }
 
 document.getElementById("cancelar-edicao-evento")?.addEventListener("click", () => {
@@ -9271,7 +8265,6 @@ document.getElementById("cancelar-edicao-evento")?.addEventListener("click", () 
   eventoForm.elements.id.value = "";
   document.getElementById("cancelar-edicao-evento").setAttribute("hidden", "");
   eventoForm.querySelector('button[type="submit"]').textContent = "Registrar evento";
-  eventoForm.elements.tipo?.dispatchEvent(new Event("change"));
 });
 
 document.getElementById("toggle-dashboard-calendar-view")?.addEventListener("click", () => {
@@ -9332,15 +8325,15 @@ if (vtForm) {
     const id = form.get("id");
     const values = getVtFormValues(formElement);
     if (!hasFullName(values.colaborador)) {
-      showModal("Colaborador obrigatório", "Informe nome e sobrenome do colaborador para registrar o cálculo de VT.", "error");
+      showModal("Colaborador obrigatÃ³rio", "Informe nome e sobrenome do colaborador para registrar o cÃ¡lculo de VT.", "error");
       return;
     }
     if (!values.unidade) {
-      showModal("Unidade obrigatória", "Informe a unidade do trabalhador para registrar o cálculo de VT.", "error");
+      showModal("Unidade obrigatÃ³ria", "Informe a unidade do trabalhador para registrar o cÃ¡lculo de VT.", "error");
       return;
     }
     if (!VT_MONTH_NAMES.includes(values.mes)) {
-      showModal("Mês obrigatório", "Informe o mês de referência para registrar o cálculo de VT.", "error");
+      showModal("MÃªs obrigatÃ³rio", "Informe o mÃªs de referÃªncia para registrar o cÃ¡lculo de VT.", "error");
       return;
     }
     const success = id
@@ -9348,7 +8341,7 @@ if (vtForm) {
       : await addItem("vtRegistros", { ...values, createdBy: getCurrentUserName() });
     if (success) {
       resetVtForm();
-      showModal(id ? "VT atualizado" : "VT registrado", id ? "O registro de vale-transporte foi atualizado com sucesso." : "O cálculo de vale-transporte foi registrado com sucesso.", "info");
+      showModal(id ? "VT atualizado" : "VT registrado", id ? "O registro de vale-transporte foi atualizado com sucesso." : "O cÃ¡lculo de vale-transporte foi registrado com sucesso.", "info");
     }
   });
   document.getElementById("cancelar-edicao-vt")?.addEventListener("click", resetVtForm);
@@ -9359,7 +8352,6 @@ document.getElementById("vt-filter-nome")?.addEventListener("input", renderVtReg
 document.getElementById("vt-filter-mes")?.addEventListener("change", renderVtRegistros);
 document.getElementById("vt-filter-unidade")?.addEventListener("change", renderVtRegistros);
 document.getElementById("abrir-relatorio-vt")?.addEventListener("click", showVtReportMenu);
-document.getElementById("abrir-relatorio-disciplinary")?.addEventListener("click", showDisciplinaryReportMenu);
 document.getElementById("limpar-filtros-vt")?.addEventListener("click", () => {
   const nameFilter = document.getElementById("vt-filter-nome");
   const monthFilter = document.getElementById("vt-filter-mes");
@@ -9426,13 +8418,13 @@ function showResetPasswordModal() {
       <div class="modal-header info">Redefinir senha</div>
       <div class="modal-body">
         <label class="modal-password-label flush-top">Senha atual
-          <input id="modal-current-pwd" type="password" placeholder="Digite sua senha atual" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" />
+          <input id="modal-current-pwd" type="password" placeholder="Digite sua senha atual" autocomplete="current-password" />
         </label>
         <label class="modal-password-label">Nova senha
-          <input id="modal-new-pwd" type="password" placeholder="Digite a nova senha" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" />
+          <input id="modal-new-pwd" type="password" placeholder="Digite a nova senha" autocomplete="new-password" />
         </label>
         <label class="modal-password-label">Confirmar nova senha
-          <input id="modal-confirm-pwd" type="password" placeholder="Confirme a nova senha" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" />
+          <input id="modal-confirm-pwd" type="password" placeholder="Confirme a nova senha" autocomplete="new-password" />
         </label>
         <p class="form-feedback error modal-error-spacing" id="modal-action-error" hidden></p>
       </div>
@@ -9452,7 +8444,7 @@ function showResetPasswordModal() {
     const errorEl = overlay.querySelector("#modal-action-error");
 
     if (!currentPwd) {
-      errorEl.textContent = "A senha atual é obrigatória.";
+      errorEl.textContent = "A senha atual Ã© obrigatÃ³ria.";
       errorEl.hidden = false;
       return;
     }
@@ -9462,20 +8454,20 @@ function showResetPasswordModal() {
       return;
     }
     if (newPwd !== confirmPwd) {
-      errorEl.textContent = "A confirmação da nova senha não confere.";
+      errorEl.textContent = "A confirmaÃ§Ã£o da nova senha nÃ£o confere.";
       errorEl.hidden = false;
       return;
     }
 
     if (newPwd === currentPwd) {
-      errorEl.textContent = "A nova senha não pode ser igual à senha atual.";
+      errorEl.textContent = "A nova senha nÃ£o pode ser igual Ã  senha atual.";
       errorEl.hidden = false;
       return;
     }
 
     const isPasswordValid = await verifyCurrentPassword(currentPwd);
     if (!isPasswordValid) {
-      errorEl.textContent = "A senha atual informada não confere.";
+      errorEl.textContent = "A senha atual informada nÃ£o confere.";
       errorEl.hidden = false;
       return;
     }
@@ -9498,7 +8490,6 @@ function showResetPasswordModal() {
   });
 
   document.body.appendChild(overlay);
-  disableSensitiveFieldAutofill();
   overlay.querySelector("#modal-current-pwd").focus();
 }
 
@@ -9526,11 +8517,13 @@ document.querySelectorAll("[data-user-setting]").forEach((field) => {
 
 document.addEventListener("keydown", handleSettingsKeyboardShortcut);
 
+// Function to initialize account settings form
 function initializeAccountSettingsForm() {
   currentUserSettings = loadUserSettings();
   applyUserSettings();
   renderAccountSettings();
-
+  
+  // Handle file input changes
   const fotoInput = document.getElementById("foto-perfil-input");
   if (fotoInput) {
     fotoInput.addEventListener("change", (e) => {
@@ -9545,36 +8538,38 @@ function initializeAccountSettingsForm() {
   }
 }
 
+// Function to validate account update
 function validateAccountUpdate(newName, fotoFile) {
   const errors = [];
-
+  
   if (newName && newName.length < 2) {
     errors.push("Nome deve ter pelo menos 2 caracteres.");
   }
-
+  
   if (newName && newName.length > 100) {
     errors.push("Nome nao pode ter mais de 100 caracteres.");
   }
-
+  
   if (fotoFile && fotoFile.name) {
     const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
     if (!allowedTypes.has(fotoFile.type)) {
       errors.push("Use uma imagem em formato JPG, PNG ou WEBP.");
     }
-
+    
     const maxSizeMB = 5;
     if (fotoFile.size > maxSizeMB * 1024 * 1024) {
       errors.push(`Imagem nao pode exceder ${maxSizeMB} MB.`);
     }
-
+    
     if (fotoFile.size < 1) {
       errors.push("Arquivo de imagem invalido.");
     }
   }
-
+  
   return { isValid: errors.length === 0, errors };
 }
 
+// Function to set form loading state
 function setAccountFormLoading(isLoading) {
   const submitBtn = document.querySelector("#conta-form .primary-button");
   if (submitBtn) {
@@ -9593,19 +8588,27 @@ if (contaForm) {
     const newName = String(form.get("novo_nome") || "").trim();
     const fotoFile = form.get("foto_perfil");
 
+    // Validate form
     const validation = validateAccountUpdate(newName, fotoFile);
     if (!validation.isValid) {
       showModal("Erro de validacao", validation.errors.join("\n"), "error");
       return;
     }
 
+    // Show loading state
     setAccountFormLoading(true);
 
     let fotoUrl = null;
-    if (fotoFile && fotoFile.name) {
+    if (fotoFile && fotoFile.name && postgresClient) {
       try {
-        const uploaded = await hubUpload(fotoFile, "avatar");
-        fotoUrl = uploaded.url;
+        const safeName = fotoFile.name.replace(/[^a-z0-9_.-]/gi, "-");
+        const path = `avatars/${Date.now()}-${generateUUID()}-${safeName}`;
+        const { error: uploadError } = await postgresClient.storage
+          .from(getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files")
+          .upload(path, fotoFile, { contentType: fotoFile.type, upsert: false });
+        if (uploadError) throw uploadError;
+
+        fotoUrl = path;
       } catch (e) {
         console.error("Erro ao enviar foto", e);
         setAccountFormLoading(false);
@@ -9616,10 +8619,11 @@ if (contaForm) {
 
     const success = await updateCurrentAccount("", newName || null, "", fotoUrl);
     setAccountFormLoading(false);
-
+    
     if (success) {
       formElement.reset();
-      resetFileUploadLabels(formElement);
+      const filenameLabel = document.getElementById("foto-perfil-filename");
+      if (filenameLabel) filenameLabel.textContent = "Nenhuma foto selecionada";
       renderAccountSettings();
       renderCurrentUser();
       showModal("Conta atualizada", "Seus dados foram atualizados com sucesso.", "success");
@@ -9627,6 +8631,7 @@ if (contaForm) {
   });
 }
 
+// Initialize account settings when section is visible
 document.querySelectorAll("[data-settings-target]").forEach((button) => {
   if (button.dataset.settingsTarget === "settings-account-panel") {
     button.addEventListener("click", () => {
@@ -9635,6 +8640,7 @@ document.querySelectorAll("[data-settings-target]").forEach((button) => {
   }
 });
 
+// Initialize on page load
 initializeAccountSettingsForm();
 
 const candidaturaForm = document.getElementById("candidatura-form");
@@ -9678,7 +8684,7 @@ if (candidaturaForm) {
 
     const existing = (data.candidaturas || []).find(c => String(c.vaga_id) === String(vaga_id) && c.cpf === cpf);
     if (existing) {
-      showModal("Aviso", "Você já enviou um currículo para esta vaga com este CPF.", "error");
+      showModal("Aviso", "VocÃª jÃ¡ enviou um currÃ­culo para esta vaga com este CPF.", "error");
       return;
     }
 
@@ -9686,15 +8692,14 @@ if (candidaturaForm) {
       const inserted = await submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, curriculo, turnstileToken });
       data.candidaturas.unshift(mapRows("candidaturas", [inserted])[0]);
       formElement.reset();
-      resetFileUploadLabels(formElement);
       document.getElementById("vaga-id").value = vaga_id;
-      showModal("Sucesso", "Seu currículo foi enviado com sucesso!", "info");
+      showModal("Sucesso", "Seu currÃ­culo foi enviado com sucesso!", "info");
     } catch (error) {
       console.error(error);
       if (error.code === "23505") {
-        showModal("Aviso", "Você já enviou um currículo para esta vaga com este CPF.", "error");
+        showModal("Aviso", "VocÃª jÃ¡ enviou um currÃ­culo para esta vaga com este CPF.", "error");
       } else {
-        showModal("Erro", error.message || "Não foi possível enviar o currículo. Verifique sua conexão e tente novamente.", "error");
+        showModal("Erro", error.message || "NÃ£o foi possÃ­vel enviar o currÃ­culo. Verifique sua conexÃ£o e tente novamente.", "error");
       }
     }
   });
@@ -9727,7 +8732,7 @@ if (contratadoDocForm) {
     const password = String(form.get("senha_acesso") || "");
     const expectedPassword = String(contractorLayout?.dataset.contractorPassword || "");
     if (!matchesContractorAccessPassword(password, expectedPassword)) {
-      showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
+      showModal("Senha incorreta", "A senha informada nÃ£o libera esta pÃ¡gina.", "error");
       return;
     }
     contractorAccessPassword = expectedPassword;
@@ -9762,18 +8767,18 @@ if (contratadoDocForm) {
     const turnstileToken = getPublicChallengeToken(formElement);
 
     if (!empresa || !nome || !telefone || !cpf || !documentos.length) {
-      showModal("Dados obrigatórios", "Preencha todos os dados e anexe pelo menos um documento.", "error");
+      showModal("Dados obrigatÃ³rios", "Preencha todos os dados e anexe pelo menos um documento.", "error");
       return;
     }
 
     if (!isValidCpf(cpf)) {
-      showModal("CPF inválido", "Informe um CPF válido no formato 000.000.000-00.", "error");
+      showModal("CPF invÃ¡lido", "Informe um CPF vÃ¡lido no formato 000.000.000-00.", "error");
       return;
     }
 
     const fileError = documentos.map(validateContractorDocumentFile).find(Boolean);
     if (fileError) {
-      showModal("Documento inválido", fileError, "error");
+      showModal("Documento invÃ¡lido", fileError, "error");
       return;
     }
 
@@ -9781,13 +8786,12 @@ if (contratadoDocForm) {
       await submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, documentos, accessPassword: contractorAccessPassword, turnstileToken });
       formElement.reset();
       resetContractorDocumentFields(contractorDocumentsFields);
-      resetFileUploadLabels(formElement);
       showModal("Documentos enviados", "Os documentos foram enviados com sucesso para o RH.", "info");
     } catch (error) {
       console.error(error);
-      const message = /duplicate key|23505|CPF ja possui envio|CPF já possui envio/i.test(error.message || "")
-        ? "Este CPF já possui um envio de documentos registrado."
-        : error.message || "Não foi possível enviar os documentos. Tente novamente.";
+      const message = /duplicate key|23505|CPF ja possui envio|CPF jÃ¡ possui envio/i.test(error.message || "")
+        ? "Este CPF jÃ¡ possui um envio de documentos registrado."
+        : error.message || "NÃ£o foi possÃ­vel enviar os documentos. Tente novamente.";
       showModal("Erro", message, "error");
     }
   });
@@ -9886,90 +8890,27 @@ function prefillChamadoRequester() {
   input.classList.add("readonly-field");
 }
 
-async function initializeAppData() {
+function initializeAppData() {
   populateUnitSelects();
   populateEpiSelects();
-  supabaseClient = getSupabaseClient();
+  postgresClient = getPostgreSQLClient();
   if (isPublicPage()) {
-
     loadPublicData();
+    startAuthenticatedNotificationsOnAnyPage();
     return;
   }
   applyRoleAccess();
   prefillChamadoRequester();
   renderAccountSettings();
-  if (currentUserSettings.desktopNotifications && isBrowserNotificationSupported() && Notification.permission === "granted") registerHubNotificationServiceWorker();
+  registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
-  await syncReadReceiptsFromServer();
-  await loadFromSupabase({ setupLive: true });
-  notificationBaselineReady = true;
-  setupPresenceHeartbeat();
-}
-
-function setupPresenceHeartbeat() {
-  if (presenceHeartbeatStarted) return;
-  presenceHeartbeatStarted = true;
-
-  const sendHeartbeat = () => {
-    if (!isAuthenticated()) return;
-    fetch("/api/auth/heartbeat", { method: "POST", credentials: "include" }).catch(() => {});
-  };
-
-  // Ao fechar a aba/navegador ou sair da pagina, avisa o servidor que o
-  // usuario ficou offline na hora - sendBeacon entrega a chamada mesmo com a
-  // pagina sendo descarregada (fetch normal seria cancelado nesse momento).
-  const sendOfflineBeacon = () => {
-    if (!isAuthenticated()) return;
-    navigator.sendBeacon?.("/api/auth/heartbeat", new Blob([JSON.stringify({ online: false })], { type: "application/json" }));
-  };
-
-  // Trocar de aba ou minimizar NAO deve derrubar a presenca - o usuario
-  // continua logado com o sistema aberto em segundo plano. So marca offline
-  // ao fechar a aba/navegador de fato (pagehide).
-  window.addEventListener("pagehide", sendOfflineBeacon);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") sendHeartbeat();
-  });
-
-  sendHeartbeat();
-  window.setInterval(sendHeartbeat, 20000);
-  setupPresencePolling();
-}
-
-// Atualiza so o status online/offline dos contatos, separado do ciclo
-// pesado de sincronizacao geral (que busca varias colecoes e pode demorar
-// mais que 2s). Assim a bolinha de presenca acompanha quase na hora,
-// mesmo que o resto dos dados demore mais pra sincronizar.
-function setupPresencePolling() {
-  const poll = async () => {
-    if (!isAuthenticated()) return;
-    try {
-      const rows = await hubApi.list("usuarios");
-      const fresh = mapRows("usuarios", rows || []);
-      data.usuarios = mergeUsersByName(data.usuarios || [], fresh);
-      renderChatChannels();
-    } catch (_) {
-      // mantem o ultimo estado conhecido se a requisicao falhar
-    }
-  };
-
-  poll();
-  window.setInterval(poll, 3000);
+  loadFromPostgreSQL({ setupLive: true });
 }
 
 disableSensitiveFieldAutofill();
-setupFullNameValidationMessage();
 
 setupLogin().then((canInitialize) => {
   if (canInitialize) initializeAppData();
-});
-
-window.addEventListener("pageshow", (event) => {
-  if (!event.persisted) return;
-  document.getElementById("app-shell")?.classList.remove("is-ready");
-  setupLogin().then((canInitialize) => {
-    if (canInitialize) initializeAppData();
-  });
 });
 
 function reabrirChamado(id) {
@@ -9986,30 +8927,30 @@ function reabrirChamado(id) {
 
 function reabrirDenuncia(id) {
   showConfirmActionModal({
-    title: "Reabrir denúncia",
-    text: "Deseja mover esta denúncia de volta para a lista de Lidas?",
+    title: "Reabrir denÃºncia",
+    text: "Deseja mover esta denÃºncia de volta para a lista de Lidas?",
     confirmText: "Reabrir",
     onConfirm: async () => {
       const success = await atualizarStatusDenuncia(id, "Lida");
       if (success) {
-        showModal("Denúncia reaberta", "A denúncia voltou para a lista de Lidas.", "info");
+        showModal("DenÃºncia reaberta", "A denÃºncia voltou para a lista de Lidas.", "info");
       }
     },
   });
 };
 
 function editarDocumento(id) {
-  const doc = (data.documentos || []).find(d => d.id === id);
+  const doc = documentRecords.find(d => d.id === id);
   if (!doc) return;
 
   window.editingDocId = id;
 
   document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
   document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
-
+  
   const tabButton = document.querySelector(`.doc-tab[data-doc="${doc.type}"]`);
   if (tabButton) tabButton.classList.add("active");
-
+  
   const viewElement = document.getElementById(`doc-${doc.type}`);
   if (viewElement) viewElement.classList.add("active");
 
@@ -10022,14 +8963,14 @@ function editarDocumento(id) {
     const btn = form.querySelector("button[type='submit']");
     if (btn) {
       if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
-      btn.textContent = "Salvar alterações";
+      btn.textContent = "Salvar alteraÃ§Ãµes";
     }
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 };
 
 function excluirDocumento(id) {
-  const doc = (data.documentos || []).find(d => d.id === id);
+  const doc = documentRecords.find(d => d.id === id);
   if (!doc) return;
   showPasswordActionModal({
     title: "Excluir registro",
@@ -10037,8 +8978,10 @@ function excluirDocumento(id) {
     confirmText: "Excluir",
     danger: true,
     validatePassword: async (password) => verifyAuthorizationPassword(password),
-    onConfirm: async () => {
-      await deleteItem("documentos", id);
+    onConfirm: () => {
+      documentRecords = documentRecords.filter(d => d.id !== id);
+      saveDocumentRecords();
+      renderDocumentRecords();
     },
   });
 };
@@ -10097,14 +9040,12 @@ function editarEvento(id) {
 
   form.elements.id.value = evento.id;
   form.elements.titulo.value = evento.titulo || "";
-
+  // converte ISO yyyy-mm-dd para dd/mm/aaaa na mÃ¡scara
   form.elements.data.value = formatEventoDate(evento.data || "");
   form.elements.horario.value = evento.horario || "";
   form.elements.responsavel.value = evento.responsavel || "";
   form.elements.tipo.value = evento.tipo || "Evento";
   form.elements.descricao.value = evento.descricao || "";
-  form.elements.tipo?.dispatchEvent(new Event("change"));
-  if (form.elements.aniversariante) form.elements.aniversariante.value = normalizeEventType(evento.tipo) === "aniversario" ? getBirthdayPerson(evento) : "";
   document.getElementById("cancelar-edicao-evento")?.removeAttribute("hidden");
   form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
   form.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -10131,7 +9072,7 @@ async function excluirVtRegistro(id) {
 
   showConfirmActionModal({
     title: "Apagar registro de VT",
-    text: `Tem certeza que deseja apagar o registro de VT de "${registro.colaborador || "colaborador não informado"}"?`,
+    text: `Tem certeza que deseja apagar o registro de VT de "${registro.colaborador || "colaborador nÃ£o informado"}"?`,
     confirmText: "Apagar",
     danger: true,
     onConfirm: async () => {
@@ -10149,7 +9090,7 @@ async function excluirDocumentoContratado(id) {
 
   showPasswordActionModal({
     title: "Excluir documentos do contratado",
-    text: `Confirme a senha de exclusao para apagar os documentos de "${registro.nome || "contratado não informado"}".`,
+    text: `Confirme a senha de exclusao para apagar os documentos de "${registro.nome || "contratado nÃ£o informado"}".`,
     confirmText: "Excluir",
     danger: true,
     validatePassword: async (password) => verifyAuthorizationPassword(password),
@@ -10160,14 +9101,14 @@ async function excluirDocumentoContratado(id) {
         data.documentosContratados = (data.documentosContratados || []).filter((item) => String(item.id) !== String(id));
         saveLocalData();
         renderDocumentosContratados();
-        showModal("Documentos excluídos", "Os documentos do contratado foram removidos.", "info");
+        showModal("Documentos excluÃ­dos", "Os documentos do contratado foram removidos.", "info");
         return;
       }
 
       const deleted = await deleteItem("documentosContratados", id);
       if (deleted) {
         removePendingContractorDocument(id);
-        showModal("Documentos excluídos", "Os documentos do contratado foram apagados com sucesso.", "info");
+        showModal("Documentos excluÃ­dos", "Os documentos do contratado foram apagados com sucesso.", "info");
       }
     },
   });
@@ -10181,13 +9122,12 @@ function editarVtRegistro(id) {
   form.elements.id.value = registro.id;
   form.elements.colaborador.value = registro.colaborador || "";
   setFieldValue(form.elements.unidade, registro.unidade || "");
-  setFieldValue(form.elements.mes, formatVtMonth(registro.mes) === "Não informado" ? "" : formatVtMonth(registro.mes));
+  setFieldValue(form.elements.mes, formatVtMonth(registro.mes) === "NÃ£o informado" ? "" : formatVtMonth(registro.mes));
   form.elements.dias_uteis.value = registro.diasUteis || "";
-  form.elements.passagens_dia.value = registro.passagensDia || 1;
   form.elements.valor_passagem.value = formatCurrencyInput(String(Math.round(Number(registro.valorPassagem || 0) * 100)));
   form.elements.saldo_atual.value = registro.saldoAtual ?? "";
   document.getElementById("cancelar-edicao-vt")?.removeAttribute("hidden");
-  form.querySelector('button[type="submit"]').textContent = "Salvar alterações";
+  form.querySelector('button[type="submit"]').textContent = "Salvar alteraÃ§Ãµes";
   updateVtCalculation();
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 };
@@ -10202,7 +9142,7 @@ function editarMalote(id) {
   setFieldValue(form.elements.origem, malote.origem || "");
   setFieldValue(form.elements.codigo_solicitacao, malote.codigoSolicitacao || "");
   setFieldValue(form.elements.observacoes, malote.observacoes || "");
-  setFieldValue(form.elements.status, malote.status || "Separação");
+  setFieldValue(form.elements.status, malote.status || "SeparaÃ§Ã£o");
   resetMaloteCollaborators(normalizeMaloteCollaborators(malote));
   document.getElementById("cancelar-edicao-malote")?.removeAttribute("hidden");
   form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
@@ -10270,7 +9210,7 @@ function baixarDocumentoMalote(id) {
               <p class="muted">Documento gerado automaticamente pelo sistema</p>
             </div>
             <div class="number">
-              <span class="field-label">Nº do malote</span>
+              <span class="field-label">NÂº do malote</span>
               <strong>${escapeHtml(String(malote.codigoSolicitacao || malote.id || ""))}</strong>
             </div>
             <div class="status">
@@ -10325,11 +9265,11 @@ function baixarDocumentoMalote(id) {
             <tbody>${epiRows}</tbody>
           </table>
 
-          <div class="section-title">Observações</div>
+          <div class="section-title">ObservaÃ§Ãµes</div>
           <table>
             <tr>
               <td style="min-height:48px; height:48px;">
-                <div class="field-value" style="font-weight:normal; white-space:pre-wrap;">${malote.observacoes ? escapeHtml(malote.observacoes) : '<span style="color:#9ca3af;">Sem observações.</span>'}</div>
+                <div class="field-value" style="font-weight:normal; white-space:pre-wrap;">${malote.observacoes ? escapeHtml(malote.observacoes) : '<span style="color:#9ca3af;">Sem observaÃ§Ãµes.</span>'}</div>
               </td>
             </tr>
           </table>
@@ -10365,19 +9305,22 @@ async function excluirMalote(id) {
 };
 
 async function verifyAuthorizationPassword(password) {
-  const response = await fetch("/api/malotes/delete", {
+  const response = await fetch("/api/malote-delete", {
     method: "POST",
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ validateOnly: true, password }),
   });
-  return response.ok;
+  if (response.ok) return true;
+  const result = await response.json().catch(() => ({}));
+  // Se a Edge Function nao suporta validateOnly, tenta id invalido para checar apenas a senha
+  if (result.error === "Senha de autorizacao invalida.") return false;
+  // Qualquer outro erro (ex: id invalido) significa que a senha foi aceita
+  return response.status !== 401 && response.status !== 403;
 }
 
 async function deleteMaloteWithAuthorization(id, password) {
-  const response = await fetch("/api/malotes/delete", {
+  const response = await fetch("/api/malote-delete", {
     method: "POST",
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, password }),
   });
@@ -10397,47 +9340,45 @@ const documentFieldLabels = {
   cpf: "CPF",
   rg: "RG",
   cargo: "Cargo",
-  funcao: "Função",
+  funcao: "FunÃ§Ã£o",
   filial: "Filial / Unidade",
-  unidade: "Unidade",
   setor: "Setor",
-  data: "Data de admissão",
-  data_admissao: "Data de admissão",
+  data: "Data de admissÃ£o",
+  data_admissao: "Data de admissÃ£o",
   data_desligamento: "Data de desligamento",
-  data_medida: "Data da medida",
-  data_solicitacao: "Data da solicitação",
+  data_solicitacao: "Data da solicitaÃ§Ã£o",
   data_entrevista: "Data da entrevista",
-  data_ausencia: "Data(s) da ausência",
+  data_ausencia: "Data(s) da ausÃªncia",
   data_feedback: "Data do feedback",
   data_registro: "Data do registro",
   data_abertura: "Data de abertura",
-  data_inicio: "Data de início",
-  data_movimentacao: "Data da movimentação",
-  salario: "Salário",
-  salario_atual: "Salário atual",
-  salario_proposto: "Salário proposto",
+  data_inicio: "Data de inÃ­cio",
+  data_movimentacao: "Data da movimentaÃ§Ã£o",
+  salario: "SalÃ¡rio",
+  salario_atual: "SalÃ¡rio atual",
+  salario_proposto: "SalÃ¡rio proposto",
   faixa_salarial: "Faixa salarial",
-  horario_trabalho: "Horário de trabalho",
-  horario_atraso: "Horário / período",
+  horario_trabalho: "HorÃ¡rio de trabalho",
+  horario_atraso: "HorÃ¡rio / perÃ­odo",
   centro_custo: "Centro de custo",
   requisitante: "Requisitante",
-  lider: "Gestor / líder avaliador",
+  lider: "Gestor / lÃ­der avaliador",
   gestor: "Gestor imediato",
   gestor_aplicador: "Gestor aplicador",
   gestor_solicitante: "Gestor solicitante",
   entrevistador: "Entrevistador",
   motivo: "Motivo",
-  observacoes: "Observações",
+  observacoes: "ObservaÃ§Ãµes",
   feedback: "Feedback final",
   positivos: "Pontos positivos",
   melhorias: "Pontos a desenvolver",
-  acao: "Plano de ação",
-  plano_acao: "Plano de ação",
+  acao: "Plano de aÃ§Ã£o",
+  plano_acao: "Plano de aÃ§Ã£o",
   justificativa: "Justificativa",
-  justificativa_movimentacao: "Justificativa da movimentação",
-  descricao: "Descrição",
+  justificativa_movimentacao: "Justificativa da movimentaÃ§Ã£o",
+  descricao: "DescriÃ§Ã£o",
   requisitos: "Requisitos",
-  pontos_atencao: "Pontos de atenção",
+  pontos_atencao: "Pontos de atenÃ§Ã£o",
 };
 
 const documentLongFieldKeys = new Set([
@@ -10545,6 +9486,7 @@ function downloadStyledRhDocument(doc, title) {
 
           .document { width: 100%; }
 
+          /* Letterhead */
           .letterhead { display: table; width: 100%; padding-bottom: 12px; border-bottom: 3px solid #1f3a3a; }
           .letterhead-brand, .letterhead-meta { display: table-cell; vertical-align: bottom; }
           .letterhead-brand h1 { margin: 0; font-size: 20px; font-weight: 700; color: #1f3a3a; letter-spacing: 2px; }
@@ -10552,28 +9494,34 @@ function downloadStyledRhDocument(doc, title) {
           .letterhead-meta { text-align: right; font-size: 9px; color: #4b5b5b; line-height: 1.6; }
           .letterhead-meta strong { color: #1f3a3a; }
 
+          /* Title block */
           .doc-title { margin-top: 18px; margin-bottom: 4px; }
           .doc-title .doc-kicker { margin: 0; font-size: 9px; font-weight: 700; color: #1f7a6f; text-transform: uppercase; letter-spacing: 2px; }
           .doc-title h2 { margin: 4px 0 0; font-size: 17px; font-weight: 700; color: #1f2933; }
           .doc-title p { margin: 5px 0 0; font-size: 10.5px; color: #6b7c7c; font-style: italic; }
           .doc-title-rule { height: 1px; background: #d8e0e0; margin: 12px 0 18px; }
 
+          /* Section heading */
           .section-heading { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; margin: 0 0 10px; border-bottom: 1px solid #1f3a3a; }
 
+          /* Data table */
           .data-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
           .data-table td { border: 1px solid #d8e0e0; padding: 7px 10px; vertical-align: top; }
           .data-table td.label-cell { width: 32%; background: #f4f7f7; font-size: 9px; font-weight: 700; color: #4b5b5b; text-transform: uppercase; letter-spacing: .5px; }
           .data-table td.value-cell { font-size: 11px; color: #1f2933; font-weight: 500; }
 
+          /* Long-form notes */
           .note-section { margin-top: 16px; }
           .note-section h3 { margin: 0 0 6px; font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; border-bottom: 1px solid #1f3a3a; }
           .note-section p { margin: 0; padding: 10px 12px; border: 1px solid #d8e0e0; border-radius: 2px; min-height: 46px; line-height: 1.65; white-space: normal; color: #344048; background: #fafcfc; }
 
+          /* Signatures */
           .signature-box { display: table; width: 100%; margin-top: 56px; table-layout: fixed; }
           .signature-col { display: table-cell; width: 50%; padding: 0 24px; text-align: center; }
           .signature-line { border-top: 1px solid #1f2933; margin: 0 0 6px; }
           .signature-col span { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: .8px; }
 
+          /* Footer */
           .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #d8e0e0; color: #9aa8a8; font-size: 8.5px; text-align: center; letter-spacing: .5px; text-transform: uppercase; }
         </style>
       </head>
@@ -10586,7 +9534,7 @@ function downloadStyledRhDocument(doc, title) {
             </div>
             <div class="letterhead-meta">
               Emitido em <strong>${escapeHtml(emittedAt)}</strong><br />
-              Responsável: <strong>${escapeHtml(owner)}</strong>
+              ResponsÃ¡vel: <strong>${escapeHtml(owner)}</strong>
             </div>
           </header>
 
@@ -10616,193 +9564,25 @@ function downloadStyledRhDocument(doc, title) {
 }
 
 function baixarDocumentoRH(id) {
-  const doc = (data.documentos || []).find((item) => String(item.id) === String(id));
+  const doc = documentRecords.find((item) => String(item.id) === String(id));
   if (!doc) return;
   const title = documentLabels[doc.type] || doc.type;
   downloadStyledRhDocument(doc, title);
 };
 
-document.addEventListener("contextmenu", (event) => {
-  const contextRecord = event.target.closest("[data-context-type][data-id]");
-  if (contextRecord) {
-    event.preventDefault();
-    closeBoardContextMenu();
-    closeBoardCardActionMenu();
-    recordContextMenu = {
-      type: contextRecord.dataset.contextType,
-      id: contextRecord.dataset.id,
-      x: event.clientX,
-      y: event.clientY + 6,
-    };
-    renderRecordContextMenu();
-    return;
-  }
-
-  const card = event.target.closest("[data-board-card]");
-  if (card) {
-    event.preventDefault();
-    closeBoardContextMenu();
-    boardCardActionMenu = {
-      listIndex: Number(card.dataset.listIndex),
-      cardIndex: Number(card.dataset.cardIndex),
-      x: event.clientX,
-      y: event.clientY + 6,
-    };
-    renderBoardCardActionMenu();
-    return;
-  }
-
-  const tab = event.target.closest("[data-board-tab]");
-  if (!tab) {
-    closeBoardContextMenu();
-    closeBoardCardActionMenu();
-    closeRecordContextMenu();
-    return;
-  }
-  event.preventDefault();
-  closeBoardCardActionMenu();
-  closeRecordContextMenu();
-  boardContextMenu = {
-    id: tab.dataset.id,
-    x: event.clientX,
-    y: event.clientY + 6,
-  };
-  renderBoardContextMenu();
-});
-
-document.addEventListener("dragstart", (event) => {
-  const tab = event.target.closest("[data-board-tab]");
-  if (tab) {
-    draggedBoardTabId = String(tab.dataset.id || "");
-    tab.classList.add("dragging");
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", draggedBoardTabId);
-    return;
-  }
-
-  const card = event.target.closest("[data-board-card]");
-  if (!card) return;
-  closeBoardCardActionMenu();
-  suppressBoardCardClick = false;
-  draggedBoardCard = {
-    listIndex: Number(card.dataset.listIndex),
-    cardIndex: Number(card.dataset.cardIndex),
-  };
-  card.classList.add("dragging");
-  event.dataTransfer.effectAllowed = "move";
-  event.dataTransfer.setData("text/plain", JSON.stringify(draggedBoardCard));
-});
-
-document.addEventListener("dragend", (event) => {
-  const endedCardDrag = Boolean(event.target.closest("[data-board-card]"));
-  event.target.closest("[data-board-tab]")?.classList.remove("dragging");
-  document.querySelectorAll(".board-tab.drag-over").forEach((tab) => tab.classList.remove("drag-over"));
-  draggedBoardTabId = "";
-  event.target.closest("[data-board-card]")?.classList.remove("dragging");
-  document.querySelectorAll(".board-lane.drag-over").forEach((lane) => lane.classList.remove("drag-over"));
-  draggedBoardCard = null;
-  if (endedCardDrag) {
-    suppressBoardCardClick = true;
-    setTimeout(() => {
-      suppressBoardCardClick = false;
-    }, 80);
-  }
-});
-
-document.addEventListener("dragover", (event) => {
-  const tab = event.target.closest("[data-board-tab]");
-  if (tab && draggedBoardTabId && String(tab.dataset.id || "") !== draggedBoardTabId) {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    tab.classList.add("drag-over");
-    return;
-  }
-
-  const lane = event.target.closest(".board-lane");
-  if (!lane || !draggedBoardCard) return;
-  event.preventDefault();
-  event.dataTransfer.dropEffect = "move";
-  lane.classList.add("drag-over");
-});
-
-document.addEventListener("dragleave", (event) => {
-  const tab = event.target.closest("[data-board-tab]");
-  if (tab && !tab.contains(event.relatedTarget)) {
-    tab.classList.remove("drag-over");
-  }
-
-  const lane = event.target.closest(".board-lane");
-  if (!lane || lane.contains(event.relatedTarget)) return;
-  lane.classList.remove("drag-over");
-});
-
-document.addEventListener("drop", async (event) => {
-  const targetTab = event.target.closest("[data-board-tab]");
-  if (targetTab && draggedBoardTabId) {
-    event.preventDefault();
-    targetTab.classList.remove("drag-over");
-    const sourceTab = document.querySelector(`#board-tabs [data-board-tab][data-id="${CSS.escape(draggedBoardTabId)}"]`);
-    if (sourceTab && sourceTab !== targetTab) {
-      const tabs = document.getElementById("board-tabs");
-      const targetRect = targetTab.getBoundingClientRect();
-      const insertAfter = event.clientX > targetRect.left + targetRect.width / 2;
-      tabs.insertBefore(sourceTab, insertAfter ? targetTab.nextSibling : targetTab);
-      saveBoardOrderFromTabs();
-    }
-    draggedBoardTabId = "";
-    return;
-  }
-
-  const lane = event.target.closest(".board-lane");
-  if (!lane || !draggedBoardCard) return;
-  event.preventDefault();
-  lane.classList.remove("drag-over");
-  const board = getActiveBoard();
-  const fromList = board?.listas?.[draggedBoardCard.listIndex];
-  const toListIndex = Number(lane.dataset.listIndex);
-  const toList = board?.listas?.[toListIndex];
-  const card = fromList?.cartoes?.[draggedBoardCard.cardIndex];
-  if (!board || !fromList || !toList || !card) return;
-  if (draggedBoardCard.listIndex === toListIndex) return;
-  resetBoardCardFormIfEditing(draggedBoardCard.listIndex, draggedBoardCard.cardIndex);
-  fromList.cartoes.splice(draggedBoardCard.cardIndex, 1);
-  toList.cartoes.push(card);
-  await persistBoards(board);
-});
-
-document.addEventListener('click', async (event) => {
-  if (!event.target.closest("#board-context-menu") && !event.target.closest("[data-board-tab]")) {
-    closeBoardContextMenu();
-  }
-  if (!event.target.closest("#board-card-action-menu") && !event.target.closest("[data-board-card]")) {
-    closeBoardCardActionMenu();
-  }
-  if (!event.target.closest("#record-context-menu") && !event.target.closest("[data-context-type]")) {
-    closeRecordContextMenu();
-  }
-
+document.addEventListener('click', (event) => {
   const target = event.target.closest('[data-action]');
-  if (!target) {
-    const card = event.target.closest("[data-board-card]");
-    if (card) {
-      if (suppressBoardCardClick) return;
-      showBoardCardPreview(card.dataset.listIndex, card.dataset.cardIndex);
-    }
-    return;
-  }
+  if (!target) return;
 
   const { action, id } = target.dataset;
 
+  // AÃ§Ã£o especial para nÃ£o fazer nada, Ãºtil para checkboxes dentro de elementos clicÃ¡veis
   if (action === 'no-op') {
-    if (target.classList.contains("denuncia-select")) {
-      const denunciaId = String(target.value || "");
-      if (denunciaId && target.checked) selectedDenunciaIds.add(denunciaId);
-      if (denunciaId && !target.checked) selectedDenunciaIds.delete(denunciaId);
-    }
     event.stopPropagation();
     return;
   }
 
+  // AÃ§Ãµes que precisam de stopPropagation
   if (['reabrir-denuncia', 'reabrir-chamado', 'toggle-denuncia-selection', 'toggle-chamado-selection'].includes(action)) {
     event.stopPropagation();
   }
@@ -10813,19 +9593,11 @@ document.addEventListener('click', async (event) => {
       break;
     case 'toggle-denuncia-selection': {
       const checkbox = document.querySelector(`.denuncia-select[value="${CSS.escape(String(id))}"]`);
-      if (checkbox) {
-        checkbox.checked = !checkbox.checked;
-        if (checkbox.checked) selectedDenunciaIds.add(String(id));
-        else selectedDenunciaIds.delete(String(id));
-      }
+      if (checkbox) checkbox.checked = !checkbox.checked;
       break;
     }
     case 'reabrir-denuncia':
       reabrirDenuncia(id);
-      break;
-    case 'arquivar-denuncia':
-      closeRecordContextMenu();
-      await atualizarStatusDenuncia(id, "Arquivada");
       break;
     case 'toggle-chamado-selection': {
       const checkbox = document.querySelector(`.chamado-select[value="${CSS.escape(String(id))}"]`);
@@ -10835,142 +9607,10 @@ document.addEventListener('click', async (event) => {
     case 'reabrir-chamado':
       reabrirChamado(id);
       break;
-    case 'arquivar-chamado':
-      closeRecordContextMenu();
-      await updateItem("chamados", id, { status: "Arquivado" });
-      break;
     case 'editar-malote': editarMalote(id); break;
     case 'baixar-documento-malote': baixarDocumentoMalote(id); break;
     case 'excluir-malote': excluirMalote(id); break;
     case 'open-dashboard-activity': openDashboardActivity(target.dataset.index); break;
-    case 'select-board':
-      closeBoardContextMenu();
-      activeBoardId = id;
-      renderBoards();
-      break;
-    case 'rename-board': {
-      const board = data.quadros?.find((item) => String(item.id) === String(id));
-      if (!board) break;
-      const nextName = prompt("Novo nome do quadro:", board.nome || "");
-      if (nextName === null) break;
-      const cleanName = nextName.trim();
-      if (!cleanName) break;
-      board.nome = cleanName;
-      closeBoardContextMenu();
-      resetBoardCardFormIfEditing();
-      await persistBoards(board);
-      break;
-    }
-    case 'duplicate-board': {
-      const board = data.quadros?.find((item) => String(item.id) === String(id));
-      if (!board) break;
-      const duplicate = cloneBoard(board);
-      const currentIndex = data.quadros.findIndex((item) => String(item.id) === String(id));
-      closeBoardContextMenu();
-      resetBoardCardFormIfEditing();
-      if (isAuthenticated()) {
-        try {
-          const inserted = await hubApi.insert("quadros", toDbPayload("quadros", duplicate));
-          const mapped = mapRows("quadros", [inserted])[0];
-          data.quadros.splice(currentIndex + 1, 0, mapped);
-          activeBoardId = mapped.id;
-          saveLocalData();
-          renderBoards();
-          setSyncStatus("HUB online", true);
-        } catch (error) {
-          console.error("Erro ao duplicar quadro:", error);
-          setSyncStatus("Erro ao duplicar quadro", false);
-          showModal("Erro ao Salvar", error?.message || "Nao foi possivel duplicar o quadro no banco.", "error");
-        }
-        break;
-      }
-      data.quadros.splice(currentIndex + 1, 0, duplicate);
-      activeBoardId = duplicate.id;
-      await persistBoards(duplicate);
-      break;
-    }
-    case 'delete-board': {
-      ensureBoardsData();
-      if (data.quadros.length <= 1) {
-        alert("E preciso manter pelo menos um quadro.");
-        closeBoardContextMenu();
-        break;
-      }
-      const boardIndex = data.quadros.findIndex((item) => String(item.id) === String(id));
-      if (boardIndex < 0) break;
-      const boardName = data.quadros[boardIndex].nome || "este quadro";
-      if (!confirm(`Apagar "${boardName}"? Os cartoes deste quadro tambem serao removidos.`)) break;
-      closeBoardContextMenu();
-      resetBoardCardFormIfEditing();
-      if (isAuthenticated()) {
-        const deleted = await deleteItem("quadros", id);
-        if (!deleted) break;
-        activeBoardId = data.quadros[Math.max(0, boardIndex - 1)]?.id || data.quadros[0]?.id || "";
-        renderBoards();
-        break;
-      }
-      data.quadros.splice(boardIndex, 1);
-      activeBoardId = data.quadros[Math.max(0, boardIndex - 1)]?.id || data.quadros[0]?.id || "";
-      await persistBoards(getActiveBoard());
-      break;
-    }
-    case 'move-board-card': {
-      const board = getActiveBoard();
-      const listIndex = Number(target.dataset.listIndex);
-      const cardIndex = Number(target.dataset.cardIndex);
-      const direction = Number(target.dataset.direction);
-      const fromList = board?.listas?.[listIndex];
-      const toList = board?.listas?.[listIndex + direction];
-      const card = fromList?.cartoes?.[cardIndex];
-      if (!board || !fromList || !toList || !card) break;
-      resetBoardCardFormIfEditing(listIndex, cardIndex);
-      fromList.cartoes.splice(cardIndex, 1);
-      toList.cartoes.push(card);
-      await persistBoards(board);
-      break;
-    }
-    case 'edit-board-card': {
-      closeBoardCardActionMenu();
-      const board = getActiveBoard();
-      const listIndex = Number(target.dataset.listIndex);
-      const cardIndex = Number(target.dataset.cardIndex);
-      const card = board?.listas?.[listIndex]?.cartoes?.[cardIndex];
-      const form = document.getElementById("board-card-form");
-      if (!board || !card || !form) break;
-      form.elements.edit_list_index.value = String(listIndex);
-      form.elements.edit_card_index.value = String(cardIndex);
-      form.elements.titulo.value = card.titulo || "";
-      form.elements.descricao.value = card.descricao || "";
-      form.elements.prioridade.value = card.prioridade || "Normal";
-      form.querySelector("h3").textContent = "Editar cartao";
-      form.querySelector('button[type="submit"]').textContent = "Salvar cartao";
-      document.getElementById("cancelar-edicao-board-card")?.removeAttribute("hidden");
-      form.scrollIntoView({ behavior: "smooth", block: "start" });
-      break;
-    }
-    case 'duplicate-board-card': {
-      closeBoardCardActionMenu();
-      const board = getActiveBoard();
-      const list = board?.listas?.[Number(target.dataset.listIndex)];
-      const cardIndex = Number(target.dataset.cardIndex);
-      const card = list?.cartoes?.[cardIndex];
-      if (!list || !card) break;
-      resetBoardCardFormIfEditing(Number(target.dataset.listIndex), cardIndex);
-      list.cartoes.splice(cardIndex + 1, 0, cloneBoardCard(card));
-      await persistBoards(board);
-      break;
-    }
-    case 'delete-board-card': {
-      closeBoardCardActionMenu();
-      const board = getActiveBoard();
-      const list = board?.listas?.[Number(target.dataset.listIndex)];
-      const cardIndex = Number(target.dataset.cardIndex);
-      if (!list?.cartoes?.[cardIndex]) break;
-      resetBoardCardFormIfEditing(Number(target.dataset.listIndex), cardIndex);
-      list.cartoes.splice(cardIndex, 1);
-      await persistBoards(board);
-      break;
-    }
     case 'editar-vaga': editarVaga(id); break;
     case 'excluir-vaga': excluirVaga(id); break;
     case 'editar-evento': editarEvento(id); break;
@@ -10978,7 +9618,6 @@ document.addEventListener('click', async (event) => {
     case 'editar-vt': editarVtRegistro(id); break;
     case 'excluir-vt': excluirVtRegistro(id); break;
     case 'gerar-relatorio-vt': gerarRelatorioVt(target.dataset.scope); break;
-    case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary(target.dataset.scope, target.dataset.type); break;
     case 'editar-documento': editarDocumento(id); break;
     case 'baixar-documento-rh': baixarDocumentoRH(id); break;
     case 'excluir-documento': excluirDocumento(id); break;
@@ -11001,17 +9640,6 @@ document.addEventListener('click', async (event) => {
       event.preventDefault();
       handleChatAttachOption(target.dataset.attachType);
       break;
-    case 'toggle-password-visibility': {
-      event.preventDefault();
-      const control = target.closest(".password-input-control");
-      const input = control?.querySelector('input[type="password"], input[type="text"]');
-      if (!input) break;
-      const showing = input.type === "text";
-      input.type = showing ? "password" : "text";
-      target.textContent = showing ? "Mostrar" : "Ocultar";
-      target.setAttribute("aria-label", showing ? "Mostrar senha" : "Ocultar senha");
-      break;
-    }
     case 'toggle-chat-emoji-menu':
       event.preventDefault();
       toggleChatEmojiMenu();
@@ -11037,7 +9665,9 @@ document.addEventListener('click', async (event) => {
       break;
   }
 });
+/* ==================== TRACKER MODAL ==================== */
 
+// Classe para gerenciar o modal de acompanhamento
 class NotificationTracker {
   constructor() {
     this.modal = document.getElementById("tracker-modal");
@@ -11068,7 +9698,6 @@ class NotificationTracker {
 
     this.notifications = [];
     this.filteredNotifications = [];
-    this.clearedNotificationIds = loadClearedTrackerNotificationIds();
 
     this.init();
   }
@@ -11081,15 +9710,7 @@ class NotificationTracker {
     this.searchInput?.addEventListener("input", () => this.applyFilters());
     this.sortSelect?.addEventListener("change", () => this.applySorting());
     this.markAllReadBtn?.addEventListener("click", () => this.markAllRead());
-    this.clearAllBtn?.addEventListener("click", () => {
-      showConfirmActionModal({
-        title: "Limpar notificacoes",
-        text: "Deseja limpar a visualizacao das notificacoes?",
-        confirmText: "Limpar",
-        danger: true,
-        onConfirm: async () => this.clearAll(),
-      });
-    });
+    this.clearAllBtn?.addEventListener("click", () => this.clearAll());
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !this.modal?.hidden) this.closeModal();
@@ -11114,7 +9735,6 @@ class NotificationTracker {
   }
 
   loadNotifications() {
-    this.clearedNotificationIds = loadClearedTrackerNotificationIds();
     this.notifications = this.collectNotifications();
     this.applyFilters();
     this.updateStats();
@@ -11123,7 +9743,6 @@ class NotificationTracker {
   collectNotifications() {
     const notifications = [];
     const sourceData = typeof data === "object" && data ? data : {};
-    if (isAuthenticated() && !serverDataReady) return notifications;
 
     const pushNotification = (item = {}) => {
       const type = item.type || "geral";
@@ -11138,7 +9757,7 @@ class NotificationTracker {
       notifications.push({
         id,
         type,
-        title: item.title || "Notificação",
+        title: item.title || "NotificaÃ§Ã£o",
         description: item.description || item.text || "",
         details: item.details || item.description || item.text || "",
         time,
@@ -11175,7 +9794,7 @@ class NotificationTracker {
           : `${messageIds.length} mensagem(ns) no acompanhamento`,
         details: sortedMessagesOldestFirst
           .slice(-20)
-          .map((message) => `${message.createdAt || "Sem data"} · ${message.autor || "Equipe"}: ${message.mensagem || "Nova mensagem."}`)
+          .map((message) => `${message.createdAt || "Sem data"} Â· ${message.autor || "Equipe"}: ${message.mensagem || "Nova mensagem."}`)
           .join("\n\n"),
         time: latestMessage.createdAt || "Agora",
         dateTime: latestMessage.sortAt || latestMessage.createdAt || "Agora",
@@ -11184,22 +9803,22 @@ class NotificationTracker {
         view: "comunicacao",
         messageIds,
         chatMessages: sortedMessagesOldestFirst,
-        badgeText: hasUnread ? "Não lido" : "Lida",
+        badgeText: hasUnread ? "NÃ£o lido" : "Lida",
       });
     }
 
     (sourceData.denuncias || [])
-      .filter((item) => item.status !== "Arquivada")
+      .filter((item) => item.status === "Aberta" || item.status === "Urgente")
       .forEach((item) => pushNotification({
         id: `denuncia-${item.id}`,
         type: "denuncia",
-        title: "Denúncia anônima",
-        description: item.descricao || "Nova denúncia recebida.",
-        details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "Não informado"}\n\n${item.descricao || "Sem descrição."}`,
+        title: "DenÃºncia anÃ´nima",
+        description: item.descricao || "Nova denÃºncia recebida.",
+        details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "NÃ£o informado"}\n\n${item.descricao || "Sem descriÃ§Ã£o."}`,
         time: item.createdAt || "Recentemente",
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
-        status: item.status === "Urgente" ? "urgent" : item.status === "Lida" ? "resolved" : "pending",
-        unread: item.status !== "Lida",
+        status: item.status === "Urgente" ? "urgent" : "pending",
+        unread: true,
         view: "denuncias",
       }));
 
@@ -11208,14 +9827,14 @@ class NotificationTracker {
       .forEach((item) => {
         const items = typeof parseEpiItems === "function" ? parseEpiItems(item.epis) : [];
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` Â· Tam. ${epi.tamanho}` : ""} Â· Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "NÃ£o informados";
         pushNotification({
           id: `chamado-${item.id}`,
           type: "chamado",
-          title: `Chamado · ${item.unidade || "Unidade não informada"}`,
-          description: item.epis || "Itens não informados.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nSetor: ${item.setor || "Não informado"}\nItens solicitados:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "Não informada"}`,
+          title: `Chamado Â· ${item.unidade || "Unidade nÃ£o informada"}`,
+          description: item.epis || "Itens nÃ£o informados.",
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "NÃ£o informado"}\nUnidade: ${item.unidade || "NÃ£o informada"}\nSetor: ${item.setor || "NÃ£o informado"}\nItens solicitados:\n${itemDetails}\nObservaÃ§Ãµes: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "NÃ£o informada"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: "pending",
@@ -11229,16 +9848,16 @@ class NotificationTracker {
       .forEach((item) => {
         const items = typeof parseEpiItems === "function" ? parseEpiItems(item.epis) : [];
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` Â· Tam. ${epi.tamanho}` : ""} Â· Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "NÃ£o informados";
         const statusText = String(item.status || "").toLowerCase();
         const isResolved = statusText.includes("entreg") || statusText.includes("conclu") || statusText.includes("finaliz");
         pushNotification({
           id: `malote-${item.id}`,
           type: "malote",
-          title: `Malote · ${item.destino || "Destino não informado"}`,
-          description: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
+          title: `Malote Â· ${item.destino || "Destino nÃ£o informado"}`,
+          description: item.codigoSolicitacao ? `SolicitaÃ§Ã£o ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}CÃ³digo da SolicitaÃ§Ã£o: ${item.codigoSolicitacao || "NÃ£o informado"}\nOrigem: ${item.origem || "NÃ£o informada"}\nDestino: ${item.destino || "NÃ£o informado"}\nItens do malote:\n${itemDetails}\nObservaÃ§Ãµes: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "NÃ£o informado"}\nData: ${item.createdAt || "NÃ£o informada"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: isResolved ? "resolved" : "pending",
@@ -11254,9 +9873,9 @@ class NotificationTracker {
         pushNotification({
           id: `vaga-${item.id}`,
           type: "vaga",
-          title: `Vaga · ${item.cargo || "Cargo não informado"}`,
+          title: `Vaga Â· ${item.cargo || "Cargo nÃ£o informado"}`,
           description: item.descricao || "Vaga atualizada.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "NÃ£o informado"}\n\n${item.descricao || "Sem descriÃ§Ã£o."}\n\nRequisitos: ${item.requisitos || "NÃ£o informados"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: isClosed ? "resolved" : "pending",
@@ -11265,7 +9884,7 @@ class NotificationTracker {
         });
       });
 
-    const docs = Array.isArray(sourceData.documentos) ? sourceData.documentos : [];
+    const docs = typeof documentRecords !== "undefined" && Array.isArray(documentRecords) ? documentRecords : [];
     docs
       .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
       .forEach((item) => {
@@ -11273,14 +9892,30 @@ class NotificationTracker {
         pushNotification({
           id: `documento-${item.id}`,
           type: "documento",
-          title: `Documento · ${label || "Registro"}`,
+          title: `Documento Â· ${label || "Registro"}`,
           description: item.summary || "Documento registrado.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${label || "Registro"}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${label || "Registro"}\nData: ${item.createdAt || "NÃ£o informada"}\n\n${item.summary || "Documento registrado."}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: "pending",
           unread: true,
           view: "documentos",
+        });
+      });
+
+    (sourceData.atestados || [])
+      .forEach((item) => {
+        pushNotification({
+          id: `atestado-${item.id}`,
+          type: "atestado",
+          title: `Atestado Â· ${item.nome || "Colaborador"}`,
+          description: `${item.unidade || "Unidade nÃ£o informada"} Â· ${item.arquivoNome || "Atestado anexado"}`,
+          details: `Colaborador: ${item.nome || "NÃ£o informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "NÃ£o informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "NÃ£o informado"}\nUnidade: ${item.unidade || "NÃ£o informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "NÃ£o informado"}`,
+          time: item.createdAt || "Recentemente",
+          dateTime: item.sortAt || item.createdAt || "Recentemente",
+          status: "pending",
+          unread: true,
+          view: "atestados",
         });
       });
 
@@ -11293,10 +9928,10 @@ class NotificationTracker {
       pushNotification({
         id: `evento-${item.id}`,
         type: "evento",
-        title: `Evento · ${item.titulo || "Compromisso"}`,
-        description: item.descricao || [formattedDate, formattedTime].filter(Boolean).join(" · "),
-        details: `Título: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "Não informada"}\nHorário: ${formattedTime || "Não informado"}\nResponsável: ${item.responsavel || "Não informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descrição."}`,
-        time: [formattedDate, formattedTime].filter(Boolean).join(" · ") || "Recentemente",
+        title: `Evento Â· ${item.titulo || "Compromisso"}`,
+        description: item.descricao || [formattedDate, formattedTime].filter(Boolean).join(" Â· "),
+        details: `TÃ­tulo: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "NÃ£o informada"}\nHorÃ¡rio: ${formattedTime || "NÃ£o informado"}\nResponsÃ¡vel: ${item.responsavel || "NÃ£o informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descriÃ§Ã£o."}`,
+        time: [formattedDate, formattedTime].filter(Boolean).join(" Â· ") || "Recentemente",
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt || `${eventDate || ""}T${eventTime || "00:00"}`,
         status: "pending",
         unread: false,
@@ -11304,9 +9939,7 @@ class NotificationTracker {
       });
     });
 
-    return notifications
-      .filter((item) => !this.clearedNotificationIds.has(String(item.id)))
-      .sort((a, b) => (b.dateTime - a.dateTime) || (a.sequence - b.sequence));
+    return notifications.sort((a, b) => (b.dateTime - a.dateTime) || (a.sequence - b.sequence));
   }
 
   getTimeValue(value) {
@@ -11353,27 +9986,29 @@ class NotificationTracker {
       vaga: "vagas",
       evento: "calendario",
       documento: "documentos",
+      atestado: "atestados",
     };
     return views[type] || "dashboard";
   }
 
   getIconForType(type) {
     const icons = {
-      denuncia: "🚨",
-      mensagem: "💬",
-      malote: "📦",
-      chamado: "🎫",
-      vaga: "💼",
-      evento: "📅",
-      documento: "📄",
-      geral: "📢",
+      denuncia: "ðŸš¨",
+      mensagem: "ðŸ’¬",
+      malote: "ðŸ“¦",
+      chamado: "ðŸŽ«",
+      vaga: "ðŸ’¼",
+      evento: "ðŸ“…",
+      documento: "ðŸ“„",
+      atestado: "ðŸ©º",
+      geral: "ðŸ“¢",
     };
-    return icons[type] || "📢";
+    return icons[type] || "ðŸ“¢";
   }
 
   getBadgeText(status) {
     const badges = {
-      unread: "Não lido",
+      unread: "NÃ£o lido",
       pending: "Pendente",
       resolved: "Resolvido",
       urgent: "Urgente",
@@ -11466,8 +10101,6 @@ class NotificationTracker {
 
       this.notificationsList.appendChild(li);
     });
-
-    applyEmojiImages(this.notificationsList);
   }
 
   openNotification(notif) {
@@ -11507,9 +10140,9 @@ class NotificationTracker {
     this.footerArea?.setAttribute("hidden", "");
     this.emptyState?.setAttribute("hidden", "");
 
-    if (this.modalTitle) this.modalTitle.textContent = notif.title || "Notificação";
+    if (this.modalTitle) this.modalTitle.textContent = notif.title || "NotificaÃ§Ã£o";
     if (this.modalSubtitle) {
-      this.modalSubtitle.textContent = [this.humanizeType(notif.type), notif.time].filter(Boolean).join(" · ") || "Detalhe da notificação";
+      this.modalSubtitle.textContent = [this.humanizeType(notif.type), notif.time].filter(Boolean).join(" Â· ") || "Detalhe da notificaÃ§Ã£o";
     }
 
     this.detailArea?.remove();
@@ -11521,7 +10154,7 @@ class NotificationTracker {
           <div class="tracker-detail-icon">${notif.icon || this.getIconForType(notif.type)}</div>
           <div>
             <span class="tracker-notification-type">${this.escapeHtml(this.humanizeType(notif.type))}</span>
-            <h3>${this.escapeHtml(notif.title || "Notificação")}</h3>
+            <h3>${this.escapeHtml(notif.title || "NotificaÃ§Ã£o")}</h3>
             ${notif.description ? `<p>${this.escapeHtml(notif.description)}</p>` : ""}
           </div>
         </div>
@@ -11538,7 +10171,6 @@ class NotificationTracker {
 
     this.footerArea?.after(detail);
     this.detailArea = detail;
-    applyEmojiImages(detail);
     detail.querySelector("[data-tracker-back]")?.addEventListener("click", () => this.showListView());
     detail.querySelector("[data-tracker-back]")?.focus();
   }
@@ -11552,7 +10184,7 @@ class NotificationTracker {
     this.footerArea?.removeAttribute("hidden");
 
     if (this.modalTitle) this.modalTitle.textContent = "Acompanhamento Completo";
-    if (this.modalSubtitle) this.modalSubtitle.textContent = "Todas as notificações e pendências";
+    if (this.modalSubtitle) this.modalSubtitle.textContent = "Todas as notificaÃ§Ãµes e pendÃªncias";
     this.renderNotifications();
   }
 
@@ -11566,13 +10198,14 @@ class NotificationTracker {
 
   humanizeType(type) {
     const types = {
-      denuncia: "Denúncia",
+      denuncia: "DenÃºncia",
       mensagem: "Mensagem RH",
       malote: "Malote",
       chamado: "Chamado",
       vaga: "Vaga",
       evento: "Evento",
       documento: "Documento",
+      atestado: "Atestado",
       geral: "Geral",
     };
     return types[type] || type;
@@ -11592,9 +10225,6 @@ class NotificationTracker {
     if (this.statTotal) this.statTotal.textContent = total;
     if (this.statUnread) this.statUnread.textContent = unread;
     if (this.statPending) this.statPending.textContent = pending;
-    // Mostra o botao sempre que houver notificacoes no acompanhamento;
-    // so oculta quando a lista esta totalmente vazia.
-    if (this.markAllReadBtn) this.markAllReadBtn.hidden = total === 0;
   }
 
   markAllRead() {
@@ -11609,22 +10239,16 @@ class NotificationTracker {
     }));
     this.applyFilters();
     this.updateStats();
-    this.showNotification("Todas as notificações foram marcadas como lidas.");
+    this.showNotification("Todas as notificaÃ§Ãµes foram marcadas como lidas.");
   }
 
   clearAll() {
-    const idsToClear = new Set([
-      ...Array.from(this.clearedNotificationIds || []),
-      ...this.notifications.map((notif) => String(notif.id)),
-    ]);
-    this.notifications.forEach((notif) => markNotificationsRead([notif.id], notif.messageIds || []));
-    this.clearedNotificationIds = idsToClear;
-    saveClearedTrackerNotificationIds(idsToClear);
+    if (!confirm("Tem certeza que deseja limpar a visualizaÃ§Ã£o das notificaÃ§Ãµes?")) return;
     this.notifications = [];
     this.filteredNotifications = [];
     this.renderNotifications();
     this.updateStats();
-    this.showNotification("Visualização de notificações limpa.");
+    this.showNotification("VisualizaÃ§Ã£o de notificaÃ§Ãµes limpa.");
   }
 
   showNotification(message) {
@@ -11636,6 +10260,7 @@ class NotificationTracker {
   }
 }
 
+// Inicializar quando o DOM estiver pronto
 function maybeOpenNotificationTrackerFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -11659,67 +10284,6 @@ document.addEventListener('DOMContentLoaded', () => {
   maybeOpenNotificationTrackerFromUrl();
 });
 
-function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedListClass, offsetAfterForm = 96 }) {
-  const form = document.getElementById(formId);
-  const list = document.getElementById(listId);
-  const workspace = form?.closest(".workspace");
-  if (!form || !list || !workspace) return;
-
-  const margem = Math.max(0, Number(offsetAfterForm) || 0);
-  const margemRecolher = margem + 180;
-  let expandidoAtual = false;
-
-  function aplicarEstado(expandido) {
-    if (expandido === expandidoAtual) return;
-    expandidoAtual = expandido;
-
-    list.classList.toggle(expandedListClass, expandido);
-    workspace.classList.toggle(expandedWorkspaceClass, expandido);
-  }
-
-  function atualizarEstado() {
-    const formBottom = form.getBoundingClientRect().bottom;
-    if (!expandidoAtual && formBottom < margem) {
-      aplicarEstado(true);
-    } else if (expandidoAtual && formBottom > margemRecolher) {
-      aplicarEstado(false);
-    }
-  }
-
-  function resetarEstadoInicial() {
-    expandidoAtual = false;
-    list.classList.remove(expandedListClass);
-    workspace.classList.remove(expandedWorkspaceClass);
-  }
-
-  resetarEstadoInicial();
-  window.addEventListener("scroll", atualizarEstado, { passive: true });
-  window.addEventListener("resize", resetarEstadoInicial);
-}
-
-function setupVagasFormScrollGrid() {
-  setupFormScrollGrid({
-    listId: "vagas-list",
-    formId: "vaga-form",
-    expandedWorkspaceClass: "vagas-workspace-expanded",
-    expandedListClass: "vagas-two-col",
-  });
-}
-
-function setupMalotesFormScrollGrid() {
-  setupFormScrollGrid({
-    listId: "malotes-list",
-    formId: "malote-form",
-    expandedWorkspaceClass: "malotes-workspace-expanded",
-    expandedListClass: "malotes-two-col",
-  });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  setupVagasFormScrollGrid();
-  setupMalotesFormScrollGrid();
-});
-
 window.addEventListener("storage", (event) => {
   if (![READ_NOTIFICATIONS_KEY, READ_RH_MESSAGES_KEY].includes(event.key)) return;
   readNotificationIds = loadReadNotificationIds();
@@ -11729,14 +10293,20 @@ window.addEventListener("storage", (event) => {
   try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
 });
 
+// Manter compatibilidade com botÃµes antigos
 document.addEventListener('DOMContentLoaded', () => {
   const prevBtn = document.getElementById('dashboard-notifications-prev');
   const nextBtn = document.getElementById('dashboard-notifications-next');
-
+  
   if (prevBtn) prevBtn.style.display = 'none';
   if (nextBtn) nextBtn.style.display = 'none';
 });
-
+/* ==========================================================================
+   PERMISSÃƒO ARIEL + FEEDBACKS/RECLAMAÃ‡Ã•ES/SUGESTÃ•ES
+   - Equipe visÃ­vel somente para o usuÃ¡rio Ariel
+   - Nova aba em Conta > ConfiguraÃ§Ãµes para envio de feedbacks
+   - Ariel visualiza todos os envios
+   ========================================================================== */
 (function setupArielAccessAndFeedbackModule() {
   const FEEDBACK_TABLE = "hub_feedbacks";
   const FEEDBACK_LOCAL_KEY = "hub-feedbacks-local-v1";
@@ -11816,7 +10386,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalActivateView = activateView;
     activateView = function patchedActivateView(viewId) {
       if (viewId === "equipe" && !isArielUser()) {
-        showModal?.("Acesso restrito", "A aba Equipe está disponível somente para o usuário Ariel.", "warning");
+        showModal?.("Acesso restrito", "A aba Equipe estÃ¡ disponÃ­vel somente para o usuÃ¡rio Ariel.", "warning");
         return originalActivateView?.(getFallbackViewForCurrentUser());
       }
       return originalActivateView?.(viewId);
@@ -11832,7 +10402,7 @@ document.addEventListener('DOMContentLoaded', () => {
     event.stopImmediatePropagation();
 
     if (!isArielUser()) {
-      showModal?.("Acesso restrito", "A aba Equipe está disponível somente para o usuário Ariel.", "warning");
+      showModal?.("Acesso restrito", "A aba Equipe estÃ¡ disponÃ­vel somente para o usuÃ¡rio Ariel.", "warning");
       activateView?.(getFallbackViewForCurrentUser());
       return;
     }
@@ -11863,22 +10433,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function createFeedbackSettingsButton() {
     return `
-      <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclamações reclamação sugestao sugestões sugestoes melhoria usuario">
-        <span aria-hidden="true">✉</span>
-        <span><strong>Feedbacks e Sugestões</strong><small>Feedbacks, reclamações e sugestões</small></span>
+      <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclamaÃ§Ãµes reclamaÃ§Ã£o sugestao sugestÃµes sugestoes melhoria usuario">
+        <span aria-hidden="true">âœ‰</span>
+        <span><strong>Feedbacks e SugestÃµes</strong><small>Feedbacks, reclamaÃ§Ãµes e sugestÃµes</small></span>
       </button>
     `;
   }
 
   function createFeedbackDropdownButton() {
     const subtitle = isArielUser()
-      ? "Visualizar feedbacks, reclamações e sugestões"
-      : "Enviar feedback, reclamação ou sugestão";
+      ? "Visualizar feedbacks, reclamaÃ§Ãµes e sugestÃµes"
+      : "Enviar feedback, reclamaÃ§Ã£o ou sugestÃ£o";
     return `
       <button type="button" class="user-menu-item" data-view="conta" data-settings-target="${FEEDBACK_PANEL_ID}" role="menuitem">
-        <span class="user-menu-icon" aria-hidden="true">✉</span>
+        <span class="user-menu-icon" aria-hidden="true">âœ‰</span>
         <span class="user-menu-item-text">
-          <strong>Feedbacks e Sugestões</strong>
+          <strong>Feedbacks e SugestÃµes</strong>
           <small>${subtitle}</small>
         </span>
       </button>
@@ -11889,36 +10459,36 @@ document.addEventListener('DOMContentLoaded', () => {
     return `
       <section class="panel settings-detail-panel" data-settings-panel="${FEEDBACK_PANEL_ID}">
         <div class="panel-header">
-          <h2>Feedbacks, reclamações e sugestões</h2>
+          <h2>Feedbacks, reclamaÃ§Ãµes e sugestÃµes</h2>
         </div>
-        <p class="item-meta" id="hub-feedback-panel-description">Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.</p>
+        <p class="item-meta" id="hub-feedback-panel-description">Use este espaÃ§o para enviar melhorias, reclamaÃ§Ãµes ou sugestÃµes sobre o HUB e processos internos.</p>
 
         <form class="hub-feedback-form settings-section" id="hub-feedback-form">
           <h3>Novo envio</h3>
           <label>Tipo
             <select id="hub-feedback-type" required>
               <option value="Feedback">Feedback</option>
-              <option value="Reclamação">Reclamação</option>
-              <option value="Sugestão">Sugestão</option>
+              <option value="ReclamaÃ§Ã£o">ReclamaÃ§Ã£o</option>
+              <option value="SugestÃ£o">SugestÃ£o</option>
             </select>
           </label>
           <label>Mensagem
-            <textarea id="hub-feedback-message" placeholder="Descreva aqui seu feedback, reclamação ou sugestão..." required></textarea>
+            <textarea id="hub-feedback-message" placeholder="Descreva aqui seu feedback, reclamaÃ§Ã£o ou sugestÃ£o..." required></textarea>
           </label>
           <button class="primary-button" type="submit">Enviar</button>
         </form>
 
         <div class="settings-section" id="hub-feedback-admin-area" hidden>
           <div class="hub-feedback-admin-note">
-            <strong>Visualização do Ariel:</strong> aqui aparecem os feedbacks, reclamações e sugestões enviados pelos usuários.
+            <strong>VisualizaÃ§Ã£o do Ariel:</strong> aqui aparecem os feedbacks, reclamaÃ§Ãµes e sugestÃµes enviados pelos usuÃ¡rios.
           </div>
           <div class="hub-feedback-toolbar section-top">
             <h3 class="flush-bottom">Envios recebidos</h3>
             <select class="hub-feedback-filter" id="hub-feedback-filter">
               <option value="todos">Todos</option>
               <option value="Feedback">Feedback</option>
-              <option value="Reclamação">Reclamação</option>
-              <option value="Sugestão">Sugestão</option>
+              <option value="ReclamaÃ§Ã£o">ReclamaÃ§Ã£o</option>
+              <option value="SugestÃ£o">SugestÃ£o</option>
             </select>
           </div>
           <div class="hub-feedback-list" id="hub-feedback-admin-list"></div>
@@ -11939,6 +10509,8 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       event.stopPropagation();
 
+      // Quando o botÃ£o vem do menu do usuÃ¡rio, precisa abrir a aba Conta antes
+      // de selecionar o painel interno de Feedbacks.
       activateView?.("conta");
       ensureFeedbackSettingsUi();
       showSettingsPanel?.(FEEDBACK_PANEL_ID);
@@ -11988,7 +10560,7 @@ document.addEventListener('DOMContentLoaded', () => {
       id: row.id || generateUUID(),
       tipo: row.tipo || "Feedback",
       mensagem: row.mensagem || "",
-      autorNome: row.autor_nome || row.autorNome || row.created_by || "Usuário",
+      autorNome: row.autor_nome || row.autorNome || row.created_by || "UsuÃ¡rio",
       autorEmail: row.autor_email || row.autorEmail || "",
       status: row.status || "Novo",
       createdAt: row.created_at ? formatDateTime(row.created_at) : row.createdAt || todayLabel?.() || "Hoje",
@@ -12000,19 +10572,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentEmail = getCurrentUserEmailSafe();
     const localItems = getLocalFeedbacks().map(mapFeedbackRow);
 
-    if (!isAuthenticated()) {
+    if (!postgresClient) {
       return isArielUser()
         ? localItems.sort((a, b) => String(b.sortAt).localeCompare(String(a.sortAt)))
         : localItems.filter((item) => !currentEmail || normalizeAccessName(item.autorEmail) === normalizeAccessName(currentEmail));
     }
 
     try {
-      const response = await fetch("/api/feedback", { credentials: "include" });
-      if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
-      const result = await response.json();
-      return (result.data || []).map(mapFeedbackRow);
+      let query = postgresClient.from(FEEDBACK_TABLE).select("*").order("created_at", { ascending: false });
+      if (!isArielUser() && currentEmail) query = query.eq("autor_email", currentEmail);
+      const { data: rows, error } = await query;
+      if (error) throw error;
+      return (rows || []).map(mapFeedbackRow);
     } catch (error) {
-      console.warn("Feedbacks carregados do armazenamento local.", error);
+      console.warn("Feedbacks carregados do armazenamento local. Verifique se a tabela hub_feedbacks existe no PostgreSQL.", error);
       return isArielUser()
         ? localItems.sort((a, b) => String(b.sortAt).localeCompare(String(a.sortAt)))
         : localItems.filter((item) => !currentEmail || normalizeAccessName(item.autorEmail) === normalizeAccessName(currentEmail));
@@ -12026,24 +10599,26 @@ document.addEventListener('DOMContentLoaded', () => {
       created_at: new Date().toISOString(),
     });
 
-    if (isAuthenticated()) {
+    if (postgresClient) {
       try {
-        const response = await fetch("/api/feedback", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tipo: payload.tipo, mensagem: payload.mensagem }),
+        const { error } = await postgresClient.from(FEEDBACK_TABLE).insert({
+          tipo: payload.tipo,
+          mensagem: payload.mensagem,
+          autor_nome: payload.autorNome,
+          autor_email: payload.autorEmail || null,
+          status: "Novo",
+          created_by: payload.autorNome,
         });
-        if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
-        return { savedOnSupabase: true };
+        if (error) throw error;
+        return { savedOnPostgreSQL: true };
       } catch (error) {
-        console.warn("Não foi possível salvar feedback; salvando localmente.", error);
+        console.warn("NÃ£o foi possÃ­vel salvar feedback no PostgreSQL; salvando localmente.", error);
       }
     }
 
     const items = [localItem, ...getLocalFeedbacks().map(mapFeedbackRow)];
     saveLocalFeedbacks(items);
-    return { savedOnSupabase: false };
+    return { savedOnPostgreSQL: false };
   }
 
   function removeLocalFeedbackById(feedbackId) {
@@ -12056,24 +10631,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function deleteFeedback(feedbackId) {
     const normalizedId = String(feedbackId || "");
-    if (!normalizedId) return { deletedOnSupabase: false };
+    if (!normalizedId) return { deletedOnPostgreSQL: false };
 
-    if (isAuthenticated()) {
+    if (postgresClient) {
       try {
-        const response = await fetch(`/api/feedback?id=${encodeURIComponent(normalizedId)}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+        let query = postgresClient.from(FEEDBACK_TABLE).delete().eq("id", normalizedId);
+        const currentEmail = getCurrentUserEmailSafe();
+        if (!isArielUser() && currentEmail) query = query.eq("autor_email", currentEmail);
+        const { error } = await query;
+        if (error) throw error;
         removeLocalFeedbackById(normalizedId);
-        return { deletedOnSupabase: true };
+        return { deletedOnPostgreSQL: true };
       } catch (error) {
-        console.warn("Não foi possível excluir feedback; tentando remover somente do armazenamento local.", error);
+        console.warn("NÃ£o foi possÃ­vel excluir feedback no PostgreSQL; tentando remover somente do armazenamento local.", error);
       }
     }
 
     removeLocalFeedbackById(normalizedId);
-    return { deletedOnSupabase: false };
+    return { deletedOnPostgreSQL: false };
   }
 
   function renderFeedbackItems(target, items, options = {}) {
@@ -12090,7 +10665,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="tag">${escapeHtml(item.status || "Novo")}</span>
         </div>
         <p>${escapeHtml(item.mensagem)}</p>
-        <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")} | Enviado por ${escapeHtml(item.autorNome || "Usuário")}${item.autorEmail ? ` | ${escapeHtml(item.autorEmail)}` : ""}</p>
+        <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")} | Enviado por ${escapeHtml(item.autorNome || "UsuÃ¡rio")}${item.autorEmail ? ` | ${escapeHtml(item.autorEmail)}` : ""}</p>
         ${options.canDelete ? `
           <div class="hub-feedback-actions">
             <button class="danger-button hub-feedback-delete-button" type="button" data-feedback-delete-id="${escapeHtml(item.id)}">Excluir envio</button>
@@ -12108,7 +10683,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const feedbackId = button.dataset.feedbackDeleteId;
         if (!feedbackId) return;
 
-        const confirmed = window.confirm("Deseja excluir este envio? Esta ação não poderá ser desfeita.");
+        const confirmed = window.confirm("Deseja excluir este envio? Esta aÃ§Ã£o nÃ£o poderÃ¡ ser desfeita.");
         if (!confirmed) return;
 
         const originalText = button.textContent || "Excluir envio";
@@ -12118,11 +10693,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await deleteFeedback(feedbackId);
 
         showModal?.(
-          "Envio excluído",
-          result.deletedOnSupabase
-            ? "Seu envio foi excluído com sucesso."
-            : "O envio foi removido localmente. Se ele ainda aparecer em outro dispositivo, confirme a permissão DELETE no Supabase.",
-          result.deletedOnSupabase ? "success" : "info"
+          "Envio excluÃ­do",
+          result.deletedOnPostgreSQL
+            ? "Seu envio foi excluÃ­do com sucesso."
+            : "O envio foi removido localmente. Se ele ainda aparecer em outro dispositivo, confirme a permissÃ£o DELETE no PostgreSQL.",
+          result.deletedOnPostgreSQL ? "success" : "info"
         );
 
         button.disabled = false;
@@ -12141,7 +10716,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtered = filter === "todos" ? items : items.filter((item) => item.tipo === filter);
 
     if (isArielUser()) {
-
+      // Ariel somente visualiza os envios recebidos. Ele nÃ£o envia por esta aba.
       renderFeedbackItems(document.getElementById("hub-feedback-admin-list"), filtered, { admin: true });
     } else {
       renderFeedbackItems(document.getElementById("hub-feedback-user-list"), items, { canDelete: true });
@@ -12161,14 +10736,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userArea) userArea.hidden = ariel;
     if (description) {
       description.textContent = ariel
-        ? "Área exclusiva para visualizar feedbacks, reclamações e sugestões enviados pelos usuários."
-        : "Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.";
+        ? "Ãrea exclusiva para visualizar feedbacks, reclamaÃ§Ãµes e sugestÃµes enviados pelos usuÃ¡rios."
+        : "Use este espaÃ§o para enviar melhorias, reclamaÃ§Ãµes ou sugestÃµes sobre o HUB e processos internos.";
     }
 
     document.querySelectorAll(`[data-settings-target="${FEEDBACK_PANEL_ID}"] small`).forEach((small) => {
       small.textContent = ariel
-        ? "Visualizar feedbacks, reclamações e sugestões"
-        : "Enviar feedback, reclamação ou sugestão";
+        ? "Visualizar feedbacks, reclamaÃ§Ãµes e sugestÃµes"
+        : "Enviar feedback, reclamaÃ§Ã£o ou sugestÃ£o";
     });
   }
 
@@ -12180,13 +10755,13 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (isArielUser()) {
-        showModal?.("Acesso somente leitura", "O usuário Ariel apenas visualiza os feedbacks enviados pelos demais usuários.", "info");
+        showModal?.("Acesso somente leitura", "O usuÃ¡rio Ariel apenas visualiza os feedbacks enviados pelos demais usuÃ¡rios.", "info");
         return;
       }
       const tipo = document.getElementById("hub-feedback-type")?.value || "Feedback";
       const mensagem = document.getElementById("hub-feedback-message")?.value.trim() || "";
       if (!mensagem) {
-        showModal?.("Mensagem obrigatória", "Preencha o campo de mensagem antes de enviar.", "warning");
+        showModal?.("Mensagem obrigatÃ³ria", "Preencha o campo de mensagem antes de enviar.", "warning");
         return;
       }
 
@@ -12212,10 +10787,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       showModal?.(
         "Envio registrado",
-        result.savedOnSupabase
+        result.savedOnPostgreSQL
           ? "Seu feedback foi enviado com sucesso."
-          : "Seu feedback foi salvo localmente. Para o Ariel visualizar envios de todos os usuários, confirme se a tabela hub_feedbacks foi criada no Supabase.",
-        result.savedOnSupabase ? "success" : "info"
+          : "Seu feedback foi salvo localmente. Para o Ariel visualizar envios de todos os usuÃ¡rios, confirme se a tabela hub_feedbacks foi criada no PostgreSQL.",
+        result.savedOnPostgreSQL ? "success" : "info"
       );
       renderFeedbackPanel();
     });
@@ -12258,3 +10833,403 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.key === FEEDBACK_LOCAL_KEY) renderFeedbackPanel();
   });
 })();
+
+
+/* ========================================================================
+   ATESTADOS PUBLICOS + ABA INTERNA DE VISUALIZAÃ‡ÃƒO
+   ======================================================================== */
+(function setupAtestadosModule() {
+  const ATESTADOS_TABLE = "hub_atestados";
+  const ATESTADOS_LOCAL_KEY = "hub-atestados-local-v1";
+  const ATESTADO_ALLOWED_MIME_TYPES = new Set([
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ]);
+  const ATESTADO_ALLOWED_EXTENSIONS = new Set(["pdf", "jpg", "jpeg", "png", "webp", "doc", "docx"]);
+
+  function getAtestadosBucket() {
+    return typeof ATESTADOS_BUCKET !== "undefined" ? ATESTADOS_BUCKET : "hub-atestados";
+  }
+
+  function getAtestadoMaxSize() {
+    return typeof ATESTADO_MAX_SIZE_BYTES !== "undefined" ? ATESTADO_MAX_SIZE_BYTES : 10 * 1024 * 1024;
+  }
+
+  function getFileExtension(fileName = "") {
+    const parts = String(fileName || "").split(".");
+    return parts.length > 1 ? parts.pop().toLowerCase() : "";
+  }
+
+  function validateAtestadoFile(file) {
+    if (!file || !file.name) return "Anexe o atestado antes de enviar.";
+    if (file.size > getAtestadoMaxSize()) return "O arquivo deve ter no mÃ¡ximo 10 MB.";
+
+    const extension = getFileExtension(file.name);
+    const mime = String(file.type || "").toLowerCase();
+    if (!ATESTADO_ALLOWED_EXTENSIONS.has(extension) && !ATESTADO_ALLOWED_MIME_TYPES.has(mime)) {
+      return "Formato invÃ¡lido. Envie PDF, imagem, DOC ou DOCX.";
+    }
+    return "";
+  }
+
+  function safeStorageFileName(fileName = "atestado") {
+    return String(fileName || "atestado")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9_.-]/gi, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "atestado";
+  }
+
+  function getAtestadoFilterValues() {
+    return {
+      nome: String(document.getElementById("atestado-filter-nome")?.value || "").trim().toLowerCase(),
+      cpf: normalizeCpf(document.getElementById("atestado-filter-cpf")?.value || ""),
+      unidade: String(document.getElementById("atestado-filter-unidade")?.value || "").trim(),
+    };
+  }
+
+  function filterAtestados(items = []) {
+    const filters = getAtestadoFilterValues();
+    return [...items]
+      .filter((item) => {
+        const nome = String(item.nome || "").toLowerCase();
+        const cpf = normalizeCpf(item.cpf || "");
+        const unidade = String(item.unidade || "").trim();
+        if (filters.nome && !nome.includes(filters.nome)) return false;
+        if (filters.cpf && !cpf.includes(filters.cpf)) return false;
+        if (filters.unidade && unidade !== filters.unidade) return false;
+        return true;
+      })
+      .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
+  }
+
+  function getLocalAtestados() {
+    return storageService.getLocalItem(ATESTADOS_LOCAL_KEY, []).map(mapAtestadoRow);
+  }
+
+  function saveLocalAtestados(items = []) {
+    storageService.setLocalItem(ATESTADOS_LOCAL_KEY, items.map(mapAtestadoRow));
+  }
+
+  async function fetchAtestadosFromPostgreSQL() {
+    if (!postgresClient) return getLocalAtestados();
+    try {
+      const { data: rows, error } = await postgresClient
+        .from(ATESTADOS_TABLE)
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const mapped = (rows || []).map(mapAtestadoRow);
+      data.atestados = mapped;
+      saveLocalDataDebounced?.();
+      return mapped;
+    } catch (error) {
+      console.warn("NÃ£o foi possÃ­vel carregar atestados do PostgreSQL; usando cache local.", error);
+      return data.atestados?.length ? data.atestados : getLocalAtestados();
+    }
+  }
+
+  function updateAtestadoClearButton() {
+    const clearButton = document.getElementById("clear-atestado-filters");
+    if (!clearButton) return;
+    const filters = getAtestadoFilterValues();
+    clearButton.hidden = !(filters.nome || filters.cpf || filters.unidade);
+  }
+
+  function renderAtestadoCards(items = []) {
+    const target = document.getElementById("atestados-list");
+    if (!target) return;
+    const filtered = filterAtestados(items);
+    updateAtestadoClearButton();
+
+    if (!filtered.length) {
+      target.innerHTML = '<p class="empty-state">Nenhum atestado encontrado.</p>';
+      return;
+    }
+
+    target.innerHTML = filtered.map((item) => {
+      const status = item.status || "Recebido";
+      const fileName = item.arquivoNome || "Atestado";
+      const fileMeta = [fileName, formatFileSize(item.arquivoTamanho)].filter(Boolean).join(" Â· ");
+      return `
+        <article class="item-card atestado-card">
+          <div class="item-topline">
+            <p class="item-title">${escapeHtml(item.nome || "Colaborador nÃ£o informado")}</p>
+            <span class="tag">${escapeHtml(status)}</span>
+          </div>
+          <p><strong>CPF:</strong> ${escapeHtml(formatCpf(item.cpf || ""))}</p>
+          <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || item.telefone || "NÃ£o informado")}</p>
+          <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "NÃ£o informada")}</p>
+          <p class="item-meta">Recebido em ${escapeHtml(item.createdAt || "NÃ£o informado")} | ${escapeHtml(fileMeta || "Arquivo anexado")}</p>
+          <div class="job-actions section-top atestado-actions">
+            <div class="atestado-action-buttons">
+              ${item.arquivoUrl ? `<button type="button" class="secondary-link private-file-button atestado-action-button" data-private-storage-bucket="${escapeHtml(getAtestadosBucket())}" data-private-storage-path="${escapeHtml(item.arquivoUrl)}">Ver atestado</button>` : ""}
+              <button type="button" class="danger-button atestado-action-button" data-delete-atestado-id="${escapeHtml(item.id)}" data-delete-atestado-path="${escapeHtml(item.arquivoUrl || "")}">Apagar atestado</button>
+            </div>
+            <label class="compact-status-label">Status
+              <select data-atestado-status-id="${escapeHtml(item.id)}">
+                ${["Recebido", "Em anÃ¡lise", "LanÃ§ado", "Recusado"].map((option) => `<option${option === status ? " selected" : ""}>${option}</option>`).join("")}
+              </select>
+            </label>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  async function renderAtestadosSection() {
+    if (!document.getElementById("atestados-list")) return;
+    const items = await fetchAtestadosFromPostgreSQL();
+    renderAtestadoCards(items);
+    try { renderDashboard?.(); } catch (_) {}
+    try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
+  }
+
+  async function deleteAtestado(id, filePath = "") {
+    if (!id) return;
+    const item = (data.atestados || []).find((record) => String(record.id) === String(id));
+    const label = item?.nome ? ` de ${item.nome}` : "";
+    if (!confirm(`Tem certeza que deseja apagar o atestado${label}? Essa aÃ§Ã£o nÃ£o poderÃ¡ ser desfeita.`)) return;
+
+    const applyLocalDelete = () => {
+      data.atestados = (data.atestados || []).filter((record) => String(record.id) !== String(id));
+      saveLocalAtestados(data.atestados || []);
+      renderAtestadoCards(data.atestados || []);
+      try { renderDashboard?.(); } catch (_) {}
+      try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
+    };
+
+    if (postgresClient) {
+      try {
+        const pathToRemove = filePath || item?.arquivoUrl || "";
+        if (pathToRemove) {
+          const { error: storageError } = await postgresClient.storage
+            .from(getAtestadosBucket())
+            .remove([pathToRemove]);
+          if (storageError) console.warn("NÃ£o foi possÃ­vel remover o arquivo do storage:", storageError);
+        }
+
+        const { error } = await postgresClient
+          .from(ATESTADOS_TABLE)
+          .delete()
+          .eq("id", id);
+        if (error) throw error;
+
+        applyLocalDelete();
+        showModal?.("Atestado apagado", "O atestado foi removido com sucesso.", "success");
+        return;
+      } catch (error) {
+        console.error("Erro ao apagar atestado:", error);
+        showModal?.("Erro", "NÃ£o foi possÃ­vel apagar o atestado. Verifique a permissÃ£o DELETE da tabela hub_atestados e do bucket hub-atestados.", "error");
+        return;
+      }
+    }
+
+    applyLocalDelete();
+    showModal?.("Atestado apagado localmente", "Sem PostgreSQL ativo, a exclusÃ£o foi feita apenas neste navegador.", "info");
+  }
+
+  async function updateAtestadoStatus(id, status) {
+    if (!id || !status) return;
+    const applyLocal = () => {
+      data.atestados = (data.atestados || []).map((item) => String(item.id) === String(id) ? { ...item, status } : item);
+      saveLocalAtestados(data.atestados || []);
+      renderAtestadoCards(data.atestados || []);
+    };
+
+    if (postgresClient) {
+      try {
+        const { error } = await postgresClient.from(ATESTADOS_TABLE).update({ status }).eq("id", id);
+        if (error) throw error;
+        applyLocal();
+        showModal?.("Status atualizado", "O status do atestado foi atualizado com sucesso.", "success");
+        return;
+      } catch (error) {
+        console.error("Erro ao atualizar status do atestado:", error);
+        showModal?.("Erro", "NÃ£o foi possÃ­vel atualizar o status no PostgreSQL. Verifique a permissÃ£o UPDATE da tabela hub_atestados.", "error");
+        return;
+      }
+    }
+
+    applyLocal();
+    showModal?.("Status atualizado localmente", "Sem PostgreSQL ativo, a alteraÃ§Ã£o ficou salva apenas neste navegador.", "info");
+  }
+
+  async function uploadPublicAtestado({ nome, cpf, telefone, unidade, file }) {
+    if (!postgresClient) throw new Error("PostgreSQL indisponÃ­vel. Verifique a configuraÃ§Ã£o pÃºblica do HUB.");
+
+    const cpfDigits = normalizeCpf(cpf);
+    const safeName = safeStorageFileName(file.name || "atestado.pdf");
+    const path = `atestados/${cpfDigits || "sem-cpf"}/${Date.now()}-${generateUUID()}-${safeName}`;
+
+    const { error: uploadError } = await postgresClient.storage
+      .from(getAtestadosBucket())
+      .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+    if (uploadError) throw uploadError;
+
+    const payload = {
+      nome,
+      cpf: cpfDigits,
+      telefone,
+      unidade,
+      arquivo_nome: file.name || "Atestado",
+      arquivo_tamanho: file.size || 0,
+      arquivo_tipo: file.type || "application/octet-stream",
+      arquivo_url: path,
+      status: "Recebido",
+      created_by: "Publico",
+    };
+
+    // IMPORTANTE:
+    // NÃ£o usar .select().single() no envio pÃºblico.
+    // O visitante/anon tem permissÃ£o apenas para INSERIR, nÃ£o para LER a tabela.
+    // Quando o INSERT pede retorno com .select(), o PostgreSQL tenta aplicar SELECT
+    // e pode retornar erro de RLS mesmo com a policy de INSERT correta.
+    const { error: insertError } = await postgresClient
+      .from(ATESTADOS_TABLE)
+      .insert(payload);
+    if (insertError) throw insertError;
+
+    return mapAtestadoRow({
+      id: generateUUID(),
+      ...payload,
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  function setupPublicAtestadoForm() {
+    const form = document.getElementById("atestado-form");
+    if (!form || form.dataset.atestadoReady === "true") return;
+    form.dataset.atestadoReady = "true";
+    ensurePublicCaptchaNotice?.(form);
+
+    document.getElementById("atestado-cpf")?.addEventListener("input", (event) => {
+      event.currentTarget.value = formatCpf(event.currentTarget.value);
+    });
+    document.getElementById("atestado-telefone")?.addEventListener("input", (event) => {
+      event.currentTarget.value = formatPhone(event.currentTarget.value);
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formElement = event.currentTarget;
+      const publicFormError = validatePublicFormSubmission?.(formElement);
+      if (publicFormError) {
+        showModal?.("Envio bloqueado", publicFormError, "error");
+        return;
+      }
+
+      const formData = new FormData(formElement);
+      const nome = String(formData.get("nome") || "").trim();
+      const cpf = String(formData.get("cpf") || "").trim();
+      const telefone = String(formData.get("telefone") || "").trim();
+      const unidade = String(formData.get("unidade") || "").trim();
+      const file = formData.get("atestado");
+
+      if (!/\S+\s+\S+/.test(nome)) {
+        showModal?.("Nome obrigatÃ³rio", "Informe nome e sobrenome do colaborador.", "error");
+        return;
+      }
+      if (!isValidCpf(cpf)) {
+        showModal?.("CPF invÃ¡lido", "Informe um CPF vÃ¡lido no formato 000.000.000-00.", "error");
+        return;
+      }
+      if (!telefone || normalizeCpf(telefone).length < 10) {
+        showModal?.("Telefone obrigatÃ³rio", "Informe um telefone vÃ¡lido para contato.", "error");
+        return;
+      }
+      if (!unidade) {
+        showModal?.("Unidade obrigatÃ³ria", "Selecione a unidade do colaborador.", "error");
+        return;
+      }
+      const fileError = validateAtestadoFile(file);
+      if (fileError) {
+        showModal?.("Arquivo invÃ¡lido", fileError, "error");
+        return;
+      }
+
+      const submitButton = formElement.querySelector('button[type="submit"]');
+      const originalText = submitButton?.textContent || "Enviar atestado";
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Enviando...";
+      }
+
+      try {
+        await uploadPublicAtestado({ nome, cpf, telefone, unidade, file });
+        formElement.reset();
+        showModal?.("Atestado enviado", "Seu atestado foi enviado com sucesso para o RH.", "success");
+      } catch (error) {
+        console.error("Erro ao enviar atestado:", error);
+        showModal?.("Erro no envio", error.message || "NÃ£o foi possÃ­vel enviar o atestado. Verifique sua conexÃ£o e tente novamente.", "error");
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = originalText;
+        }
+      }
+    });
+  }
+
+  function setupAtestadosInternalView() {
+    if (!document.getElementById("atestados-list")) return;
+    ["atestado-filter-nome", "atestado-filter-cpf", "atestado-filter-unidade"].forEach((id) => {
+      const field = document.getElementById(id);
+      if (!field || field.dataset.atestadoFilterReady === "true") return;
+      field.dataset.atestadoFilterReady = "true";
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, () => renderAtestadoCards(data.atestados || []));
+    });
+
+    document.getElementById("atestado-filter-cpf")?.addEventListener("input", (event) => {
+      event.currentTarget.value = formatCpf(event.currentTarget.value);
+    });
+
+    document.getElementById("clear-atestado-filters")?.addEventListener("click", () => {
+      ["atestado-filter-nome", "atestado-filter-cpf", "atestado-filter-unidade"].forEach((id) => {
+        const field = document.getElementById(id);
+        if (field) field.value = "";
+      });
+      renderAtestadoCards(data.atestados || []);
+    });
+
+    if (!document.documentElement.dataset.atestadoDeleteReady) {
+      document.documentElement.dataset.atestadoDeleteReady = "true";
+      document.addEventListener("click", (event) => {
+        const deleteButton = event.target.closest?.("[data-delete-atestado-id]");
+        if (!deleteButton) return;
+        event.preventDefault();
+        deleteAtestado(deleteButton.dataset.deleteAtestadoId, deleteButton.dataset.deleteAtestadoPath || "");
+      });
+    }
+
+    document.addEventListener("change", (event) => {
+      const select = event.target.closest?.("[data-atestado-status-id]");
+      if (!select) return;
+      updateAtestadoStatus(select.dataset.atestadoStatusId, select.value);
+    });
+  }
+
+  try {
+    const originalRenderAll = renderAll;
+    renderAll = function patchedRenderAllForAtestados() {
+      originalRenderAll?.();
+      renderAtestadosSection();
+    };
+  } catch (_) {}
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setupPublicAtestadoForm();
+    setupAtestadosInternalView();
+  });
+
+  setupPublicAtestadoForm();
+  setupAtestadosInternalView();
+})();
+
+

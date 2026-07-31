@@ -4,7 +4,7 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 
 ## Estado atual
 
-- Login migrado para Supabase Auth.
+- Login migrado para PostgreSQL Auth.
 - RLS ativo nas tabelas `hub_*`.
 - Regras por cargo aplicadas no banco:
   - `RH`: acesso interno amplo conforme policies.
@@ -18,10 +18,10 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 - Bucket `hub-curriculos` privado, com upload publico feito somente via Edge Function.
 - Bucket `hub-chat-files` privado, limitado a 10 MB, MIME restrito e acesso por cargo/canal para leitura e upload; update/delete seguem RH-only.
 - `.env`, `*.env` e arquivos locais sensiveis estao no `.gitignore`.
-- O app nao depende mais de `supabase-config.js`; a configuracao publica padrao fica centralizada em `script.js`.
+- O app nao depende mais de `postgres-config.js`; a configuracao publica padrao fica centralizada em `script.js`.
 - Historico antigo do Git foi reescrito para reduzir risco de senhas antigas em commits.
 - Coluna legada `hub_users.senha` removida do banco.
-- Supabase JS usa SRI nos HTMLs.
+- PostgreSQL JS usa SRI nos HTMLs.
 - CSP nao usa mais `unsafe-inline`.
 - Sem Turnstile configurado, denuncias publicas usam rate limit no servidor; chamados e candidaturas seguem bloqueados.
 - Usuarios autenticados nao possuem mais `UPDATE` direto em `hub_users`.
@@ -31,7 +31,7 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 
 - Preencher `email` em todos os perfis de `hub_users`; atualmente o RLS por cargo depende desse vinculo ou de `app_metadata.cargo`.
 - Configurar `TURNSTILE_SECRET_KEY` na Edge Function e `turnstileSiteKey` no front para exigir CAPTCHA tambem nas denuncias publicas.
-- Ativar no Supabase Auth a protecao contra senhas vazadas e forcar redefinicao de senha dos usuarios antigos.
+- Ativar no PostgreSQL Auth a protecao contra senhas vazadas e forcar redefinicao de senha dos usuarios antigos.
 
 ## Historico
 
@@ -53,7 +53,7 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 ### 2026-06-21 - Arquivamento interno e vagas demonstrativas
 
 - Funcoes de validacao de denuncias e chamados permitem atualizacao de status somente para RH autenticado; envios publicos continuam obrigados aos estados iniciais.
-- Removida a vaga demonstrativa do estado inicial para evitar que apareca antes da sincronizacao com o Supabase.
+- Removida a vaga demonstrativa do estado inicial para evitar que apareca antes da sincronizacao com o PostgreSQL.
 - Denuncias aceitam mensagem nao vazia de ate 4000 caracteres em HTML, frontend, Edge Function e validacao do banco.
 
 ### 2026-06-21 - Correcao do upload de foto de perfil
@@ -85,7 +85,7 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 
 - A RPC publica `hub_update_own_profile` foi removida.
 - Atualizacao de perfil agora passa pela Edge Function `hub-account-update`, com JWT obrigatorio.
-- A funcao valida a sessao no Supabase Auth e permite somente `nome` e `foto_perfil` do proprio usuario.
+- A funcao valida a sessao no PostgreSQL Auth e permite somente `nome` e `foto_perfil` do proprio usuario.
 - Teste sem token confirmou bloqueio com `401`.
 
 ### 2026-06-20 - Validacao de Edge Functions
@@ -97,8 +97,8 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 
 ### 2026-06-20 - Suporte Deno no editor
 
-- Adicionado `supabase/functions/deno.json` para tipagem das Edge Functions.
-- Adicionada configuracao VS Code para habilitar Deno somente em `supabase/functions`.
+- Adicionado `postgres/functions/deno.json` para tipagem das Edge Functions.
+- Adicionada configuracao VS Code para habilitar Deno somente em `postgres/functions`.
 
 ### 2026-06-20 - Login por CPF
 
@@ -110,7 +110,7 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 ### 2026-06-19 - Correcao do checklist de vulnerabilidades
 
 - Edge Function `hub-public-submit` implantada na versao 7 com Turnstile obrigatorio para todo POST publico.
-- Formulários publicos passam a coletar token Turnstile quando `turnstileSiteKey` estiver configurada.
+- FormulÃ¡rios publicos passam a coletar token Turnstile quando `turnstileSiteKey` estiver configurada.
 - POST publico sem CAPTCHA testado e bloqueado com `503` enquanto `TURNSTILE_SECRET_KEY` nao estiver configurada.
 - GET publico de vagas segue funcionando pela Edge Function.
 - `hub-curriculos` confirmado privado, sem policy anon e com upload publico somente via service role da Edge Function.
@@ -118,7 +118,7 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 - Upload de anexos de chat passou a gravar em `chat/<canal>/...` para permitir RLS por canal no Storage.
 - Coluna legada `hub_users.senha` removida do banco e do baseline SQL.
 - Role da UI deixou de usar `sessionStorage/localStorage` como fonte de permissao; agora vem do usuario Auth/perfil carregado.
-- SRI adicionado ao CDN do Supabase JS em todos os HTMLs.
+- SRI adicionado ao CDN do PostgreSQL JS em todos os HTMLs.
 - `unsafe-inline` removido de `script-src` e `style-src`.
 - Wrapper publico `public.hub_check_public_rate_limit` ficou executavel apenas por `service_role`.
 - Funcoes auxiliares em `app_private` receberam `search_path` fixo.
@@ -129,12 +129,12 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 - Mapas de rate limit e tabela foram tipados para impedir valores `undefined` no TypeScript.
 - Resposta do Turnstile recebeu tipo explicito.
 
-### 2026-06-19 - Configuracao Supabase sem arquivo externo
+### 2026-06-19 - Configuracao PostgreSQL sem arquivo externo
 
-- Removida a necessidade de carregar `supabase-config.js` nos HTMLs.
-- Configuracao publica padrao do Supabase centralizada em `script.js`.
-- `getHubSupabaseConfig()` ainda permite override via `window.HUB_SUPABASE`, caso algum ambiente injete configuracao propria.
-- `supabase-config.example.js` foi removido por nao ser mais necessario.
+- Removida a necessidade de carregar `postgres-config.js` nos HTMLs.
+- Configuracao publica padrao do PostgreSQL centralizada em `script.js`.
+- `getHubPostgreSQLConfig()` ainda permite override via `window.HUB_POSTGRES`, caso algum ambiente injete configuracao propria.
+- `postgres-config.example.js` foi removido por nao ser mais necessario.
 
 ### 2026-06-19 - Edge Function anti-spam e hardening de frontend
 
@@ -146,7 +146,7 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 - Criadas funcoes `app_private.hub_check_public_rate_limit` e wrapper `public.hub_check_public_rate_limit`.
 - Front passou a enviar fluxos publicos pela Edge Function.
 - Adicionada CSP nas paginas HTML.
-- Supabase JS fixado em `@supabase/supabase-js@2.108.2`.
+- PostgreSQL JS fixado em `@postgres/postgres-js@2.108.2`.
 - Leitura de `hub_users` limitada a RH ou ao proprio usuario.
 - Edge Function testada com envio valido de denuncia e limpeza do registro de teste.
 
@@ -163,8 +163,8 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 - Arquivos atualizados:
   - `script.js`
   - `style.css`
-  - `supabase-rls-hub.sql`
-  - `supabase-rls-verify.sql`
+  - `postgres-rls-hub.sql`
+  - `postgres-rls-verify.sql`
 - Commit: `eef44e5 fix remaining security hardening gaps`
 
 ### 2026-06-18 - Upload publico de curriculo
@@ -188,5 +188,6 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 - Policies amplas `authenticated_all` removidas das tabelas internas.
 - Acesso interno passou a depender de cargo.
 - Criados scripts locais:
-  - `supabase-rls-hub.sql`
-  - `supabase-rls-verify.sql`
+  - `postgres-rls-hub.sql`
+  - `postgres-rls-verify.sql`
+

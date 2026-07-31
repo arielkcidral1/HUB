@@ -1,11 +1,10 @@
 {
-  "name": "hub",
+  "name": "hub-postgres",
   "private": true,
+  "version": "1.0.0",
   "type": "module",
   "dependencies": {
-    "@neondatabase/serverless": "^0.10.4",
-    "@vercel/blob": "^0.27.1",
     "bcryptjs": "^2.4.3",
-    "jose": "^5.9.6"
+    "pg": "^8.13.1"
   }
 }
