@@ -3029,9 +3029,9 @@ if (collection === "malotes") {
       details: row.detalhes || "",
       formData: row.dados || {},
       createdBy: row.created_by || getSystemFallbackAuthor(),
-      createdAt: formatDate(row.created_at),
+      createdAt: formatDateTime(row.created_at),
       updatedBy: row.updated_by || "",
-      updatedAt: row.updated_at ? formatDate(row.updated_at) : "",
+      updatedAt: row.updated_at ? formatDateTime(row.updated_at) : "",
       sortAt: row.created_at || "",
       updatedSortAt: row.updated_at || "",
     }));
@@ -8339,7 +8339,8 @@ function renderDocumentRecords() {
           </div>
         </div>
         <p>${escapeHtml(item.summary)}</p>
-        <p class="item-meta">Registro: ${escapeHtml(item.createdAt || "Data nao informada")} por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy || item.updatedAt ? ` | Edicao: ${escapeHtml(item.updatedAt || "Data nao informada")} por ${escapeHtml(item.updatedBy || getSystemFallbackAuthor())}` : ""}</p>
+        <p class="item-meta">Registro: ${escapeHtml(item.createdAt || "Data e horario nao informados")}${item.updatedBy || item.updatedAt ? ` | Edicao: ${escapeHtml(item.updatedAt || "Data e horario nao informados")}` : ""}</p>
+        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy || item.updatedAt ? ` | Editado por ${escapeHtml(item.updatedBy || getSystemFallbackAuthor())}` : ""}</p>
       </article>
     `)
     .join("");
