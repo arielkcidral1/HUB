@@ -1,4 +1,4 @@
-import { assertTable, getBody, json, pool, quoteIdent } from "./db.js";
+import { assertDatabaseUrl, assertTable, getBody, json, pool, quoteIdent } from "./db.js";
 
 const OPERATORS = {
   eq: "=",
@@ -72,6 +72,7 @@ function buildLimit(limit) {
 
 export default async function handler(req, res) {
   try {
+    assertDatabaseUrl();
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const table = url.searchParams.get("table") || "";
     assertTable(table);

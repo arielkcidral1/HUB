@@ -4,15 +4,21 @@ const { Pool } = pg;
 
 const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
 
-if (!DATABASE_URL) {
-  console.warn("DATABASE_URL nao configurada para o PostgreSQL da Microsoft.");
+export function assertDatabaseUrl() {
+  if (!DATABASE_URL) {
+    const error = new Error("DATABASE_URL nao configurada no ambiente do deploy.");
+    error.statusCode = 500;
+    throw error;
+  }
 }
 
-export const pool = new Pool({
-  connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-  max: 5,
-});
+export const pool = DATABASE_URL
+  ? new Pool({
+      connectionString: DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      max: 5,
+    })
+  : null;
 
 export const TABLES = new Set([
   "hub_atestados",
@@ -43,7 +49,12 @@ export function assertTable(table) {
 }
 
 export function json(res, status, body) {
-  res.status(status).setHeader("Content-Type", "application/json; charset=utf-8");
+  if (typeof res.status === "function") {
+    res.status(status);
+  } else {
+    res.statusCode = status;
+  }
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.end(JSON.stringify(body));
 }
 

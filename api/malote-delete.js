@@ -1,9 +1,10 @@
 import bcrypt from "bcryptjs";
-import { getBody, json, pool } from "./db.js";
+import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
 
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") return json(res, 405, { error: "Metodo nao permitido." });
+    assertDatabaseUrl();
     const body = await getBody(req);
     const password = String(body.password || "").trim();
     const result = await pool.query(

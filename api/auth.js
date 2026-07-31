@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import { getBody, json, pool } from "./db.js";
+import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
 
 function normalize(value) {
   return String(value || "").trim();
@@ -50,6 +50,7 @@ function publicUser(row) {
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") return json(res, 405, { error: "Metodo nao permitido." });
+    assertDatabaseUrl();
     const body = await getBody(req);
     const action = body.action || "login";
 

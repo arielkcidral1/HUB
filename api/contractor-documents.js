@@ -1,4 +1,4 @@
-import { getBody, json, pool } from "./db.js";
+import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
 
 export const config = { api: { bodyParser: { sizeLimit: "30mb" } } };
 
@@ -32,6 +32,7 @@ function isValidPayload(payload) {
 export default async function handler(request, response) {
   try {
     if (request.method !== "POST") return json(response, 405, { error: "Metodo nao permitido." });
+    assertDatabaseUrl();
 
     const body = await getBody(request);
     const payload = {
