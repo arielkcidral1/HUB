@@ -2,7 +2,15 @@ import pg from "pg";
 
 const { Pool } = pg;
 
-const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
+function firstValidDatabaseUrl(...values) {
+  return values.find((value) => /^postgres(ql)?:\/\//i.test(String(value || "").trim())) || "";
+}
+
+const DATABASE_URL = firstValidDatabaseUrl(
+  process.env.AZURE_POSTGRES_URL,
+  process.env.POSTGRES_URL,
+  process.env.DATABASE_URL
+);
 
 export function assertDatabaseUrl() {
   if (!DATABASE_URL) {
