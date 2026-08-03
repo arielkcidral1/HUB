@@ -113,23 +113,23 @@
 
         <section class="view active" id="dashboard">
           <div class="metric-grid">
-            <article class="metric-card">
+            <article class="metric-card metric-card-link" data-view="chamados" role="button" tabindex="0">
               <span>Denuncias abertas</span>
               <strong id="metric-denuncias">0</strong>
             </article>
-            <article class="metric-card">
+            <article class="metric-card metric-card-link" data-view="comunicacao" role="button" tabindex="0">
               <span>Mensagens do RH</span>
               <strong id="metric-comunicados">0</strong>
             </article>
-            <article class="metric-card">
+            <article class="metric-card metric-card-link" data-view="malotes" role="button" tabindex="0">
               <span>Malotes feitos hoje</span>
               <strong id="metric-malotes">0</strong>
             </article>
-            <article class="metric-card">
+            <article class="metric-card metric-card-link" data-view="vagas" role="button" tabindex="0">
               <span>Vagas abertas</span>
               <strong id="metric-vagas">0</strong>
             </article>
-            <article class="metric-card">
+            <article class="metric-card metric-card-link" data-view="calendario" role="button" tabindex="0">
               <span>Eventos proximos</span>
               <strong id="metric-eventos">0</strong>
             </article>
@@ -556,16 +556,19 @@
                 <h2>Novo evento</h2>
               </div>
               <input name="id" type="hidden" />
-              <label>Atividade
+              <label data-event-title-field="true">Atividade
                 <input name="titulo" placeholder="Ex: Treinamento de seguranca" required />
+              </label>
+              <label data-event-birthday-field="true" hidden>Aniversariante
+                <input name="aniversariante" placeholder="Nome do aniversariante" />
               </label>
               <label>Data
                 <input name="data" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" required />
               </label>
-              <label>Horario
+              <label data-event-required-field="true">Horario
                 <input name="horario" type="time" required />
               </label>
-              <label>Responsavel
+              <label data-event-required-field="true">Responsavel
                 <input name="responsavel" placeholder="Nome ou area responsavel" required />
               </label>
               <label>Tipo
@@ -574,9 +577,11 @@
                   <option>Treinamento</option>
                   <option>Reuniao</option>
                   <option>Atividade</option>
+                  <option>Aniversário</option>
+                  <option>Entrevista</option>
                 </select>
               </label>
-              <label>Observacoes
+              <label data-event-optional-field="true">Observacoes
                 <textarea name="descricao" rows="4" placeholder="Detalhes, local ou participantes"></textarea>
               </label>
               <button class="primary-button" type="submit">Registrar evento</button>
