@@ -170,7 +170,7 @@ h2 {
   display: grid;
   grid-template-columns: 264px minmax(0, 1fr);
   min-height: 100vh;
-  visibility: hidden;
+  position: relative;
 }
 
 .app-shell.is-ready {
@@ -178,7 +178,27 @@ h2 {
 }
 
 .app-shell.is-locked {
-  display: none;
+  grid-template-columns: 1fr;
+  place-items: center;
+  background: var(--bg);
+}
+
+.app-shell.is-locked > * {
+  visibility: hidden;
+}
+
+.app-shell.is-locked::before {
+  content: "Carregando sua conta...";
+  visibility: visible;
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--bg);
+  z-index: 9999;
 }
 
 .login-screen {
@@ -1201,6 +1221,20 @@ textarea {
 .activity-list {
   display: grid;
   gap: 10px;
+}
+
+.workspace.vagas-workspace-expanded,
+.workspace.malotes-workspace-expanded,
+.workspace.equipe-workspace-expanded {
+  grid-template-columns: minmax(300px, 0.62fr) minmax(0, 1.38fr);
+}
+
+.card-list.vagas-two-col,
+.card-list.malotes-two-col,
+.card-list.equipe-two-col {
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  align-items: start;
+  gap: 16px;
 }
 
 .activity-list {
@@ -2388,7 +2422,7 @@ textarea {
   bottom: calc(100% + 10px);
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(12, 34px);
+  grid-template-columns: repeat(6, 34px);
   gap: 6px;
   padding: 12px;
   width: max-content;
@@ -4132,7 +4166,7 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-panel {
     min-height: auto;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto minmax(300px, 48vh) auto;
     gap: 0;
   }
 
