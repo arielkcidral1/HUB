@@ -236,51 +236,13 @@ function generateUUID() {
 }
 
 const defaultData = {
-  denuncias: [
-    {
-      id: generateUUID(),
-      identificacao: "Anonimo",
-      categoria: "Denuncia anonima",
-      descricao: "Relato anonimo recebido para avaliacao inicial do RH.",
-      status: "Aberta",
-      createdAt: "Hoje",
-    },
-  ],
-  comunicados: [
-    {
-      id: generateUUID(),
-      autor: "Marina Souza",
-      mensagem: "Revisar pendencias de benefÃ­cios, vagas e entregas de EPI.",
-      canal: GENERAL_CHANNEL,
-      arquivo: null,
-      createdAt: "Hoje",
-    },
-  ],
-  malotes: [
-    {
-      id: generateUUID(),
-      destino: "Unidade Norte",
-      origem: "Almoxarifado Central",
-      epis: "Luvas nitrilicas (10), oculos de protecao (5), protetor auricular (20)",
-      status: "Entrega",
-      createdAt: "Hoje",
-    },
-  ],
+  denuncias: [],
+  comunicados: [],
+  malotes: [],
   chamados: [],
+  quadros: [],
   vagas: [],
-  eventos: [
-    {
-      id: generateUUID(),
-      titulo: "Reuniao semanal do RH",
-      data: getLocalDateKey(),
-      horario: "09:00",
-      responsavel: "Equipe RH",
-      tipo: "Reuniao",
-      descricao: "Alinhamento de prioridades da semana.",
-      createdBy: "Sistema",
-      createdAt: "Hoje",
-    },
-  ],
+  eventos: [],
   vtRegistros: [],
   documentosContratados: [],
   candidaturas: [],
@@ -5563,12 +5525,12 @@ function renderPublicVagas() {
   const list = document.getElementById("public-vagas-list");
   if (!selectedInput && !selectedPanel && !list) return;
 
-  const cargoFilter = normalizeUnitText(publicVagaCargoFilter);
-  const unidadeFilter = normalizeUnitText(publicVagaUnidadeFilter);
+  const cargoFilter = String(publicVagaCargoFilter || "").trim().toLowerCase();
+  const unidadeFilter = String(publicVagaUnidadeFilter || "").trim().toLowerCase();
   const openVagas = data.vagas
     .filter(v => v.status === "Aberta")
-    .filter(v => !cargoFilter || normalizeUnitText(v.cargo).includes(cargoFilter))
-    .filter(v => !unidadeFilter || normalizeUnitText(getCanonicalUnit(v.unidade)).includes(unidadeFilter));
+    .filter(v => !cargoFilter || String(v.cargo || "").toLowerCase().includes(cargoFilter))
+    .filter(v => !unidadeFilter || String(v.unidade || "").toLowerCase().includes(unidadeFilter));
   const selectedVaga = new URLSearchParams(window.location.search).get("vaga");
 
   if (!openVagas.length) {
@@ -5896,6 +5858,16 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
 const HUB_NOTIFICATION_PERMISSION_PROMPT_ID = "hub-notification-permission-prompt";
 let hubNotificationPermissionInteractionBound = false;
 
+function getNotificationPermissionDismissedKey() {
+  const identity = normalizeLoginName(
+    currentUserProfile?.email ||
+    currentAuthUser?.email ||
+    storageService.getLocalItem(`${SESSION_KEY}-email`) ||
+    getCurrentUserName()
+  ) || "anon";
+  return `hub-notification-permission-dismissed-${identity}`;
+}
+
 function removeDesktopNotificationPermissionPrompt() {
   document.getElementById(HUB_NOTIFICATION_PERMISSION_PROMPT_ID)?.remove();
 }
@@ -5903,9 +5875,11 @@ function removeDesktopNotificationPermissionPrompt() {
 function showDesktopNotificationPermissionPrompt(isBlocked = false) {
   if (!isAuthenticated() || !isBrowserNotificationSupported()) return;
   if (Notification.permission === "granted") {
+    localStorage.removeItem(getNotificationPermissionDismissedKey());
     removeDesktopNotificationPermissionPrompt();
     return;
   }
+  if (!isBlocked && localStorage.getItem(getNotificationPermissionDismissedKey()) === "true") return;
 
   let prompt = document.getElementById(HUB_NOTIFICATION_PERMISSION_PROMPT_ID);
   if (!prompt) {
@@ -5955,7 +5929,10 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
         hint: shown ? "Se estiver em outra aba, o aviso aparecerÃ¡ fora do HUB" : "Cadeado do navegador > NotificaÃ§Ãµes > Permitir",
       });
     });
-    prompt.querySelector("[data-permission-dismiss]")?.addEventListener("click", () => prompt.remove());
+    prompt.querySelector("[data-permission-dismiss]")?.addEventListener("click", () => {
+      localStorage.setItem(getNotificationPermissionDismissedKey(), "true");
+      prompt.remove();
+    });
   }
 
   const message = prompt.querySelector("[data-permission-message]");
@@ -5968,7 +5945,13 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
 
 function armDesktopNotificationPermissionRequest() {
   if (!isAuthenticated() || !isBrowserNotificationSupported()) return;
-  if (Notification.permission === "granted") return;
+  if (Notification.permission === "granted") {
+    localStorage.removeItem(getNotificationPermissionDismissedKey());
+    removeDesktopNotificationPermissionPrompt();
+    registerHubNotificationServiceWorker();
+    return;
+  }
+  if (localStorage.getItem(getNotificationPermissionDismissedKey()) === "true") return;
 
   currentUserSettings.desktopNotifications = true;
   currentUserSettings.notificationSound = true;
