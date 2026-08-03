@@ -8,9 +8,24 @@
   }
 
   async function request(path, options = {}) {
-    const response = await fetch(path, options);
+    let response;
+    try {
+      response = await fetch(path, options);
+    } catch (error) {
+      return {
+        data: null,
+        error: {
+          message: error?.message || "Nao foi possivel conectar ao PostgreSQL.",
+          cause: error,
+        },
+      };
+    }
+
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) return { data: null, error: result };
+    if (!response.ok) {
+      const message = result?.message || result?.error || response.statusText || "Erro no PostgreSQL.";
+      return { data: null, error: { ...result, message, status: response.status } };
+    }
     return { data: result.data ?? result, error: null };
   }
 

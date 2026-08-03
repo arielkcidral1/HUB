@@ -3154,24 +3154,30 @@ async function loadFromPostgreSQL(options = {}) {
       orderBy: "created_at",
       ascending: false,
     });
-    if (usersError) throw usersError;
+    let usersLoadFailed = false;
 
-    const mappedUsers = mapRows("usuarios", userRows || []);
-    const dbNames = mappedUsers.map((user) => normalizeLoginName(user.nome));
-    data.usuarios = (data.usuarios || []).filter((localUser) => {
-      const normalizedName = normalizeLoginName(localUser.nome);
-      if (dbNames.includes(normalizedName)) return true;
-      if (localUser.syncStatus === "local") {
-        postgresClient.from(USERS_TABLE).insert({
-          nome: localUser.nome,
-          email: localUser.email || null,
-          created_by: "Auto-Sync",
-        }).then();
-        return true;
-      }
-      return false;
-    });
-    data.usuarios = mergeUsersByName(data.usuarios, mappedUsers);
+    if (usersError) {
+      usersLoadFailed = true;
+      console.error("Erro ao carregar usuarios do PostgreSQL:", usersError);
+      ensureRequiredTeamUsers();
+    } else {
+      const mappedUsers = mapRows("usuarios", userRows || []);
+      const dbNames = mappedUsers.map((user) => normalizeLoginName(user.nome));
+      data.usuarios = (data.usuarios || []).filter((localUser) => {
+        const normalizedName = normalizeLoginName(localUser.nome);
+        if (dbNames.includes(normalizedName)) return true;
+        if (localUser.syncStatus === "local") {
+          postgresClient.from(USERS_TABLE).insert({
+            nome: localUser.nome,
+            email: localUser.email || null,
+            created_by: "Auto-Sync",
+          }).then();
+          return true;
+        }
+        return false;
+      });
+      data.usuarios = mergeUsersByName(data.usuarios, mappedUsers);
+    }
 
     const requests = await Promise.allSettled(
       Object.entries(TABLES)
@@ -3206,7 +3212,7 @@ async function loadFromPostgreSQL(options = {}) {
       setupRealtime();
       setupAutoRefresh();
     }
-    const hasFailures = requests.some((result) => result.status === "rejected");
+    const hasFailures = usersLoadFailed || requests.some((result) => result.status === "rejected");
     setSyncStatus(hasFailures ? "PostgreSQL parcial" : "PostgreSQL EIXO online", !hasFailures);
     renderAll();
     if (setupLive) rememberCurrentNotificationKeysForPolling();
