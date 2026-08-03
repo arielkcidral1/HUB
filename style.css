@@ -170,7 +170,7 @@ h2 {
   display: grid;
   grid-template-columns: 264px minmax(0, 1fr);
   min-height: 100vh;
-  visibility: hidden;
+  position: relative;
 }
 
 .app-shell.is-ready {
@@ -178,7 +178,27 @@ h2 {
 }
 
 .app-shell.is-locked {
-  display: none;
+  grid-template-columns: 1fr;
+  place-items: center;
+  background: var(--bg);
+}
+
+.app-shell.is-locked > * {
+  visibility: hidden;
+}
+
+.app-shell.is-locked::before {
+  content: "Carregando sua conta...";
+  visibility: visible;
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--bg);
+  z-index: 9999;
 }
 
 .login-screen {

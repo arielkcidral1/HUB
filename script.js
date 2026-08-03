@@ -9569,6 +9569,13 @@ disableSensitiveFieldAutofill();
 
 setupLogin().then((canInitialize) => {
   if (canInitialize) initializeAppData();
+}).catch((error) => {
+  console.error("Erro ao validar login:", error);
+  if (!isLoginPage() && !isPublicPage()) {
+    window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`;
+    return;
+  }
+  initializeAppData();
 });
 
 function reabrirChamado(id) {
