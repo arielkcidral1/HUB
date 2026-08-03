@@ -10960,22 +10960,9 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
   const workspace = form?.closest(".workspace");
   if (!form || !list || !workspace) return;
 
-  const expandOffset = Math.max(0, Number(offsetAfterForm) || 0);
-  const collapseGap = Math.max(140, expandOffset + 80);
+  const expandMargin = Math.max(0, Number(offsetAfterForm) || 0);
+  const collapseMargin = expandMargin + 180;
   let expanded = false;
-  let triggerY = 0;
-
-  function refreshTrigger() {
-    const wasExpanded = expanded;
-    list.classList.remove(expandedListClass);
-    workspace.classList.remove(expandedWorkspaceClass);
-    const formRect = form.getBoundingClientRect();
-    triggerY = (window.scrollY || document.documentElement.scrollTop || 0) + formRect.top + formRect.height + expandOffset;
-    if (wasExpanded) {
-      list.classList.add(expandedListClass);
-      workspace.classList.add(expandedWorkspaceClass);
-    }
-  }
 
   function applyState(nextExpanded) {
     if (nextExpanded === expanded) return;
@@ -10985,10 +10972,10 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
   }
 
   function updateState() {
-    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-    if (!expanded && scrollY > triggerY) {
+    const formBottom = form.getBoundingClientRect().bottom;
+    if (!expanded && formBottom < expandMargin) {
       applyState(true);
-    } else if (expanded && scrollY < triggerY - collapseGap) {
+    } else if (expanded && formBottom > collapseMargin) {
       applyState(false);
     }
   }
@@ -10997,16 +10984,11 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
     expanded = false;
     list.classList.remove(expandedListClass);
     workspace.classList.remove(expandedWorkspaceClass);
-    refreshTrigger();
   }
 
   resetInitialState();
-  requestAnimationFrame(updateState);
   window.addEventListener("scroll", updateState, { passive: true });
-  window.addEventListener("resize", () => {
-    refreshTrigger();
-    updateState();
-  });
+  window.addEventListener("resize", resetInitialState);
 }
 
 function setupVagasFormScrollGrid() {
