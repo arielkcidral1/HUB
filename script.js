@@ -4703,6 +4703,10 @@ function getBoardCardCount(board) {
   return (board?.listas || []).reduce((total, list) => total + (list.cartoes || []).length, 0);
 }
 
+function createBoardList(title = "Nova coluna") {
+  return { id: generateUUID(), titulo: title, cartoes: [] };
+}
+
 function renderBoards() {
   const tabs = document.getElementById("board-tabs");
   const lanes = document.getElementById("boards-lanes");
@@ -4724,8 +4728,8 @@ function renderBoards() {
     return;
   }
 
-  lanes.innerHTML = (board.listas || []).map((list, listIndex) => `
-    <section class="board-lane" data-list-index="${listIndex}">
+  const renderedLanes = (board.listas || []).map((list, listIndex) => `
+    <section class="board-lane" data-board-list="true" data-list-index="${listIndex}">
       <div class="board-lane-header">
         <h3>${escapeHtml(list.titulo)}</h3>
         <span class="tag">${(list.cartoes || []).length}</span>
@@ -4743,6 +4747,13 @@ function renderBoards() {
       </div>
     </section>
   `).join("");
+
+  lanes.innerHTML = `${renderedLanes}
+    <button class="board-add-lane-button" type="button" data-action="add-board-list">
+      <span aria-hidden="true">+</span>
+      <strong>Adicionar coluna</strong>
+    </button>
+  `;
 }
 
 async function persistBoard(board = getActiveBoard()) {
@@ -4786,7 +4797,10 @@ function resetBoardCardFormIfEditing(listIndex = null, cardIndex = null) {
   if (!form) return;
   const editingList = form.elements.edit_list_index?.value;
   const editingCard = form.elements.edit_card_index?.value;
-  const shouldReset = listIndex === null || (String(editingList) === String(listIndex) && String(editingCard) === String(cardIndex));
+  const shouldReset = listIndex === null || (
+    String(editingList) === String(listIndex) &&
+    (cardIndex === null || String(editingCard) === String(cardIndex))
+  );
   if (!shouldReset) return;
   form.reset();
   form.elements.edit_list_index.value = "";
@@ -4804,6 +4818,7 @@ function openBoardCardPreview(listIndex, cardIndex) {
 function closeBoardContextMenu() {
   boardContextMenu = null;
   document.getElementById("board-context-menu")?.remove();
+  document.getElementById("board-list-context-menu")?.remove();
 }
 
 function closeBoardCardActionMenu() {
@@ -4855,6 +4870,21 @@ function renderBoardCardActionMenu() {
   placeFloatingMenu(menu, boardCardActionMenu.x, boardCardActionMenu.y);
 }
 
+function renderBoardListContextMenu() {
+  document.getElementById("board-list-context-menu")?.remove();
+  if (!boardContextMenu || boardContextMenu.type !== "list") return;
+  const menu = document.createElement("div");
+  menu.id = "board-list-context-menu";
+  menu.className = "board-context-menu";
+  menu.innerHTML = `
+    <button type="button" data-board-menu-action="duplicate-list">Duplicar</button>
+    <button type="button" data-board-menu-action="rename-list">Renomear</button>
+    <button class="danger" type="button" data-board-menu-action="delete-list">Excluir</button>
+  `;
+  menu.addEventListener("click", (clickEvent) => handleBoardContextAction(clickEvent, "list", { listIndex: boardContextMenu.listIndex }));
+  placeFloatingMenu(menu, boardContextMenu.x, boardContextMenu.y);
+}
+
 async function handleBoardContextAction(event, type, payload) {
   const action = event.target.closest("[data-board-menu-action]")?.dataset.boardMenuAction;
   if (!action) return;
@@ -4885,6 +4915,35 @@ async function handleBoardContextAction(event, type, payload) {
       saveLocalData();
       renderBoards();
       if (postgresClient && !String(id).startsWith("local-")) await deleteItem("quadros", id);
+    }
+    return;
+  }
+
+  if (type === "list") {
+    const list = board.listas?.[payload.listIndex];
+    if (!list) return;
+    if (action === "duplicate-list") {
+      const duplicate = JSON.parse(JSON.stringify(list));
+      duplicate.id = generateUUID();
+      duplicate.titulo = `${list.titulo || "Coluna"} copia`;
+      duplicate.cartoes = (duplicate.cartoes || []).map((card) => ({ ...card, id: generateUUID() }));
+      board.listas.splice(payload.listIndex + 1, 0, duplicate);
+      await persistBoard(board);
+    } else if (action === "rename-list") {
+      const name = prompt("Novo nome da coluna", list.titulo || "");
+      if (name && name.trim()) {
+        list.titulo = name.trim();
+        await persistBoard(board);
+      }
+    } else if (action === "delete-list") {
+      if ((board.listas || []).length <= 1) {
+        showModal("Coluna obrigatoria", "E preciso manter pelo menos uma coluna no quadro.", "info");
+        return;
+      }
+      if (!confirm(`Excluir "${list.titulo || "esta coluna"}"? Os cartoes desta coluna tambem serao removidos.`)) return;
+      resetBoardCardFormIfEditing(payload.listIndex, null);
+      board.listas.splice(payload.listIndex, 1);
+      await persistBoard(board);
     }
     return;
   }
@@ -9080,9 +9139,18 @@ document.getElementById("board-card-form")?.addEventListener("submit", async (ev
 document.getElementById("cancelar-edicao-board-card")?.addEventListener("click", () => resetBoardCardFormIfEditing());
 
 document.addEventListener("click", (event) => {
-  if (!event.target.closest("#board-context-menu") && !event.target.closest("[data-board-tab]")) closeBoardContextMenu();
+  if (!event.target.closest("#board-context-menu") && !event.target.closest("#board-list-context-menu") && !event.target.closest("[data-board-tab]") && !event.target.closest("[data-board-list]")) closeBoardContextMenu();
   if (!event.target.closest("#board-card-action-menu") && !event.target.closest("[data-board-card]")) closeBoardCardActionMenu();
   if (!event.target.closest("#record-context-menu")) document.getElementById("record-context-menu")?.remove();
+  const addListButton = event.target.closest("[data-action='add-board-list']");
+  if (addListButton) {
+    const board = getActiveBoard();
+    if (!board) return;
+    board.listas = [...(board.listas || []), createBoardList()];
+    resetBoardCardFormIfEditing();
+    persistBoard(board);
+    return;
+  }
   const boardButton = event.target.closest("[data-action='select-board']");
   if (boardButton) {
     closeBoardContextMenu();
@@ -9127,6 +9195,19 @@ document.addEventListener("contextmenu", (event) => {
       y: event.clientY + 6,
     };
     renderBoardCardActionMenu();
+    return;
+  }
+  const lane = event.target.closest("[data-board-list]");
+  if (lane) {
+    event.preventDefault();
+    closeBoardCardActionMenu();
+    boardContextMenu = {
+      type: "list",
+      listIndex: Number(lane.dataset.listIndex),
+      x: event.clientX,
+      y: event.clientY + 6,
+    };
+    renderBoardListContextMenu();
     return;
   }
   closeBoardContextMenu();
