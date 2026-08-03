@@ -758,8 +758,23 @@ async function loadUserProfile(authUser) {
   const displayName = normalizeLoginName(getAuthUserDisplayName(authUser));
 
   try {
-    let query = postgresClient.from(USERS_TABLE).select("id, nome, email, cpf, cargo, foto_perfil, created_by, created_at");
+    let query = postgresClient.from(USERS_TABLE).select("id, nome, email, cpf, cargo, foto_perfil, configuracoes, created_by, created_at");
     const { data: profiles, error } = await query.or(`email.ilike.${email},nome.ilike.${displayName}`).limit(1);
+
+    if (error && isMissingColumn(error, "configuracoes")) {
+      const fallback = await postgresClient
+        .from(USERS_TABLE)
+        .select("id, nome, email, cpf, cargo, foto_perfil, created_by, created_at")
+        .or(`email.ilike.${email},nome.ilike.${displayName}`)
+        .limit(1);
+      if (fallback.error) throw fallback.error;
+      const profile = mapRows("usuarios", fallback.data || [])[0] || null;
+      if (profile) {
+        const profileWithEmail = { ...profile, email: profile.email || authUser.email || "", configuracoes: {} };
+        upsertLocalUser({ ...profileWithEmail, syncStatus: "active" });
+        return profileWithEmail;
+      }
+    }
 
     if (error && isMissingColumn(error, "email")) {
       const fallback = await postgresClient
@@ -780,6 +795,7 @@ async function loadUserProfile(authUser) {
         email: authUser.email || "",
         cargo: authUser.app_metadata?.cargo || "",
         foto_perfil: "",
+        configuracoes: {},
         syncStatus: "auth",
         createdAt: todayLabel(),
       };
@@ -797,6 +813,7 @@ async function loadUserProfile(authUser) {
       email: authUser.email || "",
       cargo: authUser.app_metadata?.cargo || "",
       foto_perfil: "",
+      configuracoes: {},
       syncStatus: "auth",
       createdAt: todayLabel(),
     };
@@ -808,6 +825,7 @@ async function loadUserProfile(authUser) {
       email: authUser.email || "",
       cargo: authUser.app_metadata?.cargo || "",
       foto_perfil: "",
+      configuracoes: {},
       syncStatus: "auth",
       createdAt: todayLabel(),
     };
@@ -2608,6 +2626,8 @@ if (collection === "malotes") {
       nome: row.nome || "Quadro",
       listas: Array.isArray(row.listas) ? row.listas : parseBoardLists(row.listas),
       ownerName: row.owner_name || "",
+      ownerId: row.owner_id || row.user_id || "",
+      ownerEmail: row.owner_email || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
       updatedBy: row.updated_by || "",
       createdAt: formatDate(row.created_at),
@@ -2687,6 +2707,7 @@ if (collection === "eventos") {
       cpf: row.cpf || "",
       cargo: row.cargo || "",
       foto_perfil: row.foto_perfil || "",
+      configuracoes: row.configuracoes && typeof row.configuracoes === "object" ? row.configuracoes : {},
       isOnline: Boolean(row.is_online),
       lastSeen: row.last_seen || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
@@ -4526,6 +4547,8 @@ function createDefaultBoard(nome = "Quadro principal", createdBy = getCurrentUse
     id: `local-${generateUUID()}`,
     nome,
     ownerName,
+    ownerId: currentUserProfile?.id || currentAuthUser?.id || "",
+    ownerEmail: currentUserProfile?.email || currentAuthUser?.email || "",
     listas: [
       { id: generateUUID(), titulo: "A fazer", cartoes: [] },
       { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
@@ -4545,14 +4568,13 @@ function ensureBoardsData() {
       if (!Array.isArray(list.cartoes)) list.cartoes = [];
     });
   });
-  if (!activeBoardId || !data.quadros.some((board) => String(board.id) === String(activeBoardId))) {
-    activeBoardId = getOrderedBoards()[0]?.id || data.quadros[0]?.id || "";
+  if (!activeBoardId || !getBoardsForCurrentUser().some((board) => String(board.id) === String(activeBoardId))) {
+    activeBoardId = getOrderedBoards()[0]?.id || "";
   }
 }
 
 function getVisibleBoards() {
-  ensureBoardsDataRaw();
-  return data.quadros || [];
+  return getBoardsForCurrentUser();
 }
 
 function ensureBoardsDataRaw() {
@@ -4566,9 +4588,43 @@ function ensureBoardsDataRaw() {
   });
 }
 
+function getCurrentBoardOwnerKeys() {
+  return new Set([
+    currentUserProfile?.id,
+    currentAuthUser?.id,
+    currentUserProfile?.email,
+    currentAuthUser?.email,
+    currentUserProfile?.cpf,
+    getCurrentUserName(),
+    storageService.getLocalItem(`${SESSION_KEY}-user`),
+    storageService.getSessionItem(`${SESSION_KEY}-user`),
+  ].filter(Boolean).map(normalizeLoginName));
+}
+
+function isCurrentUserBoard(board = {}) {
+  const ownerKeys = getCurrentBoardOwnerKeys();
+  if (!ownerKeys.size) return false;
+  const boardKeys = [
+    board.ownerName,
+    board.owner_name,
+    board.createdBy,
+    board.created_by,
+    board.userId,
+    board.user_id,
+    board.ownerId,
+    board.owner_id,
+  ].filter(Boolean).map(normalizeLoginName);
+  return boardKeys.some((key) => ownerKeys.has(key));
+}
+
+function getBoardsForCurrentUser() {
+  ensureBoardsDataRaw();
+  return (data.quadros || []).filter(isCurrentUserBoard);
+}
+
 function getOrderedBoards() {
   ensureBoardsDataRaw();
-  const boards = [...(data.quadros || [])];
+  const boards = [...getBoardsForCurrentUser()];
   const order = Array.isArray(currentUserSettings.boardOrder) ? currentUserSettings.boardOrder.map(String) : [];
   if (!order.length) {
     return boards.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" }));
@@ -4590,7 +4646,7 @@ function saveBoardOrderFromTabs() {
 
 function getActiveBoard() {
   ensureBoardsData();
-  return data.quadros.find((board) => String(board.id) === String(activeBoardId)) || getOrderedBoards()[0] || null;
+  return getBoardsForCurrentUser().find((board) => String(board.id) === String(activeBoardId)) || getOrderedBoards()[0] || null;
 }
 
 function getPriorityClass(value = "") {
@@ -4648,6 +4704,9 @@ function renderBoards() {
 
 async function persistBoard(board = getActiveBoard()) {
   if (!board) return false;
+  board.ownerName = board.ownerName || getCurrentUserName();
+  board.ownerId = board.ownerId || currentUserProfile?.id || currentAuthUser?.id || "";
+  board.ownerEmail = board.ownerEmail || currentUserProfile?.email || currentAuthUser?.email || "";
   saveLocalData();
   if (!postgresClient) {
     renderBoards();
@@ -6115,10 +6174,39 @@ function saveUserSettings(settings = currentUserSettings) {
   } catch {
     localStorage.setItem(USER_SETTINGS_STORAGE_KEY, JSON.stringify(currentUserSettings));
   }
+  syncUserSettingsToServer(currentUserSettings);
+}
+
+async function syncUserSettingsToServer(settings = currentUserSettings) {
+  if (!postgresClient || !currentUserProfile?.id) return;
+  try {
+    const normalizedSettings = normalizeUserSettings(settings);
+    const { error } = await postgresClient
+      .from(USERS_TABLE)
+      .update({ configuracoes: normalizedSettings })
+      .eq("id", currentUserProfile.id);
+    if (error) {
+      if (isMissingColumn(error, "configuracoes")) return;
+      throw error;
+    }
+    currentUserProfile = { ...currentUserProfile, configuracoes: normalizedSettings };
+  } catch (error) {
+    console.warn("Nao foi possivel salvar configuracoes do usuario no PostgreSQL:", error);
+  }
 }
 
 function reloadUserSettingsForCurrentUser() {
   currentUserSettings = loadUserSettings();
+  const localSettings = currentUserSettings;
+  const serverSettings = currentUserProfile?.configuracoes;
+  currentUserSettings = serverSettings && Object.keys(serverSettings).length
+    ? normalizeUserSettings({ ...localSettings, ...serverSettings })
+    : localSettings;
+  try {
+    localStorage.setItem(getUserSettingsStorageKey(), JSON.stringify(currentUserSettings));
+  } catch {
+    // Mantem as preferências em memoria se o navegador bloquear localStorage.
+  }
   applyUserSettings();
   renderAccountSettings();
 }
@@ -6212,7 +6300,6 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
   }
 
   currentUserSettings.desktopNotifications = true;
-  currentUserSettings.notificationSound = true;
   saveUserSettings(currentUserSettings);
   syncUserSettingsControls();
   await registerHubNotificationServiceWorker();
@@ -6354,7 +6441,6 @@ function armDesktopNotificationPermissionRequest() {
   if (localStorage.getItem(getNotificationPermissionDismissedKey()) === "true") return;
 
   currentUserSettings.desktopNotifications = true;
-  currentUserSettings.notificationSound = true;
   saveUserSettings(currentUserSettings);
   showDesktopNotificationPermissionPrompt(Notification.permission === "denied");
 
@@ -6818,9 +6904,6 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
 
 function startAuthenticatedNotificationsOnAnyPage() {
   if (!isAuthenticated() || !postgresClient) return;
-  currentUserSettings.desktopNotifications = true;
-  currentUserSettings.notificationSound = true;
-  saveUserSettings(currentUserSettings);
   registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
   setupRealtime();
@@ -10869,9 +10952,20 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
   const workspace = form?.closest(".workspace");
   if (!form || !list || !workspace) return;
 
-  const expandMargin = Math.max(0, Number(offsetAfterForm) || 0);
-  const collapseMargin = expandMargin + 180;
+  const expandOffset = Math.max(0, Number(offsetAfterForm) || 0);
   let expanded = false;
+  let triggerY = 0;
+
+  function refreshTrigger() {
+    const wasExpanded = expanded;
+    list.classList.remove(expandedListClass);
+    workspace.classList.remove(expandedWorkspaceClass);
+    triggerY = form.offsetTop + form.offsetHeight + expandOffset;
+    if (wasExpanded) {
+      list.classList.add(expandedListClass);
+      workspace.classList.add(expandedWorkspaceClass);
+    }
+  }
 
   function applyState(nextExpanded) {
     if (nextExpanded === expanded) return;
@@ -10881,10 +10975,10 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
   }
 
   function updateState() {
-    const formBottom = form.getBoundingClientRect().bottom;
-    if (!expanded && formBottom < expandMargin) {
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    if (!expanded && scrollY > triggerY) {
       applyState(true);
-    } else if (expanded && formBottom > collapseMargin) {
+    } else if (expanded && scrollY < triggerY - 180) {
       applyState(false);
     }
   }
@@ -10893,12 +10987,15 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
     expanded = false;
     list.classList.remove(expandedListClass);
     workspace.classList.remove(expandedWorkspaceClass);
-    requestAnimationFrame(updateState);
+    refreshTrigger();
   }
 
   resetInitialState();
   window.addEventListener("scroll", updateState, { passive: true });
-  window.addEventListener("resize", resetInitialState);
+  window.addEventListener("resize", () => {
+    refreshTrigger();
+    updateState();
+  });
 }
 
 function setupVagasFormScrollGrid() {
@@ -11084,7 +11181,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function createFeedbackSettingsButton() {
     return `
       <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclama��es reclama��o sugestao sugest�es sugestoes melhoria usuario">
-        <span aria-hidden="true">?</span>
+        <span class="settings-item-icon settings-icon-feedback" aria-hidden="true"></span>
         <span><strong>Feedbacks e Sugest�es</strong><small>Feedbacks, reclama��es e sugest�es</small></span>
       </button>
     `;
