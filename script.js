@@ -736,6 +736,8 @@ function setAuthenticatedUser(authUser, profile = null) {
   const displayName = profile?.nome || getAuthUserDisplayName(authUser);
   storageService.setSessionItem(SESSION_KEY, "active");
   storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
+  storageService.setSessionItem(`${SESSION_KEY}-email`, profile?.email || authUser?.email || "");
+  storageService.setSessionItem(`${SESSION_KEY}-role`, profile?.cargo || authUser?.cargo || authUser?.app_metadata?.cargo || "");
   reloadUserSettingsForCurrentUser();
 }
 
@@ -1057,7 +1059,7 @@ function loadLocalData() {
 }
 
 function loadDocumentRecords() {
-  return storageService.getSessionItem(DOCUMENT_RECORDS_KEY, []);
+  return storageService.getSessionItem(DOCUMENT_RECORDS_KEY, storageService.getLocalItem(DOCUMENT_RECORDS_KEY, []));
 }
 
 function disableSensitiveFieldAutofill() {
@@ -1079,6 +1081,7 @@ function getPublicClientId() {
 
 function saveDocumentRecords() {
   storageService.setSessionItem(DOCUMENT_RECORDS_KEY, documentRecords);
+  storageService.setLocalItem(DOCUMENT_RECORDS_KEY, documentRecords);
 }
 
 function saveLocalData() {
