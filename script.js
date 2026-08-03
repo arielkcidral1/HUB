@@ -731,6 +731,23 @@ function getAuthUserDisplayName(authUser) {
   );
 }
 
+function buildPersistedAuthSession() {
+  if (storageService.getLocalItem(SESSION_KEY) !== "active") return null;
+  const nome = storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`) || "";
+  const email = storageService.getLocalItem(`${SESSION_KEY}-email`) || storageService.getSessionItem(`${SESSION_KEY}-email`) || "";
+  const cargo = storageService.getLocalItem(`${SESSION_KEY}-role`) || storageService.getSessionItem(`${SESSION_KEY}-role`) || "";
+  if (!nome && !email) return null;
+
+  return {
+    user: {
+      id: email || normalizeLoginName(nome) || "persisted-user",
+      email,
+      user_metadata: { nome, cargo },
+      app_metadata: { cargo },
+    },
+  };
+}
+
 function setAuthenticatedUser(authUser, profile = null) {
   currentAuthUser = authUser || null;
   currentUserProfile = profile || null;
@@ -848,7 +865,10 @@ async function loadUserProfile(authUser) {
 }
 
 async function restoreAuthenticatedSession() {
-  const session = await getAuthSession();
+  let session = await getAuthSession();
+  if (!session?.user) {
+    session = buildPersistedAuthSession();
+  }
   if (!session?.user) {
     clearAuthenticatedUser();
     return false;
