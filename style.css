@@ -1223,6 +1223,20 @@ textarea {
   gap: 10px;
 }
 
+.workspace.vagas-workspace-expanded,
+.workspace.malotes-workspace-expanded,
+.workspace.equipe-workspace-expanded {
+  grid-template-columns: minmax(300px, 0.62fr) minmax(0, 1.38fr);
+}
+
+.card-list.vagas-two-col,
+.card-list.malotes-two-col,
+.card-list.equipe-two-col {
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+
 .activity-list {
   margin: 0;
   padding: 0;

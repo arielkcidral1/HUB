@@ -1,6 +1,4 @@
-import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
-
-export const config = { api: { bodyParser: { sizeLimit: "30mb" } } };
+export const config = { runtime: "edge" };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_FILES = 20;
@@ -11,12 +9,43 @@ const ACCESS_PASSWORDS = {
   "Trinca Mkt": "trinca5212",
 };
 
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
+}
+
 function text(value) {
   return String(value || "").trim();
 }
 
 function safeFileName(name) {
   return text(name).toLowerCase().replace(/[^a-z0-9_.-]/g, "-").replace(/^-+|-+$/g, "") || "documento";
+}
+
+async function fileToDataUrl(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 1) binary += String.fromCharCode(bytes[index]);
+  return `data:${file.type || "application/octet-stream"};base64,${btoa(binary)}`;
+}
+
+function getPostgrestUrl() {
+  const directUrl = text(process.env.POSTGRES_REST_URL || process.env.SUPABASE_URL);
+  if (directUrl) return directUrl.replace(/\/$/, "");
+
+  const databaseUrl = text(process.env.POSTGRES_URL || process.env.DATABASE_URL);
+  const host = databaseUrl.match(/@([^/:?]+)(?::\d+)?(?:\/|\?|$)/)?.[1];
+  if (host) return `https://${host.replace(/^db\./, "")}`;
+  throw Object.assign(new Error("PostgREST nao configurado."), { statusCode: 500 });
+}
+
+function getServiceRoleKey() {
+  const key = text(process.env.POSTGRES_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY);
+  if (!key) throw Object.assign(new Error("POSTGRES_SERVICE_ROLE_KEY nao configurada."), { statusCode: 500 });
+  // fileToDataUrl e usado para embutir os anexos quando o envio chega pelo Vercel.
+  return key;
 }
 
 function isValidPayload(payload) {
@@ -29,50 +58,93 @@ function isValidPayload(payload) {
   return null;
 }
 
-export default async function handler(request, response) {
-  try {
-    if (request.method !== "POST") return json(response, 405, { error: "Metodo nao permitido." });
-    assertDatabaseUrl();
+async function insertContractorDocuments(row) {
+  const baseUrl = getPostgrestUrl();
+  const serviceRoleKey = getServiceRoleKey();
+  const headers = {
+    apikey: serviceRoleKey,
+    authorization: `Bearer ${serviceRoleKey}`,
+    "content-type": "application/json",
+    prefer: "return=representation",
+  };
 
-    const body = await getBody(request);
+  let result = await fetch(`${baseUrl}/rest/v1/hub_documentos_contratados`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(row),
+  });
+
+  if (result.status === 201 || result.status === 200) {
+    const data = await result.json().catch(() => []);
+    return Array.isArray(data) ? data[0] : data;
+  }
+
+  const error = await result.json().catch(() => ({}));
+  if (error?.code !== "PGRST204") throw error;
+
+  const legacyRow = { ...row };
+  delete legacyRow.origem_html;
+  result = await fetch(`${baseUrl}/rest/v1/hub_documentos_contratados`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(legacyRow),
+  });
+
+  if (result.status === 201 || result.status === 200) {
+    const data = await result.json().catch(() => []);
+    return Array.isArray(data) ? data[0] : data;
+  }
+
+  throw await result.json().catch(() => ({}));
+}
+
+export default async function handler(request) {
+  try {
+    if (request.method !== "POST") return json({ error: "Metodo nao permitido." }, 405);
+
+    const formData = await request.formData();
+    // PGRST204 tambem e tratado em insertContractorDocuments para tolerar schema antigo.
     const payload = {
-      empresa: text(body.empresa),
-      origemHtml: text(body.origemHtml),
-      accessPassword: text(body.accessPassword),
-      nome: text(body.nome),
-      telefone: text(body.telefone),
-      cpf: text(body.cpf),
+      empresa: text(formData.get("empresa")),
+      origemHtml: text(formData.get("origemHtml")),
+      accessPassword: text(formData.get("accessPassword")),
+      nome: text(formData.get("nome")),
+      telefone: text(formData.get("telefone")),
+      cpf: text(formData.get("cpf")),
     };
 
     const validationError = isValidPayload(payload);
-    if (validationError) return json(response, 400, { error: validationError });
+    if (validationError) return json({ error: validationError }, 400);
 
-    const documentos = Array.isArray(body.documentos) ? body.documentos : [];
-    if (!documentos.length || documentos.length > MAX_FILES) return json(response, 400, { error: "Documentos invalidos." });
-    if (documentos.some((file) => Number(file.size || 0) <= 0 || Number(file.size || 0) > MAX_FILE_SIZE)) {
-      return json(response, 400, { error: "Cada documento deve ter entre 1 byte e 10 MB." });
+    const files = formData.getAll("documentos").filter((file) => file && typeof file === "object" && "arrayBuffer" in file);
+    if (!files.length || files.length > MAX_FILES) return json({ error: "Documentos invalidos." }, 400);
+    if (files.some((file) => Number(file.size || 0) <= 0 || Number(file.size || 0) > MAX_FILE_SIZE)) {
+      return json({ error: "Cada documento deve ter entre 1 byte e 10 MB." }, 400);
     }
 
-    const normalizedDocuments = documentos.map((file) => ({
+    const documentos = await Promise.all(files.map(async (file) => ({
       name: safeFileName(file.name),
       size: Number(file.size || 0),
       type: text(file.type) || "application/octet-stream",
-      dataUrl: text(file.dataUrl),
-    }));
+      dataUrl: await fileToDataUrl(file),
+    })));
 
-    const result = await pool.query(
-      `insert into public.hub_documentos_contratados
-        (empresa, origem_html, nome, telefone, cpf, documentos, created_by)
-       values ($1, $2, $3, $4, $5, $6::jsonb, 'Publico')
-       returning *`,
-      [payload.empresa, payload.origemHtml, payload.nome, payload.telefone, payload.cpf, JSON.stringify(normalizedDocuments)]
-    );
+    const data = await insertContractorDocuments({
+      empresa: payload.empresa,
+      origem_html: payload.origemHtml,
+      nome: payload.nome,
+      telefone: payload.telefone,
+      cpf: payload.cpf,
+      documentos,
+      created_by: "Publico",
+    });
 
-    return json(response, 200, { data: result.rows[0] });
+    return json({ data });
   } catch (error) {
-    const message = error.code === "23505"
+    const result = error || {};
+    const message = result?.code === "23505"
       ? "CPF ja possui envio de documentos registrado."
-      : error.message || "Nao foi possivel salvar documentos.";
-    return json(response, error.statusCode || 500, { error: message, code: error.code });
+      : result.message || "Nao foi possivel salvar documentos.";
+    return json({ error: message, code: result.code }, result.statusCode || 500);
   }
 }
