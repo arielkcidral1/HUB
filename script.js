@@ -663,12 +663,12 @@ function debugLocalLoginNames() {
 }
 
 function isAuthenticated() {
-  return storageService.getSessionItem(SESSION_KEY) === "active";
+  return storageService.getSessionItem(SESSION_KEY) === "active" || storageService.getLocalItem(SESSION_KEY) === "active";
 }
 
 function getCurrentUserName() {
   if (!isAuthenticated() && isPublicPage()) return "Publico";
-  return storageService.getSessionItem(`${SESSION_KEY}-user`) || "Voce";
+  return storageService.getSessionItem(`${SESSION_KEY}-user`) || storageService.getLocalItem(`${SESSION_KEY}-user`) || "Voce";
 }
 
 /**
@@ -736,9 +736,13 @@ function setAuthenticatedUser(authUser, profile = null) {
   currentUserProfile = profile || null;
   const displayName = profile?.nome || getAuthUserDisplayName(authUser);
   storageService.setSessionItem(SESSION_KEY, "active");
+  storageService.setLocalItem(SESSION_KEY, "active");
   storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
+  storageService.setLocalItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
   storageService.setSessionItem(`${SESSION_KEY}-email`, profile?.email || authUser?.email || "");
+  storageService.setLocalItem(`${SESSION_KEY}-email`, profile?.email || authUser?.email || "");
   storageService.setSessionItem(`${SESSION_KEY}-role`, profile?.cargo || authUser?.cargo || authUser?.app_metadata?.cargo || "");
+  storageService.setLocalItem(`${SESSION_KEY}-role`, profile?.cargo || authUser?.cargo || authUser?.app_metadata?.cargo || "");
   reloadUserSettingsForCurrentUser();
 }
 
@@ -756,6 +760,10 @@ function clearAuthenticatedUser() {
   storageService.removeSessionItem(`${SESSION_KEY}-user`);
   storageService.removeSessionItem(`${SESSION_KEY}-role`);
   storageService.removeSessionItem(`${SESSION_KEY}-email`);
+  storageService.removeLocalItem(SESSION_KEY);
+  storageService.removeLocalItem(`${SESSION_KEY}-user`);
+  storageService.removeLocalItem(`${SESSION_KEY}-role`);
+  storageService.removeLocalItem(`${SESSION_KEY}-email`);
   clearSensitiveClientCache();
   currentUserSettings = normalizeUserSettings();
   applyUserSettings();
@@ -9482,7 +9490,9 @@ function prefillChamadoRequester() {
 }
 
 function initializeAppData() {
-  document.getElementById("app-shell")?.classList.add("is-ready");
+  const shell = document.getElementById("app-shell");
+  shell?.classList.remove("is-locked");
+  shell?.classList.add("is-ready");
   populateUnitSelects();
   populateEpiSelects();
   postgresClient = getPostgreSQLClient();
