@@ -4923,6 +4923,7 @@ function setupUserMenuDropdown() {
   dropdown.querySelectorAll(".user-menu-item[data-view]").forEach((item) => {
     item.addEventListener("click", () => {
       const panelId = item.dataset.settingsTarget || "settings-account-panel";
+      activateView(item.dataset.view || "conta");
       showSettingsPanel(panelId);
       renderAccountSettings();
       closeUserMenuDropdown();
@@ -6112,6 +6113,9 @@ function renderAccountSettings() {
 }
 
 function showSettingsPanel(panelId) {
+  if (panelId && String(panelId).startsWith("settings-")) {
+    activateView("conta");
+  }
   document.querySelectorAll("[data-settings-panel]").forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.settingsPanel === panelId);
   });
