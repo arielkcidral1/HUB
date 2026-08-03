@@ -5361,10 +5361,10 @@ function applyRoleAccess() {
   const chamadosUrls = new Set(["chamados.html", "https://hub-opal-nine.vercel.app/chamados.html"]);
   const denunciaUrls = new Set(["denuncia.html", "https://hub-opal-nine.vercel.app/denuncia.html"]);
   const allowedViews = isCashierUser()
-    ? new Set(["comunicacao", "conta"])
+    ? new Set(["comunicacao", "calendario", "conta"])
     : isManagerUser()
-    ? new Set(["comunicacao", "documentos", "conta"])
-    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "vagas", "calendario", "documentos", "documentos-contratados", "atestados", "gerenciamento-vt", "equipe", "conta"]);
+    ? new Set(["comunicacao", "quadros", "calendario", "documentos", "conta"])
+    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : isManagerUser()
@@ -7892,12 +7892,12 @@ document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
       window.location.href = button.dataset.externalUrl;
       return;
     }
-    if (isCashierUser() && !["comunicacao", "conta"].includes(button.dataset.view)) {
+    if (isCashierUser() && !["comunicacao", "calendario", "conta"].includes(button.dataset.view)) {
       activateView("comunicacao");
       closeMobileMenu();
       return;
     }
-    if (isManagerUser() && !["comunicacao", "documentos", "conta"].includes(button.dataset.view)) {
+    if (isManagerUser() && !["comunicacao", "quadros", "calendario", "documentos", "conta"].includes(button.dataset.view)) {
       activateView("documentos");
       closeMobileMenu();
       return;
