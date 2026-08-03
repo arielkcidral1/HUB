@@ -649,11 +649,137 @@ h2 {
 }
 
 .user-menu-icon {
-  display: grid;
-  place-items: center;
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(47, 178, 162, 0.1);
   color: var(--teal);
-  font-size: 16px;
-  line-height: 1;
+}
+
+.user-menu-icon::before,
+.user-menu-icon::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.user-menu-icon-account::before {
+  width: 8px;
+  height: 8px;
+  left: 9px;
+  top: 6px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.user-menu-icon-account::after {
+  width: 14px;
+  height: 7px;
+  left: 6px;
+  top: 17px;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 999px 999px 0 0;
+}
+
+.user-menu-icon-privacy::before {
+  width: 14px;
+  height: 11px;
+  left: 7px;
+  top: 12px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+}
+
+.user-menu-icon-privacy::after {
+  width: 10px;
+  height: 8px;
+  left: 9px;
+  top: 6px;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 999px 999px 0 0;
+}
+
+.user-menu-icon-chats::before,
+.user-menu-icon-feedback::before {
+  width: 16px;
+  height: 12px;
+  left: 6px;
+  top: 7px;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+}
+
+.user-menu-icon-chats::after,
+.user-menu-icon-feedback::after {
+  width: 7px;
+  height: 7px;
+  left: 16px;
+  top: 16px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-14deg);
+}
+
+.user-menu-icon-notifications::before {
+  width: 13px;
+  height: 15px;
+  left: 7.5px;
+  top: 6px;
+  border: 2px solid currentColor;
+  border-radius: 999px 999px 7px 7px;
+}
+
+.user-menu-icon-notifications::after {
+  width: 7px;
+  height: 2px;
+  left: 10.5px;
+  top: 23px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.user-menu-icon-shortcuts::before {
+  width: 16px;
+  height: 12px;
+  left: 6px;
+  top: 8px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+}
+
+.user-menu-icon-shortcuts::after {
+  width: 3px;
+  height: 3px;
+  left: 10px;
+  top: 12px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 5px 0 0 currentColor, 0 5px 0 currentColor, 5px 5px 0 currentColor, 10px 5px 0 currentColor;
+}
+
+.user-menu-icon-logout::before {
+  width: 13px;
+  height: 13px;
+  left: 6px;
+  top: 7px;
+  border: 2px solid currentColor;
+  border-right: 0;
+  border-radius: 4px 0 0 4px;
+}
+
+.user-menu-icon-logout::after {
+  width: 10px;
+  height: 10px;
+  left: 13px;
+  top: 9px;
+  border-right: 2px solid currentColor;
+  border-top: 2px solid currentColor;
+  transform: rotate(45deg);
 }
 
 .user-menu-item-text strong {
