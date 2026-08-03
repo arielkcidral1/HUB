@@ -1363,6 +1363,14 @@ textarea {
   gap: 16px;
 }
 
+.workspace.equipe-workspace-expanded {
+  align-items: start;
+}
+
+.card-list.equipe-two-col {
+  min-width: 0;
+}
+
 .activity-list {
   margin: 0;
   padding: 0;

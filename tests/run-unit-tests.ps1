@@ -126,6 +126,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'data-action="add-board-list"[\s\S]*Adicionar coluna' "quadros possui mini coluna para adicionar coluna"
   Assert-MatchText $script 'function renderBoardListContextMenu\(\)[\s\S]*duplicate-list[\s\S]*Duplicar[\s\S]*rename-list[\s\S]*Renomear[\s\S]*delete-list[\s\S]*Excluir' "colunas dos quadros possuem menu de contexto"
   Assert-MatchText $script 'type === "list"[\s\S]*duplicate-list[\s\S]*rename-list[\s\S]*delete-list' "acoes de coluna dos quadros estao conectadas"
+  Assert-MatchText $script 'function setupEquipeFormScrollGrid\(\)[\s\S]*equipe-workspace-expanded[\s\S]*equipe-two-col[\s\S]*offsetAfterForm: 140[\s\S]*expandOnce: true' "transicao da aba Equipe expande de forma estavel"
   Assert-True -Condition (-not ($index -match 'data-view="gerenciamento-vt"[^>]*>Gerenciamento VT</button>')) -Message "menu nao possui mais aba Gerenciamento VT"
   Assert-MatchText $index 'data-view="documentos-contratados"[^>]*>Documentos de Contratados</button>' "menu possui aba Documentos de Contratados"
   Assert-MatchText $index 'id="primary-sidebar"[^>]*aria-label="Navegacao principal"[\s\S]*id="mobile-menu-toggle"[^>]*aria-controls="primary-sidebar"[^>]*aria-expanded="false"' "mobile possui botao para abrir menu principal"

@@ -11168,7 +11168,7 @@ document.addEventListener('DOMContentLoaded', () => {
   maybeOpenNotificationTrackerFromUrl();
 });
 
-function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedListClass, offsetAfterForm = 96 }) {
+function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedListClass, offsetAfterForm = 96, expandOnce = false }) {
   const form = document.getElementById(formId);
   const list = document.getElementById(listId);
   const workspace = form?.closest(".workspace");
@@ -11186,10 +11186,11 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
   }
 
   function updateState() {
+    if (expandOnce && expanded) return;
     const formBottom = form.getBoundingClientRect().bottom;
     if (!expanded && formBottom < expandMargin) {
       applyState(true);
-    } else if (expanded && formBottom > collapseMargin) {
+    } else if (!expandOnce && expanded && formBottom > collapseMargin) {
       applyState(false);
     }
   }
@@ -11229,6 +11230,8 @@ function setupEquipeFormScrollGrid() {
     formId: "usuario-form",
     expandedWorkspaceClass: "equipe-workspace-expanded",
     expandedListClass: "equipe-two-col",
+    offsetAfterForm: 140,
+    expandOnce: true,
   });
 }
 
