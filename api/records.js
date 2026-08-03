@@ -5,6 +5,26 @@ const OPERATORS = {
   ilike: "ilike",
 };
 
+const JSON_COLUMNS = new Map([
+  ["hub_documentos_contratados", new Set(["documentos"])],
+  ["hub_malotes", new Set(["colaboradores"])],
+  ["hub_quadros", new Set(["listas"])],
+  ["hub_users", new Set(["configuracoes"])],
+]);
+
+function isJsonColumn(table, column) {
+  return JSON_COLUMNS.get(table)?.has(column);
+}
+
+function normalizeDbValue(table, column, value) {
+  if (!isJsonColumn(table, column) || value == null || typeof value === "string") return value;
+  return JSON.stringify(value);
+}
+
+function placeholderFor(table, column, index) {
+  return isJsonColumn(table, column) ? `$${index}::jsonb` : `$${index}`;
+}
+
 function normalizeColumns(select) {
   if (!select || select === "*") return "*";
   return String(select)
@@ -95,8 +115,8 @@ export default async function handler(req, res) {
       for (const row of rows) {
         const entries = Object.entries(row || {}).filter(([, value]) => value !== undefined);
         const columns = entries.map(([key]) => quoteIdent(key));
-        const values = entries.map(([, value]) => value);
-        const placeholders = values.map((_, index) => `$${index + 1}`);
+        const values = entries.map(([key, value]) => normalizeDbValue(table, key, value));
+        const placeholders = entries.map(([key], index) => placeholderFor(table, key, index + 1));
         const sql = `insert into public.${quoteIdent(table)} (${columns.join(", ")}) values (${placeholders.join(", ")}) returning *`;
         const result = await pool.query(sql, values);
         inserted.push(result.rows[0]);
@@ -108,8 +128,8 @@ export default async function handler(req, res) {
       const filters = Array.isArray(body.filters) ? body.filters : [];
       const row = body.row || {};
       const entries = Object.entries(row).filter(([, value]) => value !== undefined);
-      const values = entries.map(([, value]) => value);
-      const sets = entries.map(([key], index) => `${quoteIdent(key)} = $${index + 1}`);
+      const values = entries.map(([key, value]) => normalizeDbValue(table, key, value));
+      const sets = entries.map(([key], index) => `${quoteIdent(key)} = ${placeholderFor(table, key, index + 1)}`);
       const where = buildWhere(filters);
       const shiftedWhereSql = where.sql.replace(/\$(\d+)/g, (_, number) => `$${Number(number) + values.length}`);
       const sql = `update public.${quoteIdent(table)} set ${sets.join(", ")}${shiftedWhereSql} returning *`;
