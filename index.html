@@ -34,7 +34,6 @@
           <button class="nav-item" data-view="documentos" type="button">Documentos RH</button>
           <button class="nav-item" data-view="advertencias-suspensoes" type="button">Advertencias e Suspensoes</button>
           <button class="nav-item" data-view="documentos-contratados" type="button">Documentos de Contratados</button>
-          <button class="nav-item" data-view="gerenciamento-vt" type="button">Gerenciamento VT</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/chamados.html" type="button">Solicitar EPIs</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/denuncia.html" type="button">Canal de Denúncia</button>
           <button class="nav-item" data-view="equipe" type="button">Equipe</button>
@@ -443,7 +442,6 @@
               <h2 id="chamados-primary-title">Abertos</h2>
               <div class="chamados-filter-bar" aria-label="Filtros de chamados">
                 <div class="chamados-filter-fields">
-                  <select id="chamado-filter-destino" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar chamados por destino"></select>
                   <input id="chamado-filter-colaborador" type="search" placeholder="Colaborador" autocomplete="off" aria-label="Filtrar chamados por colaborador" />
                   <input id="chamado-filter-codigo" type="search" inputmode="numeric" maxlength="6" placeholder="xxxx-x" autocomplete="off" aria-label="Filtrar chamados por codigo da solicitacao" />
                   <select id="chamado-filter-mes" aria-label="Filtrar chamados por mes">
@@ -461,6 +459,7 @@
                     <option>Novembro</option>
                     <option>Dezembro</option>
                   </select>
+                  <select id="chamado-filter-destino" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar chamados por destino"></select>
                 </div>
                 <button class="secondary-link compact-filter-button" id="limpar-filtros-chamados" type="button" hidden>Limpar</button>
               </div>
@@ -1137,6 +1136,7 @@
                   <button class="secondary-link vt-report-button" id="abrir-relatorio-disciplinary" type="button">Relatorio</button>
                   <div class="vt-filter-fields disciplinary-filter-fields">
                     <input id="disciplinary-filter-name" type="search" placeholder="Nome" autocomplete="off" aria-label="Filtrar por nome" />
+                    <input id="disciplinary-filter-observations" type="search" placeholder="Observacoes" autocomplete="off" aria-label="Filtrar por observacoes" />
                     <select id="disciplinary-filter-date" aria-label="Filtrar por mes">
                       <option value="">Mes</option>
                       <option value="01">Janeiro</option>
@@ -1152,7 +1152,6 @@
                       <option value="11">Novembro</option>
                       <option value="12">Dezembro</option>
                     </select>
-                    <input id="disciplinary-filter-observations" type="search" placeholder="Observacoes" autocomplete="off" aria-label="Filtrar por observacoes" />
                     <select id="disciplinary-filter-unit" aria-label="Filtrar por unidade" data-unit-select data-unit-placeholder="Unidade"></select>
                   </div>
                   <button class="secondary-link compact-filter-button" id="clear-disciplinary-filters" type="button" hidden>Limpar</button>

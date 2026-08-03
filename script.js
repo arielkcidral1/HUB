@@ -275,6 +275,8 @@ let showArchivedDenuncias = false;
 let dashboardCalendarViewMode = "week";
 let visibleCalendarDate = new Date();
 let activeBoardId = "";
+let boardContextMenu = null;
+let boardCardActionMenu = null;
 let draggedBoardCard = null;
 let draggedBoardTabId = "";
 let suppressBoardCardClick = false;
@@ -4799,25 +4801,65 @@ function openBoardCardPreview(listIndex, cardIndex) {
   showModal(card.titulo || "Cartao", card.descricao || "Sem descricao.", "info");
 }
 
-function openBoardContextMenu(event, type, payload = {}) {
+function closeBoardContextMenu() {
+  boardContextMenu = null;
   document.getElementById("board-context-menu")?.remove();
+}
+
+function closeBoardCardActionMenu() {
+  boardCardActionMenu = null;
+  document.getElementById("board-card-action-menu")?.remove();
+}
+
+function placeFloatingMenu(menu, x, y) {
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+  document.body.appendChild(menu);
+  const rect = menu.getBoundingClientRect();
+  const left = Math.min(x, window.innerWidth - rect.width - 10);
+  const top = Math.min(y, window.innerHeight - rect.height - 10);
+  menu.style.left = `${Math.max(10, left)}px`;
+  menu.style.top = `${Math.max(10, top)}px`;
+}
+
+function renderBoardContextMenu() {
+  document.getElementById("board-context-menu")?.remove();
+  if (!boardContextMenu) return;
   const menu = document.createElement("div");
   menu.id = "board-context-menu";
   menu.className = "board-context-menu";
-  menu.style.left = `${event.clientX}px`;
-  menu.style.top = `${event.clientY}px`;
-  const actions = type === "board"
-    ? [["rename-board", "Renomear"], ["duplicate-board", "Duplicar"], ["delete-board", "Apagar", "danger"]]
-    : [["edit-card", "Editar"], ["duplicate-card", "Duplicar"], ["delete-card", "Excluir", "danger"]];
-  menu.innerHTML = actions.map(([action, label, danger]) => `<button type="button" class="${danger || ""}" data-board-menu-action="${action}">${label}</button>`).join("");
-  menu.addEventListener("click", (clickEvent) => handleBoardContextAction(clickEvent, type, payload));
-  document.body.appendChild(menu);
+  menu.innerHTML = `
+    <button type="button" data-board-menu-action="rename-board">Renomear</button>
+    <button type="button" data-board-menu-action="duplicate-board">Duplicar</button>
+    <button class="danger" type="button" data-board-menu-action="delete-board">Apagar</button>
+  `;
+  menu.addEventListener("click", (clickEvent) => handleBoardContextAction(clickEvent, "board", { id: boardContextMenu.id }));
+  placeFloatingMenu(menu, boardContextMenu.x, boardContextMenu.y);
+}
+
+function renderBoardCardActionMenu() {
+  document.getElementById("board-card-action-menu")?.remove();
+  if (!boardCardActionMenu) return;
+  const menu = document.createElement("div");
+  menu.id = "board-card-action-menu";
+  menu.className = "board-context-menu";
+  menu.innerHTML = `
+    <button type="button" data-board-menu-action="edit-card">Editar</button>
+    <button type="button" data-board-menu-action="duplicate-card">Duplicar</button>
+    <button class="danger" type="button" data-board-menu-action="delete-card">Excluir</button>
+  `;
+  menu.addEventListener("click", (clickEvent) => handleBoardContextAction(clickEvent, "card", {
+    listIndex: boardCardActionMenu.listIndex,
+    cardIndex: boardCardActionMenu.cardIndex,
+  }));
+  placeFloatingMenu(menu, boardCardActionMenu.x, boardCardActionMenu.y);
 }
 
 async function handleBoardContextAction(event, type, payload) {
   const action = event.target.closest("[data-board-menu-action]")?.dataset.boardMenuAction;
   if (!action) return;
-  document.getElementById("board-context-menu")?.remove();
+  closeBoardContextMenu();
+  closeBoardCardActionMenu();
   const board = getActiveBoard();
   if (!board) return;
 
@@ -9038,16 +9080,19 @@ document.getElementById("board-card-form")?.addEventListener("submit", async (ev
 document.getElementById("cancelar-edicao-board-card")?.addEventListener("click", () => resetBoardCardFormIfEditing());
 
 document.addEventListener("click", (event) => {
-  if (!event.target.closest("#board-context-menu")) document.getElementById("board-context-menu")?.remove();
+  if (!event.target.closest("#board-context-menu") && !event.target.closest("[data-board-tab]")) closeBoardContextMenu();
+  if (!event.target.closest("#board-card-action-menu") && !event.target.closest("[data-board-card]")) closeBoardCardActionMenu();
   if (!event.target.closest("#record-context-menu")) document.getElementById("record-context-menu")?.remove();
   const boardButton = event.target.closest("[data-action='select-board']");
   if (boardButton) {
+    closeBoardContextMenu();
+    closeBoardCardActionMenu();
     activeBoardId = boardButton.dataset.id || "";
     resetBoardCardFormIfEditing();
     renderBoards();
     return;
   }
-  const card = event.target.closest("[data-action='open-board-card-preview']");
+  const card = event.target.closest("[data-board-card]");
   if (card && !suppressBoardCardClick) openBoardCardPreview(Number(card.dataset.listIndex), Number(card.dataset.cardIndex));
 });
 
@@ -9064,16 +9109,28 @@ document.addEventListener("contextmenu", (event) => {
   const tab = event.target.closest("[data-board-tab]");
   if (tab) {
     event.preventDefault();
+    closeBoardCardActionMenu();
     activeBoardId = tab.dataset.id || activeBoardId;
     renderBoards();
-    openBoardContextMenu(event, "board", { id: tab.dataset.id });
+    boardContextMenu = { id: tab.dataset.id, x: event.clientX, y: event.clientY + 6 };
+    renderBoardContextMenu();
     return;
   }
   const card = event.target.closest("[data-board-card]");
   if (card) {
     event.preventDefault();
-    openBoardContextMenu(event, "card", { listIndex: Number(card.dataset.listIndex), cardIndex: Number(card.dataset.cardIndex) });
+    closeBoardContextMenu();
+    boardCardActionMenu = {
+      listIndex: Number(card.dataset.listIndex),
+      cardIndex: Number(card.dataset.cardIndex),
+      x: event.clientX,
+      y: event.clientY + 6,
+    };
+    renderBoardCardActionMenu();
+    return;
   }
+  closeBoardContextMenu();
+  closeBoardCardActionMenu();
 });
 
 document.addEventListener("dragstart", (event) => {
@@ -9082,42 +9139,59 @@ document.addEventListener("dragstart", (event) => {
     draggedBoardTabId = String(tab.dataset.id || "");
     tab.classList.add("dragging");
     event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", draggedBoardTabId);
     return;
   }
   const card = event.target.closest("[data-board-card]");
   if (!card) return;
+  closeBoardCardActionMenu();
+  suppressBoardCardClick = false;
   draggedBoardCard = { listIndex: Number(card.dataset.listIndex), cardIndex: Number(card.dataset.cardIndex) };
   card.classList.add("dragging");
   event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", `${draggedBoardCard.listIndex}:${draggedBoardCard.cardIndex}`);
 });
 
 document.addEventListener("dragend", (event) => {
+  const endedCardDrag = Boolean(event.target.closest("[data-board-card]"));
   event.target.closest("[data-board-tab]")?.classList.remove("dragging");
   event.target.closest("[data-board-card]")?.classList.remove("dragging");
   document.querySelectorAll(".board-tab.drag-over, .board-lane.drag-over").forEach((item) => item.classList.remove("drag-over"));
   draggedBoardTabId = "";
   draggedBoardCard = null;
-  suppressBoardCardClick = true;
-  setTimeout(() => { suppressBoardCardClick = false; }, 0);
+  if (endedCardDrag) {
+    suppressBoardCardClick = true;
+    setTimeout(() => { suppressBoardCardClick = false; }, 80);
+  }
 });
 
 document.addEventListener("dragover", (event) => {
   const tab = event.target.closest("[data-board-tab]");
   if (tab && draggedBoardTabId && String(tab.dataset.id || "") !== draggedBoardTabId) {
     event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
     tab.classList.add("drag-over");
     return;
   }
   const lane = event.target.closest(".board-lane");
   if (!lane || !draggedBoardCard) return;
   event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
   lane.classList.add("drag-over");
+});
+
+document.addEventListener("dragleave", (event) => {
+  const tab = event.target.closest("[data-board-tab]");
+  if (tab && !tab.contains(event.relatedTarget)) tab.classList.remove("drag-over");
+  const lane = event.target.closest(".board-lane");
+  if (lane && !lane.contains(event.relatedTarget)) lane.classList.remove("drag-over");
 });
 
 document.addEventListener("drop", async (event) => {
   const tab = event.target.closest("[data-board-tab]");
   if (tab && draggedBoardTabId) {
     event.preventDefault();
+    tab.classList.remove("drag-over");
     const source = document.querySelector(`#board-tabs [data-board-tab][data-id="${CSS.escape(draggedBoardTabId)}"]`);
     const tabs = document.getElementById("board-tabs");
     if (source && tabs && source !== tab) {
@@ -9131,6 +9205,7 @@ document.addEventListener("drop", async (event) => {
   const lane = event.target.closest(".board-lane");
   if (!lane || !draggedBoardCard) return;
   event.preventDefault();
+  lane.classList.remove("drag-over");
   const board = getActiveBoard();
   const fromList = board?.listas?.[draggedBoardCard.listIndex];
   const toList = board?.listas?.[Number(lane.dataset.listIndex)];
