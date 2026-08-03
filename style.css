@@ -170,7 +170,6 @@ h2 {
   display: grid;
   grid-template-columns: 264px minmax(0, 1fr);
   min-height: 100vh;
-  visibility: hidden;
 }
 
 .app-shell.is-ready {
@@ -2388,7 +2387,7 @@ textarea {
   bottom: calc(100% + 10px);
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(12, 34px);
+  grid-template-columns: repeat(6, 34px);
   gap: 6px;
   padding: 12px;
   width: max-content;
@@ -4132,7 +4131,7 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-panel {
     min-height: auto;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto minmax(300px, 48vh) auto;
     gap: 0;
   }
 

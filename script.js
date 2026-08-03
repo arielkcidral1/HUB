@@ -7,9 +7,9 @@ const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
-// IMPORTANTE: os IDs lidos nÃ£o entram no cache sensÃ­vel.
-// Assim, ao fechar/abrir o site ou perder a sessÃ£o, as notificaÃ§Ãµes jÃ¡ visualizadas
-// nÃ£o voltam como nÃ£o lidas.
+// IMPORTANTE: os IDs lidos não entram no cache sensível.
+// Assim, ao fechar/abrir o site ou perder a sessão, as notificações já visualizadas
+// não voltam como não lidas.
 const SENSITIVE_CLIENT_CACHE_KEYS = [
   STORAGE_KEY,
   DOCUMENT_RECORDS_KEY,
@@ -71,79 +71,79 @@ const CHAT_FILE_EXTENSION_MIME_TYPES = new Map([
   ["mov", "video/quicktime"],
 ]);
 const CHAT_EMOJIS = [
-  "ðŸ˜€","ðŸ˜ƒ","ðŸ˜„","ðŸ˜","ðŸ˜†","ðŸ˜…","ðŸ¤£","ðŸ˜‚","ðŸ™‚","ðŸ™ƒ","ðŸ˜‰","ðŸ˜Š","ðŸ˜‡","ðŸ¥°","ðŸ˜",
-  "ðŸ¤©","ðŸ˜˜","ðŸ˜—","ðŸ˜š","ðŸ˜™","ðŸ˜‹","ðŸ˜›","ðŸ˜œ","ðŸ¤ª","ðŸ˜","ðŸ¤‘","ðŸ¤—","ðŸ¤­","ðŸ«¢","ðŸ«£",
-  "ðŸ¤«","ðŸ¤”","ðŸ«¡","ðŸ¤","ðŸ¤¨","ðŸ˜","ðŸ˜‘","ðŸ˜¶","ðŸ«¥","ðŸ˜","ðŸ˜’","ðŸ™„","ðŸ˜¬","ðŸ¤¥","ðŸ˜Œ",
-  "ðŸ˜”","ðŸ˜ª","ðŸ¤¤","ðŸ˜´","ðŸ˜·","ðŸ¤’","ðŸ¤•","ðŸ¤¢","ðŸ¤®","ðŸ¤§","ðŸ¥µ","ðŸ¥¶","ðŸ¥´","ðŸ˜µ","ðŸ¤¯",
-  "ðŸ¤ ","ðŸ¥³","ðŸ¥¸","ðŸ˜Ž","ðŸ¤“","ðŸ§","ðŸ˜•","ðŸ«¤","ðŸ˜Ÿ","ðŸ™","â˜¹ï¸","ðŸ˜®","ðŸ˜¯","ðŸ˜²","ðŸ˜³",
-  "ðŸ¥º","ðŸ¥¹","ðŸ˜¦","ðŸ˜§","ðŸ˜¨","ðŸ˜°","ðŸ˜¥","ðŸ˜¢","ðŸ˜­","ðŸ˜±","ðŸ˜–","ðŸ˜£","ðŸ˜ž","ðŸ˜“","ðŸ˜©",
-  "ðŸ˜«","ðŸ¥±","ðŸ˜¤","ðŸ˜¡","ðŸ˜ ","ðŸ¤¬","ðŸ˜ˆ","ðŸ‘¿","ðŸ’€","â˜ ï¸","ðŸ’©","ðŸ¤¡","ðŸ‘¹","ðŸ‘º","ðŸ‘»",
-  "ðŸ‘½","ðŸ¤–","ðŸ˜º","ðŸ˜¸","ðŸ˜¹","ðŸ˜»","ðŸ˜¼","ðŸ˜½","ðŸ™€","ðŸ˜¿","ðŸ˜¾","ðŸ‘‹","ðŸ¤š","ðŸ–ï¸","âœ‹",
-  "ðŸ––","ðŸ«±","ðŸ«²","ðŸ«³","ðŸ«´","ðŸ‘Œ","ðŸ¤Œ","ðŸ¤","âœŒï¸","ðŸ¤ž","ðŸ«°","ðŸ¤Ÿ","ðŸ¤˜","ðŸ¤™","ðŸ‘ˆ",
-  "ðŸ‘‰","ðŸ‘†","ðŸ–•","ðŸ‘‡","â˜ï¸","ðŸ‘","ðŸ‘Ž","âœŠ","ðŸ‘Š","ðŸ¤›","ðŸ¤œ","ðŸ‘","ðŸ™Œ","ðŸ«¶","ðŸ‘",
-  "ðŸ¤²","ðŸ¤","ðŸ™","âœï¸","ðŸ’…","ðŸ¤³","ðŸ’ª","ðŸ¦¾","ðŸ¦µ","ðŸ¦¿","ðŸ¦¶","ðŸ‘‚","ðŸ¦»","ðŸ‘ƒ","ðŸ§ ",
-  "ðŸ«€","ðŸ«","ðŸ¦·","ðŸ¦´","ðŸ‘€","ðŸ‘ï¸","ðŸ‘…","ðŸ‘„","ðŸ’‹","â¤ï¸","ðŸ§¡","ðŸ’›","ðŸ’š","ðŸ’™","ðŸ’œ",
-  "ðŸ–¤","ðŸ¤","ðŸ¤Ž","ðŸ’”","â¤ï¸â€ðŸ”¥","â¤ï¸â€ðŸ©¹","â£ï¸","ðŸ’•","ðŸ’ž","ðŸ’“","ðŸ’—","ðŸ’–","ðŸ’˜","ðŸ’","ðŸ’Ÿ",
-  "ðŸ‘¶","ðŸ§’","ðŸ‘¦","ðŸ‘§","ðŸ§‘","ðŸ‘±","ðŸ‘¨","ðŸ§”","ðŸ‘©","ðŸ§“","ðŸ‘´","ðŸ‘µ","ðŸ™","ðŸ™Ž","ðŸ™…",
-  "ðŸ™†","ðŸ’","ðŸ™‹","ðŸ§","ðŸ™‡","ðŸ¤¦","ðŸ¤·","ðŸ‘®","ðŸ•µï¸","ðŸ’‚","ðŸ‘·","ðŸ«…","ðŸ¤´","ðŸ‘¸","ðŸ‘³",
-  "ðŸ‘²","ðŸ§•","ðŸ¤µ","ðŸ‘°","ðŸ¤°","ðŸ¤±","ðŸ‘¼","ðŸŽ…","ðŸ¤¶","ðŸ¦¸","ðŸ¦¹","ðŸ§™","ðŸ§š","ðŸ§›","ðŸ§œ",
-  "ðŸ§","ðŸ§ž","ðŸ§Ÿ","ðŸ’†","ðŸ’‡","ðŸš¶","ðŸ§","ðŸ§Ž","ðŸƒ","ðŸ’ƒ","ðŸ•º","ðŸ§–","ðŸ§—","ðŸ¤º","ðŸ‡",
-  "â›·ï¸","ðŸ‚","ðŸŒï¸","ðŸ„","ðŸš£","ðŸŠ","â›¹ï¸","ðŸ‹ï¸","ðŸš´","ðŸšµ","ðŸ¶","ðŸ±","ðŸ­","ðŸ¹","ðŸ°",
-  "ðŸ¦Š","ðŸ»","ðŸ¼","ðŸ»â€â„ï¸","ðŸ¨","ðŸ¯","ðŸ¦","ðŸ®","ðŸ·","ðŸ½","ðŸ¸","ðŸµ","ðŸ™ˆ","ðŸ™‰","ðŸ™Š",
-  "ðŸ’","ðŸ”","ðŸ§","ðŸ¦","ðŸ¤","ðŸ£","ðŸ¥","ðŸ¦†","ðŸ¦…","ðŸ¦‰","ðŸ¦‡","ðŸº","ðŸ—","ðŸ´","ðŸ¦„",
-  "ðŸ","ðŸª±","ðŸ›","ðŸ¦‹","ðŸŒ","ðŸž","ðŸœ","ðŸª°","ðŸª²","ðŸª³","ðŸ¦Ÿ","ðŸ¦—","ðŸ•·ï¸","ðŸ•¸ï¸","ðŸ¦‚",
-  "ðŸ¢","ðŸ","ðŸ¦Ž","ðŸ¦–","ðŸ¦•","ðŸ™","ðŸ¦‘","ðŸ¦","ðŸ¦ž","ðŸ¦€","ðŸ¡","ðŸ ","ðŸŸ","ðŸ¬","ðŸ³",
-  "ðŸ‹","ðŸ¦ˆ","ðŸŠ","ðŸ…","ðŸ†","ðŸ¦“","ðŸ¦","ðŸ¦§","ðŸ¦£","ðŸ˜","ðŸ¦›","ðŸ¦","ðŸª","ðŸ«","ðŸ¦’",
-  "ðŸ¦˜","ðŸƒ","ðŸ‚","ðŸ„","ðŸŽ","ðŸ–","ðŸ","ðŸ‘","ðŸ¦™","ðŸ","ðŸ¦Œ","ðŸ•","ðŸ©","ðŸˆ","ðŸ“",
-  "ðŸ¦ƒ","ðŸ¦¤","ðŸ¦š","ðŸ¦œ","ðŸ¦¢","ðŸ¦©","ðŸ•Šï¸","ðŸ‡","ðŸ¦","ðŸ¦¨","ðŸ¦¡","ðŸ¦«","ðŸ¦¦","ðŸ¦¥","ðŸ",
-  "ðŸ€","ðŸ¿ï¸","ðŸ¦”","ðŸ¾","ðŸ‰","ðŸ²","ðŸŒµ","ðŸŽ„","ðŸŒ²","ðŸŒ³","ðŸŒ´","ðŸŒ±","ðŸŒ¿","â˜˜ï¸","ðŸ€",
-  "ðŸŽ","ðŸª´","ðŸŽ‹","ðŸƒ","ðŸ‚","ðŸ","ðŸ„","ðŸš","ðŸª¨","ðŸŒ¾","ðŸ’","ðŸŒ·","ðŸŒ¹","ðŸ¥€","ðŸŒº",
-  "ðŸŒ¸","ðŸŒ¼","ðŸŒ»","â˜€ï¸","ðŸŒ¤ï¸","â›…","ðŸŒ¥ï¸","â˜ï¸","ðŸŒ¦ï¸","ðŸŒ§ï¸","â›ˆï¸","ðŸŒ©ï¸","ðŸŒ¨ï¸","â„ï¸","â˜ƒï¸",
-  "â›„","ðŸŒ¬ï¸","ðŸ’¨","ðŸŒªï¸","ðŸŒˆ","â˜‚ï¸","â˜”","âš¡","ðŸ”¥","ðŸ’§","ðŸŒŠ","ðŸŒ™","â­","ðŸŒŸ","âœ¨",
-  "â˜„ï¸","ðŸŒŒ","ðŸ","ðŸŽ","ðŸ","ðŸŠ","ðŸ‹","ðŸŒ","ðŸ‰","ðŸ‡","ðŸ“","ðŸ«","ðŸˆ","ðŸ’","ðŸ‘",
-  "ðŸ¥­","ðŸ","ðŸ¥¥","ðŸ¥","ðŸ…","ðŸ†","ðŸ¥‘","ðŸ¥¦","ðŸ¥¬","ðŸ¥’","ðŸŒ¶ï¸","ðŸ«‘","ðŸŒ½","ðŸ¥•","ðŸ«’",
-  "ðŸ§„","ðŸ§…","ðŸ¥”","ðŸ ","ðŸ¥","ðŸ¥¯","ðŸž","ðŸ¥–","ðŸ¥¨","ðŸ§€","ðŸ¥š","ðŸ³","ðŸ§ˆ","ðŸ¥ž","ðŸ§‡",
-  "ðŸ¥“","ðŸ¥©","ðŸ—","ðŸ–","ðŸŒ­","ðŸ”","ðŸŸ","ðŸ•","ðŸ«“","ðŸ¥ª","ðŸ¥™","ðŸ§†","ðŸŒ®","ðŸŒ¯","ðŸ«”",
-  "ðŸ¥—","ðŸ¥˜","ðŸ«•","ðŸ¥«","ðŸ","ðŸœ","ðŸ²","ðŸ›","ðŸ£","ðŸ±","ðŸ¥Ÿ","ðŸ¦ª","ðŸ¤","ðŸ™","ðŸš",
-  "ðŸ˜","ðŸ¥","ðŸ¥ ","ðŸ¥®","ðŸ¢","ðŸ¡","ðŸ§","ðŸ¨","ðŸ¦","ðŸ¥§","ðŸ§","ðŸ°","ðŸŽ‚","ðŸ®","ðŸ­",
-  "ðŸ¬","ðŸ«","ðŸ¿","ðŸ©","ðŸª","ðŸŒ°","ðŸ¥œ","ðŸ¯","ðŸ¥›","ðŸ¼","â˜•","ðŸ«–","ðŸµ","ðŸ§ƒ","ðŸ¥¤",
-  "ðŸ§‹","ðŸ¶","ðŸº","ðŸ»","ðŸ¥‚","ðŸ·","ðŸ¥ƒ","ðŸ¸","ðŸ¹","ðŸ§‰","ðŸ¾","ðŸ§Š","ðŸ¥„","ðŸ´","ðŸ½ï¸",
-  "ðŸ¥£","ðŸ¥¡","âš½","ðŸ€","ðŸˆ","âš¾","ðŸ¥Ž","ðŸŽ¾","ðŸ","ðŸ‰","ðŸŽ±","ðŸª€","ðŸ“","ðŸ¸","ðŸ’",
-  "ðŸ‘","ðŸ¥","ðŸ","ðŸ¥…","â›³","ðŸª","ðŸ¹","ðŸŽ£","ðŸ¤¿","ðŸ¥Š","ðŸ¥‹","ðŸŽ½","ðŸ›¹","ðŸ›¼","ðŸ›·",
-  "â›¸ï¸","ðŸ¥Œ","ðŸŽ¿","ðŸ¤¼","ðŸ¤¸","ðŸ¤¾","ðŸ§˜","ðŸ¤½","ðŸ†","ðŸ¥‡","ðŸ¥ˆ","ðŸ¥‰","ðŸ…","ðŸŽ–ï¸","ðŸŽ—ï¸",
-  "ðŸŽ«","ðŸŽŸï¸","ðŸŽª","ðŸ¤¹","ðŸŽ­","ðŸŽ¨","ðŸŽ¬","ðŸŽ¤","ðŸŽ§","ðŸŽ¼","ðŸŽ¹","ðŸ¥","ðŸª˜","ðŸŽ·","ðŸŽº",
-  "ðŸŽ¸","ðŸª•","ðŸŽ»","ðŸŽ²","â™Ÿï¸","ðŸŽ¯","ðŸŽ³","ðŸŽ®","ðŸŽ°","ðŸ§©","ðŸš—","ðŸš•","ðŸš™","ðŸšŒ","ðŸšŽ",
-  "ðŸŽï¸","ðŸš“","ðŸš‘","ðŸš’","ðŸš","ðŸ›»","ðŸšš","ðŸš›","ðŸšœ","ðŸ›µ","ðŸï¸","ðŸ›º","ðŸš²","ðŸ›´","ðŸš¨",
-  "ðŸš”","ðŸš","ðŸš˜","ðŸš–","ðŸš¡","ðŸš ","ðŸšŸ","ðŸšƒ","ðŸš‹","ðŸšž","ðŸš","ðŸš„","ðŸš…","ðŸšˆ","ðŸš‚",
-  "ðŸš†","ðŸš‡","ðŸšŠ","ðŸš‰","âœˆï¸","ðŸ›«","ðŸ›¬","ðŸ›©ï¸","ðŸ’º","ðŸ›°ï¸","ðŸš€","ðŸ›¸","ðŸš","ðŸ›¶","â›µ",
-  "ðŸš¤","ðŸ›¥ï¸","ðŸ›³ï¸","â›´ï¸","ðŸš¢","âš“","ðŸª","â›½","ðŸš§","ðŸš¦","ðŸš¥","ðŸ—ºï¸","ðŸ—¿","ðŸ—½","ðŸ—¼",
-  "ðŸ°","ðŸ¯","ðŸŸï¸","ðŸŽ¡","ðŸŽ¢","ðŸŽ ","â›²","â›±ï¸","ðŸ–ï¸","ðŸï¸","ðŸœï¸","ðŸŒ‹","â›°ï¸","ðŸ”ï¸","ðŸ—»",
-  "ðŸ•ï¸","â›º","ðŸ ","ðŸ¡","ðŸ˜ï¸","ðŸšï¸","ðŸ—ï¸","ðŸ­","ðŸ¢","ðŸ¬","ðŸ£","ðŸ¤","ðŸ¥","ðŸ¦","ðŸ¨",
-  "ðŸª","ðŸ«","ðŸ©","ðŸ’’","ðŸ›ï¸","â›ª","ðŸ•Œ","ðŸ•","ðŸ›•","ðŸ•‹","âŒš","ðŸ“±","ðŸ’»","âŒ¨ï¸","ðŸ–¥ï¸",
-  "ðŸ–¨ï¸","ðŸ–±ï¸","ðŸ–²ï¸","ðŸ•¹ï¸","ðŸ’½","ðŸ’¾","ðŸ’¿","ðŸ“€","ðŸ“¼","ðŸ“·","ðŸ“¸","ðŸ“¹","ðŸŽ¥","ðŸ“ž","â˜Žï¸",
-  "ðŸ“Ÿ","ðŸ“ ","ðŸ“º","ðŸ“»","ðŸŽ™ï¸","ðŸŽšï¸","ðŸŽ›ï¸","ðŸ§­","â±ï¸","â²ï¸","â°","ðŸ•°ï¸","âŒ›","â³","ðŸ“¡",
-  "ðŸ”‹","ðŸ”Œ","ðŸ’¡","ðŸ”¦","ðŸ•¯ï¸","ðŸª”","ðŸ§¯","ðŸ›¢ï¸","ðŸ’¸","ðŸ’µ","ðŸ’´","ðŸ’¶","ðŸ’·","ðŸª™","ðŸ’°",
-  "ðŸ’³","ðŸ’Ž","âš–ï¸","ðŸªœ","ðŸ§°","ðŸª›","ðŸ”§","ðŸ”¨","âš’ï¸","ðŸ› ï¸","â›ï¸","ðŸªš","ðŸ”©","âš™ï¸","ðŸª¤",
-  "ðŸ§±","â›“ï¸","ðŸ§²","ðŸ”«","ðŸ’£","ðŸ§¨","ðŸª“","ðŸ”ª","ðŸ—¡ï¸","âš”ï¸","ðŸ›¡ï¸","ðŸš¬","âš°ï¸","ðŸª¦","âš±ï¸",
-  "ðŸº","ðŸ”®","ðŸ“¿","ðŸ§¿","ðŸ’ˆ","âš—ï¸","ðŸ”­","ðŸ”¬","ðŸ•³ï¸","ðŸ©¹","ðŸ©º","ðŸ’Š","ðŸ’‰","ðŸ©¸","ðŸ§¬",
-  "ðŸ¦ ","ðŸ§«","ðŸ§ª","ðŸŒ¡ï¸","ðŸ§¹","ðŸª ","ðŸ§º","ðŸ§»","ðŸš½","ðŸš°","ðŸš¿","ðŸ›","ðŸ›€","ðŸ§¼","ðŸª¥",
-  "ðŸª’","ðŸ§½","ðŸª£","ðŸ§´","ðŸ›Žï¸","ðŸ”‘","ðŸ—ï¸","ðŸšª","ðŸª‘","ðŸ›‹ï¸","ðŸ›ï¸","ðŸ›Œ","ðŸ§¸","ðŸª†","ðŸ–¼ï¸",
-  "ðŸªž","ðŸªŸ","ðŸ›ï¸","ðŸ›’","ðŸŽ","ðŸŽˆ","ðŸŽ","ðŸŽ€","ðŸª„","ðŸª…","ðŸŽŠ","ðŸŽ‰","ðŸŽŽ","ðŸ®","ðŸŽ",
-  "ðŸ§§","âœ‰ï¸","ðŸ“©","ðŸ“¨","ðŸ“§","ðŸ’Œ","ðŸ“¥","ðŸ“¤","ðŸ“¦","ðŸ·ï¸","ðŸª§","ðŸ“ª","ðŸ“«","ðŸ“¬","ðŸ“­",
-  "ðŸ“®","ðŸ“¯","ðŸ“œ","ðŸ“ƒ","ðŸ“„","ðŸ“‘","ðŸ“Š","ðŸ“ˆ","ðŸ“‰","ðŸ—’ï¸","ðŸ—“ï¸","ðŸ“†","ðŸ“…","ðŸ—‘ï¸","ðŸ“‡",
-  "ðŸ—ƒï¸","ðŸ—³ï¸","ðŸ—„ï¸","ðŸ“‹","ðŸ“","ðŸ“‚","ðŸ—‚ï¸","ðŸ—žï¸","ðŸ“°","ðŸ““","ðŸ“”","ðŸ“’","ðŸ“•","ðŸ“—","ðŸ“˜",
-  "ðŸ“™","ðŸ“š","ðŸ“–","ðŸ”–","ðŸ§·","ðŸ”—","ðŸ“Ž","ðŸ–‡ï¸","ðŸ“","ðŸ“","ðŸ§®","ðŸ“Œ","ðŸ“","âœ‚ï¸","ðŸ–Šï¸",
-  "ðŸ–‹ï¸","âœ’ï¸","ðŸ–Œï¸","ðŸ–ï¸","ðŸ“","âœï¸","ðŸ”","ðŸ”Ž","ðŸ”","ðŸ”","ðŸ”’","ðŸ”“","ðŸ’¬","ðŸ’­","ðŸ—¯ï¸",
-  "ðŸ’¤","ðŸ‘£","ðŸŒ€","ðŸ””","ðŸ”•","ðŸ“¢","ðŸ“£","ðŸŽµ","ðŸŽ¶","âž•","âž–","âž—","âœ–ï¸","ðŸŸ°","â™¾ï¸",
-  "â€¼ï¸","â‰ï¸","â“","â”","â•","â—","ã€°ï¸","ðŸ’±","ðŸ’²","ðŸ”±","ðŸ“›","ðŸ”°","â­•","âœ…","â˜‘ï¸",
-  "âœ”ï¸","âŒ","âŽ","âž°","âž¿","ã€½ï¸","âœ³ï¸","âœ´ï¸","â‡ï¸","Â©ï¸","Â®ï¸","â„¢ï¸","#ï¸âƒ£","*ï¸âƒ£","0ï¸âƒ£",
-  "1ï¸âƒ£","2ï¸âƒ£","3ï¸âƒ£","4ï¸âƒ£","5ï¸âƒ£","6ï¸âƒ£","7ï¸âƒ£","8ï¸âƒ£","9ï¸âƒ£","ðŸ”Ÿ","ðŸ”¢","ðŸ”¤","ðŸ”¡","ðŸ” ","ðŸ†—",
-  "ðŸ†•","ðŸ†“","ðŸ†’","ðŸ†™","ðŸ†–","ðŸˆ","ðŸˆ‚ï¸","ðŸˆš","ðŸˆ¯","ðŸˆ²","ðŸˆ³","ðŸˆ´","ðŸˆµ","ðŸˆ¶","ðŸˆ·ï¸",
-  "ðŸ‰","ðŸ‰‘","ãŠ—ï¸","ãŠ™ï¸","ðŸ”´","ðŸŸ ","ðŸŸ¡","ðŸŸ¢","ðŸ”µ","ðŸŸ£","ðŸŸ¤","âš«","âšª","ðŸŸ¥","ðŸŸ§",
-  "ðŸŸ¨","ðŸŸ©","ðŸŸ¦","ðŸŸª","ðŸŸ«","â¬›","â¬œ","â—¼ï¸","â—»ï¸","â—¾","â—½","â–ªï¸","â–«ï¸","ðŸ”¶","ðŸ”·",
-  "ðŸ”¸","ðŸ”¹","ðŸ”º","ðŸ”»","ðŸ’ ","ðŸ”˜","ðŸ”³","ðŸ”²","ðŸ","ðŸš©","ðŸŽŒ","ðŸ´","ðŸ³ï¸","ðŸ³ï¸â€ðŸŒˆ","ðŸ³ï¸â€âš§ï¸",
-  "ðŸ´â€â˜ ï¸","ðŸ‡§ðŸ‡·","ðŸ‡ºðŸ‡¸","ðŸ‡µðŸ‡¹","ðŸ‡ªðŸ‡¸","ðŸ‡¦ðŸ‡·","ðŸ‡®ðŸ‡¹","ðŸ‡«ðŸ‡·","ðŸ‡©ðŸ‡ª","ðŸ‡¬ðŸ‡§","ðŸ‡¯ðŸ‡µ","ðŸ‡¨ðŸ‡³","ðŸ‡¨ðŸ‡¦","ðŸ‡²ðŸ‡½","ðŸ‡¨ðŸ‡´",
-  "ðŸ‡¨ðŸ‡±",
+  "😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍",
+  "🤩","😘","😗","😚","😙","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🫢","🫣",
+  "🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😏","😒","🙄","😬","🤥","😌",
+  "😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","🤯",
+  "🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","☹️","😮","😯","😲","😳",
+  "🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩",
+  "😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻",
+  "👽","🤖","😺","😸","😹","😻","😼","😽","🙀","😿","😾","👋","🤚","🖐️","✋",
+  "🖖","🫱","🫲","🫳","🫴","👌","🤌","🤏","✌️","🤞","🫰","🤟","🤘","🤙","👈",
+  "👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐",
+  "🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦵","🦿","🦶","👂","🦻","👃","🧠",
+  "🫀","🫁","🦷","🦴","👀","👁️","👅","👄","💋","❤️","🧡","💛","💚","💙","💜",
+  "🖤","🤍","🤎","💔","❤️‍🔥","❤️‍🩹","❣️","💕","💞","💓","💗","💖","💘","💝","💟",
+  "👶","🧒","👦","👧","🧑","👱","👨","🧔","👩","🧓","👴","👵","🙍","🙎","🙅",
+  "🙆","💁","🙋","🧏","🙇","🤦","🤷","👮","🕵️","💂","👷","🫅","🤴","👸","👳",
+  "👲","🧕","🤵","👰","🤰","🤱","👼","🎅","🤶","🦸","🦹","🧙","🧚","🧛","🧜",
+  "🧝","🧞","🧟","💆","💇","🚶","🧍","🧎","🏃","💃","🕺","🧖","🧗","🤺","🏇",
+  "⛷️","🏂","🏌️","🏄","🚣","🏊","⛹️","🏋️","🚴","🚵","🐶","🐱","🐭","🐹","🐰",
+  "🦊","🐻","🐼","🐻‍❄️","🐨","🐯","🦁","🐮","🐷","🐽","🐸","🐵","🙈","🙉","🙊",
+  "🐒","🐔","🐧","🐦","🐤","🐣","🐥","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄",
+  "🐝","🪱","🐛","🦋","🐌","🐞","🐜","🪰","🪲","🪳","🦟","🦗","🕷️","🕸️","🦂",
+  "🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳",
+  "🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🦣","🐘","🦛","🦏","🐪","🐫","🦒",
+  "🦘","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🐈","🐓",
+  "🦃","🦤","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁",
+  "🐀","🐿️","🦔","🐾","🐉","🐲","🌵","🎄","🌲","🌳","🌴","🌱","🌿","☘️","🍀",
+  "🎍","🪴","🎋","🍃","🍂","🍁","🍄","🐚","🪨","🌾","💐","🌷","🌹","🥀","🌺",
+  "🌸","🌼","🌻","☀️","🌤️","⛅","🌥️","☁️","🌦️","🌧️","⛈️","🌩️","🌨️","❄️","☃️",
+  "⛄","🌬️","💨","🌪️","🌈","☂️","☔","⚡","🔥","💧","🌊","🌙","⭐","🌟","✨",
+  "☄️","🌌","🍏","🍎","🍐","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍈","🍒","🍑",
+  "🥭","🍍","🥥","🥝","🍅","🍆","🥑","🥦","🥬","🥒","🌶️","🫑","🌽","🥕","🫒",
+  "🧄","🧅","🥔","🍠","🥐","🥯","🍞","🥖","🥨","🧀","🥚","🍳","🧈","🥞","🧇",
+  "🥓","🥩","🍗","🍖","🌭","🍔","🍟","🍕","🫓","🥪","🥙","🧆","🌮","🌯","🫔",
+  "🥗","🥘","🫕","🥫","🍝","🍜","🍲","🍛","🍣","🍱","🥟","🦪","🍤","🍙","🍚",
+  "🍘","🍥","🥠","🥮","🍢","🍡","🍧","🍨","🍦","🥧","🧁","🍰","🎂","🍮","🍭",
+  "🍬","🍫","🍿","🍩","🍪","🌰","🥜","🍯","🥛","🍼","☕","🫖","🍵","🧃","🥤",
+  "🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","🧊","🥄","🍴","🍽️",
+  "🥣","🥡","⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🎱","🪀","🏓","🏸","🏒",
+  "🏑","🥍","🏏","🥅","⛳","🪁","🏹","🎣","🤿","🥊","🥋","🎽","🛹","🛼","🛷",
+  "⛸️","🥌","🎿","🤼","🤸","🤾","🧘","🤽","🏆","🥇","🥈","🥉","🏅","🎖️","🎗️",
+  "🎫","🎟️","🎪","🤹","🎭","🎨","🎬","🎤","🎧","🎼","🎹","🥁","🪘","🎷","🎺",
+  "🎸","🪕","🎻","🎲","♟️","🎯","🎳","🎮","🎰","🧩","🚗","🚕","🚙","🚌","🚎",
+  "🏎️","🚓","🚑","🚒","🚐","🛻","🚚","🚛","🚜","🛵","🏍️","🛺","🚲","🛴","🚨",
+  "🚔","🚍","🚘","🚖","🚡","🚠","🚟","🚃","🚋","🚞","🚝","🚄","🚅","🚈","🚂",
+  "🚆","🚇","🚊","🚉","✈️","🛫","🛬","🛩️","💺","🛰️","🚀","🛸","🚁","🛶","⛵",
+  "🚤","🛥️","🛳️","⛴️","🚢","⚓","🪝","⛽","🚧","🚦","🚥","🗺️","🗿","🗽","🗼",
+  "🏰","🏯","🏟️","🎡","🎢","🎠","⛲","⛱️","🏖️","🏝️","🏜️","🌋","⛰️","🏔️","🗻",
+  "🏕️","⛺","🏠","🏡","🏘️","🏚️","🏗️","🏭","🏢","🏬","🏣","🏤","🏥","🏦","🏨",
+  "🏪","🏫","🏩","💒","🏛️","⛪","🕌","🕍","🛕","🕋","⌚","📱","💻","⌨️","🖥️",
+  "🖨️","🖱️","🖲️","🕹️","💽","💾","💿","📀","📼","📷","📸","📹","🎥","📞","☎️",
+  "📟","📠","📺","📻","🎙️","🎚️","🎛️","🧭","⏱️","⏲️","⏰","🕰️","⌛","⏳","📡",
+  "🔋","🔌","💡","🔦","🕯️","🪔","🧯","🛢️","💸","💵","💴","💶","💷","🪙","💰",
+  "💳","💎","⚖️","🪜","🧰","🪛","🔧","🔨","⚒️","🛠️","⛏️","🪚","🔩","⚙️","🪤",
+  "🧱","⛓️","🧲","🔫","💣","🧨","🪓","🔪","🗡️","⚔️","🛡️","🚬","⚰️","🪦","⚱️",
+  "🏺","🔮","📿","🧿","💈","⚗️","🔭","🔬","🕳️","🩹","🩺","💊","💉","🩸","🧬",
+  "🦠","🧫","🧪","🌡️","🧹","🪠","🧺","🧻","🚽","🚰","🚿","🛁","🛀","🧼","🪥",
+  "🪒","🧽","🪣","🧴","🛎️","🔑","🗝️","🚪","🪑","🛋️","🛏️","🛌","🧸","🪆","🖼️",
+  "🪞","🪟","🛍️","🛒","🎁","🎈","🎏","🎀","🪄","🪅","🎊","🎉","🎎","🏮","🎐",
+  "🧧","✉️","📩","📨","📧","💌","📥","📤","📦","🏷️","🪧","📪","📫","📬","📭",
+  "📮","📯","📜","📃","📄","📑","📊","📈","📉","🗒️","🗓️","📆","📅","🗑️","📇",
+  "🗃️","🗳️","🗄️","📋","📁","📂","🗂️","🗞️","📰","📓","📔","📒","📕","📗","📘",
+  "📙","📚","📖","🔖","🧷","🔗","📎","🖇️","📐","📏","🧮","📌","📍","✂️","🖊️",
+  "🖋️","✒️","🖌️","🖍️","📝","✏️","🔍","🔎","🔏","🔐","🔒","🔓","💬","💭","🗯️",
+  "💤","👣","🌀","🔔","🔕","📢","📣","🎵","🎶","➕","➖","➗","✖️","🟰","♾️",
+  "‼️","⁉️","❓","❔","❕","❗","〰️","💱","💲","🔱","📛","🔰","⭕","✅","☑️",
+  "✔️","❌","❎","➰","➿","〽️","✳️","✴️","❇️","©️","®️","™️","#️⃣","*️⃣","0️⃣",
+  "1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟","🔢","🔤","🔡","🔠","🆗",
+  "🆕","🆓","🆒","🆙","🆖","🈁","🈂️","🈚","🈯","🈲","🈳","🈴","🈵","🈶","🈷️",
+  "🉐","🉑","㊗️","㊙️","🔴","🟠","🟡","🟢","🔵","🟣","🟤","⚫","⚪","🟥","🟧",
+  "🟨","🟩","🟦","🟪","🟫","⬛","⬜","◼️","◻️","◾","◽","▪️","▫️","🔶","🔷",
+  "🔸","🔹","🔺","🔻","💠","🔘","🔳","🔲","🏁","🚩","🎌","🏴","🏳️","🏳️‍🌈","🏳️‍⚧️",
+  "🏴‍☠️","🇧🇷","🇺🇸","🇵🇹","🇪🇸","🇦🇷","🇮🇹","🇫🇷","🇩🇪","🇬🇧","🇯🇵","🇨🇳","🇨🇦","🇲🇽","🇨🇴",
+  "🇨🇱",
 ];
 const USER_SETTINGS_STORAGE_KEY = "hub-user-settings-v1";
 const USER_SETTINGS_DEFAULTS = Object.freeze({
@@ -250,7 +250,7 @@ const defaultData = {
     {
       id: generateUUID(),
       autor: "Marina Souza",
-      mensagem: "Revisar pendencias de benefÃ­cios, vagas e entregas de EPI.",
+      mensagem: "Revisar pendencias de benefícios, vagas e entregas de EPI.",
       canal: GENERAL_CHANNEL,
       arquivo: null,
       createdAt: "Hoje",
@@ -339,7 +339,7 @@ const UNIT_OPTIONS = [
   "1- MTZ",
   "2- SBS",
   "3- ITJ 1",
-  "4- PLÃ‡",
+  "4- PLÇ",
   "5- GUA",
   "7- DPA JC",
   "9- DPA IRI",
@@ -360,7 +360,7 @@ const UNIT_OPTIONS = [
   "28- ARA",
 ];
 
-// Normaliza texto para comparaÃ§Ã£o: remove acentos, caixa e espaÃ§os extras.
+// Normaliza texto para comparação: remove acentos, caixa e espaços extras.
 function normalizeUnitText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -370,7 +370,7 @@ function normalizeUnitText(value) {
 }
 
 // Vagas antigas podem ter sido gravadas com texto livre (ex: "JRG", "JGR").
-// Aqui mapeamos esses valores legados para a opÃ§Ã£o oficial correspondente.
+// Aqui mapeamos esses valores legados para a opção oficial correspondente.
 const UNIT_ALIASES = {
   jrg: "13- JRG 1",
   jgr: "13- JRG 1",
@@ -400,27 +400,27 @@ const EPI_OPTIONS = [
   "Protetor Auricular",
   "Protetor Auricular tipo concha",
   "Avental de Raspa",
-  "SapatÃ£o",
+  "Sapatão",
   "Luva de Vaqueta",
-  "Creme de ProteÃ§Ã£o",
+  "Creme de Proteção",
 ];
 
 const UNIFORM_OPTIONS = [
   "Camiseta Operacional Fredy - Pneus",
-  "Camiseta Chefe de PÃ¡tio - Fredy Pneus",
+  "Camiseta Chefe de Pátio - Fredy Pneus",
   "Moletom Operacional - Fredy Pneus",
   "Camisa Social Azul - Fredy Pneus",
   "Camisa Social Branca Fredy - Pneus",
-  "CalÃ§a Operacional Fredy - Pneus",
+  "Calça Operacional Fredy - Pneus",
   "Camiseta Operacional - GCS",
   "Camiseta Cinza Claro - GCS",
   "Camisa Polo - GCS",
-  "CalÃ§a Operacional - GCS",
+  "Calça Operacional - GCS",
   "Bermuda Operacional - GCS",
   "Camiseta Operacional - JPL",
   "Camisa Polo - JPL",
   "Moletom Operacional - JPL",
-  "CalÃ§a Operacional - JPL",
+  "Calça Operacional - JPL",
   "Camiseta - FAC",
 ];
 
@@ -576,18 +576,18 @@ function getChatChannels() {
 
   let channels = isCashierUser()
     ? [
-        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "ComunicaÃ§Ã£o geral entre caixas/crediaristas e equipe de RH", isGroup: true },
+        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunicação geral entre caixas/crediaristas e equipe de RH", isGroup: true },
         ...directChannels,
       ]
     : isManagerUser()
     ? [
-        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "ComunicaÃ§Ã£o geral entre gerentes e equipe de RH", isGroup: true },
+        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
         ...directChannels,
       ]
     : [
         { id: GENERAL_CHANNEL, label: "Chat geral RH", subtitle: "Mensagens compartilhadas apenas pela equipe de RH", isGroup: true },
-        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "ComunicaÃ§Ã£o geral entre gerentes e equipe de RH", isGroup: true },
-        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "ComunicaÃ§Ã£o geral entre caixas/crediaristas e equipe de RH", isGroup: true },
+        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
+        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunicação geral entre caixas/crediaristas e equipe de RH", isGroup: true },
         ...directChannels,
       ];
 
@@ -652,9 +652,9 @@ function getCurrentUserName() {
 }
 
 /**
- * [ALERTA DE SEGURANÃ‡A] A verificaÃ§Ã£o de permissÃ£o real DEVE ser feita no backend
- * com Row Level Security (RLS) do PostgreSQL. Estas funÃ§Ãµes sÃ£o apenas para controle de UI.
- * A 'role' Ã© lida do token JWT para maior seguranÃ§a no frontend, mas a RLS Ã© indispensÃ¡vel.
+ * [ALERTA DE SEGURANÇA] A verificação de permissão real DEVE ser feita no backend
+ * com Row Level Security (RLS) do PostgreSQL. Estas funções são apenas para controle de UI.
+ * A 'role' é lida do token JWT para maior segurança no frontend, mas a RLS é indispensável.
  */
 const AuthHelper = {
   _getClaim(claim) {
@@ -835,7 +835,7 @@ async function validateLogin(identifier, password) {
 
   if (!client?.auth) {
     const errorMsg = document.getElementById("login-error");
-    if (errorMsg) errorMsg.textContent = "Erro de conexÃ£o com o PostgreSQL.";
+    if (errorMsg) errorMsg.textContent = "Erro de conexão com o PostgreSQL.";
     return false;
   }
 
@@ -1295,14 +1295,14 @@ function renderMaloteReport() {
     return acc;
   }, {});
   const topDestino = Object.entries(byDestino).sort((a, b) => b[1] - a[1])[0];
-  const separacao = source.filter((item) => item.status === "SeparaÃ§Ã£o").length;
+  const separacao = source.filter((item) => item.status === "Separação").length;
   const entrega = source.filter((item) => item.status === "Entrega").length;
 
   target.innerHTML = `
     <article class="report-chip">
       <span>${selectedDestino || search ? "Resultado filtrado" : "Total geral"}</span>
       <strong>${source.length}</strong>
-      <small>${escapeHtml([selectedDestino, search ? `CÃ³digo: ${search}` : ""].filter(Boolean).join(" | ") || "Todos os destinos")}</small>
+      <small>${escapeHtml([selectedDestino, search ? `Código: ${search}` : ""].filter(Boolean).join(" | ") || "Todos os destinos")}</small>
     </article>
     <article class="report-chip">
       <span>Em separacao</span>
@@ -1473,7 +1473,7 @@ function applyDateMask(input) {
   input.maxLength = 10;
   input.placeholder = "dd/mm/aaaa";
   input.dataset.dateMask = "true";
-  input.dataset.docDate = "true"; // mantÃ©m compatibilidade
+  input.dataset.docDate = "true"; // mantém compatibilidade
   input.dataset.dateMaskApplied = "true";
   input.value = formatMaskedDate(input.value);
 }
@@ -1481,7 +1481,7 @@ function applyDateMask(input) {
 function normalizeDocumentDateInputs(root = document) {
   // cobre doc-forms e o campo de data do evento-form
   root.querySelectorAll('[data-doc-form] input[type="date"], #evento-form input[type="date"]').forEach(applyDateMask);
-  // reinicializa campos que jÃ¡ foram convertidos mas podem ter recebido valor ISO novo
+  // reinicializa campos que já foram convertidos mas podem ter recebido valor ISO novo
   root.querySelectorAll('[data-date-mask="true"]').forEach((input) => {
     input.value = formatMaskedDate(input.value);
   });
@@ -1506,8 +1506,8 @@ function formatTimeRange(value) {
 
   if (digits.length <= 2) return firstHour;
   if (digits.length <= 4) return `${firstHour}:${firstMinute}`;
-  if (digits.length <= 6) return `${firstHour}:${firstMinute} Ã s ${secondHour}`;
-  return `${firstHour}:${firstMinute} Ã s ${secondHour}:${secondMinute}`;
+  if (digits.length <= 6) return `${firstHour}:${firstMinute} às ${secondHour}`;
+  return `${firstHour}:${firstMinute} às ${secondHour}:${secondMinute}`;
 }
 
 function formatCpf(value) {
@@ -1644,7 +1644,7 @@ function createMaloteCollaboratorBlock(group = {}) {
   return `
     <div class="malote-collaborator" data-malote-collaborator>
       <div class="item-topline">
-        <label>Colaborador que irÃ¡ receber
+        <label>Colaborador que irá receber
           <input name="malote_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
         </label>
         <button class="danger-button remove-malote-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
@@ -1662,7 +1662,7 @@ function createChamadoCollaboratorBlock(group = {}) {
   return `
     <div class="malote-collaborator" data-chamado-collaborator>
       <div class="item-topline">
-        <label>Colaborador que irÃ¡ receber
+        <label>Colaborador que irá receber
           <input name="chamado_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
         </label>
         <button class="danger-button remove-chamado-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
@@ -1799,8 +1799,8 @@ function renderMaloteCollaboratorsDetails(malote = {}) {
           ${group.itens.map((item) => `
             <li>
               ${escapeHtml(item.nome || "Nao informado")}
-              â€” Tamanho: ${escapeHtml(item.tamanho || "Nao se aplica")}
-              â€” Quantidade: ${escapeHtml(item.quantidade || "1")}
+              — Tamanho: ${escapeHtml(item.tamanho || "Nao se aplica")}
+              — Quantidade: ${escapeHtml(item.quantidade || "1")}
             </li>
           `).join("")}
         </ul>
@@ -1815,9 +1815,9 @@ function renderMaloteCardContent(item, options = {}) {
     <div class="item-topline"><p class="item-title">Malote de EPI</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
     <p><strong>Destino:</strong> ${escapeHtml(item.destino || "Nao informado")}</p>
       <p><strong>Origem:</strong> ${escapeHtml(item.origem || "Nao informada")}</p>
-      <p><strong>CÃ³digo da SolicitaÃ§Ã£o:</strong> ${escapeHtml(item.codigoSolicitacao || "Nao informado")}</p>
+      <p><strong>Código da Solicitação:</strong> ${escapeHtml(item.codigoSolicitacao || "Nao informado")}</p>
     ${renderMaloteCollaboratorsDetails(item)}
-    ${item.observacoes ? `<p><strong>ObservaÃ§Ãµes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
+    ${item.observacoes ? `<p><strong>Observações:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
     ${showAudit ? `<p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}</p>` : ""}
     ${showActions ? `
       <div class="job-actions">
@@ -2425,7 +2425,7 @@ function renderChatPoll(item, poll) {
           <strong>${percent}%</strong>
         </span>
         <span class="chat-poll-bar" aria-hidden="true"><span style="width: ${percent}%"></span></span>
-        <span class="item-meta">${count} voto${count === 1 ? "" : "s"}${selected ? " â€¢ seu voto" : ""}</span>
+        <span class="item-meta">${count} voto${count === 1 ? "" : "s"}${selected ? " • seu voto" : ""}</span>
       </button>
     `;
   }).join("");
@@ -2868,7 +2868,7 @@ function toDbPayload(collection, values) {
     colaboradores: values.colaboradores || [],
     codigo_solicitacao: values.codigoSolicitacao || "",
     observacoes: values.observacoes || "",
-    status: values.status || "SeparaÃ§Ã£o",
+    status: values.status || "Separação",
     created_by: values.createdBy || getCurrentUserName(),
     updated_by: values.updatedBy || null,
   };
@@ -3116,7 +3116,7 @@ function setupRealtime() {
     } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
       console.warn("HUB realtime desconectado:", status);
       setSyncStatus("Reconectando...", false);
-      // Remove canal atual e agenda reconexÃ£o
+      // Remove canal atual e agenda reconexão
       try { realtimeChannel.unsubscribe(); } catch (_) {}
       realtimeChannel = null;
       setTimeout(() => {
@@ -3258,7 +3258,7 @@ function openChatFilePicker({ accept = getChatDefaultFileAccept(), capture = "" 
 function handleChatAttachOption(type) {
   closeChatAttachMenu();
   if (!activeChatChannel || !canAccessChatChannel(activeChatChannel)) {
-    showModal("Selecione um chat", "Escolha um canal de comunicaÃ§Ã£o antes de adicionar anexos.", "error");
+    showModal("Selecione um chat", "Escolha um canal de comunicação antes de adicionar anexos.", "error");
     return;
   }
 
@@ -3363,15 +3363,15 @@ function renderChatAttachmentPreview(files) {
   } else if (mimeType.startsWith("audio/")) {
     body = `
       <div class="chat-preview-audio-card">
-        <button type="button" class="chat-preview-audio-trash" data-action="clear-chat-file" title="Remover audio" aria-label="Remover audio">ðŸ—‘</button>
+        <button type="button" class="chat-preview-audio-trash" data-action="clear-chat-file" title="Remover audio" aria-label="Remover audio">🗑</button>
         <audio class="chat-preview-audio-player" controls src="${chatAttachmentPreviewUrl}"></audio>
       </div>`;
     activeChip = `<span class="chat-preview-chip-icon" aria-hidden="true">AUD</span>`;
   } else {
     body = `
       <div class="chat-preview-unavailable">
-        <div class="chat-preview-file-icon" aria-hidden="true">â–¦</div>
-        <strong>PrÃ©via indisponÃ­vel</strong>
+        <div class="chat-preview-file-icon" aria-hidden="true">▦</div>
+        <strong>Prévia indisponível</strong>
         <span>${meta}</span>
       </div>`;
     activeChip = `<span class="chat-preview-chip-icon" aria-hidden="true">${escapeHtml(extension.slice(0, 3))}</span>`;
@@ -3393,12 +3393,12 @@ function renderChatAttachmentPreview(files) {
         <button type="button" class="chat-preview-chip ${index === chatAttachmentPreviewIndex ? "is-active" : ""}" data-action="preview-chat-file" data-index="${index}" title="Visualizar ${escapeHtml(item.name)}" aria-label="Visualizar ${escapeHtml(item.name)}">
           ${chipContent}
         </button>
-        <button type="button" class="chat-preview-chip-remove" data-action="remove-chat-file" data-index="${index}" title="Remover ${escapeHtml(item.name)}" aria-label="Remover ${escapeHtml(item.name)}">Ã—</button>
+        <button type="button" class="chat-preview-chip-remove" data-action="remove-chat-file" data-index="${index}" title="Remover ${escapeHtml(item.name)}" aria-label="Remover ${escapeHtml(item.name)}">×</button>
       </span>`;
   }).join("");
 
   preview.innerHTML = `
-    <button type="button" class="chat-preview-close" data-action="clear-chat-file" title="Remover anexo" aria-label="Remover anexo">Ã—</button>
+    <button type="button" class="chat-preview-close" data-action="clear-chat-file" title="Remover anexo" aria-label="Remover anexo">×</button>
     <div class="chat-preview-title">${fileName}${selectedFiles.length > 1 ? ` + ${selectedFiles.length - 1} arquivo(s)` : ""}</div>
     <div class="chat-preview-body">${body}</div>
     <div class="chat-preview-strip" aria-label="Anexo selecionado">
@@ -3412,8 +3412,8 @@ function renderChatAttachmentPreview(files) {
 function resetAudioRecordButton() {
   const button = document.getElementById("record-audio-button");
   if (!button) return;
-  button.title = "Gravar Ã¡udio";
-  button.setAttribute("aria-label", "Gravar Ã¡udio");
+  button.title = "Gravar áudio";
+  button.setAttribute("aria-label", "Gravar áudio");
   button.classList.remove("is-recording");
   button.classList.remove("is-processing");
   stopChatAudioTimer();
@@ -3482,8 +3482,8 @@ async function toggleChatAudioRecording() {
 
   if (chatAudioRecorder?.state === "recording") {
     chatAudioRecorder.stop();
-    button.title = "Processando Ã¡udio";
-    button.setAttribute("aria-label", "Processando Ã¡udio");
+    button.title = "Processando áudio";
+    button.setAttribute("aria-label", "Processando áudio");
     button.classList.remove("is-recording");
     button.classList.add("is-processing");
     button.disabled = true;
@@ -3491,7 +3491,7 @@ async function toggleChatAudioRecording() {
   }
 
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-    showModal("GravaÃ§Ã£o indisponÃ­vel", "Seu navegador nÃ£o suporta gravaÃ§Ã£o de Ã¡udio neste canal.", "error");
+    showModal("Gravação indisponível", "Seu navegador não suporta gravação de áudio neste canal.", "error");
     return;
   }
 
@@ -3513,21 +3513,21 @@ async function toggleChatAudioRecording() {
       stopChatAudioStream();
       resetAudioRecordButton();
       if (!blob.size) {
-        showModal("Ãudio vazio", "A gravaÃ§Ã£o nÃ£o capturou Ã¡udio.", "error");
+        showModal("Áudio vazio", "A gravação não capturou áudio.", "error");
         return;
       }
       const file = new File([blob], `audio-chat-${Date.now()}.${extension}`, { type });
       const error = validateChatFile(file);
       if (error) {
-        showModal("Anexo invÃ¡lido", error, "error");
+        showModal("Anexo inválido", error, "error");
         return;
       }
       setChatSelectedFile(file);
     });
     chatAudioRecorder.start();
     startChatAudioTimer();
-    button.title = "Parar gravaÃ§Ã£o";
-    button.setAttribute("aria-label", "Parar gravaÃ§Ã£o");
+    button.title = "Parar gravação";
+    button.setAttribute("aria-label", "Parar gravação");
     button.classList.add("is-recording");
     button.classList.remove("is-processing");
   } catch (error) {
@@ -3536,9 +3536,9 @@ async function toggleChatAudioRecording() {
     resetAudioRecordButton();
     const errorName = String(error?.name || "");
     const message = errorName === "NotAllowedError" || errorName === "SecurityError"
-      ? "NÃ£o foi possÃ­vel acessar o microfone. Verifique se a permissÃ£o do navegador estÃ¡ liberada para este site."
-      : "NÃ£o foi possÃ­vel iniciar a gravaÃ§Ã£o de Ã¡udio. Verifique se hÃ¡ um microfone conectado e tente novamente.";
-    showModal("Microfone indisponÃ­vel", message, "error");
+      ? "Não foi possível acessar o microfone. Verifique se a permissão do navegador está liberada para este site."
+      : "Não foi possível iniciar a gravação de áudio. Verifique se há um microfone conectado e tente novamente.";
+    showModal("Microfone indisponível", message, "error");
   }
 }
 
@@ -3568,7 +3568,7 @@ function validateResumeFile(file) {
 function validateContractorDocumentFile(file) {
   if (!file || !file.name) return "Anexe pelo menos um documento.";
   if (file.size <= 0) return "Um dos arquivos enviados parece estar vazio.";
-  if (file.size > CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES) return "Cada documento deve ter no mÃ¡ximo 10 MB.";
+  if (file.size > CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES) return "Cada documento deve ter no máximo 10 MB.";
   return null;
 }
 
@@ -3987,11 +3987,11 @@ if (collection === "eventos") {
 }
 
 /**
- * [ALERTA DE SEGURANÃ‡A - IDOR] Esta funÃ§Ã£o recebe um 'id' diretamente do cliente.
- * Sem uma polÃ­tica de Row Level Security (RLS) no PostgreSQL, um usuÃ¡rio autenticado
+ * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente.
+ * Sem uma política de Row Level Security (RLS) no PostgreSQL, um usuário autenticado
  * poderia, teoricamente, alterar este 'id' para modificar ou deletar um registro
- * que nÃ£o lhe pertence.
- * SOLUÃ‡ÃƒO: Implemente polÃ­ticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuÃ¡rio sÃ³ possa operar nos registros que ele tem permissÃ£o (ex: que ele mesmo criou).
+ * que não lhe pertence.
+ * SOLUÇÃO: Implemente políticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuário só possa operar nos registros que ele tem permissão (ex: que ele mesmo criou).
  */
 async function updateItem(collection, id, values) {
   if (!id) return false;
@@ -4120,11 +4120,11 @@ if (collection === "eventos") {
 }
 
 /**
- * [ALERTA DE SEGURANÃ‡A - IDOR] Esta funÃ§Ã£o recebe um 'id' diretamente do cliente para exclusÃ£o.
- * Sem uma polÃ­tica de Row Level Security (RLS) no PostgreSQL, um usuÃ¡rio autenticado
+ * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente para exclusão.
+ * Sem uma política de Row Level Security (RLS) no PostgreSQL, um usuário autenticado
  * poderia, teoricamente, alterar este 'id' para deletar um registro
- * que nÃ£o lhe pertence.
- * SOLUÃ‡ÃƒO: Implemente polÃ­ticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuÃ¡rio sÃ³ possa deletar os registros que ele tem permissÃ£o.
+ * que não lhe pertence.
+ * SOLUÇÃO: Implemente políticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuário só possa deletar os registros que ele tem permissão.
  */
 async function deleteItem(collection, id) {
   if (!id) return false;
@@ -4274,7 +4274,7 @@ async function saveTeamUser(values) {
     const saved = mapRows("usuarios", savedRows || [])[0] || { nome, email, cargo, createdAt: todayLabel() };
     upsertLocalUser({ ...saved, email: saved.email || email, cpf: saved.cpf || cpf, cargo: saved.cargo || cargo, syncStatus: "active" });
     setSyncStatus("PostgreSQL EIXO online", true);
-    showModal("Perfil salvo", "Crie ou atualize o usuÃ¡rio correspondente no PostgreSQL Auth para liberar o login.", "info");
+    showModal("Perfil salvo", "Crie ou atualize o usuário correspondente no PostgreSQL Auth para liberar o login.", "info");
     return true;
   } catch (error) {
     console.error("Erro ao salvar usuario no PostgreSQL:", error);
@@ -4552,12 +4552,12 @@ function calculateVtValue(diasUteis, valorPassagem, saldoAtual) {
   return Math.max(0, (Number(diasUteis) || 0) * (Number(valorPassagem) || 0) - (Number(saldoAtual) || 0));
 }
 
-const VT_MONTH_NAMES = ["Janeiro", "Fevereiro", "MarÃ§o", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const VT_MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 function formatVtMonth(value) {
   if (VT_MONTH_NAMES.includes(String(value || ""))) return String(value);
   const match = String(value || "").match(/^(\d{4})-(\d{2})$/);
-  if (!match) return "NÃ£o informado";
+  if (!match) return "Não informado";
   const date = new Date(Number(match[1]), Number(match[2]) - 1, 1);
   return new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(date);
 }
@@ -4571,7 +4571,7 @@ function updateVtCalculation() {
   const detail = document.getElementById("vt-calculo-detalhe");
   if (result) result.textContent = formatCurrencyBRL(total);
   if (detail) {
-    detail.textContent = `${diasUteis || 0} dias Ã— ${formatCurrencyBRL(valorPassagem)} - ${formatCurrencyBRL(saldoAtual)} = ${formatCurrencyBRL(total)}`;
+    detail.textContent = `${diasUteis || 0} dias × ${formatCurrencyBRL(valorPassagem)} - ${formatCurrencyBRL(saldoAtual)} = ${formatCurrencyBRL(total)}`;
   }
 }
 
@@ -4613,7 +4613,7 @@ function getVtReportFilterLabel(useFilters = true) {
   const monthFilter = document.getElementById("vt-filter-mes")?.value || "";
   const unitFilter = document.getElementById("vt-filter-unidade")?.value || "";
   if (nameFilter) parts.push(`Nome: ${nameFilter}`);
-  if (monthFilter) parts.push(`MÃªs: ${monthFilter}`);
+  if (monthFilter) parts.push(`Mês: ${monthFilter}`);
   if (unitFilter) parts.push(`Unidade: ${unitFilter}`);
   return parts.length ? parts.join(" | ") : "Sem filtros ativos";
 }
@@ -4637,8 +4637,8 @@ function formatVtReportDateTime(value = new Date()) {
 function getVtReportRows(useFilters = true) {
   const registros = useFilters ? getFilteredVtRegistros() : (data.vtRegistros || []);
   return registros.map((item) => ({
-    colaborador: item.colaborador || "Colaborador nÃ£o informado",
-    unidade: item.unidade || "NÃ£o informada",
+    colaborador: item.colaborador || "Colaborador não informado",
+    unidade: item.unidade || "Não informada",
     mes: formatVtMonth(item.mes),
     diasUteis: Number(item.diasUteis) || 0,
     valorPassagem: Number(item.valorPassagem) || 0,
@@ -4658,13 +4658,13 @@ function showVtReportMenu() {
   overlay.className = "modal-overlay";
   overlay.innerHTML = `
     <div class="modal-card vt-report-modal">
-      <div class="modal-header info">RelatÃ³rio de VT</div>
+      <div class="modal-header info">Relatório de VT</div>
       <div class="modal-body">
         <p>Escolha quais registros deseja exportar em .xlsx.</p>
         <div class="vt-report-options">
           <button class="report-chip" type="button" data-action="gerar-relatorio-vt" data-scope="filtered">
             <span>Registros filtrados</span>
-            <small>${escapeHtml(String(filteredCount))} registro(s) Â· ${escapeHtml(getVtReportFilterLabel(true))}</small>
+            <small>${escapeHtml(String(filteredCount))} registro(s) · ${escapeHtml(getVtReportFilterLabel(true))}</small>
           </button>
           <button class="report-chip" type="button" data-action="gerar-relatorio-vt" data-scope="all">
             <span>Todos os registros</span>
@@ -4711,9 +4711,9 @@ function worksheetRowXml(values, rowIndex, styleId = 0) {
 }
 
 function buildVtReportWorksheet(rows) {
-  const headers = ["Colaborador", "Unidade", "MÃªs", "Dias Ãºteis", "Valor da passagem", "Saldo atual", "Valor necessÃ¡rio", "Registrado em"];
+  const headers = ["Colaborador", "Unidade", "Mês", "Dias úteis", "Valor da passagem", "Saldo atual", "Valor necessário", "Registrado em"];
   const sheetRows = [
-    worksheetRowXml(["RelatÃ³rio de Vale Transporte"], 1, 2),
+    worksheetRowXml(["Relatório de Vale Transporte"], 1, 2),
     worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
     worksheetRowXml(headers, 5, 1),
     ...rows.map((item, index) => worksheetRowXml([
@@ -4898,7 +4898,7 @@ function gerarRelatorioVt(scope = "filtered") {
   const useFilters = scope !== "all";
   const rows = getVtReportRows(useFilters);
   if (!rows.length) {
-    showModal("RelatÃ³rio vazio", "NÃ£o hÃ¡ registros de VT para gerar o relatÃ³rio.", "error");
+    showModal("Relatório vazio", "Não há registros de VT para gerar o relatório.", "error");
     return;
   }
   const blob = createVtReportXlsxBlob(rows);
@@ -4922,12 +4922,12 @@ function renderVtRegistros() {
   renderCards("vt-registros-list", getFilteredVtRegistros(), (item) => `
     <article class="item-card">
       <div class="item-topline">
-        <p class="item-title">${escapeHtml(item.colaborador || "Colaborador nÃ£o informado")}</p>
+        <p class="item-title">${escapeHtml(item.colaborador || "Colaborador não informado")}</p>
         <span class="tag">${escapeHtml(formatCurrencyBRL(item.valorNecessario))}</span>
       </div>
-      <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "NÃ£o informada")}</p>
-      <p><strong>MÃªs:</strong> ${escapeHtml(formatVtMonth(item.mes))}</p>
-      <p><strong>Dias Ãºteis:</strong> ${escapeHtml(String(item.diasUteis || 0))}</p>
+      <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Não informada")}</p>
+      <p><strong>Mês:</strong> ${escapeHtml(formatVtMonth(item.mes))}</p>
+      <p><strong>Dias úteis:</strong> ${escapeHtml(String(item.diasUteis || 0))}</p>
       <p><strong>Valor da passagem:</strong> ${escapeHtml(formatCurrencyBRL(item.valorPassagem))}</p>
       <p><strong>Saldo atual:</strong> ${escapeHtml(formatCurrencyBRL(item.saldoAtual))}</p>
       <p><strong>Valor registrado:</strong> ${escapeHtml(formatCurrencyBRL(item.valorNecessario))}</p>
@@ -5002,14 +5002,14 @@ function renderDocumentosContratados() {
   renderCards("documentos-contratados-list", filteredItems, (item) => `
     <article class="item-card">
       <div class="item-topline">
-        <p class="item-title">${escapeHtml(item.nome || "Contratado nÃ£o informado")}</p>
-        <span class="tag">${escapeHtml(item.empresa || "Empresa nÃ£o informada")}</span>
+        <p class="item-title">${escapeHtml(item.nome || "Contratado não informado")}</p>
+        <span class="tag">${escapeHtml(item.empresa || "Empresa não informada")}</span>
         ${item.pendingSync ? '<span class="tag alert">Pendente</span>' : ""}
       </div>
       <p><strong>CPF:</strong> ${escapeHtml(formatCpf(item.cpf || ""))}</p>
-      <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || "NÃ£o informado")}</p>
-      <p><strong>Origem:</strong> ${escapeHtml(getContractorSourceLabel(item.origemHtml, item.empresa) || "NÃ£o informada")}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Enviado por ${escapeHtml(item.nome || "Contratado nÃ£o informado")}</p>
+      <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || "Não informado")}</p>
+      <p><strong>Origem:</strong> ${escapeHtml(getContractorSourceLabel(item.origemHtml, item.empresa) || "Não informada")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Enviado por ${escapeHtml(item.nome || "Contratado não informado")}</p>
       <div class="contractor-file-list">
         ${formatContractorDocumentList(item.documentos || [])}
       </div>
@@ -5026,17 +5026,17 @@ function resetVtForm() {
   form.reset();
   form.elements.id.value = "";
   document.getElementById("cancelar-edicao-vt")?.setAttribute("hidden", "");
-  form.querySelector('button[type="submit"]').textContent = "Registrar cÃ¡lculo VT";
+  form.querySelector('button[type="submit"]').textContent = "Registrar cálculo VT";
   updateVtCalculation();
 }
 
 /**
- * [ALERTA DE SEGURANÃ‡A] Esta funÃ§Ã£o controla a visibilidade dos elementos da UI
- * com base na role do usuÃ¡rio armazenada no sessionStorage. Um usuÃ¡rio mal-intencionado
+ * [ALERTA DE SEGURANÇA] Esta função controla a visibilidade dos elementos da UI
+ * com base na role do usuário armazenada no sessionStorage. Um usuário mal-intencionado
  * pode facilmente alterar essa role no console do navegador para obter acesso visual
- * a seÃ§Ãµes restritas.
- * A seguranÃ§a real da aplicaÃ§Ã£o NÃƒO PODE depender desta funÃ§Ã£o. Ela deve ser garantida
- * por polÃ­ticas de Row Level Security (RLS) no PostgreSQL, que filtram os dados no servidor.
+ * a seções restritas.
+ * A segurança real da aplicação NÃO PODE depender desta função. Ela deve ser garantida
+ * por políticas de Row Level Security (RLS) no PostgreSQL, que filtram os dados no servidor.
  */
 function applyRoleAccess() {
   if (!isAuthenticated() || isPublicPage() || !document.querySelector(".nav-list")) return;
@@ -5083,7 +5083,7 @@ function isSystemAuditAuthor(value) {
 }
 
 function getDashboardSystemUpdateMeta(item = {}) {
-  if (isSystemAuditAuthor(item.updatedBy)) return "AtualizaÃ§Ã£o do sistema";
+  if (isSystemAuditAuthor(item.updatedBy)) return "Atualização do sistema";
   if (isSystemAuditAuthor(item.createdBy)) return "Registro do sistema";
   return "";
 }
@@ -5179,8 +5179,8 @@ function renderDashboard() {
     document.getElementById("metric-documentos").textContent = documentRecords.filter((item) => !isArchivedRecord(item)).length;
   }
 
-  // Mensagens do RH aparecem como um Ãºnico bloco no acompanhamento.
-  // Quando ficam lidas, nÃ£o mudam de cor; apenas perdem prioridade para itens novos.
+  // Mensagens do RH aparecem como um único bloco no acompanhamento.
+  // Quando ficam lidas, não mudam de cor; apenas perdem prioridade para itens novos.
   const accessibleRhMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
   const sortedRhMessagesNewestFirst = [...accessibleRhMessages]
     .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
@@ -5204,9 +5204,9 @@ function renderDashboard() {
         : `${messageIds.length} mensagem(ns) no acompanhamento`,
       details: sortedRhMessagesOldestFirst
         .slice(-20)
-        .map((msg) => `${msg.createdAt || "Sem data"} Â· ${msg.autor || "Equipe"}: ${msg.mensagem || "Nova notificaÃ§Ã£o recebida."}`)
+        .map((msg) => `${msg.createdAt || "Sem data"} · ${msg.autor || "Equipe"}: ${msg.mensagem || "Nova notificação recebida."}`)
         .join("\n\n"),
-      detailsHeader: "ComunicaÃ§Ã£o RH",
+      detailsHeader: "Comunicação RH",
       tag: hasUnread ? "Nova" : "Lida",
       date: latestMessage.createdAt,
       dateTime: latestMessage.sortAt || latestMessage.createdAt,
@@ -5222,9 +5222,9 @@ function renderDashboard() {
       .map((item) => ({
         kind: "denuncia",
         notificationId: getDashboardNotificationId("denuncia", item),
-        title: "DenÃºncia anÃ´nima",
-        text: item.descricao || "Nova denÃºncia recebida.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "NÃ£o informado"}\n\n${item.descricao || "Sem descriÃ§Ã£o."}`,
+        title: "Denúncia anônima",
+        text: item.descricao || "Nova denúncia recebida.",
+        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "Não informado"}\n\n${item.descricao || "Sem descrição."}`,
         tag: item.status,
         date: item.createdAt,
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5236,14 +5236,14 @@ function renderDashboard() {
       .map((item) => {
         const items = parseEpiItems(item.epis);
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` Â· Tam. ${epi.tamanho}` : ""} Â· Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "NÃ£o informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "Não informados";
         return {
           kind: "chamado",
           notificationId: getDashboardNotificationId("chamado", item),
-          title: `Chamado Â· ${item.unidade}`,
-          text: item.epis || "Itens nÃ£o informados.",
-          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "NÃ£o informado"}\nUnidade: ${item.unidade || "NÃ£o informada"}\nSetor: ${item.setor || "NÃ£o informado"}\nItens solicitados:\n${itemDetails}\nObservaÃ§Ãµes: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "NÃ£o informada"}`,
+          title: `Chamado · ${item.unidade}`,
+          text: item.epis || "Itens não informados.",
+          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nSetor: ${item.setor || "Não informado"}\nItens solicitados:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "Não informada"}`,
           tag: item.status,
           date: item.createdAt,
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5256,14 +5256,14 @@ function renderDashboard() {
       .map((item) => {
         const items = parseEpiItems(item.epis);
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` Â· Tam. ${epi.tamanho}` : ""} Â· Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "NÃ£o informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "Não informados";
         return {
           kind: "malote",
           notificationId: getDashboardNotificationId("malote", item),
-          title: `Malote Â· ${item.destino}`,
-          text: item.codigoSolicitacao ? `SolicitaÃ§Ã£o ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
-          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}CÃ³digo da SolicitaÃ§Ã£o: ${item.codigoSolicitacao || "NÃ£o informado"}\nOrigem: ${item.origem || "NÃ£o informada"}\nDestino: ${item.destino || "NÃ£o informado"}\nItens do malote:\n${itemDetails}\nObservaÃ§Ãµes: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "NÃ£o informado"}\nData: ${item.createdAt || "NÃ£o informada"}`,
+          title: `Malote · ${item.destino}`,
+          text: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
+          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
           tag: item.status,
           date: item.createdAt,
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5276,9 +5276,9 @@ function renderDashboard() {
       .map((item) => ({
         kind: "vaga",
         notificationId: getDashboardNotificationId("vaga", item),
-        title: `Vaga Â· ${item.cargo}`,
+        title: `Vaga · ${item.cargo}`,
         text: item.descricao || "Vaga atualizada.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "NÃ£o informado"}\n\n${item.descricao || "Sem descriÃ§Ã£o."}\n\nRequisitos: ${item.requisitos || "NÃ£o informados"}`,
+        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
         tag: item.status,
         date: item.createdAt,
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5290,9 +5290,9 @@ function renderDashboard() {
       .map((item) => ({
         kind: "documento",
         notificationId: getDashboardNotificationId("documento", item),
-        title: `Documento Â· ${documentLabels[item.type] || item.type}`,
+        title: `Documento · ${documentLabels[item.type] || item.type}`,
         text: item.summary || "Documento registrado.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${documentLabels[item.type] || item.type}\nData: ${item.createdAt || "NÃ£o informada"}\n\n${item.summary || "Documento registrado."}`,
+        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${documentLabels[item.type] || item.type}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
         tag: "Registro",
         date: item.createdAt,
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5303,9 +5303,9 @@ function renderDashboard() {
       .map((item) => ({
         kind: "atestado",
         notificationId: getDashboardNotificationId("atestado", item),
-        title: `Atestado Â· ${item.nome || "Colaborador"}`,
-        text: `${item.unidade || "Unidade nÃ£o informada"} Â· ${item.arquivoNome || "Atestado anexado"}`,
-        details: `Colaborador: ${item.nome || "NÃ£o informado"}\nCPF: ${formatCpf(item.cpf || "") || "NÃ£o informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "NÃ£o informado"}\nUnidade: ${item.unidade || "NÃ£o informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "NÃ£o informado"}`,
+        title: `Atestado · ${item.nome || "Colaborador"}`,
+        text: `${item.unidade || "Unidade não informada"} · ${item.arquivoNome || "Atestado anexado"}`,
+        details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${formatCpf(item.cpf || "") || "Não informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
         tag: "Atestado",
         date: item.createdAt,
         dateTime: item.sortAt || item.createdAt,
@@ -5323,7 +5323,7 @@ function renderDashboard() {
   const dashboardPageSize = 3;
   dashboardNotificationOffset = 0;
 
-  // Acompanhamento da tela principal deve exibir somente notificaÃ§Ãµes nÃ£o lidas.
+  // Acompanhamento da tela principal deve exibir somente notificações não lidas.
   // Quando todas estiverem lidas, a lista fica vazia.
   const unreadDashboardItems = sortedDashboardItems.filter((item) => !isDashboardActivityReadForOrdering(item));
   const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
@@ -5333,28 +5333,28 @@ function renderDashboard() {
   if (previousDashboardButton) previousDashboardButton.hidden = true;
   if (nextDashboardButton) {
     nextDashboardButton.hidden = true;
-    nextDashboardButton.textContent = "Ver prÃ³ximas";
+    nextDashboardButton.textContent = "Ver próximas";
   }
 
   const dashboardTarget = document.getElementById("dashboard-list");
   if (dashboardTarget) {
     if (!currentUserSettings.dashboardNotificationBadges) {
       visibleDashboardActivityItems = [];
-      dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configuraÃ§Ãµes.</p>';
+      dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configurações.</p>';
       if (previousDashboardButton) previousDashboardButton.hidden = true;
       if (nextDashboardButton) nextDashboardButton.hidden = true;
       renderDashboardCalendar(upcomingEvents);
       return;
     }
     if (visibleDashboardItems.length === 0) {
-      dashboardTarget.innerHTML = '<p class="empty-state">Nenhuma pendÃªncia para acompanhar no momento.</p>';
+      dashboardTarget.innerHTML = '<p class="empty-state">Nenhuma pendência para acompanhar no momento.</p>';
     } else {
       dashboardTarget.innerHTML = visibleDashboardItems
         .map((item, index) => {
           const itemRead = isDashboardActivityReadForOrdering(item);
           const visualTag = itemRead && !item.systemUpdate ? "Lida" : item.tag;
           const visualBadgeClass = item.systemUpdate ? "tag" : badgeClass(item.tag || visualTag);
-          return `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}" data-read="${itemRead ? "true" : "false"}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${visualBadgeClass}">${escapeHtml(item.systemUpdate ? "Sistema" : visualTag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "â€¦" : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`;
+          return `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}" data-read="${itemRead ? "true" : "false"}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${visualBadgeClass}">${escapeHtml(item.systemUpdate ? "Sistema" : visualTag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "…" : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`;
         })
         .join("");
     }
@@ -5486,19 +5486,19 @@ function renderCalendar() {
   `);
 }
 
-// LÃ³gica de abertura de denÃºncia para leitura e transiÃ§Ã£o de estado automÃ¡tica
+// Lógica de abertura de denúncia para leitura e transição de estado automática
 async function lerDenuncia(id) {
   const denuncia = data.denuncias.find(item => String(item.id) === String(id));
   if (!denuncia) return;
 
   // Mostra o relato em formato de modal customizado
   showModal(
-    "VisualizaÃ§Ã£o da DenÃºncia",
+    "Visualização da Denúncia",
     `Categoria: ${denuncia.categoria}\nRecebida em: ${denuncia.createdAt}\nStatus Atual: ${denuncia.status}\n\nRelato:\n"${denuncia.descricao}"`,
     "info"
   );
 
-  // Se a denÃºncia ainda constar como NÃ£o lida ("Aberta"), movemos para "Lida"
+  // Se a denúncia ainda constar como Não lida ("Aberta"), movemos para "Lida"
   if (denuncia.status === "Aberta") {
     if (!postgresClient) {
       denuncia.status = "Lida";
@@ -5519,8 +5519,8 @@ async function lerDenuncia(id) {
         saveLocalData();
         renderAll();
       } catch (err) {
-        console.error("Erro ao atualizar status da denÃºncia no PostgreSQL:", err);
-        showModal("Aviso de PermissÃ£o", "A denÃºncia nÃ£o pÃ´de ser atualizada. VocÃª precisa rodar o script SQL de UPDATE no painel do PostgreSQL para consertar as permissÃµes.", "error");
+        console.error("Erro ao atualizar status da denúncia no PostgreSQL:", err);
+        showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada. Você precisa rodar o script SQL de UPDATE no painel do PostgreSQL para consertar as permissões.", "error");
       }
     }
   }
@@ -5551,8 +5551,8 @@ async function atualizarStatusDenuncia(id, status) {
     renderRealtimeUpdate("denuncias");
     return true;
   } catch (err) {
-    console.error("Erro ao atualizar status da denÃºncia no PostgreSQL:", err);
-    showModal("Aviso de PermissÃ£o", "A denÃºncia nÃ£o pÃ´de ser atualizada. Rode o postgres-schema.sql atualizado para liberar UPDATE em hub_denuncias.", "error");
+    console.error("Erro ao atualizar status da denúncia no PostgreSQL:", err);
+    showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada. Rode o postgres-schema.sql atualizado para liberar UPDATE em hub_denuncias.", "error");
     return false;
   }
 }
@@ -5795,7 +5795,7 @@ function applyUserSettings() {
   const nextDashboardButton = document.getElementById("dashboard-notifications-next");
   if (!currentUserSettings.dashboardNotificationBadges) {
     visibleDashboardActivityItems = [];
-    if (dashboardTarget) dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configuraÃ§Ãµes.</p>';
+    if (dashboardTarget) dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configurações.</p>';
     if (previousDashboardButton) previousDashboardButton.hidden = true;
     if (nextDashboardButton) nextDashboardButton.hidden = true;
   }
@@ -5835,14 +5835,14 @@ async function registerHubNotificationServiceWorker() {
     });
     return hubNotificationServiceWorkerRegistration;
   } catch (error) {
-    console.warn("Service Worker de notificaÃ§Ãµes nÃ£o pÃ´de ser registrado:", error);
+    console.warn("Service Worker de notificações não pôde ser registrado:", error);
     return null;
   }
 }
 
 async function requestDesktopNotificationPermission({ showSuccess = true } = {}) {
   if (!isBrowserNotificationSupported()) {
-    showModal("NotificaÃ§Ãµes indisponÃ­veis", "Este navegador nÃ£o suporta notificaÃ§Ãµes do sistema.", "error");
+    showModal("Notificações indisponíveis", "Este navegador não suporta notificações do sistema.", "error");
     currentUserSettings.desktopNotifications = false;
     saveUserSettings(currentUserSettings);
     syncUserSettingsControls();
@@ -5865,17 +5865,17 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
     if (permission === "granted") {
       removeDesktopNotificationPermissionPrompt();
       if (showSuccess) {
-        await showBrowserDesktopNotification("NotificaÃ§Ãµes ativadas", "Agora o HUB pode avisar mesmo quando vocÃª estiver em outra aba.", {
+        await showBrowserDesktopNotification("Notificações ativadas", "Agora o HUB pode avisar mesmo quando você estiver em outra aba.", {
           type: "geral",
-          icon: "ðŸ””",
+          icon: "🔔",
           tag: "hub-rh-notificacoes-ativadas",
           requireInteraction: true,
         });
-        showUserNotificationPopout("NotificaÃ§Ãµes ativadas", "Avisos externos do HUB foram liberados neste navegador.", {
+        showUserNotificationPopout("Notificações ativadas", "Avisos externos do HUB foram liberados neste navegador.", {
           type: "geral",
-          icon: "ðŸ””",
+          icon: "🔔",
           duration: 7000,
-          hint: "VocÃª tambÃ©m receberÃ¡ o aviso nativo do navegador",
+          hint: "Você também receberá o aviso nativo do navegador",
         });
       }
       return "granted";
@@ -5887,7 +5887,7 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
     showDesktopNotificationPermissionPrompt(true);
     return permission;
   } catch (error) {
-    console.warn("PermissÃ£o de notificaÃ§Ãµes nÃ£o pÃ´de ser solicitada:", error);
+    console.warn("Permissão de notificações não pôde ser solicitada:", error);
     showDesktopNotificationPermissionPrompt(true);
     return "error";
   }
@@ -5914,14 +5914,14 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
     prompt.className = "hub-notification-permission-prompt";
     prompt.setAttribute("role", "status");
     prompt.innerHTML = `
-      <div class="hub-notification-permission-icon">ðŸ””</div>
+      <div class="hub-notification-permission-icon">🔔</div>
       <div class="hub-notification-permission-text">
-        <strong>Ative as notificaÃ§Ãµes do HUB</strong>
+        <strong>Ative as notificações do HUB</strong>
         <p data-permission-message></p>
       </div>
       <button class="secondary-button" type="button" data-permission-dismiss>Depois</button>
       <button class="secondary-button" type="button" data-permission-test>Testar aviso</button>
-      <button class="primary-button" type="button" data-permission-enable>Permitir notificaÃ§Ãµes</button>
+      <button class="primary-button" type="button" data-permission-enable>Permitir notificações</button>
     `;
     document.body.appendChild(prompt);
     prompt.querySelector("[data-permission-enable]")?.addEventListener("click", () => requestDesktopNotificationPermission());
@@ -5931,28 +5931,28 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
         : await requestDesktopNotificationPermission({ showSuccess: false });
 
       if (permission !== "granted") {
-        showUserNotificationPopout("PermissÃ£o pendente", "O navegador ainda nÃ£o liberou as notificaÃ§Ãµes externas do HUB.", {
+        showUserNotificationPopout("Permissão pendente", "O navegador ainda não liberou as notificações externas do HUB.", {
           type: "geral",
-          icon: "âš ï¸",
+          icon: "⚠️",
           duration: 9000,
-          hint: "Libere no cadeado do navegador: NotificaÃ§Ãµes > Permitir",
+          hint: "Libere no cadeado do navegador: Notificações > Permitir",
         });
         return;
       }
 
-      const shown = await showBrowserDesktopNotification("Teste de notificaÃ§Ã£o HUB", "Este Ã© o aviso visual que aparecerÃ¡ fora da aba do HUB.", {
+      const shown = await showBrowserDesktopNotification("Teste de notificação HUB", "Este é o aviso visual que aparecerá fora da aba do HUB.", {
         type: "geral",
-        icon: "ðŸ””",
+        icon: "🔔",
         tag: `hub-rh-teste-${Date.now()}`,
         requireInteraction: true,
       });
       showUserNotificationPopout(shown ? "Teste enviado" : "Teste bloqueado", shown
-        ? "A notificaÃ§Ã£o nativa do navegador foi disparada. Verifique o canto da tela ou a central de notificaÃ§Ãµes."
-        : "O navegador bloqueou o aviso externo. Confira as permissÃµes do site.", {
+        ? "A notificação nativa do navegador foi disparada. Verifique o canto da tela ou a central de notificações."
+        : "O navegador bloqueou o aviso externo. Confira as permissões do site.", {
         type: "geral",
-        icon: shown ? "ðŸ””" : "âš ï¸",
+        icon: shown ? "🔔" : "⚠️",
         duration: 10000,
-        hint: shown ? "Se estiver em outra aba, o aviso aparecerÃ¡ fora do HUB" : "Cadeado do navegador > NotificaÃ§Ãµes > Permitir",
+        hint: shown ? "Se estiver em outra aba, o aviso aparecerá fora do HUB" : "Cadeado do navegador > Notificações > Permitir",
       });
     });
     prompt.querySelector("[data-permission-dismiss]")?.addEventListener("click", () => prompt.remove());
@@ -5961,7 +5961,7 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
   const message = prompt.querySelector("[data-permission-message]");
   if (message) {
     message.textContent = isBlocked || Notification.permission === "denied"
-      ? "O navegador bloqueou a permissÃ£o. Libere notificaÃ§Ãµes do site nas configuraÃ§Ãµes do navegador para receber avisos fora do HUB."
+      ? "O navegador bloqueou a permissão. Libere notificações do site nas configurações do navegador para receber avisos fora do HUB."
       : "Clique em Permitir para receber popout do navegador mesmo quando estiver em outra aba, como ChatGPT, e com som mais forte.";
   }
 }
@@ -6058,16 +6058,16 @@ function showUserNotificationPopout(title, message, options = {}) {
 
     const icon = document.createElement("div");
     icon.className = "hub-notification-popout-icon";
-    icon.textContent = options.icon || "ðŸ””";
+    icon.textContent = options.icon || "🔔";
 
     const content = document.createElement("div");
     content.className = "hub-notification-popout-content";
 
     const heading = document.createElement("strong");
-    heading.textContent = title || "Nova notificaÃ§Ã£o";
+    heading.textContent = title || "Nova notificação";
 
     const body = document.createElement("p");
-    body.textContent = message || "VocÃª possui uma nova atualizaÃ§Ã£o no HUB.";
+    body.textContent = message || "Você possui uma nova atualização no HUB.";
 
     const hint = document.createElement("span");
     hint.textContent = options.hint || "Clique para abrir o acompanhamento";
@@ -6077,8 +6077,8 @@ function showUserNotificationPopout(title, message, options = {}) {
     const closeButton = document.createElement("button");
     closeButton.type = "button";
     closeButton.className = "hub-notification-popout-close";
-    closeButton.setAttribute("aria-label", "Fechar notificaÃ§Ã£o");
-    closeButton.textContent = "Ã—";
+    closeButton.setAttribute("aria-label", "Fechar notificação");
+    closeButton.textContent = "×";
 
     popout.append(icon, content, closeButton);
     container.prepend(popout);
@@ -6109,7 +6109,7 @@ function showUserNotificationPopout(title, message, options = {}) {
     const popouts = [...container.querySelectorAll(".hub-notification-popout")];
     popouts.slice(4).forEach(removeUserNotificationPopout);
   } catch (error) {
-    console.warn("NÃ£o foi possÃ­vel exibir o popout de notificaÃ§Ã£o:", error);
+    console.warn("Não foi possível exibir o popout de notificação:", error);
   }
 }
 
@@ -6142,7 +6142,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
   if (messageIds.length) targetUrl.searchParams.set("markMessages", messageIds.join(","));
 
   const notificationOptions = {
-    body: body || "VocÃª tem uma nova notificaÃ§Ã£o no HUB.",
+    body: body || "Você tem uma nova notificação no HUB.",
     icon: "assets/logo.svg",
     badge: "assets/logo.svg",
     tag: options.tag || `hub-rh-notificacao-${Date.now()}`,
@@ -6172,7 +6172,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
         return true;
       }
     } catch (swError) {
-      console.warn("NotificaÃ§Ã£o via Service Worker bloqueada:", swError);
+      console.warn("Notificação via Service Worker bloqueada:", swError);
     }
     return false;
   };
@@ -6188,7 +6188,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
       };
       return true;
     } catch (directError) {
-      console.warn("NotificaÃ§Ã£o direta do navegador bloqueada:", directError);
+      console.warn("Notificação direta do navegador bloqueada:", directError);
       return false;
     }
   };
@@ -6207,7 +6207,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
 let hubOriginalDocumentTitle = document.title;
 let hubNotificationTitleTimer = null;
 
-function flashHubDocumentTitle(title = "Nova notificaÃ§Ã£o") {
+function flashHubDocumentTitle(title = "Nova notificação") {
   try {
     hubOriginalDocumentTitle = hubOriginalDocumentTitle || document.title;
     if (hubNotificationTitleTimer) window.clearInterval(hubNotificationTitleTimer);
@@ -6216,7 +6216,7 @@ function flashHubDocumentTitle(title = "Nova notificaÃ§Ã£o") {
     hubNotificationTitleTimer = window.setInterval(() => {
       ticks += 1;
       visible = !visible;
-      document.title = visible ? `ðŸ”” ${title}` : hubOriginalDocumentTitle;
+      document.title = visible ? `🔔 ${title}` : hubOriginalDocumentTitle;
       if (ticks >= 20 || document.visibilityState === "visible") {
         window.clearInterval(hubNotificationTitleTimer);
         hubNotificationTitleTimer = null;
@@ -6238,10 +6238,10 @@ function updateHubAppBadge(count = 0) {
 }
 
 function showHubCrossPageNotification(title, message, options = {}) {
-  playUserNotificationSound();
+  if (!options.skipSound) playUserNotificationSound();
   updateHubAppBadge(1);
   if (document.visibilityState === "hidden" || !document.hasFocus?.()) {
-    flashHubDocumentTitle(title || "Nova notificaÃ§Ã£o");
+    flashHubDocumentTitle(title || "Nova notificação");
   }
 
   const openAndMark = () => {
@@ -6256,23 +6256,25 @@ function showHubCrossPageNotification(title, message, options = {}) {
     hint: options.hint || "Clique para marcar como lida e abrir o acompanhamento",
     onClick: openAndMark,
   });
-  showBrowserDesktopNotification(title, message, {
-    type: options.type,
-    tag: options.tag,
-    requireInteraction: options.requireInteraction,
-    notificationId: options.notificationId,
-    messageIds: options.messageIds || [],
-  });
+  if (!options.skipDesktop) {
+    showBrowserDesktopNotification(title, message, {
+      type: options.type,
+      tag: options.tag,
+      requireInteraction: options.requireInteraction,
+      notificationId: options.notificationId,
+      messageIds: options.messageIds || [],
+    });
+  }
 }
 
 function getRealtimeNotificationText(collection, item = {}) {
   if (collection === "comunicados") {
-    const author = item.autor || "ComunicaÃ§Ã£o RH";
+    const author = item.autor || "Comunicação RH";
     const text = item.mensagem || "Nova mensagem recebida.";
     return {
-      title: `ComunicaÃ§Ã£o RH Â· ${author}`,
+      title: `Comunicação RH · ${author}`,
       message: text.length > 110 ? `${text.slice(0, 107)}...` : text,
-      icon: "ðŸ’¬",
+      icon: "💬",
       type: "mensagem",
       tag: `hub-rh-comunicacao-${item.id || Date.now()}`,
     };
@@ -6280,9 +6282,9 @@ function getRealtimeNotificationText(collection, item = {}) {
 
   if (collection === "denuncias") {
     return {
-      title: "Nova denÃºncia recebida",
-      message: item.descricao || "Uma nova denÃºncia foi registrada no HUB.",
-      icon: "ðŸš¨",
+      title: "Nova denúncia recebida",
+      message: item.descricao || "Uma nova denúncia foi registrada no HUB.",
+      icon: "🚨",
       type: "denuncia",
       tag: `hub-rh-denuncia-${item.id || Date.now()}`,
     };
@@ -6291,8 +6293,8 @@ function getRealtimeNotificationText(collection, item = {}) {
   if (collection === "chamados") {
     return {
       title: "Novo chamado de EPI",
-      message: [item.solicitante, item.unidade, item.status].filter(Boolean).join(" Â· ") || "Um novo chamado foi registrado.",
-      icon: "ðŸŽ«",
+      message: [item.solicitante, item.unidade, item.status].filter(Boolean).join(" · ") || "Um novo chamado foi registrado.",
+      icon: "🎫",
       type: "chamado",
       tag: `hub-rh-chamado-${item.id || Date.now()}`,
     };
@@ -6300,9 +6302,9 @@ function getRealtimeNotificationText(collection, item = {}) {
 
   if (collection === "malotes") {
     return {
-      title: "AtualizaÃ§Ã£o de malote",
-      message: [item.codigoSolicitacao, item.destino, item.status].filter(Boolean).join(" Â· ") || "Um malote foi atualizado.",
-      icon: "ðŸ“¦",
+      title: "Atualização de malote",
+      message: [item.codigoSolicitacao, item.destino, item.status].filter(Boolean).join(" · ") || "Um malote foi atualizado.",
+      icon: "📦",
       type: "malote",
       tag: `hub-rh-malote-${item.id || Date.now()}`,
     };
@@ -6310,9 +6312,9 @@ function getRealtimeNotificationText(collection, item = {}) {
 
   if (collection === "vagas") {
     return {
-      title: "AtualizaÃ§Ã£o de vaga",
-      message: [item.cargo, item.unidade, item.status].filter(Boolean).join(" Â· ") || "Uma vaga foi atualizada.",
-      icon: "ðŸ’¼",
+      title: "Atualização de vaga",
+      message: [item.cargo, item.unidade, item.status].filter(Boolean).join(" · ") || "Uma vaga foi atualizada.",
+      icon: "💼",
       type: "vaga",
       tag: `hub-rh-vaga-${item.id || Date.now()}`,
     };
@@ -6336,8 +6338,8 @@ function getRealtimeNotificationText(collection, item = {}) {
   if (collection === "documentosContratados") {
     return {
       title: "Documentos recebidos",
-      message: [item.nome, item.empresa].filter(Boolean).join(" Â· ") || "Novos documentos foram enviados.",
-      icon: "ðŸ“„",
+      message: [item.nome, item.empresa].filter(Boolean).join(" · ") || "Novos documentos foram enviados.",
+      icon: "📄",
       type: "documento",
       tag: `hub-rh-documento-${item.id || Date.now()}`,
     };
@@ -6417,7 +6419,7 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
   const notification = getRealtimeNotificationText(collection, item);
   if (!notification) return;
 
-  const actionLabel = action === "UPDATE" ? "AtualizaÃ§Ã£o" : "Nova notificaÃ§Ã£o";
+  const actionLabel = action === "UPDATE" ? "Atualização" : "Nova notificação";
   showHubCrossPageNotification(notification.title, notification.message || actionLabel, {
     type: notification.type,
     icon: notification.icon,
@@ -6449,16 +6451,35 @@ function notifyUnreadRhMessages(count) {
   }
 
   const newMessageCount = count - lastUnreadNotificationCount;
-  const messageText = `${newMessageCount} nova(s) mensagem(ns) nÃ£o lida(s).`;
+  const messageText = `${newMessageCount} nova(s) mensagem(ns) não lida(s).`;
 
   const unreadIds = getUnreadRhMessages().map((item) => item.id).filter(Boolean);
-  showHubCrossPageNotification("ComunicaÃ§Ã£o RH", messageText, {
+  playUserNotificationSound();
+  if (currentUserSettings.desktopNotifications && isBrowserNotificationSupported() && Notification.permission === "granted") {
+    const notification = new Notification("Comunicação RH", {
+      body: messageText,
+      icon: "assets/logo.svg",
+      badge: "assets/logo.svg",
+      tag: "hub-rh-comunicacao",
+      requireInteraction: true,
+    });
+    notification.onclick = () => {
+      try { markNotificationsRead([`mensagem-rh-${unreadIds[0] || Date.now()}`], unreadIds); } catch (_) {}
+      window.focus?.();
+      openNotificationTrackerFromPopout();
+      notification.close?.();
+    };
+  }
+
+  showHubCrossPageNotification("Comunicação RH", messageText, {
     type: "mensagem",
-    icon: "ðŸ’¬",
+    icon: "💬",
     tag: "hub-rh-comunicacao",
     requireInteraction: true,
     notificationId: `mensagem-rh-${unreadIds[0] || Date.now()}`,
     messageIds: unreadIds,
+    skipSound: true,
+    skipDesktop: true,
   });
 
   lastUnreadNotificationCount = count;
@@ -6762,7 +6783,7 @@ function renderChamadosSection() {
       </div>
       <p><strong>Solicitante:</strong> ${escapeHtml(item.solicitante)}</p>
       ${item.setor ? `<p><strong>Setor:</strong> ${escapeHtml(item.setor)}</p>` : ""}
-      <p><strong>CÃ³digo da SolicitaÃ§Ã£o:</strong> ${escapeHtml(item.codigoSolicitacao || item.id || "Nao informado")}</p>
+      <p><strong>Código da Solicitação:</strong> ${escapeHtml(item.codigoSolicitacao || item.id || "Nao informado")}</p>
       <p><strong>EPIs:</strong> ${escapeHtml(item.epis)}</p>
       ${item.observacoes ? `<p><strong>Observacoes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
       <p class="item-meta">${escapeHtml(item.createdAt)}</p>
@@ -6799,10 +6820,10 @@ function renderDenunciasSection() {
 
   if (selectDenunciasButton) {
     selectDenunciasButton.disabled = !naoLidas.length && !lidas.length;
-    selectDenunciasButton.textContent = denunciasSelectionMode ? "Arquivar selecionadas" : "Selecionar denÃºncias";
+    selectDenunciasButton.textContent = denunciasSelectionMode ? "Arquivar selecionadas" : "Selecionar denúncias";
     selectDenunciasButton.className = denunciasSelectionMode ? "danger-button" : "secondary-link";
   }
-  if (primaryDenunciasTitle) primaryDenunciasTitle.textContent = showArchivedDenuncias ? "Arquivadas" : "NÃ£o Lidas";
+  if (primaryDenunciasTitle) primaryDenunciasTitle.textContent = showArchivedDenuncias ? "Arquivadas" : "Não Lidas";
   if (toggleArchivedDenunciasButton) {
     toggleArchivedDenunciasButton.textContent = showArchivedDenuncias ? "Ocultar arquivadas" : "Mostrar arquivadas";
     toggleArchivedDenunciasButton.disabled = false;
@@ -6821,7 +6842,7 @@ function renderDenunciasSection() {
              data-id="${escapeHtml(item.id)}">
       <div class="item-topline">
         <p class="item-title">
-          ${!archived && denunciasSelectionMode ? `<input class="denuncia-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar denÃºncia de ${escapeHtml(item.createdAt)}" data-action="no-op" />` : ""}
+          ${!archived && denunciasSelectionMode ? `<input class="denuncia-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar denúncia de ${escapeHtml(item.createdAt)}" data-action="no-op" />` : ""}
           Denuncia anonima
         </p>
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
@@ -6874,7 +6895,7 @@ function renderAll() {
   renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
     const candidaturas = getVagaCandidaturas(item.id, vagasFilters);
     const totalCandidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id) === String(item.id)).length;
-    let candidaturasHtml = `<p class="empty-candidates">Nenhum currÃ­culo recebido.</p>`;
+    let candidaturasHtml = `<p class="empty-candidates">Nenhum currículo recebido.</p>`;
     if (totalCandidaturas > 0 && !candidaturas.length) {
       candidaturasHtml = `<p class="empty-candidates">Nenhum candidato encontrado para o filtro aplicado.</p>`;
     }
@@ -6887,7 +6908,7 @@ function renderAll() {
             <span class="meta-line">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
             <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
           </p>
-          <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver CurrÃ­culo</button>
+          <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver Currículo</button>
         </div>
       `).join("");
     }
@@ -6903,7 +6924,7 @@ function renderAll() {
           <button class="secondary-link" type="button" data-action="editar-vaga" data-id="${escapeHtml(item.id)}">Editar</button>
           <button class="danger-button" type="button" data-action="excluir-vaga" data-id="${escapeHtml(item.id)}">Deletar</button>
         </div>
-        <div class="candidate-list"><p class="candidate-list-title">CurrÃ­culos Recebidos (${candidaturas.length}${candidaturas.length !== totalCandidaturas ? ` de ${totalCandidaturas}` : ""})</p>${candidaturasHtml}</div>
+        <div class="candidate-list"><p class="candidate-list-title">Currículos Recebidos (${candidaturas.length}${candidaturas.length !== totalCandidaturas ? ` de ${totalCandidaturas}` : ""})</p>${candidaturasHtml}</div>
       </article>
     `;
   });
@@ -6947,7 +6968,7 @@ function renderNotificationChatThread(messages = [], options = {}) {
   });
 
   if (!normalizedMessages.length) {
-    return `<p class="empty-state">Nenhuma mensagem disponÃ­vel para exibiÃ§Ã£o.</p>`;
+    return `<p class="empty-state">Nenhuma mensagem disponível para exibição.</p>`;
   }
 
   const currentUser = typeof getCurrentUserName === "function" ? getCurrentUserName() : "";
@@ -6995,7 +7016,7 @@ function openDashboardActivity(index) {
   const hasChatMessages = Array.isArray(item.chatMessages) && item.chatMessages.length;
 
   // Mensagens abertas pelo acompanhamento principal devem usar exatamente
-  // o mesmo modal/detalhe do painel completo de notificaÃ§Ãµes.
+  // o mesmo modal/detalhe do painel completo de notificações.
   if (hasChatMessages && window.notificationTracker && typeof window.notificationTracker.openModal === "function") {
     const tracker = window.notificationTracker;
     tracker.openModal();
@@ -7019,8 +7040,8 @@ function openDashboardActivity(index) {
       unread: Boolean(item.unread),
       status: item.unread ? "unread" : "pending",
       view: "comunicacao",
-      icon: "ðŸ’¬",
-      badgeText: item.unread ? "NÃ£o lido" : "",
+      icon: "💬",
+      badgeText: item.unread ? "Não lido" : "",
       messageIds: Array.isArray(item.messageIds) ? item.messageIds.map(String) : [],
       chatMessages: item.chatMessages,
     };
@@ -7048,7 +7069,7 @@ function openDashboardActivity(index) {
       <div class="tracker-notification-detail mensagem dashboard-message-detail-fallback">
         <div class="tracker-detail-card">
           <div class="tracker-detail-topline">
-            <div class="tracker-detail-icon">ðŸ’¬</div>
+            <div class="tracker-detail-icon">💬</div>
             <div>
               <span class="tracker-notification-type">Mensagem RH</span>
               <h3>${escapeHtml(item.title || "Mensagens do RH")}</h3>
@@ -7059,7 +7080,7 @@ function openDashboardActivity(index) {
         </div>
       </div>`;
   } else {
-    const details = String(item.details || item.text || "Sem detalhes disponÃ­veis.")
+    const details = String(item.details || item.text || "Sem detalhes disponíveis.")
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
@@ -7068,7 +7089,7 @@ function openDashboardActivity(index) {
       const detail = details[detailIndex];
       if (/^Itens (do malote|solicitados):$/i.test(detail)) {
         const itemLines = [];
-        while (details[detailIndex + 1] && !/^(ObservaÃ§Ãµes|Status|Data):/i.test(details[detailIndex + 1])) {
+        while (details[detailIndex + 1] && !/^(Observações|Status|Data):/i.test(details[detailIndex + 1])) {
           detailIndex += 1;
           itemLines.push(details[detailIndex]);
         }
@@ -7196,7 +7217,7 @@ function renderChat() {
   const pollMenuOption = document.querySelector('[data-attach-type="poll"]');
   if (!activeChannel) {
     clearChatMessageFilter();
-    if (title) title.textContent = "ComunicaÃ§Ã£o interna";
+    if (title) title.textContent = "Comunicação interna";
     if (subtitle) subtitle.textContent = "Selecione um canal para abrir a conversa";
     if (messageInput) {
       messageInput.placeholder = "Escolha um chat ao lado para enviar mensagens";
@@ -7218,7 +7239,7 @@ function renderChat() {
     }
     closeChatAttachMenu();
     closeChatEmojiMenu();
-    target.innerHTML = '<p class="empty-state">Selecione um canal de comunicaÃ§Ã£o para visualizar as mensagens.</p>';
+    target.innerHTML = '<p class="empty-state">Selecione um canal de comunicação para visualizar as mensagens.</p>';
     return;
   }
 
@@ -7349,10 +7370,10 @@ function createChatPollOptionField(index, required = false) {
   const canRemove = index > 2;
   return `
     <div class="chat-poll-option-editor" data-chat-poll-option>
-      <label>OpÃ§Ã£o ${index}
-        <input name="opcao" type="text" maxlength="80" placeholder="${required ? (index === 1 ? "Primeira opÃ§Ã£o" : "Segunda opÃ§Ã£o") : "Opcional"}" ${required ? "required" : ""} />
+      <label>Opção ${index}
+        <input name="opcao" type="text" maxlength="80" placeholder="${required ? (index === 1 ? "Primeira opção" : "Segunda opção") : "Opcional"}" ${required ? "required" : ""} />
       </label>
-      ${canRemove ? `<button class="secondary-link chat-poll-remove-option" type="button" data-action="remove-chat-poll-option" aria-label="Excluir opÃ§Ã£o ${index}">Excluir</button>` : ""}
+      ${canRemove ? `<button class="secondary-link chat-poll-remove-option" type="button" data-action="remove-chat-poll-option" aria-label="Excluir opção ${index}">Excluir</button>` : ""}
     </div>
   `;
 }
@@ -7365,16 +7386,16 @@ function refreshChatPollOptionFields(formElement) {
     const label = field.querySelector("label");
     const input = field.querySelector('input[name="opcao"]');
     const removeButton = field.querySelector('[data-action="remove-chat-poll-option"]');
-    if (label) label.firstChild.textContent = `OpÃ§Ã£o ${optionNumber}`;
+    if (label) label.firstChild.textContent = `Opção ${optionNumber}`;
     if (input) {
       input.required = optionNumber <= 2;
-      if (optionNumber === 1) input.placeholder = "Primeira opÃ§Ã£o";
-      else if (optionNumber === 2) input.placeholder = "Segunda opÃ§Ã£o";
+      if (optionNumber === 1) input.placeholder = "Primeira opção";
+      else if (optionNumber === 2) input.placeholder = "Segunda opção";
       else input.placeholder = "Opcional";
     }
     if (removeButton) {
       removeButton.hidden = optionNumber <= 2;
-      removeButton.setAttribute("aria-label", `Excluir opÃ§Ã£o ${optionNumber}`);
+      removeButton.setAttribute("aria-label", `Excluir opção ${optionNumber}`);
     }
   });
 }
@@ -7384,7 +7405,7 @@ function addChatPollOptionField(formElement) {
   if (!list) return;
   const currentTotal = list.querySelectorAll('input[name="opcao"]').length;
   if (currentTotal >= 8) {
-    showModal("Limite de opÃ§Ãµes", "A enquete pode ter no mÃ¡ximo 8 opÃ§Ãµes.", "info");
+    showModal("Limite de opções", "A enquete pode ter no máximo 8 opções.", "info");
     return;
   }
   list.insertAdjacentHTML("beforeend", createChatPollOptionField(currentTotal + 1));
@@ -7397,7 +7418,7 @@ function removeChatPollOptionField(button) {
   const list = formElement?.querySelector("#chat-poll-options");
   const fields = list?.querySelectorAll("[data-chat-poll-option]") || [];
   if (fields.length <= 2) {
-    showModal("MÃ­nimo de opÃ§Ãµes", "A enquete precisa ter pelo menos 2 opÃ§Ãµes.", "info");
+    showModal("Mínimo de opções", "A enquete precisa ter pelo menos 2 opções.", "info");
     return;
   }
   button.closest("[data-chat-poll-option]")?.remove();
@@ -7420,13 +7441,13 @@ function showChatPollModal() {
       <div class="modal-header info">Criar enquete</div>
       <form class="modal-body chat-poll-form" id="chat-poll-form">
         <label>Pergunta
-          <input name="pergunta" type="text" maxlength="180" placeholder="Ex: Qual melhor dia para reuniÃ£o?" required />
+          <input name="pergunta" type="text" maxlength="180" placeholder="Ex: Qual melhor dia para reunião?" required />
         </label>
         <div class="chat-poll-options-editor" id="chat-poll-options">
           ${createChatPollOptionField(1, true)}
           ${createChatPollOptionField(2, true)}
         </div>
-        <button class="secondary-link chat-poll-add-option" type="button" data-action="add-chat-poll-option">Adicionar opÃ§Ã£o</button>
+        <button class="secondary-link chat-poll-add-option" type="button" data-action="add-chat-poll-option">Adicionar opção</button>
       </form>
       <div class="modal-footer">
         <button class="secondary-link" type="button" data-action="close-modal">Cancelar</button>
@@ -7739,20 +7760,20 @@ document.getElementById("select-denuncias")?.addEventListener("click", () => {
     .filter(Boolean);
 
   if (!selectedIds.length) {
-    showModal("Nenhuma denÃºncia selecionada", "Selecione pelo menos uma denÃºncia para arquivar.", "error");
+    showModal("Nenhuma denúncia selecionada", "Selecione pelo menos uma denúncia para arquivar.", "error");
     return;
   }
 
   showConfirmActionModal({
-    title: "Arquivar denÃºncias",
-    text: `Deseja arquivar ${selectedIds.length} denÃºncia(s) selecionada(s)?`,
+    title: "Arquivar denúncias",
+    text: `Deseja arquivar ${selectedIds.length} denúncia(s) selecionada(s)?`,
     confirmText: "Arquivar",
     onConfirm: async () => {
       const results = await Promise.all(selectedIds.map((id) => atualizarStatusDenuncia(id, "Arquivada")));
       if (results.every(Boolean)) {
         denunciasSelectionMode = false;
         renderAll();
-        showModal("DenÃºncias arquivadas", "As denÃºncias selecionadas foram movidas para Arquivadas.", "info");
+        showModal("Denúncias arquivadas", "As denúncias selecionadas foram movidas para Arquivadas.", "info");
       }
     },
   });
@@ -7775,7 +7796,7 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
     button.classList.add("active");
     document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
 
-    // Cancela a ediÃ§Ã£o se o usuÃ¡rio trocar de aba de documento
+    // Cancela a edição se o usuário trocar de aba de documento
     if (window.editingDocId) {
       window.editingDocId = null;
       document.querySelectorAll("[data-doc-form]").forEach(form => {
@@ -7907,7 +7928,7 @@ if (denunciaForm) {
       if (feedback) {
         feedback.textContent = "Denuncia enviada com sucesso. Obrigado pelo relato.";
       }
-      showModal("DenÃºncia enviada", "Seu relato foi enviado com sucesso e serÃ¡ analisado pela equipe responsÃ¡vel.", "info");
+      showModal("Denúncia enviada", "Seu relato foi enviado com sucesso e será analisado pela equipe responsável.", "info");
     }
   });
 }
@@ -7950,12 +7971,12 @@ if (chatForm) {
     chatForm.requestSubmit();
   });
 
-  // Garante que Enter em qualquer elemento do formulÃ¡rio (ex: apÃ³s anexar arquivo) tambÃ©m envia
+  // Garante que Enter em qualquer elemento do formulário (ex: após anexar arquivo) também envia
   chatForm.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
-    if (event.target === chatMessageInput) return; // jÃ¡ tratado acima
-    if (event.target.tagName === "BUTTON") return; // deixa botÃµes funcionarem normalmente
+    if (event.target === chatMessageInput) return; // já tratado acima
+    if (event.target.tagName === "BUTTON") return; // deixa botões funcionarem normalmente
     event.preventDefault();
     chatForm.requestSubmit();
   });
@@ -7985,7 +8006,7 @@ if (chatForm) {
       return;
     }
 
-    // â”€â”€ OTIMISMO: mostra a mensagem imediatamente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── OTIMISMO: mostra a mensagem imediatamente ──────────────────────────
     const pendingMessages = files.length
       ? files.map((file, index) => {
         const attachmentType = getChatFileMimeType(file);
@@ -8011,11 +8032,11 @@ if (chatForm) {
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
     data.comunicados = [...pendingMessages, ...(data.comunicados || [])];
     renderChat();
-    // Limpa o formulÃ¡rio imediatamente
+    // Limpa o formulário imediatamente
     formElement.reset();
     clearChatSelectedFile();
 
-    // â”€â”€ UPLOAD de arquivos em background â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── UPLOAD de arquivos em background ──────────────────────────────────
     const uploadedFiles = [];
     try {
       for (const file of files) {
@@ -8033,7 +8054,7 @@ if (chatForm) {
       return;
     }
 
-    // â”€â”€ PERSISTÃŠNCIA: remove otimistas e deixa o realtime confirmar â”€â”€â”€â”€â”€â”€â”€
+    // ── PERSISTÊNCIA: remove otimistas e deixa o realtime confirmar ───────
     data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
 
     const payloads = uploadedFiles.length
@@ -8128,7 +8149,7 @@ if (maloteForm) {
     const id = form.get("id");
     const codigoSolicitacao = String(form.get("codigo_solicitacao") || "").replace(/\D/g, "");
     if (!/^\d{5}$/.test(codigoSolicitacao)) {
-      showModal("CÃ³digo invÃ¡lido", "Informe o CÃ³digo da SolicitaÃ§Ã£o no formato 0000-0.", "error");
+      showModal("Código inválido", "Informe o Código da Solicitação no formato 0000-0.", "error");
       return;
     }
     const colaboradores = readMaloteCollaborators(formElement);
@@ -8201,7 +8222,7 @@ document.getElementById("cancelar-edicao-vaga")?.addEventListener("click", () =>
 
 const eventoForm = document.getElementById("evento-form");
 if (eventoForm) {
-  // inicializa o campo de data com mÃ¡scara (caso tenha valor default)
+  // inicializa o campo de data com máscara (caso tenha valor default)
   const eventoDataInput = eventoForm.elements.data;
   if (eventoDataInput) {
     eventoDataInput.value = formatEventoDate(eventoDataInput.value);
@@ -8224,7 +8245,7 @@ if (eventoForm) {
     const form = new FormData(formElement);
     const id = form.get("id");
 
-    // converte dd/mm/aaaa â†’ yyyy-mm-dd para salvar
+    // converte dd/mm/aaaa → yyyy-mm-dd para salvar
     const dataDisplay = String(form.get("data") || "");
     const dataIso = eventoDateToIso(dataDisplay);
     if (!dataIso) {
@@ -8234,7 +8255,7 @@ if (eventoForm) {
     }
     const year = Number(dataIso.split("-")[0]);
     if (year > 2026) {
-      eventoDataInput?.setCustomValidity("O ano nÃ£o pode ser superior a 2026.");
+      eventoDataInput?.setCustomValidity("O ano não pode ser superior a 2026.");
       eventoDataInput?.reportValidity();
       return;
     }
@@ -8325,15 +8346,15 @@ if (vtForm) {
     const id = form.get("id");
     const values = getVtFormValues(formElement);
     if (!hasFullName(values.colaborador)) {
-      showModal("Colaborador obrigatÃ³rio", "Informe nome e sobrenome do colaborador para registrar o cÃ¡lculo de VT.", "error");
+      showModal("Colaborador obrigatório", "Informe nome e sobrenome do colaborador para registrar o cálculo de VT.", "error");
       return;
     }
     if (!values.unidade) {
-      showModal("Unidade obrigatÃ³ria", "Informe a unidade do trabalhador para registrar o cÃ¡lculo de VT.", "error");
+      showModal("Unidade obrigatória", "Informe a unidade do trabalhador para registrar o cálculo de VT.", "error");
       return;
     }
     if (!VT_MONTH_NAMES.includes(values.mes)) {
-      showModal("MÃªs obrigatÃ³rio", "Informe o mÃªs de referÃªncia para registrar o cÃ¡lculo de VT.", "error");
+      showModal("Mês obrigatório", "Informe o mês de referência para registrar o cálculo de VT.", "error");
       return;
     }
     const success = id
@@ -8341,7 +8362,7 @@ if (vtForm) {
       : await addItem("vtRegistros", { ...values, createdBy: getCurrentUserName() });
     if (success) {
       resetVtForm();
-      showModal(id ? "VT atualizado" : "VT registrado", id ? "O registro de vale-transporte foi atualizado com sucesso." : "O cÃ¡lculo de vale-transporte foi registrado com sucesso.", "info");
+      showModal(id ? "VT atualizado" : "VT registrado", id ? "O registro de vale-transporte foi atualizado com sucesso." : "O cálculo de vale-transporte foi registrado com sucesso.", "info");
     }
   });
   document.getElementById("cancelar-edicao-vt")?.addEventListener("click", resetVtForm);
@@ -8444,7 +8465,7 @@ function showResetPasswordModal() {
     const errorEl = overlay.querySelector("#modal-action-error");
 
     if (!currentPwd) {
-      errorEl.textContent = "A senha atual Ã© obrigatÃ³ria.";
+      errorEl.textContent = "A senha atual é obrigatória.";
       errorEl.hidden = false;
       return;
     }
@@ -8454,20 +8475,20 @@ function showResetPasswordModal() {
       return;
     }
     if (newPwd !== confirmPwd) {
-      errorEl.textContent = "A confirmaÃ§Ã£o da nova senha nÃ£o confere.";
+      errorEl.textContent = "A confirmação da nova senha não confere.";
       errorEl.hidden = false;
       return;
     }
 
     if (newPwd === currentPwd) {
-      errorEl.textContent = "A nova senha nÃ£o pode ser igual Ã  senha atual.";
+      errorEl.textContent = "A nova senha não pode ser igual à senha atual.";
       errorEl.hidden = false;
       return;
     }
 
     const isPasswordValid = await verifyCurrentPassword(currentPwd);
     if (!isPasswordValid) {
-      errorEl.textContent = "A senha atual informada nÃ£o confere.";
+      errorEl.textContent = "A senha atual informada não confere.";
       errorEl.hidden = false;
       return;
     }
@@ -8684,7 +8705,7 @@ if (candidaturaForm) {
 
     const existing = (data.candidaturas || []).find(c => String(c.vaga_id) === String(vaga_id) && c.cpf === cpf);
     if (existing) {
-      showModal("Aviso", "VocÃª jÃ¡ enviou um currÃ­culo para esta vaga com este CPF.", "error");
+      showModal("Aviso", "Você já enviou um currículo para esta vaga com este CPF.", "error");
       return;
     }
 
@@ -8693,13 +8714,13 @@ if (candidaturaForm) {
       data.candidaturas.unshift(mapRows("candidaturas", [inserted])[0]);
       formElement.reset();
       document.getElementById("vaga-id").value = vaga_id;
-      showModal("Sucesso", "Seu currÃ­culo foi enviado com sucesso!", "info");
+      showModal("Sucesso", "Seu currículo foi enviado com sucesso!", "info");
     } catch (error) {
       console.error(error);
       if (error.code === "23505") {
-        showModal("Aviso", "VocÃª jÃ¡ enviou um currÃ­culo para esta vaga com este CPF.", "error");
+        showModal("Aviso", "Você já enviou um currículo para esta vaga com este CPF.", "error");
       } else {
-        showModal("Erro", error.message || "NÃ£o foi possÃ­vel enviar o currÃ­culo. Verifique sua conexÃ£o e tente novamente.", "error");
+        showModal("Erro", error.message || "Não foi possível enviar o currículo. Verifique sua conexão e tente novamente.", "error");
       }
     }
   });
@@ -8731,8 +8752,8 @@ if (contratadoDocForm) {
     const form = new FormData(event.currentTarget);
     const password = String(form.get("senha_acesso") || "");
     const expectedPassword = String(contractorLayout?.dataset.contractorPassword || "");
-    if (!matchesContractorAccessPassword(password, expectedPassword)) {
-      showModal("Senha incorreta", "A senha informada nÃ£o libera esta pÃ¡gina.", "error");
+    if (password !== expectedPassword) {
+      showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
       return;
     }
     contractorAccessPassword = expectedPassword;
@@ -8767,18 +8788,18 @@ if (contratadoDocForm) {
     const turnstileToken = getPublicChallengeToken(formElement);
 
     if (!empresa || !nome || !telefone || !cpf || !documentos.length) {
-      showModal("Dados obrigatÃ³rios", "Preencha todos os dados e anexe pelo menos um documento.", "error");
+      showModal("Dados obrigatórios", "Preencha todos os dados e anexe pelo menos um documento.", "error");
       return;
     }
 
     if (!isValidCpf(cpf)) {
-      showModal("CPF invÃ¡lido", "Informe um CPF vÃ¡lido no formato 000.000.000-00.", "error");
+      showModal("CPF inválido", "Informe um CPF válido no formato 000.000.000-00.", "error");
       return;
     }
 
     const fileError = documentos.map(validateContractorDocumentFile).find(Boolean);
     if (fileError) {
-      showModal("Documento invÃ¡lido", fileError, "error");
+      showModal("Documento inválido", fileError, "error");
       return;
     }
 
@@ -8789,9 +8810,9 @@ if (contratadoDocForm) {
       showModal("Documentos enviados", "Os documentos foram enviados com sucesso para o RH.", "info");
     } catch (error) {
       console.error(error);
-      const message = /duplicate key|23505|CPF ja possui envio|CPF jÃ¡ possui envio/i.test(error.message || "")
-        ? "Este CPF jÃ¡ possui um envio de documentos registrado."
-        : error.message || "NÃ£o foi possÃ­vel enviar os documentos. Tente novamente.";
+      const message = /duplicate key|23505|CPF ja possui envio|CPF já possui envio/i.test(error.message || "")
+        ? "Este CPF já possui um envio de documentos registrado."
+        : error.message || "Não foi possível enviar os documentos. Tente novamente.";
       showModal("Erro", message, "error");
     }
   });
@@ -8891,6 +8912,7 @@ function prefillChamadoRequester() {
 }
 
 function initializeAppData() {
+  document.getElementById("app-shell")?.classList.add("is-ready");
   populateUnitSelects();
   populateEpiSelects();
   postgresClient = getPostgreSQLClient();
@@ -8927,13 +8949,13 @@ function reabrirChamado(id) {
 
 function reabrirDenuncia(id) {
   showConfirmActionModal({
-    title: "Reabrir denÃºncia",
-    text: "Deseja mover esta denÃºncia de volta para a lista de Lidas?",
+    title: "Reabrir denúncia",
+    text: "Deseja mover esta denúncia de volta para a lista de Lidas?",
     confirmText: "Reabrir",
     onConfirm: async () => {
       const success = await atualizarStatusDenuncia(id, "Lida");
       if (success) {
-        showModal("DenÃºncia reaberta", "A denÃºncia voltou para a lista de Lidas.", "info");
+        showModal("Denúncia reaberta", "A denúncia voltou para a lista de Lidas.", "info");
       }
     },
   });
@@ -8963,7 +8985,7 @@ function editarDocumento(id) {
     const btn = form.querySelector("button[type='submit']");
     if (btn) {
       if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
-      btn.textContent = "Salvar alteraÃ§Ãµes";
+      btn.textContent = "Salvar alterações";
     }
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -9040,7 +9062,7 @@ function editarEvento(id) {
 
   form.elements.id.value = evento.id;
   form.elements.titulo.value = evento.titulo || "";
-  // converte ISO yyyy-mm-dd para dd/mm/aaaa na mÃ¡scara
+  // converte ISO yyyy-mm-dd para dd/mm/aaaa na máscara
   form.elements.data.value = formatEventoDate(evento.data || "");
   form.elements.horario.value = evento.horario || "";
   form.elements.responsavel.value = evento.responsavel || "";
@@ -9072,7 +9094,7 @@ async function excluirVtRegistro(id) {
 
   showConfirmActionModal({
     title: "Apagar registro de VT",
-    text: `Tem certeza que deseja apagar o registro de VT de "${registro.colaborador || "colaborador nÃ£o informado"}"?`,
+    text: `Tem certeza que deseja apagar o registro de VT de "${registro.colaborador || "colaborador não informado"}"?`,
     confirmText: "Apagar",
     danger: true,
     onConfirm: async () => {
@@ -9090,7 +9112,7 @@ async function excluirDocumentoContratado(id) {
 
   showPasswordActionModal({
     title: "Excluir documentos do contratado",
-    text: `Confirme a senha de exclusao para apagar os documentos de "${registro.nome || "contratado nÃ£o informado"}".`,
+    text: `Confirme a senha de exclusao para apagar os documentos de "${registro.nome || "contratado não informado"}".`,
     confirmText: "Excluir",
     danger: true,
     validatePassword: async (password) => verifyAuthorizationPassword(password),
@@ -9101,14 +9123,14 @@ async function excluirDocumentoContratado(id) {
         data.documentosContratados = (data.documentosContratados || []).filter((item) => String(item.id) !== String(id));
         saveLocalData();
         renderDocumentosContratados();
-        showModal("Documentos excluÃ­dos", "Os documentos do contratado foram removidos.", "info");
+        showModal("Documentos excluídos", "Os documentos do contratado foram removidos.", "info");
         return;
       }
 
       const deleted = await deleteItem("documentosContratados", id);
       if (deleted) {
         removePendingContractorDocument(id);
-        showModal("Documentos excluÃ­dos", "Os documentos do contratado foram apagados com sucesso.", "info");
+        showModal("Documentos excluídos", "Os documentos do contratado foram apagados com sucesso.", "info");
       }
     },
   });
@@ -9122,12 +9144,12 @@ function editarVtRegistro(id) {
   form.elements.id.value = registro.id;
   form.elements.colaborador.value = registro.colaborador || "";
   setFieldValue(form.elements.unidade, registro.unidade || "");
-  setFieldValue(form.elements.mes, formatVtMonth(registro.mes) === "NÃ£o informado" ? "" : formatVtMonth(registro.mes));
+  setFieldValue(form.elements.mes, formatVtMonth(registro.mes) === "Não informado" ? "" : formatVtMonth(registro.mes));
   form.elements.dias_uteis.value = registro.diasUteis || "";
   form.elements.valor_passagem.value = formatCurrencyInput(String(Math.round(Number(registro.valorPassagem || 0) * 100)));
   form.elements.saldo_atual.value = registro.saldoAtual ?? "";
   document.getElementById("cancelar-edicao-vt")?.removeAttribute("hidden");
-  form.querySelector('button[type="submit"]').textContent = "Salvar alteraÃ§Ãµes";
+  form.querySelector('button[type="submit"]').textContent = "Salvar alterações";
   updateVtCalculation();
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 };
@@ -9142,7 +9164,7 @@ function editarMalote(id) {
   setFieldValue(form.elements.origem, malote.origem || "");
   setFieldValue(form.elements.codigo_solicitacao, malote.codigoSolicitacao || "");
   setFieldValue(form.elements.observacoes, malote.observacoes || "");
-  setFieldValue(form.elements.status, malote.status || "SeparaÃ§Ã£o");
+  setFieldValue(form.elements.status, malote.status || "Separação");
   resetMaloteCollaborators(normalizeMaloteCollaborators(malote));
   document.getElementById("cancelar-edicao-malote")?.removeAttribute("hidden");
   form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
@@ -9210,7 +9232,7 @@ function baixarDocumentoMalote(id) {
               <p class="muted">Documento gerado automaticamente pelo sistema</p>
             </div>
             <div class="number">
-              <span class="field-label">NÂº do malote</span>
+              <span class="field-label">Nº do malote</span>
               <strong>${escapeHtml(String(malote.codigoSolicitacao || malote.id || ""))}</strong>
             </div>
             <div class="status">
@@ -9265,11 +9287,11 @@ function baixarDocumentoMalote(id) {
             <tbody>${epiRows}</tbody>
           </table>
 
-          <div class="section-title">ObservaÃ§Ãµes</div>
+          <div class="section-title">Observações</div>
           <table>
             <tr>
               <td style="min-height:48px; height:48px;">
-                <div class="field-value" style="font-weight:normal; white-space:pre-wrap;">${malote.observacoes ? escapeHtml(malote.observacoes) : '<span style="color:#9ca3af;">Sem observaÃ§Ãµes.</span>'}</div>
+                <div class="field-value" style="font-weight:normal; white-space:pre-wrap;">${malote.observacoes ? escapeHtml(malote.observacoes) : '<span style="color:#9ca3af;">Sem observações.</span>'}</div>
               </td>
             </tr>
           </table>
@@ -9340,45 +9362,45 @@ const documentFieldLabels = {
   cpf: "CPF",
   rg: "RG",
   cargo: "Cargo",
-  funcao: "FunÃ§Ã£o",
+  funcao: "Função",
   filial: "Filial / Unidade",
   setor: "Setor",
-  data: "Data de admissÃ£o",
-  data_admissao: "Data de admissÃ£o",
+  data: "Data de admissão",
+  data_admissao: "Data de admissão",
   data_desligamento: "Data de desligamento",
-  data_solicitacao: "Data da solicitaÃ§Ã£o",
+  data_solicitacao: "Data da solicitação",
   data_entrevista: "Data da entrevista",
-  data_ausencia: "Data(s) da ausÃªncia",
+  data_ausencia: "Data(s) da ausência",
   data_feedback: "Data do feedback",
   data_registro: "Data do registro",
   data_abertura: "Data de abertura",
-  data_inicio: "Data de inÃ­cio",
-  data_movimentacao: "Data da movimentaÃ§Ã£o",
-  salario: "SalÃ¡rio",
-  salario_atual: "SalÃ¡rio atual",
-  salario_proposto: "SalÃ¡rio proposto",
+  data_inicio: "Data de início",
+  data_movimentacao: "Data da movimentação",
+  salario: "Salário",
+  salario_atual: "Salário atual",
+  salario_proposto: "Salário proposto",
   faixa_salarial: "Faixa salarial",
-  horario_trabalho: "HorÃ¡rio de trabalho",
-  horario_atraso: "HorÃ¡rio / perÃ­odo",
+  horario_trabalho: "Horário de trabalho",
+  horario_atraso: "Horário / período",
   centro_custo: "Centro de custo",
   requisitante: "Requisitante",
-  lider: "Gestor / lÃ­der avaliador",
+  lider: "Gestor / líder avaliador",
   gestor: "Gestor imediato",
   gestor_aplicador: "Gestor aplicador",
   gestor_solicitante: "Gestor solicitante",
   entrevistador: "Entrevistador",
   motivo: "Motivo",
-  observacoes: "ObservaÃ§Ãµes",
+  observacoes: "Observações",
   feedback: "Feedback final",
   positivos: "Pontos positivos",
   melhorias: "Pontos a desenvolver",
-  acao: "Plano de aÃ§Ã£o",
-  plano_acao: "Plano de aÃ§Ã£o",
+  acao: "Plano de ação",
+  plano_acao: "Plano de ação",
   justificativa: "Justificativa",
-  justificativa_movimentacao: "Justificativa da movimentaÃ§Ã£o",
-  descricao: "DescriÃ§Ã£o",
+  justificativa_movimentacao: "Justificativa da movimentação",
+  descricao: "Descrição",
   requisitos: "Requisitos",
-  pontos_atencao: "Pontos de atenÃ§Ã£o",
+  pontos_atencao: "Pontos de atenção",
 };
 
 const documentLongFieldKeys = new Set([
@@ -9534,7 +9556,7 @@ function downloadStyledRhDocument(doc, title) {
             </div>
             <div class="letterhead-meta">
               Emitido em <strong>${escapeHtml(emittedAt)}</strong><br />
-              ResponsÃ¡vel: <strong>${escapeHtml(owner)}</strong>
+              Responsável: <strong>${escapeHtml(owner)}</strong>
             </div>
           </header>
 
@@ -9576,13 +9598,13 @@ document.addEventListener('click', (event) => {
 
   const { action, id } = target.dataset;
 
-  // AÃ§Ã£o especial para nÃ£o fazer nada, Ãºtil para checkboxes dentro de elementos clicÃ¡veis
+  // Ação especial para não fazer nada, útil para checkboxes dentro de elementos clicáveis
   if (action === 'no-op') {
     event.stopPropagation();
     return;
   }
 
-  // AÃ§Ãµes que precisam de stopPropagation
+  // Ações que precisam de stopPropagation
   if (['reabrir-denuncia', 'reabrir-chamado', 'toggle-denuncia-selection', 'toggle-chamado-selection'].includes(action)) {
     event.stopPropagation();
   }
@@ -9757,7 +9779,7 @@ class NotificationTracker {
       notifications.push({
         id,
         type,
-        title: item.title || "NotificaÃ§Ã£o",
+        title: item.title || "Notificação",
         description: item.description || item.text || "",
         details: item.details || item.description || item.text || "",
         time,
@@ -9794,7 +9816,7 @@ class NotificationTracker {
           : `${messageIds.length} mensagem(ns) no acompanhamento`,
         details: sortedMessagesOldestFirst
           .slice(-20)
-          .map((message) => `${message.createdAt || "Sem data"} Â· ${message.autor || "Equipe"}: ${message.mensagem || "Nova mensagem."}`)
+          .map((message) => `${message.createdAt || "Sem data"} · ${message.autor || "Equipe"}: ${message.mensagem || "Nova mensagem."}`)
           .join("\n\n"),
         time: latestMessage.createdAt || "Agora",
         dateTime: latestMessage.sortAt || latestMessage.createdAt || "Agora",
@@ -9803,7 +9825,7 @@ class NotificationTracker {
         view: "comunicacao",
         messageIds,
         chatMessages: sortedMessagesOldestFirst,
-        badgeText: hasUnread ? "NÃ£o lido" : "Lida",
+        badgeText: hasUnread ? "Não lido" : "Lida",
       });
     }
 
@@ -9812,9 +9834,9 @@ class NotificationTracker {
       .forEach((item) => pushNotification({
         id: `denuncia-${item.id}`,
         type: "denuncia",
-        title: "DenÃºncia anÃ´nima",
-        description: item.descricao || "Nova denÃºncia recebida.",
-        details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "NÃ£o informado"}\n\n${item.descricao || "Sem descriÃ§Ã£o."}`,
+        title: "Denúncia anônima",
+        description: item.descricao || "Nova denúncia recebida.",
+        details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "Não informado"}\n\n${item.descricao || "Sem descrição."}`,
         time: item.createdAt || "Recentemente",
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
         status: item.status === "Urgente" ? "urgent" : "pending",
@@ -9827,14 +9849,14 @@ class NotificationTracker {
       .forEach((item) => {
         const items = typeof parseEpiItems === "function" ? parseEpiItems(item.epis) : [];
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` Â· Tam. ${epi.tamanho}` : ""} Â· Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "NÃ£o informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "Não informados";
         pushNotification({
           id: `chamado-${item.id}`,
           type: "chamado",
-          title: `Chamado Â· ${item.unidade || "Unidade nÃ£o informada"}`,
-          description: item.epis || "Itens nÃ£o informados.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "NÃ£o informado"}\nUnidade: ${item.unidade || "NÃ£o informada"}\nSetor: ${item.setor || "NÃ£o informado"}\nItens solicitados:\n${itemDetails}\nObservaÃ§Ãµes: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "NÃ£o informada"}`,
+          title: `Chamado · ${item.unidade || "Unidade não informada"}`,
+          description: item.epis || "Itens não informados.",
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nSetor: ${item.setor || "Não informado"}\nItens solicitados:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "Não informada"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: "pending",
@@ -9848,16 +9870,16 @@ class NotificationTracker {
       .forEach((item) => {
         const items = typeof parseEpiItems === "function" ? parseEpiItems(item.epis) : [];
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` Â· Tam. ${epi.tamanho}` : ""} Â· Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "NÃ£o informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "Não informados";
         const statusText = String(item.status || "").toLowerCase();
         const isResolved = statusText.includes("entreg") || statusText.includes("conclu") || statusText.includes("finaliz");
         pushNotification({
           id: `malote-${item.id}`,
           type: "malote",
-          title: `Malote Â· ${item.destino || "Destino nÃ£o informado"}`,
-          description: item.codigoSolicitacao ? `SolicitaÃ§Ã£o ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}CÃ³digo da SolicitaÃ§Ã£o: ${item.codigoSolicitacao || "NÃ£o informado"}\nOrigem: ${item.origem || "NÃ£o informada"}\nDestino: ${item.destino || "NÃ£o informado"}\nItens do malote:\n${itemDetails}\nObservaÃ§Ãµes: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "NÃ£o informado"}\nData: ${item.createdAt || "NÃ£o informada"}`,
+          title: `Malote · ${item.destino || "Destino não informado"}`,
+          description: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: isResolved ? "resolved" : "pending",
@@ -9873,9 +9895,9 @@ class NotificationTracker {
         pushNotification({
           id: `vaga-${item.id}`,
           type: "vaga",
-          title: `Vaga Â· ${item.cargo || "Cargo nÃ£o informado"}`,
+          title: `Vaga · ${item.cargo || "Cargo não informado"}`,
           description: item.descricao || "Vaga atualizada.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "NÃ£o informado"}\n\n${item.descricao || "Sem descriÃ§Ã£o."}\n\nRequisitos: ${item.requisitos || "NÃ£o informados"}`,
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: isClosed ? "resolved" : "pending",
@@ -9892,9 +9914,9 @@ class NotificationTracker {
         pushNotification({
           id: `documento-${item.id}`,
           type: "documento",
-          title: `Documento Â· ${label || "Registro"}`,
+          title: `Documento · ${label || "Registro"}`,
           description: item.summary || "Documento registrado.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${label || "Registro"}\nData: ${item.createdAt || "NÃ£o informada"}\n\n${item.summary || "Documento registrado."}`,
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${label || "Registro"}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: "pending",
@@ -9908,9 +9930,9 @@ class NotificationTracker {
         pushNotification({
           id: `atestado-${item.id}`,
           type: "atestado",
-          title: `Atestado Â· ${item.nome || "Colaborador"}`,
-          description: `${item.unidade || "Unidade nÃ£o informada"} Â· ${item.arquivoNome || "Atestado anexado"}`,
-          details: `Colaborador: ${item.nome || "NÃ£o informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "NÃ£o informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "NÃ£o informado"}\nUnidade: ${item.unidade || "NÃ£o informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "NÃ£o informado"}`,
+          title: `Atestado · ${item.nome || "Colaborador"}`,
+          description: `${item.unidade || "Unidade não informada"} · ${item.arquivoNome || "Atestado anexado"}`,
+          details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Não informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.createdAt || "Recentemente",
           status: "pending",
@@ -9928,10 +9950,10 @@ class NotificationTracker {
       pushNotification({
         id: `evento-${item.id}`,
         type: "evento",
-        title: `Evento Â· ${item.titulo || "Compromisso"}`,
-        description: item.descricao || [formattedDate, formattedTime].filter(Boolean).join(" Â· "),
-        details: `TÃ­tulo: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "NÃ£o informada"}\nHorÃ¡rio: ${formattedTime || "NÃ£o informado"}\nResponsÃ¡vel: ${item.responsavel || "NÃ£o informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descriÃ§Ã£o."}`,
-        time: [formattedDate, formattedTime].filter(Boolean).join(" Â· ") || "Recentemente",
+        title: `Evento · ${item.titulo || "Compromisso"}`,
+        description: item.descricao || [formattedDate, formattedTime].filter(Boolean).join(" · "),
+        details: `Título: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "Não informada"}\nHorário: ${formattedTime || "Não informado"}\nResponsável: ${item.responsavel || "Não informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descrição."}`,
+        time: [formattedDate, formattedTime].filter(Boolean).join(" · ") || "Recentemente",
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt || `${eventDate || ""}T${eventTime || "00:00"}`,
         status: "pending",
         unread: false,
@@ -9993,22 +10015,22 @@ class NotificationTracker {
 
   getIconForType(type) {
     const icons = {
-      denuncia: "ðŸš¨",
-      mensagem: "ðŸ’¬",
-      malote: "ðŸ“¦",
-      chamado: "ðŸŽ«",
-      vaga: "ðŸ’¼",
-      evento: "ðŸ“…",
-      documento: "ðŸ“„",
-      atestado: "ðŸ©º",
-      geral: "ðŸ“¢",
+      denuncia: "🚨",
+      mensagem: "💬",
+      malote: "📦",
+      chamado: "🎫",
+      vaga: "💼",
+      evento: "📅",
+      documento: "📄",
+      atestado: "🩺",
+      geral: "📢",
     };
-    return icons[type] || "ðŸ“¢";
+    return icons[type] || "📢";
   }
 
   getBadgeText(status) {
     const badges = {
-      unread: "NÃ£o lido",
+      unread: "Não lido",
       pending: "Pendente",
       resolved: "Resolvido",
       urgent: "Urgente",
@@ -10140,9 +10162,9 @@ class NotificationTracker {
     this.footerArea?.setAttribute("hidden", "");
     this.emptyState?.setAttribute("hidden", "");
 
-    if (this.modalTitle) this.modalTitle.textContent = notif.title || "NotificaÃ§Ã£o";
+    if (this.modalTitle) this.modalTitle.textContent = notif.title || "Notificação";
     if (this.modalSubtitle) {
-      this.modalSubtitle.textContent = [this.humanizeType(notif.type), notif.time].filter(Boolean).join(" Â· ") || "Detalhe da notificaÃ§Ã£o";
+      this.modalSubtitle.textContent = [this.humanizeType(notif.type), notif.time].filter(Boolean).join(" · ") || "Detalhe da notificação";
     }
 
     this.detailArea?.remove();
@@ -10154,7 +10176,7 @@ class NotificationTracker {
           <div class="tracker-detail-icon">${notif.icon || this.getIconForType(notif.type)}</div>
           <div>
             <span class="tracker-notification-type">${this.escapeHtml(this.humanizeType(notif.type))}</span>
-            <h3>${this.escapeHtml(notif.title || "NotificaÃ§Ã£o")}</h3>
+            <h3>${this.escapeHtml(notif.title || "Notificação")}</h3>
             ${notif.description ? `<p>${this.escapeHtml(notif.description)}</p>` : ""}
           </div>
         </div>
@@ -10184,7 +10206,7 @@ class NotificationTracker {
     this.footerArea?.removeAttribute("hidden");
 
     if (this.modalTitle) this.modalTitle.textContent = "Acompanhamento Completo";
-    if (this.modalSubtitle) this.modalSubtitle.textContent = "Todas as notificaÃ§Ãµes e pendÃªncias";
+    if (this.modalSubtitle) this.modalSubtitle.textContent = "Todas as notificações e pendências";
     this.renderNotifications();
   }
 
@@ -10198,7 +10220,7 @@ class NotificationTracker {
 
   humanizeType(type) {
     const types = {
-      denuncia: "DenÃºncia",
+      denuncia: "Denúncia",
       mensagem: "Mensagem RH",
       malote: "Malote",
       chamado: "Chamado",
@@ -10239,16 +10261,16 @@ class NotificationTracker {
     }));
     this.applyFilters();
     this.updateStats();
-    this.showNotification("Todas as notificaÃ§Ãµes foram marcadas como lidas.");
+    this.showNotification("Todas as notificações foram marcadas como lidas.");
   }
 
   clearAll() {
-    if (!confirm("Tem certeza que deseja limpar a visualizaÃ§Ã£o das notificaÃ§Ãµes?")) return;
+    if (!confirm("Tem certeza que deseja limpar a visualização das notificações?")) return;
     this.notifications = [];
     this.filteredNotifications = [];
     this.renderNotifications();
     this.updateStats();
-    this.showNotification("VisualizaÃ§Ã£o de notificaÃ§Ãµes limpa.");
+    this.showNotification("Visualização de notificações limpa.");
   }
 
   showNotification(message) {
@@ -10293,7 +10315,7 @@ window.addEventListener("storage", (event) => {
   try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
 });
 
-// Manter compatibilidade com botÃµes antigos
+// Manter compatibilidade com botões antigos
 document.addEventListener('DOMContentLoaded', () => {
   const prevBtn = document.getElementById('dashboard-notifications-prev');
   const nextBtn = document.getElementById('dashboard-notifications-next');
@@ -10302,9 +10324,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (nextBtn) nextBtn.style.display = 'none';
 });
 /* ==========================================================================
-   PERMISSÃƒO ARIEL + FEEDBACKS/RECLAMAÃ‡Ã•ES/SUGESTÃ•ES
-   - Equipe visÃ­vel somente para o usuÃ¡rio Ariel
-   - Nova aba em Conta > ConfiguraÃ§Ãµes para envio de feedbacks
+   PERMISSÃO ARIEL + FEEDBACKS/RECLAMAÇÕES/SUGESTÕES
+   - Equipe visível somente para o usuário Ariel
+   - Nova aba em Conta > Configurações para envio de feedbacks
    - Ariel visualiza todos os envios
    ========================================================================== */
 (function setupArielAccessAndFeedbackModule() {
@@ -10386,7 +10408,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalActivateView = activateView;
     activateView = function patchedActivateView(viewId) {
       if (viewId === "equipe" && !isArielUser()) {
-        showModal?.("Acesso restrito", "A aba Equipe estÃ¡ disponÃ­vel somente para o usuÃ¡rio Ariel.", "warning");
+        showModal?.("Acesso restrito", "A aba Equipe está disponível somente para o usuário Ariel.", "warning");
         return originalActivateView?.(getFallbackViewForCurrentUser());
       }
       return originalActivateView?.(viewId);
@@ -10402,7 +10424,7 @@ document.addEventListener('DOMContentLoaded', () => {
     event.stopImmediatePropagation();
 
     if (!isArielUser()) {
-      showModal?.("Acesso restrito", "A aba Equipe estÃ¡ disponÃ­vel somente para o usuÃ¡rio Ariel.", "warning");
+      showModal?.("Acesso restrito", "A aba Equipe está disponível somente para o usuário Ariel.", "warning");
       activateView?.(getFallbackViewForCurrentUser());
       return;
     }
@@ -10433,22 +10455,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function createFeedbackSettingsButton() {
     return `
-      <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclamaÃ§Ãµes reclamaÃ§Ã£o sugestao sugestÃµes sugestoes melhoria usuario">
-        <span aria-hidden="true">âœ‰</span>
-        <span><strong>Feedbacks e SugestÃµes</strong><small>Feedbacks, reclamaÃ§Ãµes e sugestÃµes</small></span>
+      <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclamações reclamação sugestao sugestões sugestoes melhoria usuario">
+        <span aria-hidden="true">✉</span>
+        <span><strong>Feedbacks e Sugestões</strong><small>Feedbacks, reclamações e sugestões</small></span>
       </button>
     `;
   }
 
   function createFeedbackDropdownButton() {
     const subtitle = isArielUser()
-      ? "Visualizar feedbacks, reclamaÃ§Ãµes e sugestÃµes"
-      : "Enviar feedback, reclamaÃ§Ã£o ou sugestÃ£o";
+      ? "Visualizar feedbacks, reclamações e sugestões"
+      : "Enviar feedback, reclamação ou sugestão";
     return `
       <button type="button" class="user-menu-item" data-view="conta" data-settings-target="${FEEDBACK_PANEL_ID}" role="menuitem">
-        <span class="user-menu-icon" aria-hidden="true">âœ‰</span>
+        <span class="user-menu-icon" aria-hidden="true">✉</span>
         <span class="user-menu-item-text">
-          <strong>Feedbacks e SugestÃµes</strong>
+          <strong>Feedbacks e Sugestões</strong>
           <small>${subtitle}</small>
         </span>
       </button>
@@ -10459,36 +10481,36 @@ document.addEventListener('DOMContentLoaded', () => {
     return `
       <section class="panel settings-detail-panel" data-settings-panel="${FEEDBACK_PANEL_ID}">
         <div class="panel-header">
-          <h2>Feedbacks, reclamaÃ§Ãµes e sugestÃµes</h2>
+          <h2>Feedbacks, reclamações e sugestões</h2>
         </div>
-        <p class="item-meta" id="hub-feedback-panel-description">Use este espaÃ§o para enviar melhorias, reclamaÃ§Ãµes ou sugestÃµes sobre o HUB e processos internos.</p>
+        <p class="item-meta" id="hub-feedback-panel-description">Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.</p>
 
         <form class="hub-feedback-form settings-section" id="hub-feedback-form">
           <h3>Novo envio</h3>
           <label>Tipo
             <select id="hub-feedback-type" required>
               <option value="Feedback">Feedback</option>
-              <option value="ReclamaÃ§Ã£o">ReclamaÃ§Ã£o</option>
-              <option value="SugestÃ£o">SugestÃ£o</option>
+              <option value="Reclamação">Reclamação</option>
+              <option value="Sugestão">Sugestão</option>
             </select>
           </label>
           <label>Mensagem
-            <textarea id="hub-feedback-message" placeholder="Descreva aqui seu feedback, reclamaÃ§Ã£o ou sugestÃ£o..." required></textarea>
+            <textarea id="hub-feedback-message" placeholder="Descreva aqui seu feedback, reclamação ou sugestão..." required></textarea>
           </label>
           <button class="primary-button" type="submit">Enviar</button>
         </form>
 
         <div class="settings-section" id="hub-feedback-admin-area" hidden>
           <div class="hub-feedback-admin-note">
-            <strong>VisualizaÃ§Ã£o do Ariel:</strong> aqui aparecem os feedbacks, reclamaÃ§Ãµes e sugestÃµes enviados pelos usuÃ¡rios.
+            <strong>Visualização do Ariel:</strong> aqui aparecem os feedbacks, reclamações e sugestões enviados pelos usuários.
           </div>
           <div class="hub-feedback-toolbar section-top">
             <h3 class="flush-bottom">Envios recebidos</h3>
             <select class="hub-feedback-filter" id="hub-feedback-filter">
               <option value="todos">Todos</option>
               <option value="Feedback">Feedback</option>
-              <option value="ReclamaÃ§Ã£o">ReclamaÃ§Ã£o</option>
-              <option value="SugestÃ£o">SugestÃ£o</option>
+              <option value="Reclamação">Reclamação</option>
+              <option value="Sugestão">Sugestão</option>
             </select>
           </div>
           <div class="hub-feedback-list" id="hub-feedback-admin-list"></div>
@@ -10509,7 +10531,7 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       event.stopPropagation();
 
-      // Quando o botÃ£o vem do menu do usuÃ¡rio, precisa abrir a aba Conta antes
+      // Quando o botão vem do menu do usuário, precisa abrir a aba Conta antes
       // de selecionar o painel interno de Feedbacks.
       activateView?.("conta");
       ensureFeedbackSettingsUi();
@@ -10560,7 +10582,7 @@ document.addEventListener('DOMContentLoaded', () => {
       id: row.id || generateUUID(),
       tipo: row.tipo || "Feedback",
       mensagem: row.mensagem || "",
-      autorNome: row.autor_nome || row.autorNome || row.created_by || "UsuÃ¡rio",
+      autorNome: row.autor_nome || row.autorNome || row.created_by || "Usuário",
       autorEmail: row.autor_email || row.autorEmail || "",
       status: row.status || "Novo",
       createdAt: row.created_at ? formatDateTime(row.created_at) : row.createdAt || todayLabel?.() || "Hoje",
@@ -10612,7 +10634,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (error) throw error;
         return { savedOnPostgreSQL: true };
       } catch (error) {
-        console.warn("NÃ£o foi possÃ­vel salvar feedback no PostgreSQL; salvando localmente.", error);
+        console.warn("Não foi possível salvar feedback no PostgreSQL; salvando localmente.", error);
       }
     }
 
@@ -10643,7 +10665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         removeLocalFeedbackById(normalizedId);
         return { deletedOnPostgreSQL: true };
       } catch (error) {
-        console.warn("NÃ£o foi possÃ­vel excluir feedback no PostgreSQL; tentando remover somente do armazenamento local.", error);
+        console.warn("Não foi possível excluir feedback no PostgreSQL; tentando remover somente do armazenamento local.", error);
       }
     }
 
@@ -10665,7 +10687,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="tag">${escapeHtml(item.status || "Novo")}</span>
         </div>
         <p>${escapeHtml(item.mensagem)}</p>
-        <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")} | Enviado por ${escapeHtml(item.autorNome || "UsuÃ¡rio")}${item.autorEmail ? ` | ${escapeHtml(item.autorEmail)}` : ""}</p>
+        <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")} | Enviado por ${escapeHtml(item.autorNome || "Usuário")}${item.autorEmail ? ` | ${escapeHtml(item.autorEmail)}` : ""}</p>
         ${options.canDelete ? `
           <div class="hub-feedback-actions">
             <button class="danger-button hub-feedback-delete-button" type="button" data-feedback-delete-id="${escapeHtml(item.id)}">Excluir envio</button>
@@ -10683,7 +10705,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const feedbackId = button.dataset.feedbackDeleteId;
         if (!feedbackId) return;
 
-        const confirmed = window.confirm("Deseja excluir este envio? Esta aÃ§Ã£o nÃ£o poderÃ¡ ser desfeita.");
+        const confirmed = window.confirm("Deseja excluir este envio? Esta ação não poderá ser desfeita.");
         if (!confirmed) return;
 
         const originalText = button.textContent || "Excluir envio";
@@ -10693,10 +10715,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await deleteFeedback(feedbackId);
 
         showModal?.(
-          "Envio excluÃ­do",
+          "Envio excluído",
           result.deletedOnPostgreSQL
-            ? "Seu envio foi excluÃ­do com sucesso."
-            : "O envio foi removido localmente. Se ele ainda aparecer em outro dispositivo, confirme a permissÃ£o DELETE no PostgreSQL.",
+            ? "Seu envio foi excluído com sucesso."
+            : "O envio foi removido localmente. Se ele ainda aparecer em outro dispositivo, confirme a permissão DELETE no PostgreSQL.",
           result.deletedOnPostgreSQL ? "success" : "info"
         );
 
@@ -10716,7 +10738,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtered = filter === "todos" ? items : items.filter((item) => item.tipo === filter);
 
     if (isArielUser()) {
-      // Ariel somente visualiza os envios recebidos. Ele nÃ£o envia por esta aba.
+      // Ariel somente visualiza os envios recebidos. Ele não envia por esta aba.
       renderFeedbackItems(document.getElementById("hub-feedback-admin-list"), filtered, { admin: true });
     } else {
       renderFeedbackItems(document.getElementById("hub-feedback-user-list"), items, { canDelete: true });
@@ -10736,14 +10758,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userArea) userArea.hidden = ariel;
     if (description) {
       description.textContent = ariel
-        ? "Ãrea exclusiva para visualizar feedbacks, reclamaÃ§Ãµes e sugestÃµes enviados pelos usuÃ¡rios."
-        : "Use este espaÃ§o para enviar melhorias, reclamaÃ§Ãµes ou sugestÃµes sobre o HUB e processos internos.";
+        ? "Área exclusiva para visualizar feedbacks, reclamações e sugestões enviados pelos usuários."
+        : "Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.";
     }
 
     document.querySelectorAll(`[data-settings-target="${FEEDBACK_PANEL_ID}"] small`).forEach((small) => {
       small.textContent = ariel
-        ? "Visualizar feedbacks, reclamaÃ§Ãµes e sugestÃµes"
-        : "Enviar feedback, reclamaÃ§Ã£o ou sugestÃ£o";
+        ? "Visualizar feedbacks, reclamações e sugestões"
+        : "Enviar feedback, reclamação ou sugestão";
     });
   }
 
@@ -10755,13 +10777,13 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (isArielUser()) {
-        showModal?.("Acesso somente leitura", "O usuÃ¡rio Ariel apenas visualiza os feedbacks enviados pelos demais usuÃ¡rios.", "info");
+        showModal?.("Acesso somente leitura", "O usuário Ariel apenas visualiza os feedbacks enviados pelos demais usuários.", "info");
         return;
       }
       const tipo = document.getElementById("hub-feedback-type")?.value || "Feedback";
       const mensagem = document.getElementById("hub-feedback-message")?.value.trim() || "";
       if (!mensagem) {
-        showModal?.("Mensagem obrigatÃ³ria", "Preencha o campo de mensagem antes de enviar.", "warning");
+        showModal?.("Mensagem obrigatória", "Preencha o campo de mensagem antes de enviar.", "warning");
         return;
       }
 
@@ -10789,7 +10811,7 @@ document.addEventListener('DOMContentLoaded', () => {
         "Envio registrado",
         result.savedOnPostgreSQL
           ? "Seu feedback foi enviado com sucesso."
-          : "Seu feedback foi salvo localmente. Para o Ariel visualizar envios de todos os usuÃ¡rios, confirme se a tabela hub_feedbacks foi criada no PostgreSQL.",
+          : "Seu feedback foi salvo localmente. Para o Ariel visualizar envios de todos os usuários, confirme se a tabela hub_feedbacks foi criada no PostgreSQL.",
         result.savedOnPostgreSQL ? "success" : "info"
       );
       renderFeedbackPanel();
@@ -10836,7 +10858,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /* ========================================================================
-   ATESTADOS PUBLICOS + ABA INTERNA DE VISUALIZAÃ‡ÃƒO
+   ATESTADOS PUBLICOS + ABA INTERNA DE VISUALIZAÇÃO
    ======================================================================== */
 (function setupAtestadosModule() {
   const ATESTADOS_TABLE = "hub_atestados";
@@ -10866,12 +10888,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function validateAtestadoFile(file) {
     if (!file || !file.name) return "Anexe o atestado antes de enviar.";
-    if (file.size > getAtestadoMaxSize()) return "O arquivo deve ter no mÃ¡ximo 10 MB.";
+    if (file.size > getAtestadoMaxSize()) return "O arquivo deve ter no máximo 10 MB.";
 
     const extension = getFileExtension(file.name);
     const mime = String(file.type || "").toLowerCase();
     if (!ATESTADO_ALLOWED_EXTENSIONS.has(extension) && !ATESTADO_ALLOWED_MIME_TYPES.has(mime)) {
-      return "Formato invÃ¡lido. Envie PDF, imagem, DOC ou DOCX.";
+      return "Formato inválido. Envie PDF, imagem, DOC ou DOCX.";
     }
     return "";
   }
@@ -10929,7 +10951,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveLocalDataDebounced?.();
       return mapped;
     } catch (error) {
-      console.warn("NÃ£o foi possÃ­vel carregar atestados do PostgreSQL; usando cache local.", error);
+      console.warn("Não foi possível carregar atestados do PostgreSQL; usando cache local.", error);
       return data.atestados?.length ? data.atestados : getLocalAtestados();
     }
   }
@@ -10955,17 +10977,17 @@ document.addEventListener('DOMContentLoaded', () => {
     target.innerHTML = filtered.map((item) => {
       const status = item.status || "Recebido";
       const fileName = item.arquivoNome || "Atestado";
-      const fileMeta = [fileName, formatFileSize(item.arquivoTamanho)].filter(Boolean).join(" Â· ");
+      const fileMeta = [fileName, formatFileSize(item.arquivoTamanho)].filter(Boolean).join(" · ");
       return `
         <article class="item-card atestado-card">
           <div class="item-topline">
-            <p class="item-title">${escapeHtml(item.nome || "Colaborador nÃ£o informado")}</p>
+            <p class="item-title">${escapeHtml(item.nome || "Colaborador não informado")}</p>
             <span class="tag">${escapeHtml(status)}</span>
           </div>
           <p><strong>CPF:</strong> ${escapeHtml(formatCpf(item.cpf || ""))}</p>
-          <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || item.telefone || "NÃ£o informado")}</p>
-          <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "NÃ£o informada")}</p>
-          <p class="item-meta">Recebido em ${escapeHtml(item.createdAt || "NÃ£o informado")} | ${escapeHtml(fileMeta || "Arquivo anexado")}</p>
+          <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || item.telefone || "Não informado")}</p>
+          <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Não informada")}</p>
+          <p class="item-meta">Recebido em ${escapeHtml(item.createdAt || "Não informado")} | ${escapeHtml(fileMeta || "Arquivo anexado")}</p>
           <div class="job-actions section-top atestado-actions">
             <div class="atestado-action-buttons">
               ${item.arquivoUrl ? `<button type="button" class="secondary-link private-file-button atestado-action-button" data-private-storage-bucket="${escapeHtml(getAtestadosBucket())}" data-private-storage-path="${escapeHtml(item.arquivoUrl)}">Ver atestado</button>` : ""}
@@ -10973,7 +10995,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <label class="compact-status-label">Status
               <select data-atestado-status-id="${escapeHtml(item.id)}">
-                ${["Recebido", "Em anÃ¡lise", "LanÃ§ado", "Recusado"].map((option) => `<option${option === status ? " selected" : ""}>${option}</option>`).join("")}
+                ${["Recebido", "Em análise", "Lançado", "Recusado"].map((option) => `<option${option === status ? " selected" : ""}>${option}</option>`).join("")}
               </select>
             </label>
           </div>
@@ -10994,7 +11016,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!id) return;
     const item = (data.atestados || []).find((record) => String(record.id) === String(id));
     const label = item?.nome ? ` de ${item.nome}` : "";
-    if (!confirm(`Tem certeza que deseja apagar o atestado${label}? Essa aÃ§Ã£o nÃ£o poderÃ¡ ser desfeita.`)) return;
+    if (!confirm(`Tem certeza que deseja apagar o atestado${label}? Essa ação não poderá ser desfeita.`)) return;
 
     const applyLocalDelete = () => {
       data.atestados = (data.atestados || []).filter((record) => String(record.id) !== String(id));
@@ -11011,7 +11033,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const { error: storageError } = await postgresClient.storage
             .from(getAtestadosBucket())
             .remove([pathToRemove]);
-          if (storageError) console.warn("NÃ£o foi possÃ­vel remover o arquivo do storage:", storageError);
+          if (storageError) console.warn("Não foi possível remover o arquivo do storage:", storageError);
         }
 
         const { error } = await postgresClient
@@ -11025,13 +11047,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       } catch (error) {
         console.error("Erro ao apagar atestado:", error);
-        showModal?.("Erro", "NÃ£o foi possÃ­vel apagar o atestado. Verifique a permissÃ£o DELETE da tabela hub_atestados e do bucket hub-atestados.", "error");
+        showModal?.("Erro", "Não foi possível apagar o atestado. Verifique a permissão DELETE da tabela hub_atestados e do bucket hub-atestados.", "error");
         return;
       }
     }
 
     applyLocalDelete();
-    showModal?.("Atestado apagado localmente", "Sem PostgreSQL ativo, a exclusÃ£o foi feita apenas neste navegador.", "info");
+    showModal?.("Atestado apagado localmente", "Sem PostgreSQL ativo, a exclusão foi feita apenas neste navegador.", "info");
   }
 
   async function updateAtestadoStatus(id, status) {
@@ -11051,17 +11073,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       } catch (error) {
         console.error("Erro ao atualizar status do atestado:", error);
-        showModal?.("Erro", "NÃ£o foi possÃ­vel atualizar o status no PostgreSQL. Verifique a permissÃ£o UPDATE da tabela hub_atestados.", "error");
+        showModal?.("Erro", "Não foi possível atualizar o status no PostgreSQL. Verifique a permissão UPDATE da tabela hub_atestados.", "error");
         return;
       }
     }
 
     applyLocal();
-    showModal?.("Status atualizado localmente", "Sem PostgreSQL ativo, a alteraÃ§Ã£o ficou salva apenas neste navegador.", "info");
+    showModal?.("Status atualizado localmente", "Sem PostgreSQL ativo, a alteração ficou salva apenas neste navegador.", "info");
   }
 
   async function uploadPublicAtestado({ nome, cpf, telefone, unidade, file }) {
-    if (!postgresClient) throw new Error("PostgreSQL indisponÃ­vel. Verifique a configuraÃ§Ã£o pÃºblica do HUB.");
+    if (!postgresClient) throw new Error("PostgreSQL indisponível. Verifique a configuração pública do HUB.");
 
     const cpfDigits = normalizeCpf(cpf);
     const safeName = safeStorageFileName(file.name || "atestado.pdf");
@@ -11086,8 +11108,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // IMPORTANTE:
-    // NÃ£o usar .select().single() no envio pÃºblico.
-    // O visitante/anon tem permissÃ£o apenas para INSERIR, nÃ£o para LER a tabela.
+    // Não usar .select().single() no envio público.
+    // O visitante/anon tem permissão apenas para INSERIR, não para LER a tabela.
     // Quando o INSERT pede retorno com .select(), o PostgreSQL tenta aplicar SELECT
     // e pode retornar erro de RLS mesmo com a policy de INSERT correta.
     const { error: insertError } = await postgresClient
@@ -11132,24 +11154,24 @@ document.addEventListener('DOMContentLoaded', () => {
       const file = formData.get("atestado");
 
       if (!/\S+\s+\S+/.test(nome)) {
-        showModal?.("Nome obrigatÃ³rio", "Informe nome e sobrenome do colaborador.", "error");
+        showModal?.("Nome obrigatório", "Informe nome e sobrenome do colaborador.", "error");
         return;
       }
       if (!isValidCpf(cpf)) {
-        showModal?.("CPF invÃ¡lido", "Informe um CPF vÃ¡lido no formato 000.000.000-00.", "error");
+        showModal?.("CPF inválido", "Informe um CPF válido no formato 000.000.000-00.", "error");
         return;
       }
       if (!telefone || normalizeCpf(telefone).length < 10) {
-        showModal?.("Telefone obrigatÃ³rio", "Informe um telefone vÃ¡lido para contato.", "error");
+        showModal?.("Telefone obrigatório", "Informe um telefone válido para contato.", "error");
         return;
       }
       if (!unidade) {
-        showModal?.("Unidade obrigatÃ³ria", "Selecione a unidade do colaborador.", "error");
+        showModal?.("Unidade obrigatória", "Selecione a unidade do colaborador.", "error");
         return;
       }
       const fileError = validateAtestadoFile(file);
       if (fileError) {
-        showModal?.("Arquivo invÃ¡lido", fileError, "error");
+        showModal?.("Arquivo inválido", fileError, "error");
         return;
       }
 
@@ -11166,7 +11188,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showModal?.("Atestado enviado", "Seu atestado foi enviado com sucesso para o RH.", "success");
       } catch (error) {
         console.error("Erro ao enviar atestado:", error);
-        showModal?.("Erro no envio", error.message || "NÃ£o foi possÃ­vel enviar o atestado. Verifique sua conexÃ£o e tente novamente.", "error");
+        showModal?.("Erro no envio", error.message || "Não foi possível enviar o atestado. Verifique sua conexão e tente novamente.", "error");
       } finally {
         if (submitButton) {
           submitButton.disabled = false;
