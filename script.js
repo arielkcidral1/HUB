@@ -4604,17 +4604,25 @@ function getCurrentBoardOwnerKeys() {
 function isCurrentUserBoard(board = {}) {
   const ownerKeys = getCurrentBoardOwnerKeys();
   if (!ownerKeys.size) return false;
-  const boardKeys = [
+
+  const explicitOwnerKeys = [
     board.ownerName,
     board.owner_name,
-    board.createdBy,
-    board.created_by,
+    board.ownerEmail,
+    board.owner_email,
     board.userId,
     board.user_id,
     board.ownerId,
     board.owner_id,
   ].filter(Boolean).map(normalizeLoginName);
-  return boardKeys.some((key) => ownerKeys.has(key));
+
+  if (explicitOwnerKeys.length) return explicitOwnerKeys.some((key) => ownerKeys.has(key));
+
+  const legacyCreatorKeys = [
+    board.createdBy,
+    board.created_by,
+  ].filter(Boolean).map(normalizeLoginName);
+  return legacyCreatorKeys.some((key) => ownerKeys.has(key));
 }
 
 function getBoardsForCurrentUser() {
@@ -10953,6 +10961,7 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
   if (!form || !list || !workspace) return;
 
   const expandOffset = Math.max(0, Number(offsetAfterForm) || 0);
+  const collapseGap = Math.max(140, expandOffset + 80);
   let expanded = false;
   let triggerY = 0;
 
@@ -10960,7 +10969,8 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
     const wasExpanded = expanded;
     list.classList.remove(expandedListClass);
     workspace.classList.remove(expandedWorkspaceClass);
-    triggerY = form.offsetTop + form.offsetHeight + expandOffset;
+    const formRect = form.getBoundingClientRect();
+    triggerY = (window.scrollY || document.documentElement.scrollTop || 0) + formRect.top + formRect.height + expandOffset;
     if (wasExpanded) {
       list.classList.add(expandedListClass);
       workspace.classList.add(expandedWorkspaceClass);
@@ -10978,7 +10988,7 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
     const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
     if (!expanded && scrollY > triggerY) {
       applyState(true);
-    } else if (expanded && scrollY < triggerY - 180) {
+    } else if (expanded && scrollY < triggerY - collapseGap) {
       applyState(false);
     }
   }
@@ -10991,6 +11001,7 @@ function setupFormScrollGrid({ listId, formId, expandedWorkspaceClass, expandedL
   }
 
   resetInitialState();
+  requestAnimationFrame(updateState);
   window.addEventListener("scroll", updateState, { passive: true });
   window.addEventListener("resize", () => {
     refreshTrigger();
@@ -11193,7 +11204,7 @@ document.addEventListener('DOMContentLoaded', () => {
       : "Enviar feedback, reclama��o ou sugest�o";
     return `
       <button type="button" class="user-menu-item" data-view="conta" data-settings-target="${FEEDBACK_PANEL_ID}" role="menuitem">
-        <span class="user-menu-icon" aria-hidden="true">?</span>
+        <span class="user-menu-icon user-menu-icon-feedback" aria-hidden="true"></span>
         <span class="user-menu-item-text">
           <strong>Feedbacks e Sugest�es</strong>
           <small>${subtitle}</small>
