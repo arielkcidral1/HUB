@@ -54,8 +54,11 @@ function Test-ClientSecurityFunctions {
   $docsTrinca = Read-ProjectFile "documentos-trinca.html"
   $style = Read-ProjectFile "style.css"
   $contractorApi = Read-ProjectFile "api/contractor-documents.js"
+  $recordsApi = Read-ProjectFile "api/records.js"
 
   Assert-MatchText $script 'function escapeHtml\(value\).*replaceAll\("&", "&amp;"\).*replaceAll\("<", "&lt;"\).*replaceAll\(">", "&gt;"\).*replaceAll\(''"'', "&quot;"\).*replaceAll\("''", "&#039;"\)' "escapeHtml escapa caracteres perigosos"
+  Assert-MatchText $recordsApi 'JSON_COLUMNS[\s\S]*"hub_documentos_contratados"[\s\S]*"documentos"[\s\S]*"hub_malotes"[\s\S]*"colaboradores"[\s\S]*"hub_quadros"[\s\S]*"listas"[\s\S]*"hub_users"[\s\S]*"configuracoes"' "API serializa colunas JSON conhecidas"
+  Assert-MatchText $recordsApi 'function normalizeDbValue[\s\S]*JSON\.stringify\(value\)[\s\S]*function placeholderFor[\s\S]*::jsonb' "API grava arrays e objetos como jsonb"
   $encodingArtifacts = @(([char]0x00C3), ([char]0x00C2), ([char]0x00E2))
   Assert-True -Condition (-not ($encodingArtifacts | Where-Object { $index.Contains([string]$_) })) -Message "index.html nao possui caracteres corrompidos por encoding"
   Assert-MatchText $script 'function isValidCpf\(value\).*\/\^\\d\{11\}\$\/\.test\(cpf\).*\/\^\(\\d\)\\1\{10\}\$\/\.test\(cpf\)' "validacao de CPF rejeita formato invalido e sequencias repetidas"
