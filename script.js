@@ -3091,6 +3091,30 @@ function isMissingColumn(error, columnName) {
   return message.includes(columnName);
 }
 
+function isMissingDbColumn(error, columnName) {
+  const message = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`.toLowerCase();
+  const column = String(columnName || "").toLowerCase();
+  return Boolean(column) && (
+    message.includes(column) ||
+    message.includes(`column "${column}"`) ||
+    message.includes(`coluna "${column}"`)
+  );
+}
+
+async function selectPostgreSQLRows(table, { orderBy = "created_at", ascending = false, configure } = {}) {
+  let query = postgresClient.from(table).select("*");
+  if (typeof configure === "function") query = configure(query) || query;
+  if (orderBy) query = query.order(orderBy, { ascending });
+
+  let result = await query;
+  if (result.error && orderBy && isMissingDbColumn(result.error, orderBy)) {
+    let fallbackQuery = postgresClient.from(table).select("*");
+    if (typeof configure === "function") fallbackQuery = configure(fallbackQuery) || fallbackQuery;
+    result = await fallbackQuery;
+  }
+  return result;
+}
+
 function parseLegacyJobDetails(projeto) {
   try {
     const parsed = JSON.parse(projeto || "{}");
@@ -3126,10 +3150,10 @@ async function loadFromPostgreSQL(options = {}) {
   }
 
   try {
-    const { data: userRows, error: usersError } = await postgresClient
-      .from(USERS_TABLE)
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data: userRows, error: usersError } = await selectPostgreSQLRows(USERS_TABLE, {
+      orderBy: "created_at",
+      ascending: false,
+    });
     if (usersError) throw usersError;
 
     const mappedUsers = mapRows("usuarios", userRows || []);
@@ -3153,12 +3177,15 @@ async function loadFromPostgreSQL(options = {}) {
       Object.entries(TABLES)
         .filter(([collection]) => collection !== "usuarios")
         .map(async ([collection, table]) => {
-        let query = postgresClient.from(table).select("*").order("created_at", { ascending: false });
-        if (collection === "comunicados") {
-          query = query.in("canal", getAllowedChatChannelIds());
-        }
-
-        const { data: rows, error } = await query;
+        const { data: rows, error } = await selectPostgreSQLRows(table, {
+          orderBy: "created_at",
+          ascending: false,
+          configure(query) {
+            return collection === "comunicados"
+              ? query.in("canal", getAllowedChatChannelIds())
+              : query;
+          },
+        });
         if (error) throw error;
         return [collection, mapRows(collection, rows || [])];
       })
