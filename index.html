@@ -28,6 +28,7 @@
           <button class="nav-item" data-view="comunicacao" type="button">Comunicacao RH</button>
           <button class="nav-item" data-view="malotes" type="button">Malotes de EPI</button>
           <button class="nav-item" data-view="chamados" type="button">Chamados</button>
+          <button class="nav-item" data-view="quadros" type="button">Quadros</button>
           <button class="nav-item" data-view="vagas" type="button">Vagas e Projetos</button>
           <button class="nav-item" data-view="calendario" type="button">Calendario</button>
           <button class="nav-item" data-view="documentos" type="button">Documentos RH</button>
@@ -453,6 +454,50 @@
               </div>
             </div>
             <div class="card-list chamado-list" id="chamados-list"></div>
+          </div>
+        </section>
+
+        <section class="view" id="quadros">
+          <div class="boards-workspace">
+            <div class="panel boards-toolbar">
+              <div class="panel-header split-header flush-bottom">
+                <div>
+                  <h2>Quadros</h2>
+                  <p class="item-meta">Organize tarefas em listas, cartoes e prioridades</p>
+                </div>
+                <form class="boards-create-form" id="board-form">
+                  <input name="nome" placeholder="Novo quadro" autocomplete="off" required />
+                  <button class="primary-button" type="submit">Criar quadro</button>
+                </form>
+              </div>
+              <div class="board-tabs" id="board-tabs"></div>
+            </div>
+
+            <div class="boards-main" id="boards-main">
+              <aside class="panel board-side-panel">
+                <form class="board-card-form" id="board-card-form">
+                  <h3>Novo cartao</h3>
+                  <input name="edit_list_index" type="hidden" />
+                  <input name="edit_card_index" type="hidden" />
+                  <label>Titulo
+                    <input name="titulo" placeholder="Titulo do cartao" autocomplete="off" required />
+                  </label>
+                  <label>Descricao
+                    <textarea name="descricao" rows="4" placeholder="Detalhes, checklist ou contexto"></textarea>
+                  </label>
+                  <label>Prioridade
+                    <select name="prioridade">
+                      <option>Normal</option>
+                      <option>Alta</option>
+                      <option>Urgente</option>
+                    </select>
+                  </label>
+                  <button class="primary-button" type="submit">Adicionar cartao</button>
+                  <button class="secondary-link full-width-action" id="cancelar-edicao-board-card" type="button" hidden>Cancelar edicao</button>
+                </form>
+              </aside>
+              <div class="boards-lanes" id="boards-lanes"></div>
+            </div>
           </div>
         </section>
 
@@ -1275,6 +1320,10 @@
               <p class="item-meta">Preferências visuais e comportamento das conversas.</p>
               <div class="settings-section">
                 <h3>Apar&ecirc;ncia</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-appearance-dark-mode" data-user-setting="darkMode" />
+                  <span><strong>Modo escuro</strong><small>Aplica um tema escuro em todo o sistema.</small></span>
+                </label>
                 <label class="settings-option">
                   <input type="checkbox" id="settings-chat-compact" data-user-setting="compactMode" />
                   <span><strong>Modo compacto</strong><small>Reduz espa&ccedil;amentos do chat e listas para caber mais informa&ccedil;&atilde;o na tela.</small></span>

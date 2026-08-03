@@ -7,9 +7,9 @@ const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
-// IMPORTANTE: os IDs lidos não entram no cache sensível.
-// Assim, ao fechar/abrir o site ou perder a sessão, as notificações já visualizadas
-// não voltam como não lidas.
+// IMPORTANTE: os IDs lidos n�o entram no cache sens�vel.
+// Assim, ao fechar/abrir o site ou perder a sess�o, as notifica��es j� visualizadas
+// n�o voltam como n�o lidas.
 const SENSITIVE_CLIENT_CACHE_KEYS = [
   STORAGE_KEY,
   DOCUMENT_RECORDS_KEY,
@@ -71,85 +71,86 @@ const CHAT_FILE_EXTENSION_MIME_TYPES = new Map([
   ["mov", "video/quicktime"],
 ]);
 const CHAT_EMOJIS = [
-  "😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍",
-  "🤩","😘","😗","😚","😙","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🫢","🫣",
-  "🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😏","😒","🙄","😬","🤥","😌",
-  "😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","🤯",
-  "🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","☹️","😮","😯","😲","😳",
-  "🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩",
-  "😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻",
-  "👽","🤖","😺","😸","😹","😻","😼","😽","🙀","😿","😾","👋","🤚","🖐️","✋",
-  "🖖","🫱","🫲","🫳","🫴","👌","🤌","🤏","✌️","🤞","🫰","🤟","🤘","🤙","👈",
-  "👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐",
-  "🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦵","🦿","🦶","👂","🦻","👃","🧠",
-  "🫀","🫁","🦷","🦴","👀","👁️","👅","👄","💋","❤️","🧡","💛","💚","💙","💜",
-  "🖤","🤍","🤎","💔","❤️‍🔥","❤️‍🩹","❣️","💕","💞","💓","💗","💖","💘","💝","💟",
-  "👶","🧒","👦","👧","🧑","👱","👨","🧔","👩","🧓","👴","👵","🙍","🙎","🙅",
-  "🙆","💁","🙋","🧏","🙇","🤦","🤷","👮","🕵️","💂","👷","🫅","🤴","👸","👳",
-  "👲","🧕","🤵","👰","🤰","🤱","👼","🎅","🤶","🦸","🦹","🧙","🧚","🧛","🧜",
-  "🧝","🧞","🧟","💆","💇","🚶","🧍","🧎","🏃","💃","🕺","🧖","🧗","🤺","🏇",
-  "⛷️","🏂","🏌️","🏄","🚣","🏊","⛹️","🏋️","🚴","🚵","🐶","🐱","🐭","🐹","🐰",
-  "🦊","🐻","🐼","🐻‍❄️","🐨","🐯","🦁","🐮","🐷","🐽","🐸","🐵","🙈","🙉","🙊",
-  "🐒","🐔","🐧","🐦","🐤","🐣","🐥","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄",
-  "🐝","🪱","🐛","🦋","🐌","🐞","🐜","🪰","🪲","🪳","🦟","🦗","🕷️","🕸️","🦂",
-  "🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳",
-  "🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🦣","🐘","🦛","🦏","🐪","🐫","🦒",
-  "🦘","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🐈","🐓",
-  "🦃","🦤","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁",
-  "🐀","🐿️","🦔","🐾","🐉","🐲","🌵","🎄","🌲","🌳","🌴","🌱","🌿","☘️","🍀",
-  "🎍","🪴","🎋","🍃","🍂","🍁","🍄","🐚","🪨","🌾","💐","🌷","🌹","🥀","🌺",
-  "🌸","🌼","🌻","☀️","🌤️","⛅","🌥️","☁️","🌦️","🌧️","⛈️","🌩️","🌨️","❄️","☃️",
-  "⛄","🌬️","💨","🌪️","🌈","☂️","☔","⚡","🔥","💧","🌊","🌙","⭐","🌟","✨",
-  "☄️","🌌","🍏","🍎","🍐","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍈","🍒","🍑",
-  "🥭","🍍","🥥","🥝","🍅","🍆","🥑","🥦","🥬","🥒","🌶️","🫑","🌽","🥕","🫒",
-  "🧄","🧅","🥔","🍠","🥐","🥯","🍞","🥖","🥨","🧀","🥚","🍳","🧈","🥞","🧇",
-  "🥓","🥩","🍗","🍖","🌭","🍔","🍟","🍕","🫓","🥪","🥙","🧆","🌮","🌯","🫔",
-  "🥗","🥘","🫕","🥫","🍝","🍜","🍲","🍛","🍣","🍱","🥟","🦪","🍤","🍙","🍚",
-  "🍘","🍥","🥠","🥮","🍢","🍡","🍧","🍨","🍦","🥧","🧁","🍰","🎂","🍮","🍭",
-  "🍬","🍫","🍿","🍩","🍪","🌰","🥜","🍯","🥛","🍼","☕","🫖","🍵","🧃","🥤",
-  "🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","🧊","🥄","🍴","🍽️",
-  "🥣","🥡","⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🎱","🪀","🏓","🏸","🏒",
-  "🏑","🥍","🏏","🥅","⛳","🪁","🏹","🎣","🤿","🥊","🥋","🎽","🛹","🛼","🛷",
-  "⛸️","🥌","🎿","🤼","🤸","🤾","🧘","🤽","🏆","🥇","🥈","🥉","🏅","🎖️","🎗️",
-  "🎫","🎟️","🎪","🤹","🎭","🎨","🎬","🎤","🎧","🎼","🎹","🥁","🪘","🎷","🎺",
-  "🎸","🪕","🎻","🎲","♟️","🎯","🎳","🎮","🎰","🧩","🚗","🚕","🚙","🚌","🚎",
-  "🏎️","🚓","🚑","🚒","🚐","🛻","🚚","🚛","🚜","🛵","🏍️","🛺","🚲","🛴","🚨",
-  "🚔","🚍","🚘","🚖","🚡","🚠","🚟","🚃","🚋","🚞","🚝","🚄","🚅","🚈","🚂",
-  "🚆","🚇","🚊","🚉","✈️","🛫","🛬","🛩️","💺","🛰️","🚀","🛸","🚁","🛶","⛵",
-  "🚤","🛥️","🛳️","⛴️","🚢","⚓","🪝","⛽","🚧","🚦","🚥","🗺️","🗿","🗽","🗼",
-  "🏰","🏯","🏟️","🎡","🎢","🎠","⛲","⛱️","🏖️","🏝️","🏜️","🌋","⛰️","🏔️","🗻",
-  "🏕️","⛺","🏠","🏡","🏘️","🏚️","🏗️","🏭","🏢","🏬","🏣","🏤","🏥","🏦","🏨",
-  "🏪","🏫","🏩","💒","🏛️","⛪","🕌","🕍","🛕","🕋","⌚","📱","💻","⌨️","🖥️",
-  "🖨️","🖱️","🖲️","🕹️","💽","💾","💿","📀","📼","📷","📸","📹","🎥","📞","☎️",
-  "📟","📠","📺","📻","🎙️","🎚️","🎛️","🧭","⏱️","⏲️","⏰","🕰️","⌛","⏳","📡",
-  "🔋","🔌","💡","🔦","🕯️","🪔","🧯","🛢️","💸","💵","💴","💶","💷","🪙","💰",
-  "💳","💎","⚖️","🪜","🧰","🪛","🔧","🔨","⚒️","🛠️","⛏️","🪚","🔩","⚙️","🪤",
-  "🧱","⛓️","🧲","🔫","💣","🧨","🪓","🔪","🗡️","⚔️","🛡️","🚬","⚰️","🪦","⚱️",
-  "🏺","🔮","📿","🧿","💈","⚗️","🔭","🔬","🕳️","🩹","🩺","💊","💉","🩸","🧬",
-  "🦠","🧫","🧪","🌡️","🧹","🪠","🧺","🧻","🚽","🚰","🚿","🛁","🛀","🧼","🪥",
-  "🪒","🧽","🪣","🧴","🛎️","🔑","🗝️","🚪","🪑","🛋️","🛏️","🛌","🧸","🪆","🖼️",
-  "🪞","🪟","🛍️","🛒","🎁","🎈","🎏","🎀","🪄","🪅","🎊","🎉","🎎","🏮","🎐",
-  "🧧","✉️","📩","📨","📧","💌","📥","📤","📦","🏷️","🪧","📪","📫","📬","📭",
-  "📮","📯","📜","📃","📄","📑","📊","📈","📉","🗒️","🗓️","📆","📅","🗑️","📇",
-  "🗃️","🗳️","🗄️","📋","📁","📂","🗂️","🗞️","📰","📓","📔","📒","📕","📗","📘",
-  "📙","📚","📖","🔖","🧷","🔗","📎","🖇️","📐","📏","🧮","📌","📍","✂️","🖊️",
-  "🖋️","✒️","🖌️","🖍️","📝","✏️","🔍","🔎","🔏","🔐","🔒","🔓","💬","💭","🗯️",
-  "💤","👣","🌀","🔔","🔕","📢","📣","🎵","🎶","➕","➖","➗","✖️","🟰","♾️",
-  "‼️","⁉️","❓","❔","❕","❗","〰️","💱","💲","🔱","📛","🔰","⭕","✅","☑️",
-  "✔️","❌","❎","➰","➿","〽️","✳️","✴️","❇️","©️","®️","™️","#️⃣","*️⃣","0️⃣",
-  "1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟","🔢","🔤","🔡","🔠","🆗",
-  "🆕","🆓","🆒","🆙","🆖","🈁","🈂️","🈚","🈯","🈲","🈳","🈴","🈵","🈶","🈷️",
-  "🉐","🉑","㊗️","㊙️","🔴","🟠","🟡","🟢","🔵","🟣","🟤","⚫","⚪","🟥","🟧",
-  "🟨","🟩","🟦","🟪","🟫","⬛","⬜","◼️","◻️","◾","◽","▪️","▫️","🔶","🔷",
-  "🔸","🔹","🔺","🔻","💠","🔘","🔳","🔲","🏁","🚩","🎌","🏴","🏳️","🏳️‍🌈","🏳️‍⚧️",
-  "🏴‍☠️","🇧🇷","🇺🇸","🇵🇹","🇪🇸","🇦🇷","🇮🇹","🇫🇷","🇩🇪","🇬🇧","🇯🇵","🇨🇳","🇨🇦","🇲🇽","🇨🇴",
-  "🇨🇱",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","???","?",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","?","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","???","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","?????","?????","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","???","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","???","??","??","??","??","???","??","??","??","??","??","??","??",
+  "??","??","??","?????","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","???","???","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","???","??","??","??","??","??","??","??","??",
+  "??","???","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","???","?","???","??","???","???","??","???","???","??","??",
+  "?","???","??","???","??","??","?","?","??","??","??","??","?","??","?",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","???","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","?","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","???",
+  "??","??","?","??","??","?","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","?","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","???","???",
+  "??","???","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "???","??","??","??","??","??","??","??","??","??","???","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","???","??","???","??","??","??","??","?",
+  "??","???","???","??","??","?","??","?","??","??","??","???","??","??","??",
+  "??","??","???","??","??","??","?","??","???","???","???","??","??","???","??",
+  "???","?","??","??","???","???","???","??","??","??","??","??","??","??","??",
+  "??","??","??","??","???","?","??","??","??","??","?","??","??","??","???",
+  "???","???","???","???","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","???","???","???","??","??","??","?","???","?","?","??",
+  "??","??","??","??","???","??","??","???","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","???","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","???","??","???","??","??","??","??",
+  "??","??","??","??","??","??","??","??","???","??","??","??","??","??","??",
+  "??","??","??","???","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","???","??","???","??","??","???","???","??","??","??","???",
+  "??","??","???","??","??","??","??","??","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","???","??","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","???","???","??","??","???","??",
+  "???","???","???","??","??","??","???","???","??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","??","???","??","??","??","??","??","??","???",
+  "???","??","???","???","??","??","??","??","??","??","??","??","??","??","???",
+  "??","??","??","??","??","??","??","??","??","?","?","?","??","??","??",
+  "??","??","?","?","?","?","??","??","??","??","??","??","?","?","??",
+  "??","?","?","?","?","??","??","??","??","�?","�?","�?","#??","*??","0??",
+  "1??","2??","3??","4??","5??","6??","7??","8??","9??","??","??","??","??","??","??",
+  "??","??","??","??","??","??","???","??","??","??","??","??","??","??","???",
+  "??","??","??","??","??","??","??","??","??","??","??","?","?","??","??",
+  "??","??","??","??","??","?","?","??","??","?","?","??","??","??","??",
+  "??","??","??","??","??","??","??","??","??","??","??","??","???","??????","??????",
+  "?????","????","????","????","????","????","????","????","????","????","????","????","????","????","????",
+  "????",
 ];
 const USER_SETTINGS_STORAGE_KEY = "hub-user-settings-v1";
 const USER_SETTINGS_DEFAULTS = Object.freeze({
   hidePresence: false,
   blurChatPreviews: false,
   localPrivacyMode: false,
+  darkMode: false,
   compactMode: false,
   messageSize: "normal",
   showEmojiButton: true,
@@ -158,6 +159,7 @@ const USER_SETTINGS_DEFAULTS = Object.freeze({
   desktopNotifications: true,
   dashboardNotificationBadges: true,
   keyboardShortcuts: true,
+  boardOrder: [],
 });
 const DEFAULT_HUB_POSTGRES = {
   chatFilesBucket: "hub-chat-files",
@@ -168,6 +170,7 @@ const TABLES = {
   comunicados: "hub_chat_messages",
   malotes: "hub_malotes",
   chamados: "hub_chamados",
+  quadros: "hub_quadros",
   vagas: "hub_vagas",
   eventos: "hub_eventos",
   vtRegistros: "hub_vt_registros",
@@ -250,7 +253,7 @@ const defaultData = {
     {
       id: generateUUID(),
       autor: "Marina Souza",
-      mensagem: "Revisar pendencias de benefícios, vagas e entregas de EPI.",
+      mensagem: "Revisar pendencias de benef�cios, vagas e entregas de EPI.",
       canal: GENERAL_CHANNEL,
       arquivo: null,
       createdAt: "Hoje",
@@ -267,6 +270,18 @@ const defaultData = {
     },
   ],
   chamados: [],
+  quadros: [
+    {
+      id: generateUUID(),
+      nome: "Quadro principal",
+      listas: [
+        { id: generateUUID(), titulo: "A fazer", cartoes: [] },
+        { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
+        { id: generateUUID(), titulo: "Concluido", cartoes: [] },
+      ],
+      createdAt: "Hoje",
+    },
+  ],
   vagas: [],
   eventos: [
     {
@@ -309,6 +324,10 @@ let denunciasSelectionMode = false;
 let showArchivedDenuncias = false;
 let dashboardCalendarViewMode = "week";
 let visibleCalendarDate = new Date();
+let activeBoardId = "";
+let draggedBoardCard = null;
+let draggedBoardTabId = "";
+let suppressBoardCardClick = false;
 let dashboardNotificationOffset = 0;
 let visibleDashboardActivityItems = [];
 let currentUserSettings = loadUserSettings();
@@ -339,7 +358,7 @@ const UNIT_OPTIONS = [
   "1- MTZ",
   "2- SBS",
   "3- ITJ 1",
-  "4- PLÇ",
+  "4- PL�",
   "5- GUA",
   "7- DPA JC",
   "9- DPA IRI",
@@ -360,7 +379,7 @@ const UNIT_OPTIONS = [
   "28- ARA",
 ];
 
-// Normaliza texto para comparação: remove acentos, caixa e espaços extras.
+// Normaliza texto para compara��o: remove acentos, caixa e espa�os extras.
 function normalizeUnitText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -370,7 +389,7 @@ function normalizeUnitText(value) {
 }
 
 // Vagas antigas podem ter sido gravadas com texto livre (ex: "JRG", "JGR").
-// Aqui mapeamos esses valores legados para a opção oficial correspondente.
+// Aqui mapeamos esses valores legados para a op��o oficial correspondente.
 const UNIT_ALIASES = {
   jrg: "13- JRG 1",
   jgr: "13- JRG 1",
@@ -400,27 +419,27 @@ const EPI_OPTIONS = [
   "Protetor Auricular",
   "Protetor Auricular tipo concha",
   "Avental de Raspa",
-  "Sapatão",
+  "Sapat�o",
   "Luva de Vaqueta",
-  "Creme de Proteção",
+  "Creme de Prote��o",
 ];
 
 const UNIFORM_OPTIONS = [
   "Camiseta Operacional Fredy - Pneus",
-  "Camiseta Chefe de Pátio - Fredy Pneus",
+  "Camiseta Chefe de P�tio - Fredy Pneus",
   "Moletom Operacional - Fredy Pneus",
   "Camisa Social Azul - Fredy Pneus",
   "Camisa Social Branca Fredy - Pneus",
-  "Calça Operacional Fredy - Pneus",
+  "Cal�a Operacional Fredy - Pneus",
   "Camiseta Operacional - GCS",
   "Camiseta Cinza Claro - GCS",
   "Camisa Polo - GCS",
-  "Calça Operacional - GCS",
+  "Cal�a Operacional - GCS",
   "Bermuda Operacional - GCS",
   "Camiseta Operacional - JPL",
   "Camisa Polo - JPL",
   "Moletom Operacional - JPL",
-  "Calça Operacional - JPL",
+  "Cal�a Operacional - JPL",
   "Camiseta - FAC",
 ];
 
@@ -576,18 +595,18 @@ function getChatChannels() {
 
   let channels = isCashierUser()
     ? [
-        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunicação geral entre caixas/crediaristas e equipe de RH", isGroup: true },
+        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunica��o geral entre caixas/crediaristas e equipe de RH", isGroup: true },
         ...directChannels,
       ]
     : isManagerUser()
     ? [
-        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
+        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunica��o geral entre gerentes e equipe de RH", isGroup: true },
         ...directChannels,
       ]
     : [
         { id: GENERAL_CHANNEL, label: "Chat geral RH", subtitle: "Mensagens compartilhadas apenas pela equipe de RH", isGroup: true },
-        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
-        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunicação geral entre caixas/crediaristas e equipe de RH", isGroup: true },
+        { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunica��o geral entre gerentes e equipe de RH", isGroup: true },
+        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunica��o geral entre caixas/crediaristas e equipe de RH", isGroup: true },
         ...directChannels,
       ];
 
@@ -652,9 +671,9 @@ function getCurrentUserName() {
 }
 
 /**
- * [ALERTA DE SEGURANÇA] A verificação de permissão real DEVE ser feita no backend
- * com Row Level Security (RLS) do PostgreSQL. Estas funções são apenas para controle de UI.
- * A 'role' é lida do token JWT para maior segurança no frontend, mas a RLS é indispensável.
+ * [ALERTA DE SEGURAN�A] A verifica��o de permiss�o real DEVE ser feita no backend
+ * com Row Level Security (RLS) do PostgreSQL. Estas fun��es s�o apenas para controle de UI.
+ * A 'role' � lida do token JWT para maior seguran�a no frontend, mas a RLS � indispens�vel.
  */
 const AuthHelper = {
   _getClaim(claim) {
@@ -835,7 +854,7 @@ async function validateLogin(identifier, password) {
 
   if (!client?.auth) {
     const errorMsg = document.getElementById("login-error");
-    if (errorMsg) errorMsg.textContent = "Erro de conexão com o PostgreSQL.";
+    if (errorMsg) errorMsg.textContent = "Erro de conex�o com o PostgreSQL.";
     return false;
   }
 
@@ -1024,6 +1043,7 @@ function loadLocalData() {
     comunicados: parsed.comunicados || [],
     malotes: parsed.malotes || [],
     chamados: parsed.chamados || [],
+    quadros: parsed.quadros || defaultData.quadros || [],
     vagas: parsed.vagas || [],
     eventos: parsed.eventos || [],
     vtRegistros: parsed.vtRegistros || [],
@@ -1295,14 +1315,14 @@ function renderMaloteReport() {
     return acc;
   }, {});
   const topDestino = Object.entries(byDestino).sort((a, b) => b[1] - a[1])[0];
-  const separacao = source.filter((item) => item.status === "Separação").length;
+  const separacao = source.filter((item) => item.status === "Separa��o").length;
   const entrega = source.filter((item) => item.status === "Entrega").length;
 
   target.innerHTML = `
     <article class="report-chip">
       <span>${selectedDestino || search ? "Resultado filtrado" : "Total geral"}</span>
       <strong>${source.length}</strong>
-      <small>${escapeHtml([selectedDestino, search ? `Código: ${search}` : ""].filter(Boolean).join(" | ") || "Todos os destinos")}</small>
+      <small>${escapeHtml([selectedDestino, search ? `C�digo: ${search}` : ""].filter(Boolean).join(" | ") || "Todos os destinos")}</small>
     </article>
     <article class="report-chip">
       <span>Em separacao</span>
@@ -1473,7 +1493,7 @@ function applyDateMask(input) {
   input.maxLength = 10;
   input.placeholder = "dd/mm/aaaa";
   input.dataset.dateMask = "true";
-  input.dataset.docDate = "true"; // mantém compatibilidade
+  input.dataset.docDate = "true"; // mant�m compatibilidade
   input.dataset.dateMaskApplied = "true";
   input.value = formatMaskedDate(input.value);
 }
@@ -1481,7 +1501,7 @@ function applyDateMask(input) {
 function normalizeDocumentDateInputs(root = document) {
   // cobre doc-forms e o campo de data do evento-form
   root.querySelectorAll('[data-doc-form] input[type="date"], #evento-form input[type="date"]').forEach(applyDateMask);
-  // reinicializa campos que já foram convertidos mas podem ter recebido valor ISO novo
+  // reinicializa campos que j� foram convertidos mas podem ter recebido valor ISO novo
   root.querySelectorAll('[data-date-mask="true"]').forEach((input) => {
     input.value = formatMaskedDate(input.value);
   });
@@ -1506,8 +1526,8 @@ function formatTimeRange(value) {
 
   if (digits.length <= 2) return firstHour;
   if (digits.length <= 4) return `${firstHour}:${firstMinute}`;
-  if (digits.length <= 6) return `${firstHour}:${firstMinute} às ${secondHour}`;
-  return `${firstHour}:${firstMinute} às ${secondHour}:${secondMinute}`;
+  if (digits.length <= 6) return `${firstHour}:${firstMinute} �s ${secondHour}`;
+  return `${firstHour}:${firstMinute} �s ${secondHour}:${secondMinute}`;
 }
 
 function formatCpf(value) {
@@ -1644,7 +1664,7 @@ function createMaloteCollaboratorBlock(group = {}) {
   return `
     <div class="malote-collaborator" data-malote-collaborator>
       <div class="item-topline">
-        <label>Colaborador que irá receber
+        <label>Colaborador que ir� receber
           <input name="malote_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
         </label>
         <button class="danger-button remove-malote-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
@@ -1662,7 +1682,7 @@ function createChamadoCollaboratorBlock(group = {}) {
   return `
     <div class="malote-collaborator" data-chamado-collaborator>
       <div class="item-topline">
-        <label>Colaborador que irá receber
+        <label>Colaborador que ir� receber
           <input name="chamado_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
         </label>
         <button class="danger-button remove-chamado-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
@@ -1799,8 +1819,8 @@ function renderMaloteCollaboratorsDetails(malote = {}) {
           ${group.itens.map((item) => `
             <li>
               ${escapeHtml(item.nome || "Nao informado")}
-              — Tamanho: ${escapeHtml(item.tamanho || "Nao se aplica")}
-              — Quantidade: ${escapeHtml(item.quantidade || "1")}
+              � Tamanho: ${escapeHtml(item.tamanho || "Nao se aplica")}
+              � Quantidade: ${escapeHtml(item.quantidade || "1")}
             </li>
           `).join("")}
         </ul>
@@ -1815,9 +1835,9 @@ function renderMaloteCardContent(item, options = {}) {
     <div class="item-topline"><p class="item-title">Malote de EPI</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
     <p><strong>Destino:</strong> ${escapeHtml(item.destino || "Nao informado")}</p>
       <p><strong>Origem:</strong> ${escapeHtml(item.origem || "Nao informada")}</p>
-      <p><strong>Código da Solicitação:</strong> ${escapeHtml(item.codigoSolicitacao || "Nao informado")}</p>
+      <p><strong>C�digo da Solicita��o:</strong> ${escapeHtml(item.codigoSolicitacao || "Nao informado")}</p>
     ${renderMaloteCollaboratorsDetails(item)}
-    ${item.observacoes ? `<p><strong>Observações:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
+    ${item.observacoes ? `<p><strong>Observa��es:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
     ${showAudit ? `<p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}</p>` : ""}
     ${showActions ? `
       <div class="job-actions">
@@ -2405,6 +2425,20 @@ function serializeChatPoll(poll) {
   })}`;
 }
 
+function parseBoardLists(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function renderChatPoll(item, poll) {
   const votes = poll.votes || {};
   const voter = normalizeLoginName(getCurrentUserName());
@@ -2425,7 +2459,7 @@ function renderChatPoll(item, poll) {
           <strong>${percent}%</strong>
         </span>
         <span class="chat-poll-bar" aria-hidden="true"><span style="width: ${percent}%"></span></span>
-        <span class="item-meta">${count} voto${count === 1 ? "" : "s"}${selected ? " • seu voto" : ""}</span>
+        <span class="item-meta">${count} voto${count === 1 ? "" : "s"}${selected ? " � seu voto" : ""}</span>
       </button>
     `;
   }).join("");
@@ -2524,6 +2558,19 @@ if (collection === "malotes") {
       observacoes: row.observacoes || "",
       status: row.status || "Aberto",
       createdAt: formatDateTime(row.created_at),
+      sortAt: row.created_at || "",
+    }));
+  }
+
+  if (collection === "quadros") {
+    return rows.map((row) => ({
+      id: row.id,
+      nome: row.nome || "Quadro",
+      listas: Array.isArray(row.listas) ? row.listas : parseBoardLists(row.listas),
+      ownerName: row.owner_name || "",
+      createdBy: row.created_by || getSystemFallbackAuthor(),
+      updatedBy: row.updated_by || "",
+      createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
     }));
   }
@@ -2778,6 +2825,11 @@ function renderRealtimeUpdate(collection) {
     return;
   }
 
+  if (collection === "quadros") {
+    renderBoards();
+    return;
+  }
+
   if (collection === "malotes") {
     renderDashboard();
     renderMalotesSection();
@@ -2868,7 +2920,7 @@ function toDbPayload(collection, values) {
     colaboradores: values.colaboradores || [],
     codigo_solicitacao: values.codigoSolicitacao || "",
     observacoes: values.observacoes || "",
-    status: values.status || "Separação",
+    status: values.status || "Separa��o",
     created_by: values.createdBy || getCurrentUserName(),
     updated_by: values.updatedBy || null,
   };
@@ -2883,6 +2935,17 @@ function toDbPayload(collection, values) {
     if ("observacoes" in values) payload.observacoes = values.observacoes || "";
     payload.status = values.status || "Aberto";
     payload.created_by = values.createdBy || getCurrentUserName();
+    return payload;
+  }
+  if (collection === "quadros") {
+    const payload = {
+      nome: values.nome || "Quadro",
+      listas: values.listas || [],
+      owner_name: values.ownerName || values.owner_name || getCurrentUserName(),
+      created_by: values.createdBy || getCurrentUserName(),
+      updated_by: values.updatedBy || null,
+    };
+    if (values.id) payload.id = values.id;
     return payload;
   }
 if (collection === "eventos") {
@@ -3116,7 +3179,7 @@ function setupRealtime() {
     } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
       console.warn("HUB realtime desconectado:", status);
       setSyncStatus("Reconectando...", false);
-      // Remove canal atual e agenda reconexão
+      // Remove canal atual e agenda reconex�o
       try { realtimeChannel.unsubscribe(); } catch (_) {}
       realtimeChannel = null;
       setTimeout(() => {
@@ -3258,7 +3321,7 @@ function openChatFilePicker({ accept = getChatDefaultFileAccept(), capture = "" 
 function handleChatAttachOption(type) {
   closeChatAttachMenu();
   if (!activeChatChannel || !canAccessChatChannel(activeChatChannel)) {
-    showModal("Selecione um chat", "Escolha um canal de comunicação antes de adicionar anexos.", "error");
+    showModal("Selecione um chat", "Escolha um canal de comunica��o antes de adicionar anexos.", "error");
     return;
   }
 
@@ -3363,15 +3426,15 @@ function renderChatAttachmentPreview(files) {
   } else if (mimeType.startsWith("audio/")) {
     body = `
       <div class="chat-preview-audio-card">
-        <button type="button" class="chat-preview-audio-trash" data-action="clear-chat-file" title="Remover audio" aria-label="Remover audio">🗑</button>
+        <button type="button" class="chat-preview-audio-trash" data-action="clear-chat-file" title="Remover audio" aria-label="Remover audio">??</button>
         <audio class="chat-preview-audio-player" controls src="${chatAttachmentPreviewUrl}"></audio>
       </div>`;
     activeChip = `<span class="chat-preview-chip-icon" aria-hidden="true">AUD</span>`;
   } else {
     body = `
       <div class="chat-preview-unavailable">
-        <div class="chat-preview-file-icon" aria-hidden="true">▦</div>
-        <strong>Prévia indisponível</strong>
+        <div class="chat-preview-file-icon" aria-hidden="true">?</div>
+        <strong>Pr�via indispon�vel</strong>
         <span>${meta}</span>
       </div>`;
     activeChip = `<span class="chat-preview-chip-icon" aria-hidden="true">${escapeHtml(extension.slice(0, 3))}</span>`;
@@ -3393,12 +3456,12 @@ function renderChatAttachmentPreview(files) {
         <button type="button" class="chat-preview-chip ${index === chatAttachmentPreviewIndex ? "is-active" : ""}" data-action="preview-chat-file" data-index="${index}" title="Visualizar ${escapeHtml(item.name)}" aria-label="Visualizar ${escapeHtml(item.name)}">
           ${chipContent}
         </button>
-        <button type="button" class="chat-preview-chip-remove" data-action="remove-chat-file" data-index="${index}" title="Remover ${escapeHtml(item.name)}" aria-label="Remover ${escapeHtml(item.name)}">×</button>
+        <button type="button" class="chat-preview-chip-remove" data-action="remove-chat-file" data-index="${index}" title="Remover ${escapeHtml(item.name)}" aria-label="Remover ${escapeHtml(item.name)}">�</button>
       </span>`;
   }).join("");
 
   preview.innerHTML = `
-    <button type="button" class="chat-preview-close" data-action="clear-chat-file" title="Remover anexo" aria-label="Remover anexo">×</button>
+    <button type="button" class="chat-preview-close" data-action="clear-chat-file" title="Remover anexo" aria-label="Remover anexo">�</button>
     <div class="chat-preview-title">${fileName}${selectedFiles.length > 1 ? ` + ${selectedFiles.length - 1} arquivo(s)` : ""}</div>
     <div class="chat-preview-body">${body}</div>
     <div class="chat-preview-strip" aria-label="Anexo selecionado">
@@ -3412,8 +3475,8 @@ function renderChatAttachmentPreview(files) {
 function resetAudioRecordButton() {
   const button = document.getElementById("record-audio-button");
   if (!button) return;
-  button.title = "Gravar áudio";
-  button.setAttribute("aria-label", "Gravar áudio");
+  button.title = "Gravar �udio";
+  button.setAttribute("aria-label", "Gravar �udio");
   button.classList.remove("is-recording");
   button.classList.remove("is-processing");
   stopChatAudioTimer();
@@ -3482,8 +3545,8 @@ async function toggleChatAudioRecording() {
 
   if (chatAudioRecorder?.state === "recording") {
     chatAudioRecorder.stop();
-    button.title = "Processando áudio";
-    button.setAttribute("aria-label", "Processando áudio");
+    button.title = "Processando �udio";
+    button.setAttribute("aria-label", "Processando �udio");
     button.classList.remove("is-recording");
     button.classList.add("is-processing");
     button.disabled = true;
@@ -3491,7 +3554,7 @@ async function toggleChatAudioRecording() {
   }
 
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-    showModal("Gravação indisponível", "Seu navegador não suporta gravação de áudio neste canal.", "error");
+    showModal("Grava��o indispon�vel", "Seu navegador n�o suporta grava��o de �udio neste canal.", "error");
     return;
   }
 
@@ -3513,21 +3576,21 @@ async function toggleChatAudioRecording() {
       stopChatAudioStream();
       resetAudioRecordButton();
       if (!blob.size) {
-        showModal("Áudio vazio", "A gravação não capturou áudio.", "error");
+        showModal("�udio vazio", "A grava��o n�o capturou �udio.", "error");
         return;
       }
       const file = new File([blob], `audio-chat-${Date.now()}.${extension}`, { type });
       const error = validateChatFile(file);
       if (error) {
-        showModal("Anexo inválido", error, "error");
+        showModal("Anexo inv�lido", error, "error");
         return;
       }
       setChatSelectedFile(file);
     });
     chatAudioRecorder.start();
     startChatAudioTimer();
-    button.title = "Parar gravação";
-    button.setAttribute("aria-label", "Parar gravação");
+    button.title = "Parar grava��o";
+    button.setAttribute("aria-label", "Parar grava��o");
     button.classList.add("is-recording");
     button.classList.remove("is-processing");
   } catch (error) {
@@ -3536,9 +3599,9 @@ async function toggleChatAudioRecording() {
     resetAudioRecordButton();
     const errorName = String(error?.name || "");
     const message = errorName === "NotAllowedError" || errorName === "SecurityError"
-      ? "Não foi possível acessar o microfone. Verifique se a permissão do navegador está liberada para este site."
-      : "Não foi possível iniciar a gravação de áudio. Verifique se há um microfone conectado e tente novamente.";
-    showModal("Microfone indisponível", message, "error");
+      ? "N�o foi poss�vel acessar o microfone. Verifique se a permiss�o do navegador est� liberada para este site."
+      : "N�o foi poss�vel iniciar a grava��o de �udio. Verifique se h� um microfone conectado e tente novamente.";
+    showModal("Microfone indispon�vel", message, "error");
   }
 }
 
@@ -3568,7 +3631,7 @@ function validateResumeFile(file) {
 function validateContractorDocumentFile(file) {
   if (!file || !file.name) return "Anexe pelo menos um documento.";
   if (file.size <= 0) return "Um dos arquivos enviados parece estar vazio.";
-  if (file.size > CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES) return "Cada documento deve ter no máximo 10 MB.";
+  if (file.size > CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES) return "Cada documento deve ter no m�ximo 10 MB.";
   return null;
 }
 
@@ -3987,11 +4050,11 @@ if (collection === "eventos") {
 }
 
 /**
- * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente.
- * Sem uma política de Row Level Security (RLS) no PostgreSQL, um usuário autenticado
+ * [ALERTA DE SEGURAN�A - IDOR] Esta fun��o recebe um 'id' diretamente do cliente.
+ * Sem uma pol�tica de Row Level Security (RLS) no PostgreSQL, um usu�rio autenticado
  * poderia, teoricamente, alterar este 'id' para modificar ou deletar um registro
- * que não lhe pertence.
- * SOLUÇÃO: Implemente políticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuário só possa operar nos registros que ele tem permissão (ex: que ele mesmo criou).
+ * que n�o lhe pertence.
+ * SOLU��O: Implemente pol�ticas de RLS na tabela correspondente no PostgreSQL para garantir que um usu�rio s� possa operar nos registros que ele tem permiss�o (ex: que ele mesmo criou).
  */
 async function updateItem(collection, id, values) {
   if (!id) return false;
@@ -4120,11 +4183,11 @@ if (collection === "eventos") {
 }
 
 /**
- * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente para exclusão.
- * Sem uma política de Row Level Security (RLS) no PostgreSQL, um usuário autenticado
+ * [ALERTA DE SEGURAN�A - IDOR] Esta fun��o recebe um 'id' diretamente do cliente para exclus�o.
+ * Sem uma pol�tica de Row Level Security (RLS) no PostgreSQL, um usu�rio autenticado
  * poderia, teoricamente, alterar este 'id' para deletar um registro
- * que não lhe pertence.
- * SOLUÇÃO: Implemente políticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuário só possa deletar os registros que ele tem permissão.
+ * que n�o lhe pertence.
+ * SOLU��O: Implemente pol�ticas de RLS na tabela correspondente no PostgreSQL para garantir que um usu�rio s� possa deletar os registros que ele tem permiss�o.
  */
 async function deleteItem(collection, id) {
   if (!id) return false;
@@ -4274,7 +4337,7 @@ async function saveTeamUser(values) {
     const saved = mapRows("usuarios", savedRows || [])[0] || { nome, email, cargo, createdAt: todayLabel() };
     upsertLocalUser({ ...saved, email: saved.email || email, cpf: saved.cpf || cpf, cargo: saved.cargo || cargo, syncStatus: "active" });
     setSyncStatus("PostgreSQL EIXO online", true);
-    showModal("Perfil salvo", "Crie ou atualize o usuário correspondente no PostgreSQL Auth para liberar o login.", "info");
+    showModal("Perfil salvo", "Crie ou atualize o usu�rio correspondente no PostgreSQL Auth para liberar o login.", "info");
     return true;
   } catch (error) {
     console.error("Erro ao salvar usuario no PostgreSQL:", error);
@@ -4416,6 +4479,259 @@ async function deleteTeamUser(id) {
   }
 }
 
+function createDefaultBoard(nome = "Quadro principal", createdBy = getCurrentUserName(), ownerName = nome) {
+  return {
+    id: `local-${generateUUID()}`,
+    nome,
+    ownerName,
+    listas: [
+      { id: generateUUID(), titulo: "A fazer", cartoes: [] },
+      { id: generateUUID(), titulo: "Em andamento", cartoes: [] },
+      { id: generateUUID(), titulo: "Concluido", cartoes: [] },
+    ],
+    createdBy,
+    createdAt: todayLabel(),
+  };
+}
+
+function ensureBoardsData() {
+  if (!Array.isArray(data.quadros)) data.quadros = [];
+  if (!data.quadros.length) data.quadros.push(createDefaultBoard("Quadro principal"));
+  data.quadros.forEach((board) => {
+    if (!Array.isArray(board.listas)) board.listas = [];
+    if (!board.listas.length) board.listas = createDefaultBoard(board.nome || "Quadro").listas;
+    board.listas.forEach((list) => {
+      if (!Array.isArray(list.cartoes)) list.cartoes = [];
+    });
+  });
+  if (!activeBoardId || !data.quadros.some((board) => String(board.id) === String(activeBoardId))) {
+    activeBoardId = getOrderedBoards()[0]?.id || data.quadros[0]?.id || "";
+  }
+}
+
+function getVisibleBoards() {
+  ensureBoardsDataRaw();
+  return data.quadros || [];
+}
+
+function ensureBoardsDataRaw() {
+  if (!Array.isArray(data.quadros)) data.quadros = [];
+  if (!data.quadros.length) data.quadros.push(createDefaultBoard("Quadro principal"));
+  data.quadros.forEach((board) => {
+    if (!Array.isArray(board.listas)) board.listas = [];
+    if (!board.listas.length) board.listas = createDefaultBoard(board.nome || "Quadro").listas;
+    board.listas.forEach((list) => {
+      if (!Array.isArray(list.cartoes)) list.cartoes = [];
+    });
+  });
+}
+
+function getOrderedBoards() {
+  ensureBoardsDataRaw();
+  const boards = [...(data.quadros || [])];
+  const order = Array.isArray(currentUserSettings.boardOrder) ? currentUserSettings.boardOrder.map(String) : [];
+  if (!order.length) {
+    return boards.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" }));
+  }
+  const orderIndex = new Map(order.map((id, index) => [id, index]));
+  return boards.sort((a, b) => {
+    const aIndex = orderIndex.has(String(a.id)) ? orderIndex.get(String(a.id)) : Number.MAX_SAFE_INTEGER;
+    const bIndex = orderIndex.has(String(b.id)) ? orderIndex.get(String(b.id)) : Number.MAX_SAFE_INTEGER;
+    if (aIndex !== bIndex) return aIndex - bIndex;
+    return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" });
+  });
+}
+
+function saveBoardOrderFromTabs() {
+  const ids = Array.from(document.querySelectorAll("#board-tabs [data-board-tab]")).map((tab) => String(tab.dataset.id || "")).filter(Boolean);
+  currentUserSettings = normalizeUserSettings({ ...currentUserSettings, boardOrder: ids });
+  saveUserSettings(currentUserSettings);
+}
+
+function getActiveBoard() {
+  ensureBoardsData();
+  return data.quadros.find((board) => String(board.id) === String(activeBoardId)) || getOrderedBoards()[0] || null;
+}
+
+function getPriorityClass(value = "") {
+  const priority = String(value || "").toLowerCase();
+  if (priority === "urgente") return "priority-urgent";
+  if (priority === "alta") return "priority-high";
+  return "priority-normal";
+}
+
+function getBoardCardCount(board) {
+  return (board?.listas || []).reduce((total, list) => total + (list.cartoes || []).length, 0);
+}
+
+function renderBoards() {
+  const tabs = document.getElementById("board-tabs");
+  const lanes = document.getElementById("boards-lanes");
+  if (!tabs || !lanes) return;
+  ensureBoardsData();
+  const boards = getOrderedBoards();
+  if (!boards.some((board) => String(board.id) === String(activeBoardId))) activeBoardId = boards[0]?.id || "";
+  const board = getActiveBoard();
+
+  tabs.innerHTML = boards.map((item) => `
+    <button class="board-tab ${String(item.id) === String(activeBoardId) ? "active" : ""}" type="button" draggable="true" data-action="select-board" data-id="${escapeHtml(item.id)}" data-board-tab="true">
+      <span>${escapeHtml(item.nome)}</span>
+      <small>${getBoardCardCount(item)} cartao(oes)</small>
+    </button>
+  `).join("");
+
+  if (!board) {
+    lanes.innerHTML = '<p class="empty-state">Nenhum quadro encontrado.</p>';
+    return;
+  }
+
+  lanes.innerHTML = (board.listas || []).map((list, listIndex) => `
+    <section class="board-lane" data-list-index="${listIndex}">
+      <div class="board-lane-header">
+        <h3>${escapeHtml(list.titulo)}</h3>
+        <span class="tag">${(list.cartoes || []).length}</span>
+      </div>
+      <div class="board-card-list">
+        ${(list.cartoes || []).map((card, cardIndex) => `
+          <article class="board-card ${getPriorityClass(card.prioridade)}" draggable="true" data-board-card="true" data-action="open-board-card-preview" data-list-index="${listIndex}" data-card-index="${cardIndex}">
+            <div class="item-topline">
+              <p class="item-title">${escapeHtml(card.titulo)}</p>
+              <span class="tag">${escapeHtml(card.prioridade || "Normal")}</span>
+            </div>
+            <p>${escapeHtml(card.descricao || "Sem descricao.")}</p>
+          </article>
+        `).join("") || '<p class="empty-state">Nenhum cartao nesta lista.</p>'}
+      </div>
+    </section>
+  `).join("");
+}
+
+async function persistBoard(board = getActiveBoard()) {
+  if (!board) return false;
+  saveLocalData();
+  if (!postgresClient) {
+    renderBoards();
+    return true;
+  }
+  try {
+    const payload = toDbPayload("quadros", { ...board, updatedBy: getCurrentUserName() });
+    const isLocal = String(board.id || "").startsWith("local-");
+    if (isLocal) delete payload.id;
+    const query = isLocal
+      ? postgresClient.from(TABLES.quadros).insert(payload)
+      : postgresClient.from(TABLES.quadros).update(payload).eq("id", board.id);
+    const { data: saved, error } = await query.select("*").single();
+    if (error) throw error;
+    const mapped = mapRows("quadros", [saved])[0];
+    const index = data.quadros.findIndex((item) => String(item.id) === String(board.id));
+    if (index >= 0) data.quadros[index] = mapped;
+    activeBoardId = mapped.id;
+    saveLocalData();
+    renderBoards();
+    setSyncStatus("PostgreSQL EIXO online", true);
+    return true;
+  } catch (error) {
+    console.error("Erro ao salvar quadro:", error);
+    setSyncStatus("Erro ao salvar quadro", false);
+    showModal("Erro ao Salvar", error?.message || "Nao foi possivel salvar o quadro.", "error");
+    renderBoards();
+    return false;
+  }
+}
+
+function resetBoardCardFormIfEditing(listIndex = null, cardIndex = null) {
+  const form = document.getElementById("board-card-form");
+  if (!form) return;
+  const editingList = form.elements.edit_list_index?.value;
+  const editingCard = form.elements.edit_card_index?.value;
+  const shouldReset = listIndex === null || (String(editingList) === String(listIndex) && String(editingCard) === String(cardIndex));
+  if (!shouldReset) return;
+  form.reset();
+  form.elements.edit_list_index.value = "";
+  form.elements.edit_card_index.value = "";
+  document.getElementById("cancelar-edicao-board-card")?.setAttribute("hidden", "");
+  form.querySelector("h3").textContent = "Novo cartao";
+}
+
+function openBoardCardPreview(listIndex, cardIndex) {
+  const card = getActiveBoard()?.listas?.[listIndex]?.cartoes?.[cardIndex];
+  if (!card) return;
+  showModal(card.titulo || "Cartao", card.descricao || "Sem descricao.", "info");
+}
+
+function openBoardContextMenu(event, type, payload = {}) {
+  document.getElementById("board-context-menu")?.remove();
+  const menu = document.createElement("div");
+  menu.id = "board-context-menu";
+  menu.className = "board-context-menu";
+  menu.style.left = `${event.clientX}px`;
+  menu.style.top = `${event.clientY}px`;
+  const actions = type === "board"
+    ? [["rename-board", "Renomear"], ["duplicate-board", "Duplicar"], ["delete-board", "Apagar", "danger"]]
+    : [["edit-card", "Editar"], ["duplicate-card", "Duplicar"], ["delete-card", "Excluir", "danger"]];
+  menu.innerHTML = actions.map(([action, label, danger]) => `<button type="button" class="${danger || ""}" data-board-menu-action="${action}">${label}</button>`).join("");
+  menu.addEventListener("click", (clickEvent) => handleBoardContextAction(clickEvent, type, payload));
+  document.body.appendChild(menu);
+}
+
+async function handleBoardContextAction(event, type, payload) {
+  const action = event.target.closest("[data-board-menu-action]")?.dataset.boardMenuAction;
+  if (!action) return;
+  document.getElementById("board-context-menu")?.remove();
+  const board = getActiveBoard();
+  if (!board) return;
+
+  if (type === "board") {
+    if (action === "rename-board") {
+      const name = prompt("Novo nome do quadro", board.nome || "");
+      if (name && name.trim()) {
+        board.nome = name.trim();
+        await persistBoard(board);
+      }
+    } else if (action === "duplicate-board") {
+      const duplicate = JSON.parse(JSON.stringify(board));
+      duplicate.id = `local-${generateUUID()}`;
+      duplicate.nome = `${board.nome || "Quadro"} copia`;
+      data.quadros.splice(data.quadros.findIndex((item) => String(item.id) === String(board.id)) + 1, 0, duplicate);
+      activeBoardId = duplicate.id;
+      await persistBoard(duplicate);
+    } else if (action === "delete-board") {
+      if (data.quadros.length <= 1) return showModal("Quadro obrigatorio", "E preciso manter pelo menos um quadro.", "error");
+      if (!confirm(`Apagar "${board.nome}"?`)) return;
+      const id = board.id;
+      data.quadros = data.quadros.filter((item) => String(item.id) !== String(id));
+      activeBoardId = getOrderedBoards()[0]?.id || "";
+      saveLocalData();
+      renderBoards();
+      if (postgresClient && !String(id).startsWith("local-")) await deleteItem("quadros", id);
+    }
+    return;
+  }
+
+  const list = board.listas?.[payload.listIndex];
+  const card = list?.cartoes?.[payload.cardIndex];
+  if (!list || !card) return;
+  if (action === "edit-card") {
+    const form = document.getElementById("board-card-form");
+    if (!form) return;
+    form.elements.edit_list_index.value = String(payload.listIndex);
+    form.elements.edit_card_index.value = String(payload.cardIndex);
+    form.elements.titulo.value = card.titulo || "";
+    form.elements.descricao.value = card.descricao || "";
+    form.elements.prioridade.value = card.prioridade || "Normal";
+    document.getElementById("cancelar-edicao-board-card")?.removeAttribute("hidden");
+    form.querySelector("h3").textContent = "Editar cartao";
+  } else if (action === "duplicate-card") {
+    list.cartoes.splice(payload.cardIndex + 1, 0, { ...card, id: generateUUID(), titulo: `${card.titulo || "Cartao"} copia`, createdAt: todayLabel(), createdBy: getCurrentUserName() });
+    resetBoardCardFormIfEditing(payload.listIndex, payload.cardIndex);
+    await persistBoard(board);
+  } else if (action === "delete-card") {
+    list.cartoes.splice(payload.cardIndex, 1);
+    resetBoardCardFormIfEditing(payload.listIndex, payload.cardIndex);
+    await persistBoard(board);
+  }
+}
+
 function renderCards(targetId, items, template) {
   const target = document.getElementById(targetId);
   if (!target) return;
@@ -4552,12 +4868,12 @@ function calculateVtValue(diasUteis, valorPassagem, saldoAtual) {
   return Math.max(0, (Number(diasUteis) || 0) * (Number(valorPassagem) || 0) - (Number(saldoAtual) || 0));
 }
 
-const VT_MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const VT_MONTH_NAMES = ["Janeiro", "Fevereiro", "Mar�o", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 function formatVtMonth(value) {
   if (VT_MONTH_NAMES.includes(String(value || ""))) return String(value);
   const match = String(value || "").match(/^(\d{4})-(\d{2})$/);
-  if (!match) return "Não informado";
+  if (!match) return "N�o informado";
   const date = new Date(Number(match[1]), Number(match[2]) - 1, 1);
   return new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(date);
 }
@@ -4571,7 +4887,7 @@ function updateVtCalculation() {
   const detail = document.getElementById("vt-calculo-detalhe");
   if (result) result.textContent = formatCurrencyBRL(total);
   if (detail) {
-    detail.textContent = `${diasUteis || 0} dias × ${formatCurrencyBRL(valorPassagem)} - ${formatCurrencyBRL(saldoAtual)} = ${formatCurrencyBRL(total)}`;
+    detail.textContent = `${diasUteis || 0} dias � ${formatCurrencyBRL(valorPassagem)} - ${formatCurrencyBRL(saldoAtual)} = ${formatCurrencyBRL(total)}`;
   }
 }
 
@@ -4613,7 +4929,7 @@ function getVtReportFilterLabel(useFilters = true) {
   const monthFilter = document.getElementById("vt-filter-mes")?.value || "";
   const unitFilter = document.getElementById("vt-filter-unidade")?.value || "";
   if (nameFilter) parts.push(`Nome: ${nameFilter}`);
-  if (monthFilter) parts.push(`Mês: ${monthFilter}`);
+  if (monthFilter) parts.push(`M�s: ${monthFilter}`);
   if (unitFilter) parts.push(`Unidade: ${unitFilter}`);
   return parts.length ? parts.join(" | ") : "Sem filtros ativos";
 }
@@ -4637,8 +4953,8 @@ function formatVtReportDateTime(value = new Date()) {
 function getVtReportRows(useFilters = true) {
   const registros = useFilters ? getFilteredVtRegistros() : (data.vtRegistros || []);
   return registros.map((item) => ({
-    colaborador: item.colaborador || "Colaborador não informado",
-    unidade: item.unidade || "Não informada",
+    colaborador: item.colaborador || "Colaborador n�o informado",
+    unidade: item.unidade || "N�o informada",
     mes: formatVtMonth(item.mes),
     diasUteis: Number(item.diasUteis) || 0,
     valorPassagem: Number(item.valorPassagem) || 0,
@@ -4658,13 +4974,13 @@ function showVtReportMenu() {
   overlay.className = "modal-overlay";
   overlay.innerHTML = `
     <div class="modal-card vt-report-modal">
-      <div class="modal-header info">Relatório de VT</div>
+      <div class="modal-header info">Relat�rio de VT</div>
       <div class="modal-body">
         <p>Escolha quais registros deseja exportar em .xlsx.</p>
         <div class="vt-report-options">
           <button class="report-chip" type="button" data-action="gerar-relatorio-vt" data-scope="filtered">
             <span>Registros filtrados</span>
-            <small>${escapeHtml(String(filteredCount))} registro(s) · ${escapeHtml(getVtReportFilterLabel(true))}</small>
+            <small>${escapeHtml(String(filteredCount))} registro(s) � ${escapeHtml(getVtReportFilterLabel(true))}</small>
           </button>
           <button class="report-chip" type="button" data-action="gerar-relatorio-vt" data-scope="all">
             <span>Todos os registros</span>
@@ -4711,9 +5027,9 @@ function worksheetRowXml(values, rowIndex, styleId = 0) {
 }
 
 function buildVtReportWorksheet(rows) {
-  const headers = ["Colaborador", "Unidade", "Mês", "Dias úteis", "Valor da passagem", "Saldo atual", "Valor necessário", "Registrado em"];
+  const headers = ["Colaborador", "Unidade", "M�s", "Dias �teis", "Valor da passagem", "Saldo atual", "Valor necess�rio", "Registrado em"];
   const sheetRows = [
-    worksheetRowXml(["Relatório de Vale Transporte"], 1, 2),
+    worksheetRowXml(["Relat�rio de Vale Transporte"], 1, 2),
     worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
     worksheetRowXml(headers, 5, 1),
     ...rows.map((item, index) => worksheetRowXml([
@@ -4898,7 +5214,7 @@ function gerarRelatorioVt(scope = "filtered") {
   const useFilters = scope !== "all";
   const rows = getVtReportRows(useFilters);
   if (!rows.length) {
-    showModal("Relatório vazio", "Não há registros de VT para gerar o relatório.", "error");
+    showModal("Relat�rio vazio", "N�o h� registros de VT para gerar o relat�rio.", "error");
     return;
   }
   const blob = createVtReportXlsxBlob(rows);
@@ -4922,12 +5238,12 @@ function renderVtRegistros() {
   renderCards("vt-registros-list", getFilteredVtRegistros(), (item) => `
     <article class="item-card">
       <div class="item-topline">
-        <p class="item-title">${escapeHtml(item.colaborador || "Colaborador não informado")}</p>
+        <p class="item-title">${escapeHtml(item.colaborador || "Colaborador n�o informado")}</p>
         <span class="tag">${escapeHtml(formatCurrencyBRL(item.valorNecessario))}</span>
       </div>
-      <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Não informada")}</p>
-      <p><strong>Mês:</strong> ${escapeHtml(formatVtMonth(item.mes))}</p>
-      <p><strong>Dias úteis:</strong> ${escapeHtml(String(item.diasUteis || 0))}</p>
+      <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "N�o informada")}</p>
+      <p><strong>M�s:</strong> ${escapeHtml(formatVtMonth(item.mes))}</p>
+      <p><strong>Dias �teis:</strong> ${escapeHtml(String(item.diasUteis || 0))}</p>
       <p><strong>Valor da passagem:</strong> ${escapeHtml(formatCurrencyBRL(item.valorPassagem))}</p>
       <p><strong>Saldo atual:</strong> ${escapeHtml(formatCurrencyBRL(item.saldoAtual))}</p>
       <p><strong>Valor registrado:</strong> ${escapeHtml(formatCurrencyBRL(item.valorNecessario))}</p>
@@ -5002,14 +5318,14 @@ function renderDocumentosContratados() {
   renderCards("documentos-contratados-list", filteredItems, (item) => `
     <article class="item-card">
       <div class="item-topline">
-        <p class="item-title">${escapeHtml(item.nome || "Contratado não informado")}</p>
-        <span class="tag">${escapeHtml(item.empresa || "Empresa não informada")}</span>
+        <p class="item-title">${escapeHtml(item.nome || "Contratado n�o informado")}</p>
+        <span class="tag">${escapeHtml(item.empresa || "Empresa n�o informada")}</span>
         ${item.pendingSync ? '<span class="tag alert">Pendente</span>' : ""}
       </div>
       <p><strong>CPF:</strong> ${escapeHtml(formatCpf(item.cpf || ""))}</p>
-      <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || "Não informado")}</p>
-      <p><strong>Origem:</strong> ${escapeHtml(getContractorSourceLabel(item.origemHtml, item.empresa) || "Não informada")}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Enviado por ${escapeHtml(item.nome || "Contratado não informado")}</p>
+      <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || "N�o informado")}</p>
+      <p><strong>Origem:</strong> ${escapeHtml(getContractorSourceLabel(item.origemHtml, item.empresa) || "N�o informada")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Enviado por ${escapeHtml(item.nome || "Contratado n�o informado")}</p>
       <div class="contractor-file-list">
         ${formatContractorDocumentList(item.documentos || [])}
       </div>
@@ -5026,17 +5342,17 @@ function resetVtForm() {
   form.reset();
   form.elements.id.value = "";
   document.getElementById("cancelar-edicao-vt")?.setAttribute("hidden", "");
-  form.querySelector('button[type="submit"]').textContent = "Registrar cálculo VT";
+  form.querySelector('button[type="submit"]').textContent = "Registrar c�lculo VT";
   updateVtCalculation();
 }
 
 /**
- * [ALERTA DE SEGURANÇA] Esta função controla a visibilidade dos elementos da UI
- * com base na role do usuário armazenada no sessionStorage. Um usuário mal-intencionado
+ * [ALERTA DE SEGURAN�A] Esta fun��o controla a visibilidade dos elementos da UI
+ * com base na role do usu�rio armazenada no sessionStorage. Um usu�rio mal-intencionado
  * pode facilmente alterar essa role no console do navegador para obter acesso visual
- * a seções restritas.
- * A segurança real da aplicação NÃO PODE depender desta função. Ela deve ser garantida
- * por políticas de Row Level Security (RLS) no PostgreSQL, que filtram os dados no servidor.
+ * a se��es restritas.
+ * A seguran�a real da aplica��o N�O PODE depender desta fun��o. Ela deve ser garantida
+ * por pol�ticas de Row Level Security (RLS) no PostgreSQL, que filtram os dados no servidor.
  */
 function applyRoleAccess() {
   if (!isAuthenticated() || isPublicPage() || !document.querySelector(".nav-list")) return;
@@ -5083,7 +5399,7 @@ function isSystemAuditAuthor(value) {
 }
 
 function getDashboardSystemUpdateMeta(item = {}) {
-  if (isSystemAuditAuthor(item.updatedBy)) return "Atualização do sistema";
+  if (isSystemAuditAuthor(item.updatedBy)) return "Atualiza��o do sistema";
   if (isSystemAuditAuthor(item.createdBy)) return "Registro do sistema";
   return "";
 }
@@ -5179,8 +5495,8 @@ function renderDashboard() {
     document.getElementById("metric-documentos").textContent = documentRecords.filter((item) => !isArchivedRecord(item)).length;
   }
 
-  // Mensagens do RH aparecem como um único bloco no acompanhamento.
-  // Quando ficam lidas, não mudam de cor; apenas perdem prioridade para itens novos.
+  // Mensagens do RH aparecem como um �nico bloco no acompanhamento.
+  // Quando ficam lidas, n�o mudam de cor; apenas perdem prioridade para itens novos.
   const accessibleRhMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
   const sortedRhMessagesNewestFirst = [...accessibleRhMessages]
     .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
@@ -5204,9 +5520,9 @@ function renderDashboard() {
         : `${messageIds.length} mensagem(ns) no acompanhamento`,
       details: sortedRhMessagesOldestFirst
         .slice(-20)
-        .map((msg) => `${msg.createdAt || "Sem data"} · ${msg.autor || "Equipe"}: ${msg.mensagem || "Nova notificação recebida."}`)
+        .map((msg) => `${msg.createdAt || "Sem data"} � ${msg.autor || "Equipe"}: ${msg.mensagem || "Nova notifica��o recebida."}`)
         .join("\n\n"),
-      detailsHeader: "Comunicação RH",
+      detailsHeader: "Comunica��o RH",
       tag: hasUnread ? "Nova" : "Lida",
       date: latestMessage.createdAt,
       dateTime: latestMessage.sortAt || latestMessage.createdAt,
@@ -5222,9 +5538,9 @@ function renderDashboard() {
       .map((item) => ({
         kind: "denuncia",
         notificationId: getDashboardNotificationId("denuncia", item),
-        title: "Denúncia anônima",
-        text: item.descricao || "Nova denúncia recebida.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "Não informado"}\n\n${item.descricao || "Sem descrição."}`,
+        title: "Den�ncia an�nima",
+        text: item.descricao || "Nova den�ncia recebida.",
+        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "N�o informado"}\n\n${item.descricao || "Sem descri��o."}`,
         tag: item.status,
         date: item.createdAt,
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5236,14 +5552,14 @@ function renderDashboard() {
       .map((item) => {
         const items = parseEpiItems(item.epis);
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` � Tam. ${epi.tamanho}` : ""} � Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "N�o informados";
         return {
           kind: "chamado",
           notificationId: getDashboardNotificationId("chamado", item),
-          title: `Chamado · ${item.unidade}`,
-          text: item.epis || "Itens não informados.",
-          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nSetor: ${item.setor || "Não informado"}\nItens solicitados:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "Não informada"}`,
+          title: `Chamado � ${item.unidade}`,
+          text: item.epis || "Itens n�o informados.",
+          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "N�o informado"}\nUnidade: ${item.unidade || "N�o informada"}\nSetor: ${item.setor || "N�o informado"}\nItens solicitados:\n${itemDetails}\nObserva��es: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "N�o informada"}`,
           tag: item.status,
           date: item.createdAt,
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5256,14 +5572,14 @@ function renderDashboard() {
       .map((item) => {
         const items = parseEpiItems(item.epis);
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` � Tam. ${epi.tamanho}` : ""} � Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "N�o informados";
         return {
           kind: "malote",
           notificationId: getDashboardNotificationId("malote", item),
-          title: `Malote · ${item.destino}`,
-          text: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
-          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
+          title: `Malote � ${item.destino}`,
+          text: item.codigoSolicitacao ? `Solicita��o ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
+          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}C�digo da Solicita��o: ${item.codigoSolicitacao || "N�o informado"}\nOrigem: ${item.origem || "N�o informada"}\nDestino: ${item.destino || "N�o informado"}\nItens do malote:\n${itemDetails}\nObserva��es: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "N�o informado"}\nData: ${item.createdAt || "N�o informada"}`,
           tag: item.status,
           date: item.createdAt,
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5276,9 +5592,9 @@ function renderDashboard() {
       .map((item) => ({
         kind: "vaga",
         notificationId: getDashboardNotificationId("vaga", item),
-        title: `Vaga · ${item.cargo}`,
+        title: `Vaga � ${item.cargo}`,
         text: item.descricao || "Vaga atualizada.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
+        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "N�o informado"}\n\n${item.descricao || "Sem descri��o."}\n\nRequisitos: ${item.requisitos || "N�o informados"}`,
         tag: item.status,
         date: item.createdAt,
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5290,9 +5606,9 @@ function renderDashboard() {
       .map((item) => ({
         kind: "documento",
         notificationId: getDashboardNotificationId("documento", item),
-        title: `Documento · ${documentLabels[item.type] || item.type}`,
+        title: `Documento � ${documentLabels[item.type] || item.type}`,
         text: item.summary || "Documento registrado.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${documentLabels[item.type] || item.type}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
+        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${documentLabels[item.type] || item.type}\nData: ${item.createdAt || "N�o informada"}\n\n${item.summary || "Documento registrado."}`,
         tag: "Registro",
         date: item.createdAt,
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
@@ -5303,9 +5619,9 @@ function renderDashboard() {
       .map((item) => ({
         kind: "atestado",
         notificationId: getDashboardNotificationId("atestado", item),
-        title: `Atestado · ${item.nome || "Colaborador"}`,
-        text: `${item.unidade || "Unidade não informada"} · ${item.arquivoNome || "Atestado anexado"}`,
-        details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${formatCpf(item.cpf || "") || "Não informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
+        title: `Atestado � ${item.nome || "Colaborador"}`,
+        text: `${item.unidade || "Unidade n�o informada"} � ${item.arquivoNome || "Atestado anexado"}`,
+        details: `Colaborador: ${item.nome || "N�o informado"}\nCPF: ${formatCpf(item.cpf || "") || "N�o informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "N�o informado"}\nUnidade: ${item.unidade || "N�o informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "N�o informado"}`,
         tag: "Atestado",
         date: item.createdAt,
         dateTime: item.sortAt || item.createdAt,
@@ -5323,7 +5639,7 @@ function renderDashboard() {
   const dashboardPageSize = 3;
   dashboardNotificationOffset = 0;
 
-  // Acompanhamento da tela principal deve exibir somente notificações não lidas.
+  // Acompanhamento da tela principal deve exibir somente notifica��es n�o lidas.
   // Quando todas estiverem lidas, a lista fica vazia.
   const unreadDashboardItems = sortedDashboardItems.filter((item) => !isDashboardActivityReadForOrdering(item));
   const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
@@ -5333,28 +5649,28 @@ function renderDashboard() {
   if (previousDashboardButton) previousDashboardButton.hidden = true;
   if (nextDashboardButton) {
     nextDashboardButton.hidden = true;
-    nextDashboardButton.textContent = "Ver próximas";
+    nextDashboardButton.textContent = "Ver pr�ximas";
   }
 
   const dashboardTarget = document.getElementById("dashboard-list");
   if (dashboardTarget) {
     if (!currentUserSettings.dashboardNotificationBadges) {
       visibleDashboardActivityItems = [];
-      dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configurações.</p>';
+      dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configura��es.</p>';
       if (previousDashboardButton) previousDashboardButton.hidden = true;
       if (nextDashboardButton) nextDashboardButton.hidden = true;
       renderDashboardCalendar(upcomingEvents);
       return;
     }
     if (visibleDashboardItems.length === 0) {
-      dashboardTarget.innerHTML = '<p class="empty-state">Nenhuma pendência para acompanhar no momento.</p>';
+      dashboardTarget.innerHTML = '<p class="empty-state">Nenhuma pend�ncia para acompanhar no momento.</p>';
     } else {
       dashboardTarget.innerHTML = visibleDashboardItems
         .map((item, index) => {
           const itemRead = isDashboardActivityReadForOrdering(item);
           const visualTag = itemRead && !item.systemUpdate ? "Lida" : item.tag;
           const visualBadgeClass = item.systemUpdate ? "tag" : badgeClass(item.tag || visualTag);
-          return `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}" data-read="${itemRead ? "true" : "false"}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${visualBadgeClass}">${escapeHtml(item.systemUpdate ? "Sistema" : visualTag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "…" : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`;
+          return `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}" data-read="${itemRead ? "true" : "false"}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${visualBadgeClass}">${escapeHtml(item.systemUpdate ? "Sistema" : visualTag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "�" : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`;
         })
         .join("");
     }
@@ -5486,19 +5802,19 @@ function renderCalendar() {
   `);
 }
 
-// Lógica de abertura de denúncia para leitura e transição de estado automática
+// L�gica de abertura de den�ncia para leitura e transi��o de estado autom�tica
 async function lerDenuncia(id) {
   const denuncia = data.denuncias.find(item => String(item.id) === String(id));
   if (!denuncia) return;
 
   // Mostra o relato em formato de modal customizado
   showModal(
-    "Visualização da Denúncia",
+    "Visualiza��o da Den�ncia",
     `Categoria: ${denuncia.categoria}\nRecebida em: ${denuncia.createdAt}\nStatus Atual: ${denuncia.status}\n\nRelato:\n"${denuncia.descricao}"`,
     "info"
   );
 
-  // Se a denúncia ainda constar como Não lida ("Aberta"), movemos para "Lida"
+  // Se a den�ncia ainda constar como N�o lida ("Aberta"), movemos para "Lida"
   if (denuncia.status === "Aberta") {
     if (!postgresClient) {
       denuncia.status = "Lida";
@@ -5519,8 +5835,8 @@ async function lerDenuncia(id) {
         saveLocalData();
         renderAll();
       } catch (err) {
-        console.error("Erro ao atualizar status da denúncia no PostgreSQL:", err);
-        showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada. Você precisa rodar o script SQL de UPDATE no painel do PostgreSQL para consertar as permissões.", "error");
+        console.error("Erro ao atualizar status da den�ncia no PostgreSQL:", err);
+        showModal("Aviso de Permiss�o", "A den�ncia n�o p�de ser atualizada. Voc� precisa rodar o script SQL de UPDATE no painel do PostgreSQL para consertar as permiss�es.", "error");
       }
     }
   }
@@ -5551,8 +5867,8 @@ async function atualizarStatusDenuncia(id, status) {
     renderRealtimeUpdate("denuncias");
     return true;
   } catch (err) {
-    console.error("Erro ao atualizar status da denúncia no PostgreSQL:", err);
-    showModal("Aviso de Permissão", "A denúncia não pôde ser atualizada. Rode o postgres-schema.sql atualizado para liberar UPDATE em hub_denuncias.", "error");
+    console.error("Erro ao atualizar status da den�ncia no PostgreSQL:", err);
+    showModal("Aviso de Permiss�o", "A den�ncia n�o p�de ser atualizada. Rode o postgres-schema.sql atualizado para liberar UPDATE em hub_denuncias.", "error");
     return false;
   }
 }
@@ -5730,6 +6046,7 @@ function migrateUserSettingsToCurrentKey(settings) {
 function normalizeUserSettings(settings = {}) {
   const normalized = { ...USER_SETTINGS_DEFAULTS, ...settings };
   if (!["normal", "small", "large"].includes(normalized.messageSize)) normalized.messageSize = "normal";
+  if (!Array.isArray(normalized.boardOrder)) normalized.boardOrder = [];
   Object.keys(USER_SETTINGS_DEFAULTS).forEach((key) => {
     if (typeof USER_SETTINGS_DEFAULTS[key] === "boolean") normalized[key] = Boolean(normalized[key]);
   });
@@ -5777,6 +6094,8 @@ function syncUserSettingsControls() {
 
 function applyUserSettings() {
   currentUserSettings = normalizeUserSettings(currentUserSettings);
+  const isIndexPage = Boolean(document.getElementById("app-shell"));
+  document.documentElement.setAttribute("data-theme", isIndexPage && currentUserSettings.darkMode ? "dark" : "light");
   document.body?.classList.toggle("user-setting-compact", currentUserSettings.compactMode);
   document.body?.classList.toggle("user-setting-message-small", currentUserSettings.messageSize === "small");
   document.body?.classList.toggle("user-setting-message-large", currentUserSettings.messageSize === "large");
@@ -5795,7 +6114,7 @@ function applyUserSettings() {
   const nextDashboardButton = document.getElementById("dashboard-notifications-next");
   if (!currentUserSettings.dashboardNotificationBadges) {
     visibleDashboardActivityItems = [];
-    if (dashboardTarget) dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configurações.</p>';
+    if (dashboardTarget) dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configura��es.</p>';
     if (previousDashboardButton) previousDashboardButton.hidden = true;
     if (nextDashboardButton) nextDashboardButton.hidden = true;
   }
@@ -5835,14 +6154,14 @@ async function registerHubNotificationServiceWorker() {
     });
     return hubNotificationServiceWorkerRegistration;
   } catch (error) {
-    console.warn("Service Worker de notificações não pôde ser registrado:", error);
+    console.warn("Service Worker de notifica��es n�o p�de ser registrado:", error);
     return null;
   }
 }
 
 async function requestDesktopNotificationPermission({ showSuccess = true } = {}) {
   if (!isBrowserNotificationSupported()) {
-    showModal("Notificações indisponíveis", "Este navegador não suporta notificações do sistema.", "error");
+    showModal("Notifica��es indispon�veis", "Este navegador n�o suporta notifica��es do sistema.", "error");
     currentUserSettings.desktopNotifications = false;
     saveUserSettings(currentUserSettings);
     syncUserSettingsControls();
@@ -5865,17 +6184,17 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
     if (permission === "granted") {
       removeDesktopNotificationPermissionPrompt();
       if (showSuccess) {
-        await showBrowserDesktopNotification("Notificações ativadas", "Agora o HUB pode avisar mesmo quando você estiver em outra aba.", {
+        await showBrowserDesktopNotification("Notifica��es ativadas", "Agora o HUB pode avisar mesmo quando voc� estiver em outra aba.", {
           type: "geral",
-          icon: "🔔",
+          icon: "??",
           tag: "hub-rh-notificacoes-ativadas",
           requireInteraction: true,
         });
-        showUserNotificationPopout("Notificações ativadas", "Avisos externos do HUB foram liberados neste navegador.", {
+        showUserNotificationPopout("Notifica��es ativadas", "Avisos externos do HUB foram liberados neste navegador.", {
           type: "geral",
-          icon: "🔔",
+          icon: "??",
           duration: 7000,
-          hint: "Você também receberá o aviso nativo do navegador",
+          hint: "Voc� tamb�m receber� o aviso nativo do navegador",
         });
       }
       return "granted";
@@ -5887,7 +6206,7 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
     showDesktopNotificationPermissionPrompt(true);
     return permission;
   } catch (error) {
-    console.warn("Permissão de notificações não pôde ser solicitada:", error);
+    console.warn("Permiss�o de notifica��es n�o p�de ser solicitada:", error);
     showDesktopNotificationPermissionPrompt(true);
     return "error";
   }
@@ -5914,14 +6233,14 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
     prompt.className = "hub-notification-permission-prompt";
     prompt.setAttribute("role", "status");
     prompt.innerHTML = `
-      <div class="hub-notification-permission-icon">🔔</div>
+      <div class="hub-notification-permission-icon">??</div>
       <div class="hub-notification-permission-text">
-        <strong>Ative as notificações do HUB</strong>
+        <strong>Ative as notifica��es do HUB</strong>
         <p data-permission-message></p>
       </div>
       <button class="secondary-button" type="button" data-permission-dismiss>Depois</button>
       <button class="secondary-button" type="button" data-permission-test>Testar aviso</button>
-      <button class="primary-button" type="button" data-permission-enable>Permitir notificações</button>
+      <button class="primary-button" type="button" data-permission-enable>Permitir notifica��es</button>
     `;
     document.body.appendChild(prompt);
     prompt.querySelector("[data-permission-enable]")?.addEventListener("click", () => requestDesktopNotificationPermission());
@@ -5931,28 +6250,28 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
         : await requestDesktopNotificationPermission({ showSuccess: false });
 
       if (permission !== "granted") {
-        showUserNotificationPopout("Permissão pendente", "O navegador ainda não liberou as notificações externas do HUB.", {
+        showUserNotificationPopout("Permiss�o pendente", "O navegador ainda n�o liberou as notifica��es externas do HUB.", {
           type: "geral",
-          icon: "⚠️",
+          icon: "??",
           duration: 9000,
-          hint: "Libere no cadeado do navegador: Notificações > Permitir",
+          hint: "Libere no cadeado do navegador: Notifica��es > Permitir",
         });
         return;
       }
 
-      const shown = await showBrowserDesktopNotification("Teste de notificação HUB", "Este é o aviso visual que aparecerá fora da aba do HUB.", {
+      const shown = await showBrowserDesktopNotification("Teste de notifica��o HUB", "Este � o aviso visual que aparecer� fora da aba do HUB.", {
         type: "geral",
-        icon: "🔔",
+        icon: "??",
         tag: `hub-rh-teste-${Date.now()}`,
         requireInteraction: true,
       });
       showUserNotificationPopout(shown ? "Teste enviado" : "Teste bloqueado", shown
-        ? "A notificação nativa do navegador foi disparada. Verifique o canto da tela ou a central de notificações."
-        : "O navegador bloqueou o aviso externo. Confira as permissões do site.", {
+        ? "A notifica��o nativa do navegador foi disparada. Verifique o canto da tela ou a central de notifica��es."
+        : "O navegador bloqueou o aviso externo. Confira as permiss�es do site.", {
         type: "geral",
-        icon: shown ? "🔔" : "⚠️",
+        icon: shown ? "??" : "??",
         duration: 10000,
-        hint: shown ? "Se estiver em outra aba, o aviso aparecerá fora do HUB" : "Cadeado do navegador > Notificações > Permitir",
+        hint: shown ? "Se estiver em outra aba, o aviso aparecer� fora do HUB" : "Cadeado do navegador > Notifica��es > Permitir",
       });
     });
     prompt.querySelector("[data-permission-dismiss]")?.addEventListener("click", () => prompt.remove());
@@ -5961,7 +6280,7 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
   const message = prompt.querySelector("[data-permission-message]");
   if (message) {
     message.textContent = isBlocked || Notification.permission === "denied"
-      ? "O navegador bloqueou a permissão. Libere notificações do site nas configurações do navegador para receber avisos fora do HUB."
+      ? "O navegador bloqueou a permiss�o. Libere notifica��es do site nas configura��es do navegador para receber avisos fora do HUB."
       : "Clique em Permitir para receber popout do navegador mesmo quando estiver em outra aba, como ChatGPT, e com som mais forte.";
   }
 }
@@ -6058,16 +6377,16 @@ function showUserNotificationPopout(title, message, options = {}) {
 
     const icon = document.createElement("div");
     icon.className = "hub-notification-popout-icon";
-    icon.textContent = options.icon || "🔔";
+    icon.textContent = options.icon || "??";
 
     const content = document.createElement("div");
     content.className = "hub-notification-popout-content";
 
     const heading = document.createElement("strong");
-    heading.textContent = title || "Nova notificação";
+    heading.textContent = title || "Nova notifica��o";
 
     const body = document.createElement("p");
-    body.textContent = message || "Você possui uma nova atualização no HUB.";
+    body.textContent = message || "Voc� possui uma nova atualiza��o no HUB.";
 
     const hint = document.createElement("span");
     hint.textContent = options.hint || "Clique para abrir o acompanhamento";
@@ -6077,8 +6396,8 @@ function showUserNotificationPopout(title, message, options = {}) {
     const closeButton = document.createElement("button");
     closeButton.type = "button";
     closeButton.className = "hub-notification-popout-close";
-    closeButton.setAttribute("aria-label", "Fechar notificação");
-    closeButton.textContent = "×";
+    closeButton.setAttribute("aria-label", "Fechar notifica��o");
+    closeButton.textContent = "�";
 
     popout.append(icon, content, closeButton);
     container.prepend(popout);
@@ -6109,7 +6428,7 @@ function showUserNotificationPopout(title, message, options = {}) {
     const popouts = [...container.querySelectorAll(".hub-notification-popout")];
     popouts.slice(4).forEach(removeUserNotificationPopout);
   } catch (error) {
-    console.warn("Não foi possível exibir o popout de notificação:", error);
+    console.warn("N�o foi poss�vel exibir o popout de notifica��o:", error);
   }
 }
 
@@ -6142,7 +6461,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
   if (messageIds.length) targetUrl.searchParams.set("markMessages", messageIds.join(","));
 
   const notificationOptions = {
-    body: body || "Você tem uma nova notificação no HUB.",
+    body: body || "Voc� tem uma nova notifica��o no HUB.",
     icon: "assets/logo.svg",
     badge: "assets/logo.svg",
     tag: options.tag || `hub-rh-notificacao-${Date.now()}`,
@@ -6172,7 +6491,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
         return true;
       }
     } catch (swError) {
-      console.warn("Notificação via Service Worker bloqueada:", swError);
+      console.warn("Notifica��o via Service Worker bloqueada:", swError);
     }
     return false;
   };
@@ -6188,7 +6507,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
       };
       return true;
     } catch (directError) {
-      console.warn("Notificação direta do navegador bloqueada:", directError);
+      console.warn("Notifica��o direta do navegador bloqueada:", directError);
       return false;
     }
   };
@@ -6207,7 +6526,7 @@ async function showBrowserDesktopNotification(title, body, options = {}) {
 let hubOriginalDocumentTitle = document.title;
 let hubNotificationTitleTimer = null;
 
-function flashHubDocumentTitle(title = "Nova notificação") {
+function flashHubDocumentTitle(title = "Nova notifica��o") {
   try {
     hubOriginalDocumentTitle = hubOriginalDocumentTitle || document.title;
     if (hubNotificationTitleTimer) window.clearInterval(hubNotificationTitleTimer);
@@ -6216,7 +6535,7 @@ function flashHubDocumentTitle(title = "Nova notificação") {
     hubNotificationTitleTimer = window.setInterval(() => {
       ticks += 1;
       visible = !visible;
-      document.title = visible ? `🔔 ${title}` : hubOriginalDocumentTitle;
+      document.title = visible ? `?? ${title}` : hubOriginalDocumentTitle;
       if (ticks >= 20 || document.visibilityState === "visible") {
         window.clearInterval(hubNotificationTitleTimer);
         hubNotificationTitleTimer = null;
@@ -6241,7 +6560,7 @@ function showHubCrossPageNotification(title, message, options = {}) {
   if (!options.skipSound) playUserNotificationSound();
   updateHubAppBadge(1);
   if (document.visibilityState === "hidden" || !document.hasFocus?.()) {
-    flashHubDocumentTitle(title || "Nova notificação");
+    flashHubDocumentTitle(title || "Nova notifica��o");
   }
 
   const openAndMark = () => {
@@ -6269,12 +6588,12 @@ function showHubCrossPageNotification(title, message, options = {}) {
 
 function getRealtimeNotificationText(collection, item = {}) {
   if (collection === "comunicados") {
-    const author = item.autor || "Comunicação RH";
+    const author = item.autor || "Comunica��o RH";
     const text = item.mensagem || "Nova mensagem recebida.";
     return {
-      title: `Comunicação RH · ${author}`,
+      title: `Comunica��o RH � ${author}`,
       message: text.length > 110 ? `${text.slice(0, 107)}...` : text,
-      icon: "💬",
+      icon: "??",
       type: "mensagem",
       tag: `hub-rh-comunicacao-${item.id || Date.now()}`,
     };
@@ -6282,9 +6601,9 @@ function getRealtimeNotificationText(collection, item = {}) {
 
   if (collection === "denuncias") {
     return {
-      title: "Nova denúncia recebida",
-      message: item.descricao || "Uma nova denúncia foi registrada no HUB.",
-      icon: "🚨",
+      title: "Nova den�ncia recebida",
+      message: item.descricao || "Uma nova den�ncia foi registrada no HUB.",
+      icon: "??",
       type: "denuncia",
       tag: `hub-rh-denuncia-${item.id || Date.now()}`,
     };
@@ -6293,8 +6612,8 @@ function getRealtimeNotificationText(collection, item = {}) {
   if (collection === "chamados") {
     return {
       title: "Novo chamado de EPI",
-      message: [item.solicitante, item.unidade, item.status].filter(Boolean).join(" · ") || "Um novo chamado foi registrado.",
-      icon: "🎫",
+      message: [item.solicitante, item.unidade, item.status].filter(Boolean).join(" � ") || "Um novo chamado foi registrado.",
+      icon: "??",
       type: "chamado",
       tag: `hub-rh-chamado-${item.id || Date.now()}`,
     };
@@ -6302,9 +6621,9 @@ function getRealtimeNotificationText(collection, item = {}) {
 
   if (collection === "malotes") {
     return {
-      title: "Atualização de malote",
-      message: [item.codigoSolicitacao, item.destino, item.status].filter(Boolean).join(" · ") || "Um malote foi atualizado.",
-      icon: "📦",
+      title: "Atualiza��o de malote",
+      message: [item.codigoSolicitacao, item.destino, item.status].filter(Boolean).join(" � ") || "Um malote foi atualizado.",
+      icon: "??",
       type: "malote",
       tag: `hub-rh-malote-${item.id || Date.now()}`,
     };
@@ -6312,9 +6631,9 @@ function getRealtimeNotificationText(collection, item = {}) {
 
   if (collection === "vagas") {
     return {
-      title: "Atualização de vaga",
-      message: [item.cargo, item.unidade, item.status].filter(Boolean).join(" · ") || "Uma vaga foi atualizada.",
-      icon: "💼",
+      title: "Atualiza��o de vaga",
+      message: [item.cargo, item.unidade, item.status].filter(Boolean).join(" � ") || "Uma vaga foi atualizada.",
+      icon: "??",
       type: "vaga",
       tag: `hub-rh-vaga-${item.id || Date.now()}`,
     };
@@ -6338,8 +6657,8 @@ function getRealtimeNotificationText(collection, item = {}) {
   if (collection === "documentosContratados") {
     return {
       title: "Documentos recebidos",
-      message: [item.nome, item.empresa].filter(Boolean).join(" · ") || "Novos documentos foram enviados.",
-      icon: "📄",
+      message: [item.nome, item.empresa].filter(Boolean).join(" � ") || "Novos documentos foram enviados.",
+      icon: "??",
       type: "documento",
       tag: `hub-rh-documento-${item.id || Date.now()}`,
     };
@@ -6419,7 +6738,7 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
   const notification = getRealtimeNotificationText(collection, item);
   if (!notification) return;
 
-  const actionLabel = action === "UPDATE" ? "Atualização" : "Nova notificação";
+  const actionLabel = action === "UPDATE" ? "Atualiza��o" : "Nova notifica��o";
   showHubCrossPageNotification(notification.title, notification.message || actionLabel, {
     type: notification.type,
     icon: notification.icon,
@@ -6451,12 +6770,12 @@ function notifyUnreadRhMessages(count) {
   }
 
   const newMessageCount = count - lastUnreadNotificationCount;
-  const messageText = `${newMessageCount} nova(s) mensagem(ns) não lida(s).`;
+  const messageText = `${newMessageCount} nova(s) mensagem(ns) n�o lida(s).`;
 
   const unreadIds = getUnreadRhMessages().map((item) => item.id).filter(Boolean);
   playUserNotificationSound();
   if (currentUserSettings.desktopNotifications && isBrowserNotificationSupported() && Notification.permission === "granted") {
-    const notification = new Notification("Comunicação RH", {
+    const notification = new Notification("Comunica��o RH", {
       body: messageText,
       icon: "assets/logo.svg",
       badge: "assets/logo.svg",
@@ -6471,9 +6790,9 @@ function notifyUnreadRhMessages(count) {
     };
   }
 
-  showHubCrossPageNotification("Comunicação RH", messageText, {
+  showHubCrossPageNotification("Comunica��o RH", messageText, {
     type: "mensagem",
-    icon: "💬",
+    icon: "??",
     tag: "hub-rh-comunicacao",
     requireInteraction: true,
     notificationId: `mensagem-rh-${unreadIds[0] || Date.now()}`,
@@ -6783,7 +7102,7 @@ function renderChamadosSection() {
       </div>
       <p><strong>Solicitante:</strong> ${escapeHtml(item.solicitante)}</p>
       ${item.setor ? `<p><strong>Setor:</strong> ${escapeHtml(item.setor)}</p>` : ""}
-      <p><strong>Código da Solicitação:</strong> ${escapeHtml(item.codigoSolicitacao || item.id || "Nao informado")}</p>
+      <p><strong>C�digo da Solicita��o:</strong> ${escapeHtml(item.codigoSolicitacao || item.id || "Nao informado")}</p>
       <p><strong>EPIs:</strong> ${escapeHtml(item.epis)}</p>
       ${item.observacoes ? `<p><strong>Observacoes:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
       <p class="item-meta">${escapeHtml(item.createdAt)}</p>
@@ -6820,10 +7139,10 @@ function renderDenunciasSection() {
 
   if (selectDenunciasButton) {
     selectDenunciasButton.disabled = !naoLidas.length && !lidas.length;
-    selectDenunciasButton.textContent = denunciasSelectionMode ? "Arquivar selecionadas" : "Selecionar denúncias";
+    selectDenunciasButton.textContent = denunciasSelectionMode ? "Arquivar selecionadas" : "Selecionar den�ncias";
     selectDenunciasButton.className = denunciasSelectionMode ? "danger-button" : "secondary-link";
   }
-  if (primaryDenunciasTitle) primaryDenunciasTitle.textContent = showArchivedDenuncias ? "Arquivadas" : "Não Lidas";
+  if (primaryDenunciasTitle) primaryDenunciasTitle.textContent = showArchivedDenuncias ? "Arquivadas" : "N�o Lidas";
   if (toggleArchivedDenunciasButton) {
     toggleArchivedDenunciasButton.textContent = showArchivedDenuncias ? "Ocultar arquivadas" : "Mostrar arquivadas";
     toggleArchivedDenunciasButton.disabled = false;
@@ -6842,7 +7161,7 @@ function renderDenunciasSection() {
              data-id="${escapeHtml(item.id)}">
       <div class="item-topline">
         <p class="item-title">
-          ${!archived && denunciasSelectionMode ? `<input class="denuncia-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar denúncia de ${escapeHtml(item.createdAt)}" data-action="no-op" />` : ""}
+          ${!archived && denunciasSelectionMode ? `<input class="denuncia-select" type="checkbox" value="${escapeHtml(item.id)}" aria-label="Selecionar den�ncia de ${escapeHtml(item.createdAt)}" data-action="no-op" />` : ""}
           Denuncia anonima
         </p>
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
@@ -6889,13 +7208,14 @@ function renderAll() {
   renderDocumentosContratados();
 
   renderChamadosSection();
+  renderBoards();
 
   updateVagasFilterClearButton();
   const vagasFilters = getVagasFilterValues();
   renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
     const candidaturas = getVagaCandidaturas(item.id, vagasFilters);
     const totalCandidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id) === String(item.id)).length;
-    let candidaturasHtml = `<p class="empty-candidates">Nenhum currículo recebido.</p>`;
+    let candidaturasHtml = `<p class="empty-candidates">Nenhum curr�culo recebido.</p>`;
     if (totalCandidaturas > 0 && !candidaturas.length) {
       candidaturasHtml = `<p class="empty-candidates">Nenhum candidato encontrado para o filtro aplicado.</p>`;
     }
@@ -6908,7 +7228,7 @@ function renderAll() {
             <span class="meta-line">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
             <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
           </p>
-          <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver Currículo</button>
+          <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver Curr�culo</button>
         </div>
       `).join("");
     }
@@ -6924,7 +7244,7 @@ function renderAll() {
           <button class="secondary-link" type="button" data-action="editar-vaga" data-id="${escapeHtml(item.id)}">Editar</button>
           <button class="danger-button" type="button" data-action="excluir-vaga" data-id="${escapeHtml(item.id)}">Deletar</button>
         </div>
-        <div class="candidate-list"><p class="candidate-list-title">Currículos Recebidos (${candidaturas.length}${candidaturas.length !== totalCandidaturas ? ` de ${totalCandidaturas}` : ""})</p>${candidaturasHtml}</div>
+        <div class="candidate-list"><p class="candidate-list-title">Curr�culos Recebidos (${candidaturas.length}${candidaturas.length !== totalCandidaturas ? ` de ${totalCandidaturas}` : ""})</p>${candidaturasHtml}</div>
       </article>
     `;
   });
@@ -6968,7 +7288,7 @@ function renderNotificationChatThread(messages = [], options = {}) {
   });
 
   if (!normalizedMessages.length) {
-    return `<p class="empty-state">Nenhuma mensagem disponível para exibição.</p>`;
+    return `<p class="empty-state">Nenhuma mensagem dispon�vel para exibi��o.</p>`;
   }
 
   const currentUser = typeof getCurrentUserName === "function" ? getCurrentUserName() : "";
@@ -7016,7 +7336,7 @@ function openDashboardActivity(index) {
   const hasChatMessages = Array.isArray(item.chatMessages) && item.chatMessages.length;
 
   // Mensagens abertas pelo acompanhamento principal devem usar exatamente
-  // o mesmo modal/detalhe do painel completo de notificações.
+  // o mesmo modal/detalhe do painel completo de notifica��es.
   if (hasChatMessages && window.notificationTracker && typeof window.notificationTracker.openModal === "function") {
     const tracker = window.notificationTracker;
     tracker.openModal();
@@ -7040,8 +7360,8 @@ function openDashboardActivity(index) {
       unread: Boolean(item.unread),
       status: item.unread ? "unread" : "pending",
       view: "comunicacao",
-      icon: "💬",
-      badgeText: item.unread ? "Não lido" : "",
+      icon: "??",
+      badgeText: item.unread ? "N�o lido" : "",
       messageIds: Array.isArray(item.messageIds) ? item.messageIds.map(String) : [],
       chatMessages: item.chatMessages,
     };
@@ -7069,7 +7389,7 @@ function openDashboardActivity(index) {
       <div class="tracker-notification-detail mensagem dashboard-message-detail-fallback">
         <div class="tracker-detail-card">
           <div class="tracker-detail-topline">
-            <div class="tracker-detail-icon">💬</div>
+            <div class="tracker-detail-icon">??</div>
             <div>
               <span class="tracker-notification-type">Mensagem RH</span>
               <h3>${escapeHtml(item.title || "Mensagens do RH")}</h3>
@@ -7080,7 +7400,7 @@ function openDashboardActivity(index) {
         </div>
       </div>`;
   } else {
-    const details = String(item.details || item.text || "Sem detalhes disponíveis.")
+    const details = String(item.details || item.text || "Sem detalhes dispon�veis.")
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
@@ -7089,7 +7409,7 @@ function openDashboardActivity(index) {
       const detail = details[detailIndex];
       if (/^Itens (do malote|solicitados):$/i.test(detail)) {
         const itemLines = [];
-        while (details[detailIndex + 1] && !/^(Observações|Status|Data):/i.test(details[detailIndex + 1])) {
+        while (details[detailIndex + 1] && !/^(Observa��es|Status|Data):/i.test(details[detailIndex + 1])) {
           detailIndex += 1;
           itemLines.push(details[detailIndex]);
         }
@@ -7217,7 +7537,7 @@ function renderChat() {
   const pollMenuOption = document.querySelector('[data-attach-type="poll"]');
   if (!activeChannel) {
     clearChatMessageFilter();
-    if (title) title.textContent = "Comunicação interna";
+    if (title) title.textContent = "Comunica��o interna";
     if (subtitle) subtitle.textContent = "Selecione um canal para abrir a conversa";
     if (messageInput) {
       messageInput.placeholder = "Escolha um chat ao lado para enviar mensagens";
@@ -7239,7 +7559,7 @@ function renderChat() {
     }
     closeChatAttachMenu();
     closeChatEmojiMenu();
-    target.innerHTML = '<p class="empty-state">Selecione um canal de comunicação para visualizar as mensagens.</p>';
+    target.innerHTML = '<p class="empty-state">Selecione um canal de comunica��o para visualizar as mensagens.</p>';
     return;
   }
 
@@ -7370,10 +7690,10 @@ function createChatPollOptionField(index, required = false) {
   const canRemove = index > 2;
   return `
     <div class="chat-poll-option-editor" data-chat-poll-option>
-      <label>Opção ${index}
-        <input name="opcao" type="text" maxlength="80" placeholder="${required ? (index === 1 ? "Primeira opção" : "Segunda opção") : "Opcional"}" ${required ? "required" : ""} />
+      <label>Op��o ${index}
+        <input name="opcao" type="text" maxlength="80" placeholder="${required ? (index === 1 ? "Primeira op��o" : "Segunda op��o") : "Opcional"}" ${required ? "required" : ""} />
       </label>
-      ${canRemove ? `<button class="secondary-link chat-poll-remove-option" type="button" data-action="remove-chat-poll-option" aria-label="Excluir opção ${index}">Excluir</button>` : ""}
+      ${canRemove ? `<button class="secondary-link chat-poll-remove-option" type="button" data-action="remove-chat-poll-option" aria-label="Excluir op��o ${index}">Excluir</button>` : ""}
     </div>
   `;
 }
@@ -7386,16 +7706,16 @@ function refreshChatPollOptionFields(formElement) {
     const label = field.querySelector("label");
     const input = field.querySelector('input[name="opcao"]');
     const removeButton = field.querySelector('[data-action="remove-chat-poll-option"]');
-    if (label) label.firstChild.textContent = `Opção ${optionNumber}`;
+    if (label) label.firstChild.textContent = `Op��o ${optionNumber}`;
     if (input) {
       input.required = optionNumber <= 2;
-      if (optionNumber === 1) input.placeholder = "Primeira opção";
-      else if (optionNumber === 2) input.placeholder = "Segunda opção";
+      if (optionNumber === 1) input.placeholder = "Primeira op��o";
+      else if (optionNumber === 2) input.placeholder = "Segunda op��o";
       else input.placeholder = "Opcional";
     }
     if (removeButton) {
       removeButton.hidden = optionNumber <= 2;
-      removeButton.setAttribute("aria-label", `Excluir opção ${optionNumber}`);
+      removeButton.setAttribute("aria-label", `Excluir op��o ${optionNumber}`);
     }
   });
 }
@@ -7405,7 +7725,7 @@ function addChatPollOptionField(formElement) {
   if (!list) return;
   const currentTotal = list.querySelectorAll('input[name="opcao"]').length;
   if (currentTotal >= 8) {
-    showModal("Limite de opções", "A enquete pode ter no máximo 8 opções.", "info");
+    showModal("Limite de op��es", "A enquete pode ter no m�ximo 8 op��es.", "info");
     return;
   }
   list.insertAdjacentHTML("beforeend", createChatPollOptionField(currentTotal + 1));
@@ -7418,7 +7738,7 @@ function removeChatPollOptionField(button) {
   const list = formElement?.querySelector("#chat-poll-options");
   const fields = list?.querySelectorAll("[data-chat-poll-option]") || [];
   if (fields.length <= 2) {
-    showModal("Mínimo de opções", "A enquete precisa ter pelo menos 2 opções.", "info");
+    showModal("M�nimo de op��es", "A enquete precisa ter pelo menos 2 op��es.", "info");
     return;
   }
   button.closest("[data-chat-poll-option]")?.remove();
@@ -7441,13 +7761,13 @@ function showChatPollModal() {
       <div class="modal-header info">Criar enquete</div>
       <form class="modal-body chat-poll-form" id="chat-poll-form">
         <label>Pergunta
-          <input name="pergunta" type="text" maxlength="180" placeholder="Ex: Qual melhor dia para reunião?" required />
+          <input name="pergunta" type="text" maxlength="180" placeholder="Ex: Qual melhor dia para reuni�o?" required />
         </label>
         <div class="chat-poll-options-editor" id="chat-poll-options">
           ${createChatPollOptionField(1, true)}
           ${createChatPollOptionField(2, true)}
         </div>
-        <button class="secondary-link chat-poll-add-option" type="button" data-action="add-chat-poll-option">Adicionar opção</button>
+        <button class="secondary-link chat-poll-add-option" type="button" data-action="add-chat-poll-option">Adicionar op��o</button>
       </form>
       <div class="modal-footer">
         <button class="secondary-link" type="button" data-action="close-modal">Cancelar</button>
@@ -7760,20 +8080,20 @@ document.getElementById("select-denuncias")?.addEventListener("click", () => {
     .filter(Boolean);
 
   if (!selectedIds.length) {
-    showModal("Nenhuma denúncia selecionada", "Selecione pelo menos uma denúncia para arquivar.", "error");
+    showModal("Nenhuma den�ncia selecionada", "Selecione pelo menos uma den�ncia para arquivar.", "error");
     return;
   }
 
   showConfirmActionModal({
-    title: "Arquivar denúncias",
-    text: `Deseja arquivar ${selectedIds.length} denúncia(s) selecionada(s)?`,
+    title: "Arquivar den�ncias",
+    text: `Deseja arquivar ${selectedIds.length} den�ncia(s) selecionada(s)?`,
     confirmText: "Arquivar",
     onConfirm: async () => {
       const results = await Promise.all(selectedIds.map((id) => atualizarStatusDenuncia(id, "Arquivada")));
       if (results.every(Boolean)) {
         denunciasSelectionMode = false;
         renderAll();
-        showModal("Denúncias arquivadas", "As denúncias selecionadas foram movidas para Arquivadas.", "info");
+        showModal("Den�ncias arquivadas", "As den�ncias selecionadas foram movidas para Arquivadas.", "info");
       }
     },
   });
@@ -7796,7 +8116,7 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
     button.classList.add("active");
     document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
 
-    // Cancela a edição se o usuário trocar de aba de documento
+    // Cancela a edi��o se o usu�rio trocar de aba de documento
     if (window.editingDocId) {
       window.editingDocId = null;
       document.querySelectorAll("[data-doc-form]").forEach(form => {
@@ -7928,7 +8248,7 @@ if (denunciaForm) {
       if (feedback) {
         feedback.textContent = "Denuncia enviada com sucesso. Obrigado pelo relato.";
       }
-      showModal("Denúncia enviada", "Seu relato foi enviado com sucesso e será analisado pela equipe responsável.", "info");
+      showModal("Den�ncia enviada", "Seu relato foi enviado com sucesso e ser� analisado pela equipe respons�vel.", "info");
     }
   });
 }
@@ -7971,12 +8291,12 @@ if (chatForm) {
     chatForm.requestSubmit();
   });
 
-  // Garante que Enter em qualquer elemento do formulário (ex: após anexar arquivo) também envia
+  // Garante que Enter em qualquer elemento do formul�rio (ex: ap�s anexar arquivo) tamb�m envia
   chatForm.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
-    if (event.target === chatMessageInput) return; // já tratado acima
-    if (event.target.tagName === "BUTTON") return; // deixa botões funcionarem normalmente
+    if (event.target === chatMessageInput) return; // j� tratado acima
+    if (event.target.tagName === "BUTTON") return; // deixa bot�es funcionarem normalmente
     event.preventDefault();
     chatForm.requestSubmit();
   });
@@ -8006,7 +8326,7 @@ if (chatForm) {
       return;
     }
 
-    // ── OTIMISMO: mostra a mensagem imediatamente ──────────────────────────
+    // -- OTIMISMO: mostra a mensagem imediatamente --------------------------
     const pendingMessages = files.length
       ? files.map((file, index) => {
         const attachmentType = getChatFileMimeType(file);
@@ -8032,11 +8352,11 @@ if (chatForm) {
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
     data.comunicados = [...pendingMessages, ...(data.comunicados || [])];
     renderChat();
-    // Limpa o formulário imediatamente
+    // Limpa o formul�rio imediatamente
     formElement.reset();
     clearChatSelectedFile();
 
-    // ── UPLOAD de arquivos em background ──────────────────────────────────
+    // -- UPLOAD de arquivos em background ----------------------------------
     const uploadedFiles = [];
     try {
       for (const file of files) {
@@ -8054,7 +8374,7 @@ if (chatForm) {
       return;
     }
 
-    // ── PERSISTÊNCIA: remove otimistas e deixa o realtime confirmar ───────
+    // -- PERSIST�NCIA: remove otimistas e deixa o realtime confirmar -------
     data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
 
     const payloads = uploadedFiles.length
@@ -8149,7 +8469,7 @@ if (maloteForm) {
     const id = form.get("id");
     const codigoSolicitacao = String(form.get("codigo_solicitacao") || "").replace(/\D/g, "");
     if (!/^\d{5}$/.test(codigoSolicitacao)) {
-      showModal("Código inválido", "Informe o Código da Solicitação no formato 0000-0.", "error");
+      showModal("C�digo inv�lido", "Informe o C�digo da Solicita��o no formato 0000-0.", "error");
       return;
     }
     const colaboradores = readMaloteCollaborators(formElement);
@@ -8222,7 +8542,7 @@ document.getElementById("cancelar-edicao-vaga")?.addEventListener("click", () =>
 
 const eventoForm = document.getElementById("evento-form");
 if (eventoForm) {
-  // inicializa o campo de data com máscara (caso tenha valor default)
+  // inicializa o campo de data com m�scara (caso tenha valor default)
   const eventoDataInput = eventoForm.elements.data;
   if (eventoDataInput) {
     eventoDataInput.value = formatEventoDate(eventoDataInput.value);
@@ -8245,7 +8565,7 @@ if (eventoForm) {
     const form = new FormData(formElement);
     const id = form.get("id");
 
-    // converte dd/mm/aaaa → yyyy-mm-dd para salvar
+    // converte dd/mm/aaaa ? yyyy-mm-dd para salvar
     const dataDisplay = String(form.get("data") || "");
     const dataIso = eventoDateToIso(dataDisplay);
     if (!dataIso) {
@@ -8255,7 +8575,7 @@ if (eventoForm) {
     }
     const year = Number(dataIso.split("-")[0]);
     if (year > 2026) {
-      eventoDataInput?.setCustomValidity("O ano não pode ser superior a 2026.");
+      eventoDataInput?.setCustomValidity("O ano n�o pode ser superior a 2026.");
       eventoDataInput?.reportValidity();
       return;
     }
@@ -8346,15 +8666,15 @@ if (vtForm) {
     const id = form.get("id");
     const values = getVtFormValues(formElement);
     if (!hasFullName(values.colaborador)) {
-      showModal("Colaborador obrigatório", "Informe nome e sobrenome do colaborador para registrar o cálculo de VT.", "error");
+      showModal("Colaborador obrigat�rio", "Informe nome e sobrenome do colaborador para registrar o c�lculo de VT.", "error");
       return;
     }
     if (!values.unidade) {
-      showModal("Unidade obrigatória", "Informe a unidade do trabalhador para registrar o cálculo de VT.", "error");
+      showModal("Unidade obrigat�ria", "Informe a unidade do trabalhador para registrar o c�lculo de VT.", "error");
       return;
     }
     if (!VT_MONTH_NAMES.includes(values.mes)) {
-      showModal("Mês obrigatório", "Informe o mês de referência para registrar o cálculo de VT.", "error");
+      showModal("M�s obrigat�rio", "Informe o m�s de refer�ncia para registrar o c�lculo de VT.", "error");
       return;
     }
     const success = id
@@ -8362,7 +8682,7 @@ if (vtForm) {
       : await addItem("vtRegistros", { ...values, createdBy: getCurrentUserName() });
     if (success) {
       resetVtForm();
-      showModal(id ? "VT atualizado" : "VT registrado", id ? "O registro de vale-transporte foi atualizado com sucesso." : "O cálculo de vale-transporte foi registrado com sucesso.", "info");
+      showModal(id ? "VT atualizado" : "VT registrado", id ? "O registro de vale-transporte foi atualizado com sucesso." : "O c�lculo de vale-transporte foi registrado com sucesso.", "info");
     }
   });
   document.getElementById("cancelar-edicao-vt")?.addEventListener("click", resetVtForm);
@@ -8465,7 +8785,7 @@ function showResetPasswordModal() {
     const errorEl = overlay.querySelector("#modal-action-error");
 
     if (!currentPwd) {
-      errorEl.textContent = "A senha atual é obrigatória.";
+      errorEl.textContent = "A senha atual � obrigat�ria.";
       errorEl.hidden = false;
       return;
     }
@@ -8475,20 +8795,20 @@ function showResetPasswordModal() {
       return;
     }
     if (newPwd !== confirmPwd) {
-      errorEl.textContent = "A confirmação da nova senha não confere.";
+      errorEl.textContent = "A confirma��o da nova senha n�o confere.";
       errorEl.hidden = false;
       return;
     }
 
     if (newPwd === currentPwd) {
-      errorEl.textContent = "A nova senha não pode ser igual à senha atual.";
+      errorEl.textContent = "A nova senha n�o pode ser igual � senha atual.";
       errorEl.hidden = false;
       return;
     }
 
     const isPasswordValid = await verifyCurrentPassword(currentPwd);
     if (!isPasswordValid) {
-      errorEl.textContent = "A senha atual informada não confere.";
+      errorEl.textContent = "A senha atual informada n�o confere.";
       errorEl.hidden = false;
       return;
     }
@@ -8534,6 +8854,145 @@ document.querySelectorAll("[data-user-setting]").forEach((field) => {
     const input = event.currentTarget;
     updateUserSetting(input.dataset.userSetting, input.type === "checkbox" ? input.checked : input.value);
   });
+});
+
+document.getElementById("board-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const nome = String(new FormData(form).get("nome") || "").trim();
+  if (!nome) return;
+  const board = createDefaultBoard(nome, getCurrentUserName(), getCurrentUserName());
+  data.quadros = [board, ...(data.quadros || [])];
+  activeBoardId = board.id;
+  form.reset();
+  saveLocalData();
+  renderBoards();
+  await persistBoard(board);
+});
+
+document.getElementById("board-card-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const board = getActiveBoard();
+  if (!board) return;
+  const form = event.currentTarget;
+  const values = new FormData(form);
+  const editListIndex = values.get("edit_list_index") === "" ? -1 : Number(values.get("edit_list_index"));
+  const editCardIndex = values.get("edit_card_index") === "" ? -1 : Number(values.get("edit_card_index"));
+  const isEditing = editListIndex >= 0 && editCardIndex >= 0 && board.listas?.[editListIndex]?.cartoes?.[editCardIndex];
+  const list = isEditing ? board.listas[editListIndex] : board.listas?.[0];
+  if (!list) return;
+  const card = {
+    id: isEditing ? list.cartoes[editCardIndex].id : generateUUID(),
+    titulo: String(values.get("titulo") || "").trim(),
+    descricao: String(values.get("descricao") || "").trim(),
+    prioridade: String(values.get("prioridade") || "Normal"),
+    createdAt: isEditing ? list.cartoes[editCardIndex].createdAt : todayLabel(),
+    createdBy: isEditing ? list.cartoes[editCardIndex].createdBy : getCurrentUserName(),
+    updatedAt: isEditing ? todayLabel() : "",
+    updatedBy: isEditing ? getCurrentUserName() : "",
+  };
+  if (!card.titulo) return;
+  if (isEditing) list.cartoes[editCardIndex] = card;
+  else list.cartoes.push(card);
+  resetBoardCardFormIfEditing();
+  await persistBoard(board);
+});
+
+document.getElementById("cancelar-edicao-board-card")?.addEventListener("click", () => resetBoardCardFormIfEditing());
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("#board-context-menu")) document.getElementById("board-context-menu")?.remove();
+  const boardButton = event.target.closest("[data-action='select-board']");
+  if (boardButton) {
+    activeBoardId = boardButton.dataset.id || "";
+    resetBoardCardFormIfEditing();
+    renderBoards();
+    return;
+  }
+  const card = event.target.closest("[data-action='open-board-card-preview']");
+  if (card && !suppressBoardCardClick) openBoardCardPreview(Number(card.dataset.listIndex), Number(card.dataset.cardIndex));
+});
+
+document.addEventListener("contextmenu", (event) => {
+  const tab = event.target.closest("[data-board-tab]");
+  if (tab) {
+    event.preventDefault();
+    activeBoardId = tab.dataset.id || activeBoardId;
+    renderBoards();
+    openBoardContextMenu(event, "board", { id: tab.dataset.id });
+    return;
+  }
+  const card = event.target.closest("[data-board-card]");
+  if (card) {
+    event.preventDefault();
+    openBoardContextMenu(event, "card", { listIndex: Number(card.dataset.listIndex), cardIndex: Number(card.dataset.cardIndex) });
+  }
+});
+
+document.addEventListener("dragstart", (event) => {
+  const tab = event.target.closest("[data-board-tab]");
+  if (tab) {
+    draggedBoardTabId = String(tab.dataset.id || "");
+    tab.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    return;
+  }
+  const card = event.target.closest("[data-board-card]");
+  if (!card) return;
+  draggedBoardCard = { listIndex: Number(card.dataset.listIndex), cardIndex: Number(card.dataset.cardIndex) };
+  card.classList.add("dragging");
+  event.dataTransfer.effectAllowed = "move";
+});
+
+document.addEventListener("dragend", (event) => {
+  event.target.closest("[data-board-tab]")?.classList.remove("dragging");
+  event.target.closest("[data-board-card]")?.classList.remove("dragging");
+  document.querySelectorAll(".board-tab.drag-over, .board-lane.drag-over").forEach((item) => item.classList.remove("drag-over"));
+  draggedBoardTabId = "";
+  draggedBoardCard = null;
+  suppressBoardCardClick = true;
+  setTimeout(() => { suppressBoardCardClick = false; }, 0);
+});
+
+document.addEventListener("dragover", (event) => {
+  const tab = event.target.closest("[data-board-tab]");
+  if (tab && draggedBoardTabId && String(tab.dataset.id || "") !== draggedBoardTabId) {
+    event.preventDefault();
+    tab.classList.add("drag-over");
+    return;
+  }
+  const lane = event.target.closest(".board-lane");
+  if (!lane || !draggedBoardCard) return;
+  event.preventDefault();
+  lane.classList.add("drag-over");
+});
+
+document.addEventListener("drop", async (event) => {
+  const tab = event.target.closest("[data-board-tab]");
+  if (tab && draggedBoardTabId) {
+    event.preventDefault();
+    const source = document.querySelector(`#board-tabs [data-board-tab][data-id="${CSS.escape(draggedBoardTabId)}"]`);
+    const tabs = document.getElementById("board-tabs");
+    if (source && tabs && source !== tab) {
+      const rect = tab.getBoundingClientRect();
+      tabs.insertBefore(source, event.clientX > rect.left + rect.width / 2 ? tab.nextSibling : tab);
+      saveBoardOrderFromTabs();
+    }
+    draggedBoardTabId = "";
+    return;
+  }
+  const lane = event.target.closest(".board-lane");
+  if (!lane || !draggedBoardCard) return;
+  event.preventDefault();
+  const board = getActiveBoard();
+  const fromList = board?.listas?.[draggedBoardCard.listIndex];
+  const toList = board?.listas?.[Number(lane.dataset.listIndex)];
+  const card = fromList?.cartoes?.[draggedBoardCard.cardIndex];
+  if (!board || !fromList || !toList || !card || fromList === toList) return;
+  resetBoardCardFormIfEditing(draggedBoardCard.listIndex, draggedBoardCard.cardIndex);
+  fromList.cartoes.splice(draggedBoardCard.cardIndex, 1);
+  toList.cartoes.push(card);
+  await persistBoard(board);
 });
 
 document.addEventListener("keydown", handleSettingsKeyboardShortcut);
@@ -8705,7 +9164,7 @@ if (candidaturaForm) {
 
     const existing = (data.candidaturas || []).find(c => String(c.vaga_id) === String(vaga_id) && c.cpf === cpf);
     if (existing) {
-      showModal("Aviso", "Você já enviou um currículo para esta vaga com este CPF.", "error");
+      showModal("Aviso", "Voc� j� enviou um curr�culo para esta vaga com este CPF.", "error");
       return;
     }
 
@@ -8714,13 +9173,13 @@ if (candidaturaForm) {
       data.candidaturas.unshift(mapRows("candidaturas", [inserted])[0]);
       formElement.reset();
       document.getElementById("vaga-id").value = vaga_id;
-      showModal("Sucesso", "Seu currículo foi enviado com sucesso!", "info");
+      showModal("Sucesso", "Seu curr�culo foi enviado com sucesso!", "info");
     } catch (error) {
       console.error(error);
       if (error.code === "23505") {
-        showModal("Aviso", "Você já enviou um currículo para esta vaga com este CPF.", "error");
+        showModal("Aviso", "Voc� j� enviou um curr�culo para esta vaga com este CPF.", "error");
       } else {
-        showModal("Erro", error.message || "Não foi possível enviar o currículo. Verifique sua conexão e tente novamente.", "error");
+        showModal("Erro", error.message || "N�o foi poss�vel enviar o curr�culo. Verifique sua conex�o e tente novamente.", "error");
       }
     }
   });
@@ -8753,7 +9212,7 @@ if (contratadoDocForm) {
     const password = String(form.get("senha_acesso") || "");
     const expectedPassword = String(contractorLayout?.dataset.contractorPassword || "");
     if (password !== expectedPassword) {
-      showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
+      showModal("Senha incorreta", "A senha informada n�o libera esta p�gina.", "error");
       return;
     }
     contractorAccessPassword = expectedPassword;
@@ -8788,18 +9247,18 @@ if (contratadoDocForm) {
     const turnstileToken = getPublicChallengeToken(formElement);
 
     if (!empresa || !nome || !telefone || !cpf || !documentos.length) {
-      showModal("Dados obrigatórios", "Preencha todos os dados e anexe pelo menos um documento.", "error");
+      showModal("Dados obrigat�rios", "Preencha todos os dados e anexe pelo menos um documento.", "error");
       return;
     }
 
     if (!isValidCpf(cpf)) {
-      showModal("CPF inválido", "Informe um CPF válido no formato 000.000.000-00.", "error");
+      showModal("CPF inv�lido", "Informe um CPF v�lido no formato 000.000.000-00.", "error");
       return;
     }
 
     const fileError = documentos.map(validateContractorDocumentFile).find(Boolean);
     if (fileError) {
-      showModal("Documento inválido", fileError, "error");
+      showModal("Documento inv�lido", fileError, "error");
       return;
     }
 
@@ -8810,9 +9269,9 @@ if (contratadoDocForm) {
       showModal("Documentos enviados", "Os documentos foram enviados com sucesso para o RH.", "info");
     } catch (error) {
       console.error(error);
-      const message = /duplicate key|23505|CPF ja possui envio|CPF já possui envio/i.test(error.message || "")
-        ? "Este CPF já possui um envio de documentos registrado."
-        : error.message || "Não foi possível enviar os documentos. Tente novamente.";
+      const message = /duplicate key|23505|CPF ja possui envio|CPF j� possui envio/i.test(error.message || "")
+        ? "Este CPF j� possui um envio de documentos registrado."
+        : error.message || "N�o foi poss�vel enviar os documentos. Tente novamente.";
       showModal("Erro", message, "error");
     }
   });
@@ -8949,13 +9408,13 @@ function reabrirChamado(id) {
 
 function reabrirDenuncia(id) {
   showConfirmActionModal({
-    title: "Reabrir denúncia",
-    text: "Deseja mover esta denúncia de volta para a lista de Lidas?",
+    title: "Reabrir den�ncia",
+    text: "Deseja mover esta den�ncia de volta para a lista de Lidas?",
     confirmText: "Reabrir",
     onConfirm: async () => {
       const success = await atualizarStatusDenuncia(id, "Lida");
       if (success) {
-        showModal("Denúncia reaberta", "A denúncia voltou para a lista de Lidas.", "info");
+        showModal("Den�ncia reaberta", "A den�ncia voltou para a lista de Lidas.", "info");
       }
     },
   });
@@ -8985,7 +9444,7 @@ function editarDocumento(id) {
     const btn = form.querySelector("button[type='submit']");
     if (btn) {
       if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
-      btn.textContent = "Salvar alterações";
+      btn.textContent = "Salvar altera��es";
     }
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -9062,7 +9521,7 @@ function editarEvento(id) {
 
   form.elements.id.value = evento.id;
   form.elements.titulo.value = evento.titulo || "";
-  // converte ISO yyyy-mm-dd para dd/mm/aaaa na máscara
+  // converte ISO yyyy-mm-dd para dd/mm/aaaa na m�scara
   form.elements.data.value = formatEventoDate(evento.data || "");
   form.elements.horario.value = evento.horario || "";
   form.elements.responsavel.value = evento.responsavel || "";
@@ -9094,7 +9553,7 @@ async function excluirVtRegistro(id) {
 
   showConfirmActionModal({
     title: "Apagar registro de VT",
-    text: `Tem certeza que deseja apagar o registro de VT de "${registro.colaborador || "colaborador não informado"}"?`,
+    text: `Tem certeza que deseja apagar o registro de VT de "${registro.colaborador || "colaborador n�o informado"}"?`,
     confirmText: "Apagar",
     danger: true,
     onConfirm: async () => {
@@ -9112,7 +9571,7 @@ async function excluirDocumentoContratado(id) {
 
   showPasswordActionModal({
     title: "Excluir documentos do contratado",
-    text: `Confirme a senha de exclusao para apagar os documentos de "${registro.nome || "contratado não informado"}".`,
+    text: `Confirme a senha de exclusao para apagar os documentos de "${registro.nome || "contratado n�o informado"}".`,
     confirmText: "Excluir",
     danger: true,
     validatePassword: async (password) => verifyAuthorizationPassword(password),
@@ -9123,14 +9582,14 @@ async function excluirDocumentoContratado(id) {
         data.documentosContratados = (data.documentosContratados || []).filter((item) => String(item.id) !== String(id));
         saveLocalData();
         renderDocumentosContratados();
-        showModal("Documentos excluídos", "Os documentos do contratado foram removidos.", "info");
+        showModal("Documentos exclu�dos", "Os documentos do contratado foram removidos.", "info");
         return;
       }
 
       const deleted = await deleteItem("documentosContratados", id);
       if (deleted) {
         removePendingContractorDocument(id);
-        showModal("Documentos excluídos", "Os documentos do contratado foram apagados com sucesso.", "info");
+        showModal("Documentos exclu�dos", "Os documentos do contratado foram apagados com sucesso.", "info");
       }
     },
   });
@@ -9144,12 +9603,12 @@ function editarVtRegistro(id) {
   form.elements.id.value = registro.id;
   form.elements.colaborador.value = registro.colaborador || "";
   setFieldValue(form.elements.unidade, registro.unidade || "");
-  setFieldValue(form.elements.mes, formatVtMonth(registro.mes) === "Não informado" ? "" : formatVtMonth(registro.mes));
+  setFieldValue(form.elements.mes, formatVtMonth(registro.mes) === "N�o informado" ? "" : formatVtMonth(registro.mes));
   form.elements.dias_uteis.value = registro.diasUteis || "";
   form.elements.valor_passagem.value = formatCurrencyInput(String(Math.round(Number(registro.valorPassagem || 0) * 100)));
   form.elements.saldo_atual.value = registro.saldoAtual ?? "";
   document.getElementById("cancelar-edicao-vt")?.removeAttribute("hidden");
-  form.querySelector('button[type="submit"]').textContent = "Salvar alterações";
+  form.querySelector('button[type="submit"]').textContent = "Salvar altera��es";
   updateVtCalculation();
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 };
@@ -9164,7 +9623,7 @@ function editarMalote(id) {
   setFieldValue(form.elements.origem, malote.origem || "");
   setFieldValue(form.elements.codigo_solicitacao, malote.codigoSolicitacao || "");
   setFieldValue(form.elements.observacoes, malote.observacoes || "");
-  setFieldValue(form.elements.status, malote.status || "Separação");
+  setFieldValue(form.elements.status, malote.status || "Separa��o");
   resetMaloteCollaborators(normalizeMaloteCollaborators(malote));
   document.getElementById("cancelar-edicao-malote")?.removeAttribute("hidden");
   form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
@@ -9232,7 +9691,7 @@ function baixarDocumentoMalote(id) {
               <p class="muted">Documento gerado automaticamente pelo sistema</p>
             </div>
             <div class="number">
-              <span class="field-label">Nº do malote</span>
+              <span class="field-label">N� do malote</span>
               <strong>${escapeHtml(String(malote.codigoSolicitacao || malote.id || ""))}</strong>
             </div>
             <div class="status">
@@ -9287,11 +9746,11 @@ function baixarDocumentoMalote(id) {
             <tbody>${epiRows}</tbody>
           </table>
 
-          <div class="section-title">Observações</div>
+          <div class="section-title">Observa��es</div>
           <table>
             <tr>
               <td style="min-height:48px; height:48px;">
-                <div class="field-value" style="font-weight:normal; white-space:pre-wrap;">${malote.observacoes ? escapeHtml(malote.observacoes) : '<span style="color:#9ca3af;">Sem observações.</span>'}</div>
+                <div class="field-value" style="font-weight:normal; white-space:pre-wrap;">${malote.observacoes ? escapeHtml(malote.observacoes) : '<span style="color:#9ca3af;">Sem observa��es.</span>'}</div>
               </td>
             </tr>
           </table>
@@ -9362,45 +9821,45 @@ const documentFieldLabels = {
   cpf: "CPF",
   rg: "RG",
   cargo: "Cargo",
-  funcao: "Função",
+  funcao: "Fun��o",
   filial: "Filial / Unidade",
   setor: "Setor",
-  data: "Data de admissão",
-  data_admissao: "Data de admissão",
+  data: "Data de admiss�o",
+  data_admissao: "Data de admiss�o",
   data_desligamento: "Data de desligamento",
-  data_solicitacao: "Data da solicitação",
+  data_solicitacao: "Data da solicita��o",
   data_entrevista: "Data da entrevista",
-  data_ausencia: "Data(s) da ausência",
+  data_ausencia: "Data(s) da aus�ncia",
   data_feedback: "Data do feedback",
   data_registro: "Data do registro",
   data_abertura: "Data de abertura",
-  data_inicio: "Data de início",
-  data_movimentacao: "Data da movimentação",
-  salario: "Salário",
-  salario_atual: "Salário atual",
-  salario_proposto: "Salário proposto",
+  data_inicio: "Data de in�cio",
+  data_movimentacao: "Data da movimenta��o",
+  salario: "Sal�rio",
+  salario_atual: "Sal�rio atual",
+  salario_proposto: "Sal�rio proposto",
   faixa_salarial: "Faixa salarial",
-  horario_trabalho: "Horário de trabalho",
-  horario_atraso: "Horário / período",
+  horario_trabalho: "Hor�rio de trabalho",
+  horario_atraso: "Hor�rio / per�odo",
   centro_custo: "Centro de custo",
   requisitante: "Requisitante",
-  lider: "Gestor / líder avaliador",
+  lider: "Gestor / l�der avaliador",
   gestor: "Gestor imediato",
   gestor_aplicador: "Gestor aplicador",
   gestor_solicitante: "Gestor solicitante",
   entrevistador: "Entrevistador",
   motivo: "Motivo",
-  observacoes: "Observações",
+  observacoes: "Observa��es",
   feedback: "Feedback final",
   positivos: "Pontos positivos",
   melhorias: "Pontos a desenvolver",
-  acao: "Plano de ação",
-  plano_acao: "Plano de ação",
+  acao: "Plano de a��o",
+  plano_acao: "Plano de a��o",
   justificativa: "Justificativa",
-  justificativa_movimentacao: "Justificativa da movimentação",
-  descricao: "Descrição",
+  justificativa_movimentacao: "Justificativa da movimenta��o",
+  descricao: "Descri��o",
   requisitos: "Requisitos",
-  pontos_atencao: "Pontos de atenção",
+  pontos_atencao: "Pontos de aten��o",
 };
 
 const documentLongFieldKeys = new Set([
@@ -9556,7 +10015,7 @@ function downloadStyledRhDocument(doc, title) {
             </div>
             <div class="letterhead-meta">
               Emitido em <strong>${escapeHtml(emittedAt)}</strong><br />
-              Responsável: <strong>${escapeHtml(owner)}</strong>
+              Respons�vel: <strong>${escapeHtml(owner)}</strong>
             </div>
           </header>
 
@@ -9598,13 +10057,13 @@ document.addEventListener('click', (event) => {
 
   const { action, id } = target.dataset;
 
-  // Ação especial para não fazer nada, útil para checkboxes dentro de elementos clicáveis
+  // A��o especial para n�o fazer nada, �til para checkboxes dentro de elementos clic�veis
   if (action === 'no-op') {
     event.stopPropagation();
     return;
   }
 
-  // Ações que precisam de stopPropagation
+  // A��es que precisam de stopPropagation
   if (['reabrir-denuncia', 'reabrir-chamado', 'toggle-denuncia-selection', 'toggle-chamado-selection'].includes(action)) {
     event.stopPropagation();
   }
@@ -9779,7 +10238,7 @@ class NotificationTracker {
       notifications.push({
         id,
         type,
-        title: item.title || "Notificação",
+        title: item.title || "Notifica��o",
         description: item.description || item.text || "",
         details: item.details || item.description || item.text || "",
         time,
@@ -9816,7 +10275,7 @@ class NotificationTracker {
           : `${messageIds.length} mensagem(ns) no acompanhamento`,
         details: sortedMessagesOldestFirst
           .slice(-20)
-          .map((message) => `${message.createdAt || "Sem data"} · ${message.autor || "Equipe"}: ${message.mensagem || "Nova mensagem."}`)
+          .map((message) => `${message.createdAt || "Sem data"} � ${message.autor || "Equipe"}: ${message.mensagem || "Nova mensagem."}`)
           .join("\n\n"),
         time: latestMessage.createdAt || "Agora",
         dateTime: latestMessage.sortAt || latestMessage.createdAt || "Agora",
@@ -9825,7 +10284,7 @@ class NotificationTracker {
         view: "comunicacao",
         messageIds,
         chatMessages: sortedMessagesOldestFirst,
-        badgeText: hasUnread ? "Não lido" : "Lida",
+        badgeText: hasUnread ? "N�o lido" : "Lida",
       });
     }
 
@@ -9834,9 +10293,9 @@ class NotificationTracker {
       .forEach((item) => pushNotification({
         id: `denuncia-${item.id}`,
         type: "denuncia",
-        title: "Denúncia anônima",
-        description: item.descricao || "Nova denúncia recebida.",
-        details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "Não informado"}\n\n${item.descricao || "Sem descrição."}`,
+        title: "Den�ncia an�nima",
+        description: item.descricao || "Nova den�ncia recebida.",
+        details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Aberta"}\nRecebida em: ${item.createdAt || "N�o informado"}\n\n${item.descricao || "Sem descri��o."}`,
         time: item.createdAt || "Recentemente",
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
         status: item.status === "Urgente" ? "urgent" : "pending",
@@ -9849,14 +10308,14 @@ class NotificationTracker {
       .forEach((item) => {
         const items = typeof parseEpiItems === "function" ? parseEpiItems(item.epis) : [];
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` � Tam. ${epi.tamanho}` : ""} � Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "N�o informados";
         pushNotification({
           id: `chamado-${item.id}`,
           type: "chamado",
-          title: `Chamado · ${item.unidade || "Unidade não informada"}`,
-          description: item.epis || "Itens não informados.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nSetor: ${item.setor || "Não informado"}\nItens solicitados:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "Não informada"}`,
+          title: `Chamado � ${item.unidade || "Unidade n�o informada"}`,
+          description: item.epis || "Itens n�o informados.",
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Solicitante: ${item.solicitante || "N�o informado"}\nUnidade: ${item.unidade || "N�o informada"}\nSetor: ${item.setor || "N�o informado"}\nItens solicitados:\n${itemDetails}\nObserva��es: ${item.observacoes || "Nenhuma"}\nData: ${item.createdAt || "N�o informada"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: "pending",
@@ -9870,16 +10329,16 @@ class NotificationTracker {
       .forEach((item) => {
         const items = typeof parseEpiItems === "function" ? parseEpiItems(item.epis) : [];
         const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` · Tam. ${epi.tamanho}` : ""} · Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
+          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` � Tam. ${epi.tamanho}` : ""} � Qtd. ${epi.quantidade}`).join("\n")
+          : item.epis || "N�o informados";
         const statusText = String(item.status || "").toLowerCase();
         const isResolved = statusText.includes("entreg") || statusText.includes("conclu") || statusText.includes("finaliz");
         pushNotification({
           id: `malote-${item.id}`,
           type: "malote",
-          title: `Malote · ${item.destino || "Destino não informado"}`,
-          description: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
+          title: `Malote � ${item.destino || "Destino n�o informado"}`,
+          description: item.codigoSolicitacao ? `Solicita��o ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}C�digo da Solicita��o: ${item.codigoSolicitacao || "N�o informado"}\nOrigem: ${item.origem || "N�o informada"}\nDestino: ${item.destino || "N�o informado"}\nItens do malote:\n${itemDetails}\nObserva��es: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "N�o informado"}\nData: ${item.createdAt || "N�o informada"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: isResolved ? "resolved" : "pending",
@@ -9895,9 +10354,9 @@ class NotificationTracker {
         pushNotification({
           id: `vaga-${item.id}`,
           type: "vaga",
-          title: `Vaga · ${item.cargo || "Cargo não informado"}`,
+          title: `Vaga � ${item.cargo || "Cargo n�o informado"}`,
           description: item.descricao || "Vaga atualizada.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "N�o informado"}\n\n${item.descricao || "Sem descri��o."}\n\nRequisitos: ${item.requisitos || "N�o informados"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: isClosed ? "resolved" : "pending",
@@ -9914,9 +10373,9 @@ class NotificationTracker {
         pushNotification({
           id: `documento-${item.id}`,
           type: "documento",
-          title: `Documento · ${label || "Registro"}`,
+          title: `Documento � ${label || "Registro"}`,
           description: item.summary || "Documento registrado.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${label || "Registro"}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
+          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${label || "Registro"}\nData: ${item.createdAt || "N�o informada"}\n\n${item.summary || "Documento registrado."}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
           status: "pending",
@@ -9930,9 +10389,9 @@ class NotificationTracker {
         pushNotification({
           id: `atestado-${item.id}`,
           type: "atestado",
-          title: `Atestado · ${item.nome || "Colaborador"}`,
-          description: `${item.unidade || "Unidade não informada"} · ${item.arquivoNome || "Atestado anexado"}`,
-          details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Não informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
+          title: `Atestado � ${item.nome || "Colaborador"}`,
+          description: `${item.unidade || "Unidade n�o informada"} � ${item.arquivoNome || "Atestado anexado"}`,
+          details: `Colaborador: ${item.nome || "N�o informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "N�o informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "N�o informado"}\nUnidade: ${item.unidade || "N�o informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "N�o informado"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.createdAt || "Recentemente",
           status: "pending",
@@ -9950,10 +10409,10 @@ class NotificationTracker {
       pushNotification({
         id: `evento-${item.id}`,
         type: "evento",
-        title: `Evento · ${item.titulo || "Compromisso"}`,
-        description: item.descricao || [formattedDate, formattedTime].filter(Boolean).join(" · "),
-        details: `Título: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "Não informada"}\nHorário: ${formattedTime || "Não informado"}\nResponsável: ${item.responsavel || "Não informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descrição."}`,
-        time: [formattedDate, formattedTime].filter(Boolean).join(" · ") || "Recentemente",
+        title: `Evento � ${item.titulo || "Compromisso"}`,
+        description: item.descricao || [formattedDate, formattedTime].filter(Boolean).join(" � "),
+        details: `T�tulo: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "N�o informada"}\nHor�rio: ${formattedTime || "N�o informado"}\nRespons�vel: ${item.responsavel || "N�o informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descri��o."}`,
+        time: [formattedDate, formattedTime].filter(Boolean).join(" � ") || "Recentemente",
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt || `${eventDate || ""}T${eventTime || "00:00"}`,
         status: "pending",
         unread: false,
@@ -10015,22 +10474,22 @@ class NotificationTracker {
 
   getIconForType(type) {
     const icons = {
-      denuncia: "🚨",
-      mensagem: "💬",
-      malote: "📦",
-      chamado: "🎫",
-      vaga: "💼",
-      evento: "📅",
-      documento: "📄",
-      atestado: "🩺",
-      geral: "📢",
+      denuncia: "??",
+      mensagem: "??",
+      malote: "??",
+      chamado: "??",
+      vaga: "??",
+      evento: "??",
+      documento: "??",
+      atestado: "??",
+      geral: "??",
     };
-    return icons[type] || "📢";
+    return icons[type] || "??";
   }
 
   getBadgeText(status) {
     const badges = {
-      unread: "Não lido",
+      unread: "N�o lido",
       pending: "Pendente",
       resolved: "Resolvido",
       urgent: "Urgente",
@@ -10162,9 +10621,9 @@ class NotificationTracker {
     this.footerArea?.setAttribute("hidden", "");
     this.emptyState?.setAttribute("hidden", "");
 
-    if (this.modalTitle) this.modalTitle.textContent = notif.title || "Notificação";
+    if (this.modalTitle) this.modalTitle.textContent = notif.title || "Notifica��o";
     if (this.modalSubtitle) {
-      this.modalSubtitle.textContent = [this.humanizeType(notif.type), notif.time].filter(Boolean).join(" · ") || "Detalhe da notificação";
+      this.modalSubtitle.textContent = [this.humanizeType(notif.type), notif.time].filter(Boolean).join(" � ") || "Detalhe da notifica��o";
     }
 
     this.detailArea?.remove();
@@ -10176,7 +10635,7 @@ class NotificationTracker {
           <div class="tracker-detail-icon">${notif.icon || this.getIconForType(notif.type)}</div>
           <div>
             <span class="tracker-notification-type">${this.escapeHtml(this.humanizeType(notif.type))}</span>
-            <h3>${this.escapeHtml(notif.title || "Notificação")}</h3>
+            <h3>${this.escapeHtml(notif.title || "Notifica��o")}</h3>
             ${notif.description ? `<p>${this.escapeHtml(notif.description)}</p>` : ""}
           </div>
         </div>
@@ -10206,7 +10665,7 @@ class NotificationTracker {
     this.footerArea?.removeAttribute("hidden");
 
     if (this.modalTitle) this.modalTitle.textContent = "Acompanhamento Completo";
-    if (this.modalSubtitle) this.modalSubtitle.textContent = "Todas as notificações e pendências";
+    if (this.modalSubtitle) this.modalSubtitle.textContent = "Todas as notifica��es e pend�ncias";
     this.renderNotifications();
   }
 
@@ -10220,7 +10679,7 @@ class NotificationTracker {
 
   humanizeType(type) {
     const types = {
-      denuncia: "Denúncia",
+      denuncia: "Den�ncia",
       mensagem: "Mensagem RH",
       malote: "Malote",
       chamado: "Chamado",
@@ -10261,16 +10720,16 @@ class NotificationTracker {
     }));
     this.applyFilters();
     this.updateStats();
-    this.showNotification("Todas as notificações foram marcadas como lidas.");
+    this.showNotification("Todas as notifica��es foram marcadas como lidas.");
   }
 
   clearAll() {
-    if (!confirm("Tem certeza que deseja limpar a visualização das notificações?")) return;
+    if (!confirm("Tem certeza que deseja limpar a visualiza��o das notifica��es?")) return;
     this.notifications = [];
     this.filteredNotifications = [];
     this.renderNotifications();
     this.updateStats();
-    this.showNotification("Visualização de notificações limpa.");
+    this.showNotification("Visualiza��o de notifica��es limpa.");
   }
 
   showNotification(message) {
@@ -10315,7 +10774,7 @@ window.addEventListener("storage", (event) => {
   try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
 });
 
-// Manter compatibilidade com botões antigos
+// Manter compatibilidade com bot�es antigos
 document.addEventListener('DOMContentLoaded', () => {
   const prevBtn = document.getElementById('dashboard-notifications-prev');
   const nextBtn = document.getElementById('dashboard-notifications-next');
@@ -10324,9 +10783,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (nextBtn) nextBtn.style.display = 'none';
 });
 /* ==========================================================================
-   PERMISSÃO ARIEL + FEEDBACKS/RECLAMAÇÕES/SUGESTÕES
-   - Equipe visível somente para o usuário Ariel
-   - Nova aba em Conta > Configurações para envio de feedbacks
+   PERMISS�O ARIEL + FEEDBACKS/RECLAMA��ES/SUGEST�ES
+   - Equipe vis�vel somente para o usu�rio Ariel
+   - Nova aba em Conta > Configura��es para envio de feedbacks
    - Ariel visualiza todos os envios
    ========================================================================== */
 (function setupArielAccessAndFeedbackModule() {
@@ -10408,7 +10867,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalActivateView = activateView;
     activateView = function patchedActivateView(viewId) {
       if (viewId === "equipe" && !isArielUser()) {
-        showModal?.("Acesso restrito", "A aba Equipe está disponível somente para o usuário Ariel.", "warning");
+        showModal?.("Acesso restrito", "A aba Equipe est� dispon�vel somente para o usu�rio Ariel.", "warning");
         return originalActivateView?.(getFallbackViewForCurrentUser());
       }
       return originalActivateView?.(viewId);
@@ -10424,7 +10883,7 @@ document.addEventListener('DOMContentLoaded', () => {
     event.stopImmediatePropagation();
 
     if (!isArielUser()) {
-      showModal?.("Acesso restrito", "A aba Equipe está disponível somente para o usuário Ariel.", "warning");
+      showModal?.("Acesso restrito", "A aba Equipe est� dispon�vel somente para o usu�rio Ariel.", "warning");
       activateView?.(getFallbackViewForCurrentUser());
       return;
     }
@@ -10455,22 +10914,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function createFeedbackSettingsButton() {
     return `
-      <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclamações reclamação sugestao sugestões sugestoes melhoria usuario">
-        <span aria-hidden="true">✉</span>
-        <span><strong>Feedbacks e Sugestões</strong><small>Feedbacks, reclamações e sugestões</small></span>
+      <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclama��es reclama��o sugestao sugest�es sugestoes melhoria usuario">
+        <span aria-hidden="true">?</span>
+        <span><strong>Feedbacks e Sugest�es</strong><small>Feedbacks, reclama��es e sugest�es</small></span>
       </button>
     `;
   }
 
   function createFeedbackDropdownButton() {
     const subtitle = isArielUser()
-      ? "Visualizar feedbacks, reclamações e sugestões"
-      : "Enviar feedback, reclamação ou sugestão";
+      ? "Visualizar feedbacks, reclama��es e sugest�es"
+      : "Enviar feedback, reclama��o ou sugest�o";
     return `
       <button type="button" class="user-menu-item" data-view="conta" data-settings-target="${FEEDBACK_PANEL_ID}" role="menuitem">
-        <span class="user-menu-icon" aria-hidden="true">✉</span>
+        <span class="user-menu-icon" aria-hidden="true">?</span>
         <span class="user-menu-item-text">
-          <strong>Feedbacks e Sugestões</strong>
+          <strong>Feedbacks e Sugest�es</strong>
           <small>${subtitle}</small>
         </span>
       </button>
@@ -10481,36 +10940,36 @@ document.addEventListener('DOMContentLoaded', () => {
     return `
       <section class="panel settings-detail-panel" data-settings-panel="${FEEDBACK_PANEL_ID}">
         <div class="panel-header">
-          <h2>Feedbacks, reclamações e sugestões</h2>
+          <h2>Feedbacks, reclama��es e sugest�es</h2>
         </div>
-        <p class="item-meta" id="hub-feedback-panel-description">Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.</p>
+        <p class="item-meta" id="hub-feedback-panel-description">Use este espa�o para enviar melhorias, reclama��es ou sugest�es sobre o HUB e processos internos.</p>
 
         <form class="hub-feedback-form settings-section" id="hub-feedback-form">
           <h3>Novo envio</h3>
           <label>Tipo
             <select id="hub-feedback-type" required>
               <option value="Feedback">Feedback</option>
-              <option value="Reclamação">Reclamação</option>
-              <option value="Sugestão">Sugestão</option>
+              <option value="Reclama��o">Reclama��o</option>
+              <option value="Sugest�o">Sugest�o</option>
             </select>
           </label>
           <label>Mensagem
-            <textarea id="hub-feedback-message" placeholder="Descreva aqui seu feedback, reclamação ou sugestão..." required></textarea>
+            <textarea id="hub-feedback-message" placeholder="Descreva aqui seu feedback, reclama��o ou sugest�o..." required></textarea>
           </label>
           <button class="primary-button" type="submit">Enviar</button>
         </form>
 
         <div class="settings-section" id="hub-feedback-admin-area" hidden>
           <div class="hub-feedback-admin-note">
-            <strong>Visualização do Ariel:</strong> aqui aparecem os feedbacks, reclamações e sugestões enviados pelos usuários.
+            <strong>Visualiza��o do Ariel:</strong> aqui aparecem os feedbacks, reclama��es e sugest�es enviados pelos usu�rios.
           </div>
           <div class="hub-feedback-toolbar section-top">
             <h3 class="flush-bottom">Envios recebidos</h3>
             <select class="hub-feedback-filter" id="hub-feedback-filter">
               <option value="todos">Todos</option>
               <option value="Feedback">Feedback</option>
-              <option value="Reclamação">Reclamação</option>
-              <option value="Sugestão">Sugestão</option>
+              <option value="Reclama��o">Reclama��o</option>
+              <option value="Sugest�o">Sugest�o</option>
             </select>
           </div>
           <div class="hub-feedback-list" id="hub-feedback-admin-list"></div>
@@ -10531,7 +10990,7 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       event.stopPropagation();
 
-      // Quando o botão vem do menu do usuário, precisa abrir a aba Conta antes
+      // Quando o bot�o vem do menu do usu�rio, precisa abrir a aba Conta antes
       // de selecionar o painel interno de Feedbacks.
       activateView?.("conta");
       ensureFeedbackSettingsUi();
@@ -10582,7 +11041,7 @@ document.addEventListener('DOMContentLoaded', () => {
       id: row.id || generateUUID(),
       tipo: row.tipo || "Feedback",
       mensagem: row.mensagem || "",
-      autorNome: row.autor_nome || row.autorNome || row.created_by || "Usuário",
+      autorNome: row.autor_nome || row.autorNome || row.created_by || "Usu�rio",
       autorEmail: row.autor_email || row.autorEmail || "",
       status: row.status || "Novo",
       createdAt: row.created_at ? formatDateTime(row.created_at) : row.createdAt || todayLabel?.() || "Hoje",
@@ -10634,7 +11093,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (error) throw error;
         return { savedOnPostgreSQL: true };
       } catch (error) {
-        console.warn("Não foi possível salvar feedback no PostgreSQL; salvando localmente.", error);
+        console.warn("N�o foi poss�vel salvar feedback no PostgreSQL; salvando localmente.", error);
       }
     }
 
@@ -10665,7 +11124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         removeLocalFeedbackById(normalizedId);
         return { deletedOnPostgreSQL: true };
       } catch (error) {
-        console.warn("Não foi possível excluir feedback no PostgreSQL; tentando remover somente do armazenamento local.", error);
+        console.warn("N�o foi poss�vel excluir feedback no PostgreSQL; tentando remover somente do armazenamento local.", error);
       }
     }
 
@@ -10687,7 +11146,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="tag">${escapeHtml(item.status || "Novo")}</span>
         </div>
         <p>${escapeHtml(item.mensagem)}</p>
-        <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")} | Enviado por ${escapeHtml(item.autorNome || "Usuário")}${item.autorEmail ? ` | ${escapeHtml(item.autorEmail)}` : ""}</p>
+        <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")} | Enviado por ${escapeHtml(item.autorNome || "Usu�rio")}${item.autorEmail ? ` | ${escapeHtml(item.autorEmail)}` : ""}</p>
         ${options.canDelete ? `
           <div class="hub-feedback-actions">
             <button class="danger-button hub-feedback-delete-button" type="button" data-feedback-delete-id="${escapeHtml(item.id)}">Excluir envio</button>
@@ -10705,7 +11164,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const feedbackId = button.dataset.feedbackDeleteId;
         if (!feedbackId) return;
 
-        const confirmed = window.confirm("Deseja excluir este envio? Esta ação não poderá ser desfeita.");
+        const confirmed = window.confirm("Deseja excluir este envio? Esta a��o n�o poder� ser desfeita.");
         if (!confirmed) return;
 
         const originalText = button.textContent || "Excluir envio";
@@ -10715,10 +11174,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await deleteFeedback(feedbackId);
 
         showModal?.(
-          "Envio excluído",
+          "Envio exclu�do",
           result.deletedOnPostgreSQL
-            ? "Seu envio foi excluído com sucesso."
-            : "O envio foi removido localmente. Se ele ainda aparecer em outro dispositivo, confirme a permissão DELETE no PostgreSQL.",
+            ? "Seu envio foi exclu�do com sucesso."
+            : "O envio foi removido localmente. Se ele ainda aparecer em outro dispositivo, confirme a permiss�o DELETE no PostgreSQL.",
           result.deletedOnPostgreSQL ? "success" : "info"
         );
 
@@ -10738,7 +11197,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtered = filter === "todos" ? items : items.filter((item) => item.tipo === filter);
 
     if (isArielUser()) {
-      // Ariel somente visualiza os envios recebidos. Ele não envia por esta aba.
+      // Ariel somente visualiza os envios recebidos. Ele n�o envia por esta aba.
       renderFeedbackItems(document.getElementById("hub-feedback-admin-list"), filtered, { admin: true });
     } else {
       renderFeedbackItems(document.getElementById("hub-feedback-user-list"), items, { canDelete: true });
@@ -10758,14 +11217,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userArea) userArea.hidden = ariel;
     if (description) {
       description.textContent = ariel
-        ? "Área exclusiva para visualizar feedbacks, reclamações e sugestões enviados pelos usuários."
-        : "Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.";
+        ? "�rea exclusiva para visualizar feedbacks, reclama��es e sugest�es enviados pelos usu�rios."
+        : "Use este espa�o para enviar melhorias, reclama��es ou sugest�es sobre o HUB e processos internos.";
     }
 
     document.querySelectorAll(`[data-settings-target="${FEEDBACK_PANEL_ID}"] small`).forEach((small) => {
       small.textContent = ariel
-        ? "Visualizar feedbacks, reclamações e sugestões"
-        : "Enviar feedback, reclamação ou sugestão";
+        ? "Visualizar feedbacks, reclama��es e sugest�es"
+        : "Enviar feedback, reclama��o ou sugest�o";
     });
   }
 
@@ -10777,13 +11236,13 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (isArielUser()) {
-        showModal?.("Acesso somente leitura", "O usuário Ariel apenas visualiza os feedbacks enviados pelos demais usuários.", "info");
+        showModal?.("Acesso somente leitura", "O usu�rio Ariel apenas visualiza os feedbacks enviados pelos demais usu�rios.", "info");
         return;
       }
       const tipo = document.getElementById("hub-feedback-type")?.value || "Feedback";
       const mensagem = document.getElementById("hub-feedback-message")?.value.trim() || "";
       if (!mensagem) {
-        showModal?.("Mensagem obrigatória", "Preencha o campo de mensagem antes de enviar.", "warning");
+        showModal?.("Mensagem obrigat�ria", "Preencha o campo de mensagem antes de enviar.", "warning");
         return;
       }
 
@@ -10811,7 +11270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         "Envio registrado",
         result.savedOnPostgreSQL
           ? "Seu feedback foi enviado com sucesso."
-          : "Seu feedback foi salvo localmente. Para o Ariel visualizar envios de todos os usuários, confirme se a tabela hub_feedbacks foi criada no PostgreSQL.",
+          : "Seu feedback foi salvo localmente. Para o Ariel visualizar envios de todos os usu�rios, confirme se a tabela hub_feedbacks foi criada no PostgreSQL.",
         result.savedOnPostgreSQL ? "success" : "info"
       );
       renderFeedbackPanel();
@@ -10858,7 +11317,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /* ========================================================================
-   ATESTADOS PUBLICOS + ABA INTERNA DE VISUALIZAÇÃO
+   ATESTADOS PUBLICOS + ABA INTERNA DE VISUALIZA��O
    ======================================================================== */
 (function setupAtestadosModule() {
   const ATESTADOS_TABLE = "hub_atestados";
@@ -10888,12 +11347,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function validateAtestadoFile(file) {
     if (!file || !file.name) return "Anexe o atestado antes de enviar.";
-    if (file.size > getAtestadoMaxSize()) return "O arquivo deve ter no máximo 10 MB.";
+    if (file.size > getAtestadoMaxSize()) return "O arquivo deve ter no m�ximo 10 MB.";
 
     const extension = getFileExtension(file.name);
     const mime = String(file.type || "").toLowerCase();
     if (!ATESTADO_ALLOWED_EXTENSIONS.has(extension) && !ATESTADO_ALLOWED_MIME_TYPES.has(mime)) {
-      return "Formato inválido. Envie PDF, imagem, DOC ou DOCX.";
+      return "Formato inv�lido. Envie PDF, imagem, DOC ou DOCX.";
     }
     return "";
   }
@@ -10951,7 +11410,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveLocalDataDebounced?.();
       return mapped;
     } catch (error) {
-      console.warn("Não foi possível carregar atestados do PostgreSQL; usando cache local.", error);
+      console.warn("N�o foi poss�vel carregar atestados do PostgreSQL; usando cache local.", error);
       return data.atestados?.length ? data.atestados : getLocalAtestados();
     }
   }
@@ -10977,17 +11436,17 @@ document.addEventListener('DOMContentLoaded', () => {
     target.innerHTML = filtered.map((item) => {
       const status = item.status || "Recebido";
       const fileName = item.arquivoNome || "Atestado";
-      const fileMeta = [fileName, formatFileSize(item.arquivoTamanho)].filter(Boolean).join(" · ");
+      const fileMeta = [fileName, formatFileSize(item.arquivoTamanho)].filter(Boolean).join(" � ");
       return `
         <article class="item-card atestado-card">
           <div class="item-topline">
-            <p class="item-title">${escapeHtml(item.nome || "Colaborador não informado")}</p>
+            <p class="item-title">${escapeHtml(item.nome || "Colaborador n�o informado")}</p>
             <span class="tag">${escapeHtml(status)}</span>
           </div>
           <p><strong>CPF:</strong> ${escapeHtml(formatCpf(item.cpf || ""))}</p>
-          <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || item.telefone || "Não informado")}</p>
-          <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Não informada")}</p>
-          <p class="item-meta">Recebido em ${escapeHtml(item.createdAt || "Não informado")} | ${escapeHtml(fileMeta || "Arquivo anexado")}</p>
+          <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || item.telefone || "N�o informado")}</p>
+          <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "N�o informada")}</p>
+          <p class="item-meta">Recebido em ${escapeHtml(item.createdAt || "N�o informado")} | ${escapeHtml(fileMeta || "Arquivo anexado")}</p>
           <div class="job-actions section-top atestado-actions">
             <div class="atestado-action-buttons">
               ${item.arquivoUrl ? `<button type="button" class="secondary-link private-file-button atestado-action-button" data-private-storage-bucket="${escapeHtml(getAtestadosBucket())}" data-private-storage-path="${escapeHtml(item.arquivoUrl)}">Ver atestado</button>` : ""}
@@ -10995,7 +11454,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <label class="compact-status-label">Status
               <select data-atestado-status-id="${escapeHtml(item.id)}">
-                ${["Recebido", "Em análise", "Lançado", "Recusado"].map((option) => `<option${option === status ? " selected" : ""}>${option}</option>`).join("")}
+                ${["Recebido", "Em an�lise", "Lan�ado", "Recusado"].map((option) => `<option${option === status ? " selected" : ""}>${option}</option>`).join("")}
               </select>
             </label>
           </div>
@@ -11016,7 +11475,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!id) return;
     const item = (data.atestados || []).find((record) => String(record.id) === String(id));
     const label = item?.nome ? ` de ${item.nome}` : "";
-    if (!confirm(`Tem certeza que deseja apagar o atestado${label}? Essa ação não poderá ser desfeita.`)) return;
+    if (!confirm(`Tem certeza que deseja apagar o atestado${label}? Essa a��o n�o poder� ser desfeita.`)) return;
 
     const applyLocalDelete = () => {
       data.atestados = (data.atestados || []).filter((record) => String(record.id) !== String(id));
@@ -11033,7 +11492,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const { error: storageError } = await postgresClient.storage
             .from(getAtestadosBucket())
             .remove([pathToRemove]);
-          if (storageError) console.warn("Não foi possível remover o arquivo do storage:", storageError);
+          if (storageError) console.warn("N�o foi poss�vel remover o arquivo do storage:", storageError);
         }
 
         const { error } = await postgresClient
@@ -11047,13 +11506,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       } catch (error) {
         console.error("Erro ao apagar atestado:", error);
-        showModal?.("Erro", "Não foi possível apagar o atestado. Verifique a permissão DELETE da tabela hub_atestados e do bucket hub-atestados.", "error");
+        showModal?.("Erro", "N�o foi poss�vel apagar o atestado. Verifique a permiss�o DELETE da tabela hub_atestados e do bucket hub-atestados.", "error");
         return;
       }
     }
 
     applyLocalDelete();
-    showModal?.("Atestado apagado localmente", "Sem PostgreSQL ativo, a exclusão foi feita apenas neste navegador.", "info");
+    showModal?.("Atestado apagado localmente", "Sem PostgreSQL ativo, a exclus�o foi feita apenas neste navegador.", "info");
   }
 
   async function updateAtestadoStatus(id, status) {
@@ -11073,17 +11532,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       } catch (error) {
         console.error("Erro ao atualizar status do atestado:", error);
-        showModal?.("Erro", "Não foi possível atualizar o status no PostgreSQL. Verifique a permissão UPDATE da tabela hub_atestados.", "error");
+        showModal?.("Erro", "N�o foi poss�vel atualizar o status no PostgreSQL. Verifique a permiss�o UPDATE da tabela hub_atestados.", "error");
         return;
       }
     }
 
     applyLocal();
-    showModal?.("Status atualizado localmente", "Sem PostgreSQL ativo, a alteração ficou salva apenas neste navegador.", "info");
+    showModal?.("Status atualizado localmente", "Sem PostgreSQL ativo, a altera��o ficou salva apenas neste navegador.", "info");
   }
 
   async function uploadPublicAtestado({ nome, cpf, telefone, unidade, file }) {
-    if (!postgresClient) throw new Error("PostgreSQL indisponível. Verifique a configuração pública do HUB.");
+    if (!postgresClient) throw new Error("PostgreSQL indispon�vel. Verifique a configura��o p�blica do HUB.");
 
     const cpfDigits = normalizeCpf(cpf);
     const safeName = safeStorageFileName(file.name || "atestado.pdf");
@@ -11108,8 +11567,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // IMPORTANTE:
-    // Não usar .select().single() no envio público.
-    // O visitante/anon tem permissão apenas para INSERIR, não para LER a tabela.
+    // N�o usar .select().single() no envio p�blico.
+    // O visitante/anon tem permiss�o apenas para INSERIR, n�o para LER a tabela.
     // Quando o INSERT pede retorno com .select(), o PostgreSQL tenta aplicar SELECT
     // e pode retornar erro de RLS mesmo com a policy de INSERT correta.
     const { error: insertError } = await postgresClient
@@ -11154,24 +11613,24 @@ document.addEventListener('DOMContentLoaded', () => {
       const file = formData.get("atestado");
 
       if (!/\S+\s+\S+/.test(nome)) {
-        showModal?.("Nome obrigatório", "Informe nome e sobrenome do colaborador.", "error");
+        showModal?.("Nome obrigat�rio", "Informe nome e sobrenome do colaborador.", "error");
         return;
       }
       if (!isValidCpf(cpf)) {
-        showModal?.("CPF inválido", "Informe um CPF válido no formato 000.000.000-00.", "error");
+        showModal?.("CPF inv�lido", "Informe um CPF v�lido no formato 000.000.000-00.", "error");
         return;
       }
       if (!telefone || normalizeCpf(telefone).length < 10) {
-        showModal?.("Telefone obrigatório", "Informe um telefone válido para contato.", "error");
+        showModal?.("Telefone obrigat�rio", "Informe um telefone v�lido para contato.", "error");
         return;
       }
       if (!unidade) {
-        showModal?.("Unidade obrigatória", "Selecione a unidade do colaborador.", "error");
+        showModal?.("Unidade obrigat�ria", "Selecione a unidade do colaborador.", "error");
         return;
       }
       const fileError = validateAtestadoFile(file);
       if (fileError) {
-        showModal?.("Arquivo inválido", fileError, "error");
+        showModal?.("Arquivo inv�lido", fileError, "error");
         return;
       }
 
@@ -11188,7 +11647,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showModal?.("Atestado enviado", "Seu atestado foi enviado com sucesso para o RH.", "success");
       } catch (error) {
         console.error("Erro ao enviar atestado:", error);
-        showModal?.("Erro no envio", error.message || "Não foi possível enviar o atestado. Verifique sua conexão e tente novamente.", "error");
+        showModal?.("Erro no envio", error.message || "N�o foi poss�vel enviar o atestado. Verifique sua conex�o e tente novamente.", "error");
       } finally {
         if (submitButton) {
           submitButton.disabled = false;
