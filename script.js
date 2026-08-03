@@ -6622,18 +6622,29 @@ function showUserNotificationPopout(title, message, options = {}) {
 }
 
 function openNotificationTrackerFromPopout() {
-  if (window.notificationTracker && typeof window.notificationTracker.openModal === "function") {
-    window.notificationTracker.openModal();
-    return;
-  }
-
-  const trackerButton = document.getElementById("dashboard-notifications-tracker");
-  if (trackerButton) {
-    trackerButton.click();
-    return;
-  }
-
+  if (openNotificationTrackerSafely()) return;
   window.location.href = "index.html?open=acompanhamento";
+}
+
+function openNotificationTrackerSafely() {
+  try {
+    if (!window.notificationTracker && document.getElementById("tracker-modal")) {
+      window.notificationTracker = new NotificationTracker();
+    }
+    if (window.notificationTracker && typeof window.notificationTracker.openModal === "function") {
+      window.notificationTracker.openModal();
+      return true;
+    }
+  } catch (error) {
+    console.warn("Nao foi possivel iniciar o acompanhamento automaticamente:", error);
+  }
+
+  const modal = document.getElementById("tracker-modal");
+  if (!modal) return false;
+  modal.removeAttribute("hidden");
+  document.body.style.overflow = "hidden";
+  document.getElementById("tracker-search")?.focus();
+  return true;
 }
 
 async function showBrowserDesktopNotification(title, body, options = {}) {
@@ -10282,6 +10293,12 @@ function baixarDocumentoRH(id) {
 };
 
 document.addEventListener('click', (event) => {
+  if (event.target.closest("#dashboard-notifications-tracker")) {
+    event.preventDefault();
+    openNotificationTrackerSafely();
+    return;
+  }
+
   const target = event.target.closest('[data-action]');
   if (!target) return;
 
@@ -10981,7 +10998,11 @@ function maybeOpenNotificationTrackerFromUrl() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  window.notificationTracker = new NotificationTracker();
+  try {
+    window.notificationTracker = new NotificationTracker();
+  } catch (error) {
+    console.warn("Nao foi possivel iniciar o acompanhamento no carregamento:", error);
+  }
   maybeOpenNotificationTrackerFromUrl();
 });
 
