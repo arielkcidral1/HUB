@@ -717,7 +717,7 @@ function hasRealAuthIdentity(authUser = {}) {
 
 function getPersistedAuthFields() {
   const postgresSession = storageService.getLocalItem(POSTGRES_SESSION_KEY, {});
-  const postgresUser = postgresSession?.user || {};
+  const postgresUser = postgresSession?.user || window.__hubAuthenticatedSession?.user || {};
   return {
     nome: storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`) || postgresUser?.user_metadata?.nome || postgresUser?.user_metadata?.name || "",
     email: storageService.getLocalItem(`${SESSION_KEY}-email`) || storageService.getSessionItem(`${SESSION_KEY}-email`) || postgresUser?.email || "",
@@ -748,11 +748,12 @@ function hydratePersistedAuthUser(authUser = {}) {
 
 function buildPersistedAuthSession() {
   const postgresSession = storageService.getLocalItem(POSTGRES_SESSION_KEY, null);
+  const entrySession = window.__hubAuthenticatedSession || null;
   const hasHubSession = storageService.getLocalItem(SESSION_KEY) === "active" || storageService.getSessionItem(SESSION_KEY) === "active";
-  if (!hasHubSession && !postgresSession?.user) return null;
+  if (!hasHubSession && !postgresSession?.user && !entrySession?.user) return null;
   const persistedAuthUser = storageService.getLocalItem(PERSISTED_AUTH_USER_KEY);
   const { nome, email, cargo } = getPersistedAuthFields();
-  const hydratedPersistedUser = hydratePersistedAuthUser(persistedAuthUser || postgresSession?.user || {});
+  const hydratedPersistedUser = hydratePersistedAuthUser(persistedAuthUser || postgresSession?.user || entrySession?.user || {});
   if (hasRealAuthIdentity(hydratedPersistedUser)) {
     return { user: hydratedPersistedUser };
   }
