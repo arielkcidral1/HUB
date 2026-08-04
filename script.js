@@ -708,24 +708,51 @@ function getAuthUserDisplayName(authUser) {
   );
 }
 
+function getPersistedAuthFields() {
+  return {
+    nome: storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`) || "",
+    email: storageService.getLocalItem(`${SESSION_KEY}-email`) || storageService.getSessionItem(`${SESSION_KEY}-email`) || "",
+    cargo: storageService.getLocalItem(`${SESSION_KEY}-role`) || storageService.getSessionItem(`${SESSION_KEY}-role`) || "",
+  };
+}
+
+function hydratePersistedAuthUser(authUser = {}) {
+  const persisted = getPersistedAuthFields();
+  const nome = authUser?.user_metadata?.nome || authUser?.user_metadata?.name || persisted.nome || "";
+  const email = authUser?.email || persisted.email || "";
+  const cargo = authUser?.app_metadata?.cargo || authUser?.user_metadata?.cargo || authUser?.cargo || persisted.cargo || "";
+  return {
+    ...authUser,
+    id: authUser?.id || email || normalizeLoginName(nome) || "persisted-user",
+    email,
+    user_metadata: {
+      ...(authUser?.user_metadata || {}),
+      nome,
+      cargo,
+    },
+    app_metadata: {
+      ...(authUser?.app_metadata || {}),
+      cargo,
+    },
+  };
+}
+
 function buildPersistedAuthSession() {
   if (storageService.getLocalItem(SESSION_KEY) !== "active" && storageService.getSessionItem(SESSION_KEY) !== "active") return null;
   const persistedAuthUser = storageService.getLocalItem(PERSISTED_AUTH_USER_KEY);
-  if (persistedAuthUser?.id || persistedAuthUser?.email || persistedAuthUser?.user_metadata?.nome) {
-    return { user: persistedAuthUser };
+  const { nome, email, cargo } = getPersistedAuthFields();
+  if (persistedAuthUser?.id || persistedAuthUser?.email || persistedAuthUser?.user_metadata?.nome || nome || email) {
+    return { user: hydratePersistedAuthUser(persistedAuthUser || {}) };
   }
-  const nome = storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`) || "";
-  const email = storageService.getLocalItem(`${SESSION_KEY}-email`) || storageService.getSessionItem(`${SESSION_KEY}-email`) || "";
-  const cargo = storageService.getLocalItem(`${SESSION_KEY}-role`) || storageService.getSessionItem(`${SESSION_KEY}-role`) || "";
   if (!nome && !email) return null;
 
   return {
-    user: {
+    user: hydratePersistedAuthUser({
       id: email || normalizeLoginName(nome) || "persisted-user",
       email,
       user_metadata: { nome, cargo },
       app_metadata: { cargo },
-    },
+    }),
   };
 }
 
@@ -809,17 +836,35 @@ async function loadUserProfile(authUser) {
   if (!authUser || !postgresClient) return null;
   const email = normalizeLoginName(authUser.email);
   const displayName = normalizeLoginName(getAuthUserDisplayName(authUser));
+  const profileFilters = [
+    email ? `email.ilike.${email}` : "",
+    displayName && displayName !== "usuario" ? `nome.ilike.${displayName}` : "",
+  ].filter(Boolean).join(",");
+
+  if (!profileFilters) {
+    return {
+      id: authUser.id,
+      nome: getAuthUserDisplayName(authUser),
+      email: authUser.email || "",
+      cargo: authUser.app_metadata?.cargo || "",
+      foto_perfil: "",
+      configuracoes: {},
+      syncStatus: "auth",
+      createdAt: todayLabel(),
+    };
+  }
 
   try {
     let query = postgresClient.from(USERS_TABLE).select("id, nome, email, cpf, cargo, foto_perfil, configuracoes, created_by, created_at");
-    const { data: profiles, error } = await query.or(`email.ilike.${email},nome.ilike.${displayName}`).limit(1);
+    if (profileFilters) query = query.or(profileFilters);
+    const { data: profiles, error } = await query.limit(1);
 
     if (error && isMissingColumn(error, "configuracoes")) {
-      const fallback = await postgresClient
+      let fallbackQuery = postgresClient
         .from(USERS_TABLE)
-        .select("id, nome, email, cpf, cargo, foto_perfil, created_by, created_at")
-        .or(`email.ilike.${email},nome.ilike.${displayName}`)
-        .limit(1);
+        .select("id, nome, email, cpf, cargo, foto_perfil, created_by, created_at");
+      if (profileFilters) fallbackQuery = fallbackQuery.or(profileFilters);
+      const fallback = await fallbackQuery.limit(1);
       if (fallback.error) throw fallback.error;
       const profile = mapRows("usuarios", fallback.data || [])[0] || null;
       if (profile) {
