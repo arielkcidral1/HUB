@@ -123,6 +123,20 @@
     return true;
   }
 
+  function renderAuthenticatedIdentity(user) {
+    const name = getSafeDisplayName(user);
+    if (!name) return;
+    const apply = () => {
+      const target = document.getElementById("current-user");
+      if (target) target.textContent = name;
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", apply, { once: true });
+    } else {
+      apply();
+    }
+  }
+
   async function reauthenticateInDatabase() {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
@@ -139,6 +153,8 @@
         redirectToLogin();
         return false;
       }
+      window.__hubAuthenticatedSession = result.session;
+      renderAuthenticatedIdentity(result.session.user);
       return true;
     } catch (error) {
       redirectToLogin();
