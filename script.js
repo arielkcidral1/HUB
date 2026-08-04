@@ -946,13 +946,17 @@ async function restoreAuthenticatedSession() {
         const timeoutMarker = { timedOut: true };
         const authSession = await withTimeout(getAuthSession(), 6000, timeoutMarker);
         if (authSession === timeoutMarker) {
-          console.warn("Nao foi possivel validar a sessao remota a tempo; mantendo a sessao local.");
+          clearAuthenticatedUser();
+          if (!isLoginPage() && !isPublicPage()) {
+            window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
+          }
           return;
         }
         if (!authSession?.user) {
-          // The API may not expose the persistent cookie after a hard reload.
-          // Keep the verified local identity and let PostgreSQL data load normally.
-          console.warn("Sessao remota ausente; mantendo a sessao local restaurada.");
+          clearAuthenticatedUser();
+          if (!isLoginPage() && !isPublicPage()) {
+            window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
+          }
           return;
         }
         const sessionUser = hydratePersistedAuthUser(authSession.user);
