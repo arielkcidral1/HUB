@@ -7,6 +7,8 @@
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
   const AUTH_REQUEST_TIMEOUT_MS = 3000;
 
+  document.documentElement.classList.add("auth-entry-pending");
+
   function isRealUser(user) {
     const email = String(user?.email || "").trim();
     const name = String(user?.user_metadata?.nome || user?.user_metadata?.name || "").trim().toLowerCase();

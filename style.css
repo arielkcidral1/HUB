@@ -177,6 +177,10 @@ h2 {
   visibility: visible;
 }
 
+html.auth-entry-pending body {
+  visibility: hidden;
+}
+
 .account-loading-page {
   min-height: 100dvh;
   margin: 0;
