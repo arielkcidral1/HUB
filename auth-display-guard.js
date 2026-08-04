@@ -28,10 +28,22 @@
     }
   }
 
+  function waitForAuthenticatedRender(startedAt = Date.now()) {
+    if (window.__hubAuthReady) {
+      verifyRenderedIdentity();
+      return;
+    }
+    if (Date.now() - startedAt >= 10000) {
+      redirectToLogin();
+      return;
+    }
+    window.setTimeout(() => waitForAuthenticatedRender(startedAt), 100);
+  }
+
   Promise.resolve(window.__hubAuthEntryPromise)
     .then((authenticated) => {
       if (!authenticated) return;
-      window.setTimeout(verifyRenderedIdentity, 1500);
+      waitForAuthenticatedRender();
     })
     .catch(() => redirectToLogin());
 })();

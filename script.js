@@ -1145,6 +1145,7 @@ async function setupLogin() {
 
   // Redirecionamentos Inteligentes
   if (hasAuthSession && hasValidDisplayIdentity) {
+    window.__hubAuthReady = true;
     document.documentElement.classList.remove("auth-entry-pending");
     if (isLoginPage()) {
       window.location.replace(getLoginRedirectTarget());
