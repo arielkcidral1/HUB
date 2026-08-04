@@ -9972,6 +9972,17 @@ function startAppInitialization() {
   return appInitializationPromise;
 }
 
+function unlockAccountLoadingWithSession() {
+  const shell = document.getElementById("app-shell");
+  if (!shell?.classList.contains("is-locked")) return true;
+  if (!isAuthenticated()) return false;
+  renderAll();
+  shell.classList.remove("is-locked");
+  shell.classList.add("is-ready");
+  setupPresenceHeartbeat();
+  return true;
+}
+
 function armAccountLoadingReauth() {
   if (isLoginPage() || isPublicPage()) return;
   window.setTimeout(async () => {
@@ -9984,7 +9995,10 @@ function armAccountLoadingReauth() {
         return;
       }
     }
-    startAppInitialization();
+    await withTimeout(startAppInitialization(), ACCOUNT_LOADING_REAUTH_MS, null);
+    if (!unlockAccountLoadingWithSession()) {
+      window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
+    }
   }, ACCOUNT_LOADING_REAUTH_MS);
 }
 
