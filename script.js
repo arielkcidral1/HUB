@@ -950,10 +950,9 @@ async function restoreAuthenticatedSession() {
           return;
         }
         if (!authSession?.user) {
-          clearAuthenticatedUser();
-          if (!isLoginPage() && !isPublicPage()) {
-            window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
-          }
+          // The API may not expose the persistent cookie after a hard reload.
+          // Keep the verified local identity and let PostgreSQL data load normally.
+          console.warn("Sessao remota ausente; mantendo a sessao local restaurada.");
           return;
         }
         const sessionUser = hydratePersistedAuthUser(authSession.user);

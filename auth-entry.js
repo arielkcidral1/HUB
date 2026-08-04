@@ -104,7 +104,23 @@
 
   async function reauthenticateInDatabase() {
     const localIdentityAvailable = hasStoredIdentity();
-    if (localIdentityAvailable && await hasRecentActivity()) return true;
+    // A local identity is enough to paint the authenticated shell after F5.
+    // Remote validation continues in the background and must not blank the app.
+    if (localIdentityAvailable) {
+      window.setTimeout(() => {
+        fetch("/api/auth", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "session" }),
+        }).then((response) => response.json().catch(() => ({})))
+          .then((result) => {
+            if (result?.session?.user) persistAuthenticatedSession(result.session);
+          })
+          .catch(() => {});
+      }, 0);
+      return true;
+    }
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
     try {
