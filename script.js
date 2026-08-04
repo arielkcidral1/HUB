@@ -10006,10 +10006,16 @@ async function initializeAppData() {
   const postgresLoaded = await withTimeout(postgresLoad, POSTGRES_BOOT_TIMEOUT_MS, false);
   if (postgresLoaded === false) {
     setSyncStatus("PostgreSQL carregando em segundo plano", false);
-    renderAll();
   }
   shell?.classList.remove("is-locked");
   shell?.classList.add("is-ready");
+  if (postgresLoaded === false) {
+    try {
+      renderAll();
+    } catch (error) {
+      console.error("Erro ao renderizar painel apos destravar loading:", error);
+    }
+  }
   setupPresenceHeartbeat();
 }
 
@@ -10026,9 +10032,13 @@ function unlockAccountLoadingWithSession() {
   const shell = document.getElementById("app-shell");
   if (!shell?.classList.contains("is-locked")) return true;
   if (!isAuthenticated()) return false;
-  renderAll();
   shell.classList.remove("is-locked");
   shell.classList.add("is-ready");
+  try {
+    renderAll();
+  } catch (error) {
+    console.error("Erro ao renderizar painel apos restaurar sessao:", error);
+  }
   setupPresenceHeartbeat();
   return true;
 }

@@ -32,7 +32,16 @@
     if (!shell?.classList.contains("is-locked")) return;
 
     const active = readJson(SESSION_KEY) === "active";
-    if (active && hasStoredIdentity()) return;
+    if (active && hasStoredIdentity()) {
+      window.setTimeout(() => {
+        const currentShell = document.getElementById("app-shell");
+        const stillActive = readJson(SESSION_KEY) === "active";
+        if (!currentShell?.classList.contains("is-locked") || !stillActive || !hasStoredIdentity()) return;
+        currentShell.classList.remove("is-locked");
+        currentShell.classList.add("is-ready");
+      }, LIMIT_MS);
+      return;
+    }
 
     redirectToLogin();
   }, LIMIT_MS);
