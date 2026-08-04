@@ -9926,7 +9926,7 @@ function prefillChamadoRequester() {
   input.classList.add("readonly-field");
 }
 
-function initializeAppData() {
+async function initializeAppData() {
   const shell = document.getElementById("app-shell");
   populateUnitSelects();
   populateEpiSelects();
@@ -9944,14 +9944,14 @@ function initializeAppData() {
     window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
     return;
   }
-  shell?.classList.remove("is-locked");
-  shell?.classList.add("is-ready");
   applyRoleAccess();
   prefillChamadoRequester();
   renderAccountSettings();
   registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
-  loadFromPostgreSQL({ setupLive: true });
+  await loadFromPostgreSQL({ setupLive: true });
+  shell?.classList.remove("is-locked");
+  shell?.classList.add("is-ready");
   setupPresenceHeartbeat();
 }
 
@@ -10013,7 +10013,8 @@ function setupPresencePolling() {
 disableSensitiveFieldAutofill();
 
 setupLogin().then((canInitialize) => {
-  if (canInitialize) initializeAppData();
+  if (canInitialize) return initializeAppData();
+  return null;
 }).catch((error) => {
   console.error("Erro ao validar login:", error);
   if (isAuthenticated()) {
