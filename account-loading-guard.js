@@ -14,11 +14,11 @@
   function hasStoredIdentity() {
     const persistedUser = readJson(PERSISTED_AUTH_USER_KEY);
     const name = readJson(`${SESSION_KEY}-user`) || readJson(`${SESSION_KEY}-email`);
+    const normalizedName = String(persistedUser?.user_metadata?.nome || name || "").trim().toLowerCase();
     return Boolean(
-      persistedUser?.id ||
       persistedUser?.email ||
-      persistedUser?.user_metadata?.nome ||
-      name
+      (persistedUser?.user_metadata?.nome && normalizedName !== "usuario") ||
+      (name && normalizedName !== "usuario")
     );
   }
 
