@@ -177,33 +177,6 @@ h2 {
   visibility: visible;
 }
 
-html.auth-entry-pending body {
-  visibility: hidden;
-}
-
-html.auth-entry-pending {
-  background: #061b17;
-}
-
-html.auth-entry-pending::before {
-  content: "HUB\A Restaurando sua conta...";
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  display: grid;
-  place-items: center;
-  padding: 28px;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.7;
-  text-align: center;
-  white-space: pre-line;
-  background:
-    linear-gradient(120deg, rgba(12, 98, 89, 0.86), rgba(8, 25, 22, 0.96)),
-    url("assets/hero-rh.svg") center / cover no-repeat;
-}
-
 .account-loading-page {
   min-height: 100dvh;
   margin: 0;

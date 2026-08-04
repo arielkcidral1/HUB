@@ -67,7 +67,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $authApi 'action === "session"[\s\S]*decodeCookiePayload\(getCookie\(req, "hub_auth_session"\)\)' "API auth restaura sessao por cookie"
   Assert-MatchText $authApi 'action === "logout"[\s\S]*clearAuthCookie\(res\)' "API auth limpa cookie no logout"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v8[\s\S]*hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v20' "HUB valida a entrada antes de carregar o painel"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v9[\s\S]*style\.css\?v=auth-persist-v21[\s\S]*hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v21' "HUB restaura a conta local antes de carregar o painel"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
   Assert-True -Condition (-not ($index -match 'account-loading-guard\.js|Carregando sua conta')) -Message "index.html nao possui a tela de carregamento"
   $loading = Read-ProjectFile "account-loading.html"
@@ -84,7 +84,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'if \(!authSession\?\.user\)[\s\S]*mantendo a sessao local restaurada[\s\S]*return;' "validacao remota nao apaga a sessao local no F5"
   Assert-MatchText $accountLoadingGuard 'const POSTGRES_SESSION_KEY = "hub-postgres-session"[\s\S]*const postgresUser = readJson\(POSTGRES_SESSION_KEY\)\?\.user[\s\S]*postgresUser\?\.email[\s\S]*normalizedName !== "usuario"[\s\S]*if \(active && hasStoredIdentity\(\)\)' "guard externo reconhece sessao postgres persistida sem destravar Usuario generico"
   Assert-MatchText $accountLoadingGuard 'function redirectToLogin\(\)[\s\S]*window\.location\.replace\(`login\.html\?next=' "guard externo envia para login sem sessao salva"
-  Assert-MatchText $style 'html\.auth-entry-pending body[\s\S]*html\.auth-entry-pending::before[\s\S]*Restaurando sua conta[\s\S]*assets/hero-rh\.svg[\s\S]*\.account-loading-page[\s\S]*\.account-loading-screen[\s\S]*\.account-loading-card' "loading da conta nunca fica vazio durante a restauracao"
+  Assert-MatchText $style '\.account-loading-page[\s\S]*\.account-loading-screen[\s\S]*\.account-loading-card' "tela de carregamento possui estilos proprios"
   $encodingArtifacts = @(([char]0x00C3), ([char]0x00C2), ([char]0x00E2))
   Assert-True -Condition (-not ($encodingArtifacts | Where-Object { $index.Contains([string]$_) })) -Message "index.html nao possui caracteres corrompidos por encoding"
   Assert-MatchText $script 'function isValidCpf\(value\).*\/\^\\d\{11\}\$\/\.test\(cpf\).*\/\^\(\\d\)\\1\{10\}\$\/\.test\(cpf\)' "validacao de CPF rejeita formato invalido e sequencias repetidas"
