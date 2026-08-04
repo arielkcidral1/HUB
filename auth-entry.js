@@ -81,6 +81,21 @@
     window.location.replace("login.html?next=index.html");
   }
 
+  function disconnectOnReload() {
+    const navigation = performance.getEntriesByType?.("navigation")?.[0];
+    if (navigation?.type !== "reload") return false;
+    clearStoredSession();
+    fetch("/api/auth", {
+      method: "POST",
+      credentials: "same-origin",
+      keepalive: true,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "logout" }),
+    }).catch(() => {});
+    window.location.replace("login.html?next=index.html");
+    return true;
+  }
+
   function persistAuthenticatedSession(session) {
     const user = session?.user;
     if (!isRealUser(user)) return false;
@@ -125,6 +140,8 @@
       window.clearTimeout(timeout);
     }
   }
+
+  if (disconnectOnReload()) return;
 
   // Do not initialize a private page until the persistent auth cookie is valid.
   window.__hubAuthEntryPromise = reauthenticateInDatabase();
