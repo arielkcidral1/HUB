@@ -68,6 +68,29 @@ function getCookie(req, name) {
   return "";
 }
 
+async function ensureSessionVersionColumn() {
+  await pool.query(`
+    alter table public.hub_users
+      add column if not exists session_version bigint not null default 0
+  `);
+}
+
+export async function validateAuthSession(req) {
+  const session = decodeCookiePayload(getCookie(req, "hub_auth_session"));
+  const userId = session?.user?.id;
+  if (!userId || session.session_version == null) return null;
+
+  await ensureSessionVersionColumn();
+  const result = await pool.query(
+    `select session_version from public.hub_users where id = $1 limit 1`,
+    [userId]
+  );
+  const currentVersion = result.rows[0]?.session_version;
+  return currentVersion != null && String(currentVersion) === String(session.session_version)
+    ? session
+    : null;
+}
+
 function setAuthCookie(res, session) {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   res.setHeader("Set-Cookie", `hub_auth_session=${encodeCookiePayload(session)}; Path=/; Max-Age=2592000; SameSite=Lax; HttpOnly${secure}`);
@@ -83,13 +106,14 @@ export default async function handler(req, res) {
     assertDatabaseUrl();
     const body = await getBody(req);
     const action = body.action || "login";
+    await ensureSessionVersionColumn();
 
     if (action === "logout") {
       clearAuthCookie(res);
       return json(res, 200, { ok: true });
     }
     if (action === "session") {
-      const session = decodeCookiePayload(getCookie(req, "hub_auth_session"));
+      const session = await validateAuthSession(req);
       return json(res, 200, { session: session?.user ? session : null });
     }
 
@@ -98,8 +122,16 @@ export default async function handler(req, res) {
       return json(res, 401, { error: "Credenciais invalidas." });
     }
 
+    const versionedUser = (await pool.query(
+      `update public.hub_users
+          set session_version = coalesce(session_version, 0) + 1
+        where id = $1
+      returning id, nome, email, cpf, cargo, foto_perfil, created_at, session_version`,
+      [user.id]
+    )).rows[0] || user;
     const session = {
-      user: publicUser(user),
+      user: publicUser(versionedUser),
+      session_version: String(versionedUser.session_version || 0),
       access_token: crypto.randomUUID(),
       refresh_token: crypto.randomUUID(),
     };
