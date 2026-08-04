@@ -1110,6 +1110,10 @@ async function setupLogin() {
   const loginForm = document.getElementById("login-form");
   const settingsLogoutButton = document.getElementById("settings-logout-button");
 
+  if (window.__hubReloadSignedOut) {
+    return false;
+  }
+
   clearLegacyTeamCredentials();
   if (!isLoginPage() && !isPublicPage() && window.__hubAuthEntryPromise) {
     const entryAuthenticated = await window.__hubAuthEntryPromise;
