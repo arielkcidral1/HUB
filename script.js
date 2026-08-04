@@ -328,7 +328,7 @@ const UNIT_OPTIONS = [
   "1- MTZ",
   "2- SBS",
   "3- ITJ 1",
-  "4- PL",
+  "4- PLÇ",
   "5- GUA",
   "7- DPA JC",
   "9- DPA IRI",
@@ -11783,9 +11783,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (nextBtn) nextBtn.style.display = 'none';
 });
 /* ==========================================================================
-   PERMISS�O ARIEL + FEEDBACKS/RECLAMA��ES/SUGEST�ES
-   - Equipe vis�vel somente para o usuário Ariel
-   - Nova aba em Conta > Configura��es para envio de feedbacks
+   PERMISSÃO ARIEL + FEEDBACKS/RECLAMAÇÕES/SUGESTÕES
+   - Equipe visível somente para o usuário Ariel
+   - Nova aba em Conta > Configurações para envio de feedbacks
    - Ariel visualiza todos os envios
    ========================================================================== */
 (function setupArielAccessAndFeedbackModule() {
@@ -11914,22 +11914,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function createFeedbackSettingsButton() {
     return `
-      <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclama��es reclama��o sugestao sugest�es sugestoes melhoria usuario">
+      <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclamacoes sugestao sugestoes melhoria usuario">
         <span class="settings-item-icon settings-icon-feedback" aria-hidden="true"></span>
-        <span><strong>Feedbacks e Sugest�es</strong><small>Feedbacks, reclama��es e sugest�es</small></span>
+        <span><strong>Feedbacks e Sugestões</strong><small>Feedbacks, reclamações e sugestões</small></span>
       </button>
     `;
   }
 
   function createFeedbackDropdownButton() {
     const subtitle = isArielUser()
-      ? "Visualizar feedbacks, reclama��es e sugest�es"
-      : "Enviar feedback, reclama��o ou sugest�o";
+      ? "Visualizar feedbacks, reclamações e sugestões"
+      : "Enviar feedback, reclamação ou sugestão";
     return `
       <button type="button" class="user-menu-item" data-view="conta" data-settings-target="${FEEDBACK_PANEL_ID}" role="menuitem">
         <span class="user-menu-icon user-menu-icon-feedback" aria-hidden="true"></span>
         <span class="user-menu-item-text">
-          <strong>Feedbacks e Sugest�es</strong>
+          <strong>Feedbacks e Sugestões</strong>
           <small>${subtitle}</small>
         </span>
       </button>
@@ -11940,36 +11940,36 @@ document.addEventListener('DOMContentLoaded', () => {
     return `
       <section class="panel settings-detail-panel" data-settings-panel="${FEEDBACK_PANEL_ID}">
         <div class="panel-header">
-          <h2>Feedbacks, reclama��es e sugest�es</h2>
+          <h2>Feedbacks, reclamações e sugestões</h2>
         </div>
-        <p class="item-meta" id="hub-feedback-panel-description">Use este espaço para enviar melhorias, reclama��es ou sugest�es sobre o HUB e processos internos.</p>
+        <p class="item-meta" id="hub-feedback-panel-description">Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.</p>
 
         <form class="hub-feedback-form settings-section" id="hub-feedback-form">
           <h3>Novo envio</h3>
           <label>Tipo
             <select id="hub-feedback-type" required>
               <option value="Feedback">Feedback</option>
-              <option value="Reclama��o">Reclama��o</option>
-              <option value="Sugest�o">Sugest�o</option>
+              <option value="Reclamação">Reclamação</option>
+              <option value="Sugestão">Sugestão</option>
             </select>
           </label>
           <label>Mensagem
-            <textarea id="hub-feedback-message" placeholder="Descreva aqui seu feedback, reclama��o ou sugest�o..." required></textarea>
+            <textarea id="hub-feedback-message" placeholder="Descreva aqui seu feedback, reclamação ou sugestão..." required></textarea>
           </label>
           <button class="primary-button" type="submit">Enviar</button>
         </form>
 
         <div class="settings-section" id="hub-feedback-admin-area" hidden>
           <div class="hub-feedback-admin-note">
-            <strong>Visualiza��o do Ariel:</strong> aqui aparecem os feedbacks, reclama��es e sugest�es enviados pelos usuários.
+            <strong>Visualização do Ariel:</strong> aqui aparecem os feedbacks, reclamações e sugestões enviados pelos usuários.
           </div>
           <div class="hub-feedback-toolbar section-top">
             <h3 class="flush-bottom">Envios recebidos</h3>
             <select class="hub-feedback-filter" id="hub-feedback-filter">
               <option value="todos">Todos</option>
               <option value="Feedback">Feedback</option>
-              <option value="Reclama��o">Reclama��o</option>
-              <option value="Sugest�o">Sugest�o</option>
+              <option value="Reclamação">Reclamação</option>
+              <option value="Sugestão">Sugestão</option>
             </select>
           </div>
           <div class="hub-feedback-list" id="hub-feedback-admin-list"></div>
@@ -11990,7 +11990,7 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       event.stopPropagation();
 
-      // Quando o bot�o vem do menu do usuário, precisa abrir a aba Conta antes
+      // Quando o botão vem do menu do usuário, precisa abrir a aba Conta antes.
       // de selecionar o painel interno de Feedbacks.
       activateView?.("conta");
       ensureFeedbackSettingsUi();
@@ -12218,13 +12218,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (description) {
       description.textContent = ariel
         ? "Área exclusiva para visualizar feedbacks, reclamações e sugestões enviados pelos usuários."
-        : "Use este espaço para enviar melhorias, reclama��es ou sugest�es sobre o HUB e processos internos.";
+        : "Use este espaço para enviar melhorias, reclamações ou sugestões sobre o HUB e processos internos.";
     }
 
     document.querySelectorAll(`[data-settings-target="${FEEDBACK_PANEL_ID}"] small`).forEach((small) => {
       small.textContent = ariel
-        ? "Visualizar feedbacks, reclama��es e sugest�es"
-        : "Enviar feedback, reclama��o ou sugest�o";
+        ? "Visualizar feedbacks, reclamações e sugestões"
+        : "Enviar feedback, reclamação ou sugestão";
     });
   }
 
