@@ -247,6 +247,7 @@ const defaultData = {
   vagas: [],
   eventos: [],
   vtRegistros: [],
+  disciplinaryRecords: [],
   documentosContratados: [],
   candidaturas: [],
   atestados: [],
@@ -1048,6 +1049,7 @@ function loadLocalData() {
     vagas: parsed.vagas || [],
     eventos: parsed.eventos || [],
     vtRegistros: parsed.vtRegistros || [],
+    disciplinaryRecords: parsed.disciplinaryRecords || [],
     documentosContratados: (parsed.documentosContratados || [])
       .filter((item) => !String(item.id || "").startsWith("local-") && !item.pendingSync)
       .map(mapContractorDocumentRow),
@@ -5463,6 +5465,149 @@ function gerarRelatorioVt(scope = "filtered") {
   document.getElementById("custom-modal")?.remove();
 }
 
+function getDisciplinaryTypeLabel(type) {
+  return String(type || "").toLowerCase() === "suspensao" ? "Suspensao" : "Advertencia";
+}
+
+function getFilteredDisciplinaryRecords() {
+  const nameFilter = String(document.getElementById("disciplinary-filter-name")?.value || "").trim().toLowerCase();
+  const observationsFilter = String(document.getElementById("disciplinary-filter-observations")?.value || "").trim().toLowerCase();
+  const monthFilter = document.getElementById("disciplinary-filter-date")?.value || "";
+  const unitFilter = document.getElementById("disciplinary-filter-unit")?.value || "";
+
+  return (data.disciplinaryRecords || []).filter((item) => {
+    if (nameFilter && !String(item.colaborador || "").toLowerCase().includes(nameFilter)) return false;
+    if (observationsFilter && !String(item.motivo || "").toLowerCase().includes(observationsFilter)) return false;
+    if (monthFilter && String(item.dataMedida || "").slice(5, 7) !== monthFilter) return false;
+    if (unitFilter && item.unidade !== unitFilter) return false;
+    return true;
+  });
+}
+
+function updateDisciplinaryFilterClearButton() {
+  const clearButton = document.getElementById("clear-disciplinary-filters");
+  if (!clearButton) return;
+  clearButton.hidden = !Boolean(
+    String(document.getElementById("disciplinary-filter-name")?.value || "").trim()
+    || String(document.getElementById("disciplinary-filter-observations")?.value || "").trim()
+    || document.getElementById("disciplinary-filter-date")?.value
+    || document.getElementById("disciplinary-filter-unit")?.value
+  );
+}
+
+function renderDisciplinaryRecords() {
+  updateDisciplinaryFilterClearButton();
+  renderCards("disciplinary-records", getFilteredDisciplinaryRecords(), (item) => `
+    <article class="item-card">
+      <div class="item-topline">
+        <p class="item-title">${escapeHtml(item.colaborador || "Funcionario nao informado")}</p>
+        <span class="tag">${escapeHtml(getDisciplinaryTypeLabel(item.tipo))}</span>
+      </div>
+      <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Nao informada")}</p>
+      <p><strong>Data:</strong> ${escapeHtml(formatEventDate(item.dataMedida || ""))}</p>
+      <p><strong>Local:</strong> ${escapeHtml(item.local || "Nao informado")}</p>
+      <p><strong>Motivo:</strong> ${escapeHtml(item.motivo || "Nao informado")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt || "")} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</p>
+      <div class="job-actions">
+        <button class="danger-button" type="button" data-action="excluir-disciplinary" data-id="${escapeHtml(item.id)}">Deletar</button>
+      </div>
+    </article>
+  `);
+}
+
+function getDisciplinaryReportRows(useFilters = true) {
+  const records = useFilters ? getFilteredDisciplinaryRecords() : (data.disciplinaryRecords || []);
+  return records.map((item) => ({
+    tipo: getDisciplinaryTypeLabel(item.tipo),
+    colaborador: item.colaborador || "Funcionario nao informado",
+    unidade: item.unidade || "Nao informada",
+    dataMedida: formatEventDate(item.dataMedida || ""),
+    local: item.local || "Nao informado",
+    motivo: item.motivo || "Nao informado",
+    registradoEm: formatVtReportDateTime(item.createdAt || todayLabel()),
+    registradoPor: item.createdBy || getSystemFallbackAuthor(),
+  }));
+}
+
+function buildDisciplinaryReportWorksheet(rows) {
+  const headers = ["Tipo", "Funcionario", "Unidade", "Data", "Local", "Motivo", "Registrado em", "Registrado por"];
+  const sheetRows = [
+    worksheetRowXml(["Relatorio de Advertencias e Suspensoes"], 1, 2),
+    worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
+    worksheetRowXml(headers, 5, 1),
+    ...rows.map((item, index) => worksheetRowXml([
+      item.tipo,
+      item.colaborador,
+      item.unidade,
+      item.dataMedida,
+      item.local,
+      item.motivo,
+      item.registradoEm,
+      item.registradoPor,
+    ], index + 6)),
+  ];
+  const lastRow = rows.length + 5;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <dimension ref="A1:H${lastRow}"/>
+  <cols>
+    <col min="1" max="1" width="16" customWidth="1"/>
+    <col min="2" max="3" width="26" customWidth="1"/>
+    <col min="4" max="5" width="18" customWidth="1"/>
+    <col min="6" max="6" width="44" customWidth="1"/>
+    <col min="7" max="8" width="22" customWidth="1"/>
+  </cols>
+  <sheetData>${sheetRows.join("")}</sheetData>
+  <mergeCells count="2"><mergeCell ref="A1:H1"/><mergeCell ref="A2:H2"/></mergeCells>
+</worksheet>`;
+}
+
+function createDisciplinaryReportXlsxBlob(rows) {
+  const worksheet = buildDisciplinaryReportWorksheet(rows);
+  return createZipBlob([
+    { name: "[Content_Types].xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>` },
+    { name: "_rels/.rels", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+    { name: "xl/workbook.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Medidas" sheetId="1" r:id="rId1"/></sheets></workbook>` },
+    { name: "xl/_rels/workbook.xml.rels", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+    { name: "xl/styles.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2F7D6D"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` },
+    { name: "xl/worksheets/sheet1.xml", content: worksheet },
+  ]);
+}
+
+function gerarRelatorioDisciplinary(scope = "filtered") {
+  const useFilters = scope !== "all";
+  const rows = getDisciplinaryReportRows(useFilters);
+  if (!rows.length) {
+    showModal("Relatorio vazio", "Nao ha advertencias ou suspensoes para gerar o relatorio.", "error");
+    return;
+  }
+  downloadBlob(createDisciplinaryReportXlsxBlob(rows), safeDownloadName(`relatorio-advertencias-suspensoes-${useFilters ? "filtrado" : "todos"}`, "xlsx"));
+  document.getElementById("custom-modal")?.remove();
+}
+
+function showDisciplinaryReportMenu() {
+  document.getElementById("custom-modal")?.remove();
+  const filteredCount = getFilteredDisciplinaryRecords().length;
+  const totalCount = (data.disciplinaryRecords || []).length;
+  const overlay = document.createElement("div");
+  overlay.id = "custom-modal";
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-card vt-report-modal">
+      <div class="modal-header info">Relatorio disciplinar</div>
+      <div class="modal-body">
+        <p>Escolha quais registros deseja exportar em .xlsx.</p>
+        <div class="vt-report-options">
+          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="filtered"><span>Registros filtrados</span><small>${escapeHtml(String(filteredCount))} registro(s)</small></button>
+          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="all"><span>Todos os registros</span><small>${escapeHtml(String(totalCount))} registro(s) cadastrados</small></button>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="secondary-link" type="button" data-action="close-modal">Cancelar</button></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
 function updateVtFilterClearButton() {
   const clearButton = document.getElementById("limpar-filtros-vt");
   if (!clearButton) return;
@@ -7473,6 +7618,7 @@ function renderAll() {
   `);
 
   renderVtRegistros();
+  renderDisciplinaryRecords();
   renderDocumentosContratados();
 
   renderChamadosSection();
@@ -8941,6 +9087,59 @@ document.getElementById("limpar-filtros-vt")?.addEventListener("click", () => {
   renderVtRegistros();
 });
 
+document.querySelectorAll("[data-disciplinary-doc]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const targetDoc = button.dataset.disciplinaryDoc;
+    document.querySelectorAll("[data-disciplinary-doc]").forEach((tab) => tab.classList.toggle("active", tab === button));
+    document.querySelectorAll(".disciplinary-view").forEach((view) => {
+      view.classList.toggle("active", view.id === `disciplinary-${targetDoc}`);
+    });
+  });
+});
+
+document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
+  formElement.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(formElement);
+    const record = {
+      id: generateUUID(),
+      tipo: formElement.dataset.disciplinaryForm || "advertencia",
+      colaborador: String(form.get("colaborador") || "").trim(),
+      dataMedida: String(form.get("data_medida") || ""),
+      unidade: String(form.get("unidade") || ""),
+      local: String(form.get("local") || "").trim(),
+      motivo: String(form.get("motivo") || "").trim(),
+      createdAt: todayLabel(),
+      sortAt: new Date().toISOString(),
+      createdBy: getCurrentUserName(),
+    };
+    data.disciplinaryRecords = data.disciplinaryRecords || [];
+    data.disciplinaryRecords.unshift(record);
+    saveLocalData();
+    formElement.reset();
+    if (typeof populateUnitSelects === "function") populateUnitSelects();
+    renderAll();
+    showModal("Registro salvo", `${getDisciplinaryTypeLabel(record.tipo)} salva com sucesso.`, "info");
+  });
+});
+
+document.getElementById("disciplinary-filter-name")?.addEventListener("input", renderDisciplinaryRecords);
+document.getElementById("disciplinary-filter-observations")?.addEventListener("input", renderDisciplinaryRecords);
+document.getElementById("disciplinary-filter-date")?.addEventListener("change", renderDisciplinaryRecords);
+document.getElementById("disciplinary-filter-unit")?.addEventListener("change", renderDisciplinaryRecords);
+document.getElementById("abrir-relatorio-disciplinary")?.addEventListener("click", showDisciplinaryReportMenu);
+document.getElementById("clear-disciplinary-filters")?.addEventListener("click", () => {
+  const nameFilter = document.getElementById("disciplinary-filter-name");
+  const observationsFilter = document.getElementById("disciplinary-filter-observations");
+  const dateFilter = document.getElementById("disciplinary-filter-date");
+  const unitFilter = document.getElementById("disciplinary-filter-unit");
+  if (nameFilter) nameFilter.value = "";
+  if (observationsFilter) observationsFilter.value = "";
+  if (dateFilter) dateFilter.value = "";
+  if (unitFilter) unitFilter.value = "";
+  renderDisciplinaryRecords();
+});
+
 const usuarioForm = document.getElementById("usuario-form");
 if (usuarioForm) {
   usuarioForm.querySelector('[name="cpf"]')?.addEventListener("input", (event) => {
@@ -9968,6 +10167,24 @@ async function excluirVtRegistro(id) {
   });
 };
 
+function excluirDisciplinaryRecord(id) {
+  const registro = (data.disciplinaryRecords || []).find((item) => String(item.id) === String(id));
+  if (!registro) return;
+
+  showConfirmActionModal({
+    title: "Deletar registro",
+    text: `Tem certeza que deseja deletar a medida de "${registro.colaborador || "funcionario nao informado"}"?`,
+    confirmText: "Deletar",
+    danger: true,
+    onConfirm: () => {
+      data.disciplinaryRecords = (data.disciplinaryRecords || []).filter((item) => String(item.id) !== String(id));
+      saveLocalData();
+      renderAll();
+      showModal("Registro deletado", "A medida disciplinar foi removida.", "info");
+    },
+  });
+}
+
 async function excluirDocumentoContratado(id) {
   const registro = (data.documentosContratados || []).find((item) => String(item.id) === String(id));
   if (!registro) return;
@@ -10498,6 +10715,8 @@ document.addEventListener('click', (event) => {
     case 'editar-vt': editarVtRegistro(id); break;
     case 'excluir-vt': excluirVtRegistro(id); break;
     case 'gerar-relatorio-vt': gerarRelatorioVt(target.dataset.scope); break;
+    case 'excluir-disciplinary': excluirDisciplinaryRecord(id); break;
+    case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary(target.dataset.scope); break;
     case 'editar-documento': editarDocumento(id); break;
     case 'baixar-documento-rh': baixarDocumentoRH(id); break;
     case 'excluir-documento': excluirDocumento(id); break;
@@ -10819,6 +11038,41 @@ class NotificationTracker {
       });
     });
 
+    (sourceData.quadros || [])
+      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
+      .forEach((item) => {
+        const lists = Array.isArray(item.listas) ? item.listas : [];
+        const cardsCount = lists.reduce((total, list) => total + (Array.isArray(list.cards) ? list.cards.length : 0), 0);
+        pushNotification({
+          id: `quadro-${item.id}`,
+          type: "quadro",
+          title: `Quadro - ${item.nome || "Sem nome"}`,
+          description: `${cardsCount} card(s) em acompanhamento`,
+          details: `Quadro: ${item.nome || "Sem nome"}\nListas: ${lists.length}\nCards: ${cardsCount}\nAtualizado por: ${item.updatedBy || item.createdBy || "Nao informado"}\nCriado em: ${item.createdAt || "Nao informado"}`,
+          time: item.createdAt || "Recentemente",
+          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
+          status: "pending",
+          unread: true,
+          view: "quadros",
+        });
+      });
+
+    (sourceData.disciplinaryRecords || [])
+      .forEach((item) => {
+        pushNotification({
+          id: `disciplinary-${item.id}`,
+          type: "disciplinar",
+          title: `${getDisciplinaryTypeLabel(item.tipo)} - ${item.colaborador || "Funcionario"}`,
+          description: item.motivo || "Medida disciplinar registrada.",
+          details: `Tipo: ${getDisciplinaryTypeLabel(item.tipo)}\nFuncionario: ${item.colaborador || "Nao informado"}\nUnidade: ${item.unidade || "Nao informada"}\nData: ${formatEventDate(item.dataMedida || "")}\nLocal: ${item.local || "Nao informado"}\nMotivo: ${item.motivo || "Nao informado"}`,
+          time: item.createdAt || item.dataMedida || "Recentemente",
+          dateTime: item.sortAt || item.dataMedida || item.createdAt || "Recentemente",
+          status: "pending",
+          unread: true,
+          view: "advertencias-suspensoes",
+        });
+      });
+
     return notifications.sort((a, b) => (b.dateTime - a.dateTime) || (a.sequence - b.sequence));
   }
 
@@ -10867,6 +11121,8 @@ class NotificationTracker {
       evento: "calendario",
       documento: "documentos",
       atestado: "atestados",
+      quadro: "quadros",
+      disciplinar: "advertencias-suspensoes",
     };
     return views[type] || "dashboard";
   }
@@ -10881,6 +11137,8 @@ class NotificationTracker {
       evento: "??",
       documento: "??",
       atestado: "??",
+      quadro: "[]",
+      disciplinar: "!",
       geral: "??",
     };
     return icons[type] || "??";
