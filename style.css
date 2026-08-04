@@ -181,6 +181,10 @@ html.auth-entry-pending body {
   visibility: hidden;
 }
 
+html.auth-entry-pending {
+  background: #061b17;
+}
+
 .account-loading-page {
   min-height: 100dvh;
   margin: 0;
