@@ -640,7 +640,10 @@ function isAuthenticated() {
 
 function getCurrentUserName() {
   if (!isAuthenticated() && isPublicPage()) return "Publico";
-  return storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`) || "Voce";
+  const profileName = currentUserProfile?.nome || "";
+  const authName = currentAuthUser?.user_metadata?.nome || currentAuthUser?.user_metadata?.name || "";
+  const storedName = storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`) || "";
+  return [profileName, authName, storedName].find((name) => name && !isGenericAuthName(name)) || "Voce";
 }
 
 /**
@@ -773,7 +776,10 @@ function setAuthenticatedUser(authUser, profile = null) {
   currentAuthUser = hydratedAuthUser || null;
   currentUserProfile = profile || null;
   const authDisplayName = getAuthUserDisplayName(hydratedAuthUser);
-  const displayName = profile?.nome || (normalizeLoginName(authDisplayName) === "usuario" ? persisted.nome : authDisplayName) || persisted.nome;
+  const profileName = profile?.nome || "";
+  const displayName = (!isGenericAuthName(profileName) ? profileName : "") ||
+    (normalizeLoginName(authDisplayName) === "usuario" ? persisted.nome : authDisplayName) ||
+    persisted.nome;
   if (!profile && !hydratedAuthUser?.email && isGenericAuthName(displayName)) return false;
   const persistedAuthUser = {
     ...hydratedAuthUser,

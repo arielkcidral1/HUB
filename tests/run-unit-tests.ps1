@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*login-submit\.js\?v=login-submit-v1[\s\S]*script\.js\?v=auth-persist-v25' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*login-submit\.js\?v=login-submit-v1[\s\S]*script\.js\?v=auth-persist-v26' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -67,7 +67,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $authApi 'action === "session"[\s\S]*decodeCookiePayload\(getCookie\(req, "hub_auth_session"\)\)' "API auth restaura sessao por cookie"
   Assert-MatchText $authApi 'action === "logout"[\s\S]*clearAuthCookie\(res\)' "API auth limpa cookie no logout"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v12[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v25[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v12[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v26[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
   Assert-True -Condition (-not ($index -match 'account-loading-guard\.js|Carregando sua conta')) -Message "index.html nao possui a tela de carregamento"
   $loading = Read-ProjectFile "account-loading.html"
@@ -187,6 +187,8 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'clearLegacyTeamCredentials\(\)[\s\S]*const hasAuthSession = isLoginPage\(\) \? false : await restoreAuthenticatedSession\(\)' "reload continua o fluxo depois da reautenticacao"
   Assert-MatchText (Read-ProjectFile "auth-entry.js") 'LAST_ACCOUNT_KEY = "hub-rh-last-account"[\s\S]*readJson\(LAST_ACCOUNT_KEY\)[\s\S]*setItem\(LAST_ACCOUNT_KEY' "F5 preserva a ultima conta da maquina"
   Assert-MatchText $script 'const LAST_ACCOUNT_KEY = "hub-rh-last-account"[\s\S]*setLocalItem\(LAST_ACCOUNT_KEY[\s\S]*if \(window\.__hubReloadReauthenticated\)[\s\S]*await refreshSession\(\)' "F5 consulta perfil e dados do banco antes de liberar"
+  Assert-MatchText $script 'function getCurrentUserName\(\)[\s\S]*currentUserProfile\?\.nome[\s\S]*currentAuthUser\?\.user_metadata\?\.nome[\s\S]*find\(\(name\) => name && !isGenericAuthName\(name\)\)' "nome autenticado nao volta para Usuario generico"
+  Assert-MatchText $script 'const profileName = profile\?\.nome \|\| ""[\s\S]*!isGenericAuthName\(profileName\)[\s\S]*const displayName' "perfil generico do banco nao substitui identidade autenticada"
   Assert-MatchText $script 'const hasAuthSession = isLoginPage\(\) \? false : await restoreAuthenticatedSession\(\)[\s\S]*const hasValidDisplayIdentity = hasAuthSession && !isGenericAuthName\(getCurrentUserName\(\)\)[\s\S]*if \(hasAuthSession && !hasValidDisplayIdentity\)[\s\S]*clearAuthenticatedUser\(\)[\s\S]*if \(!isLoginPage\(\) && !isPublicPage\(\)\)' "login manual rejeita usuario generico e nao restaura sessao"
   Assert-MatchText $script 'const hasAuthSession = isLoginPage\(\) \? false : await restoreAuthenticatedSession\(\)' "login nao restaura automaticamente a sessao anterior"
   Assert-MatchText (Read-ProjectFile "login-submit.js") 'form\.addEventListener\("submit"[\s\S]*event\.preventDefault\(\)[\s\S]*fetch\("/api/auth"[\s\S]*method: "POST"[\s\S]*persistSession\(result\.session\)[\s\S]*window\.location\.replace' "login intercepta o envio e autentica sem POST nativo"
