@@ -757,20 +757,23 @@ function buildPersistedAuthSession() {
 }
 
 function setAuthenticatedUser(authUser, profile = null) {
-  currentAuthUser = authUser || null;
+  const persisted = getPersistedAuthFields();
+  const hydratedAuthUser = hydratePersistedAuthUser(authUser || {});
+  currentAuthUser = hydratedAuthUser || null;
   currentUserProfile = profile || null;
-  const displayName = profile?.nome || getAuthUserDisplayName(authUser);
+  const authDisplayName = getAuthUserDisplayName(hydratedAuthUser);
+  const displayName = profile?.nome || (normalizeLoginName(authDisplayName) === "usuario" ? persisted.nome : authDisplayName) || persisted.nome;
   const persistedAuthUser = {
-    ...(authUser || {}),
-    email: profile?.email || authUser?.email || "",
+    ...hydratedAuthUser,
+    email: profile?.email || hydratedAuthUser?.email || persisted.email || "",
     user_metadata: {
-      ...(authUser?.user_metadata || {}),
+      ...(hydratedAuthUser?.user_metadata || {}),
       nome: displayName,
-      cargo: profile?.cargo || authUser?.cargo || authUser?.app_metadata?.cargo || authUser?.user_metadata?.cargo || "",
+      cargo: profile?.cargo || hydratedAuthUser?.cargo || hydratedAuthUser?.app_metadata?.cargo || hydratedAuthUser?.user_metadata?.cargo || persisted.cargo || "",
     },
     app_metadata: {
-      ...(authUser?.app_metadata || {}),
-      cargo: profile?.cargo || authUser?.cargo || authUser?.app_metadata?.cargo || authUser?.user_metadata?.cargo || "",
+      ...(hydratedAuthUser?.app_metadata || {}),
+      cargo: profile?.cargo || hydratedAuthUser?.cargo || hydratedAuthUser?.app_metadata?.cargo || hydratedAuthUser?.user_metadata?.cargo || persisted.cargo || "",
     },
   };
   storageService.setSessionItem(SESSION_KEY, "active");
@@ -778,10 +781,10 @@ function setAuthenticatedUser(authUser, profile = null) {
   storageService.setLocalItem(PERSISTED_AUTH_USER_KEY, persistedAuthUser);
   storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
   storageService.setLocalItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
-  storageService.setSessionItem(`${SESSION_KEY}-email`, profile?.email || authUser?.email || "");
-  storageService.setLocalItem(`${SESSION_KEY}-email`, profile?.email || authUser?.email || "");
-  storageService.setSessionItem(`${SESSION_KEY}-role`, profile?.cargo || authUser?.cargo || authUser?.app_metadata?.cargo || "");
-  storageService.setLocalItem(`${SESSION_KEY}-role`, profile?.cargo || authUser?.cargo || authUser?.app_metadata?.cargo || "");
+  storageService.setSessionItem(`${SESSION_KEY}-email`, persistedAuthUser.email || "");
+  storageService.setLocalItem(`${SESSION_KEY}-email`, persistedAuthUser.email || "");
+  storageService.setSessionItem(`${SESSION_KEY}-role`, persistedAuthUser.app_metadata?.cargo || "");
+  storageService.setLocalItem(`${SESSION_KEY}-role`, persistedAuthUser.app_metadata?.cargo || "");
   reloadUserSettingsForCurrentUser();
 }
 
@@ -935,7 +938,7 @@ async function restoreAuthenticatedSession() {
   let session = persistedSession;
   try {
     const authSession = await withTimeout(getAuthSession(), 6000, null);
-    if (authSession?.user) session = authSession;
+    if (authSession?.user) session = { ...authSession, user: hydratePersistedAuthUser(authSession.user) };
   } catch (error) {
     console.warn("Sessao auth remota indisponivel, usando sessao local persistida:", error);
   }
