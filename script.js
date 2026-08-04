@@ -10124,18 +10124,12 @@ function setupPresenceHeartbeat() {
     }).catch(() => {});
   };
 
-  const sendOfflineBeacon = () => {
-    if (!isAuthenticated()) return;
-    navigator.sendBeacon?.("/api/auth/heartbeat", new Blob([JSON.stringify(buildPayload(false))], { type: "application/json" }));
-  };
-
-  window.addEventListener("pagehide", sendOfflineBeacon);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") sendHeartbeat(true);
   });
 
   sendHeartbeat(true);
-  window.setInterval(() => sendHeartbeat(true), 20000);
+  window.setInterval(() => sendHeartbeat(true), 2000);
   setupPresencePolling();
 }
 
