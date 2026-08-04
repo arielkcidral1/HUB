@@ -41,6 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" autocomplete="off"' "formulario de login desativa autocomplete"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v5' "login carrega scripts com cache bust de sessao persistente"
 }
 
 function Test-ClientSecurityFunctions {
@@ -56,11 +57,16 @@ function Test-ClientSecurityFunctions {
   $postgresClient = Read-ProjectFile "hub-postgres-client.js"
   $contractorApi = Read-ProjectFile "api/contractor-documents.js"
   $recordsApi = Read-ProjectFile "api/records.js"
+  $authApi = Read-ProjectFile "api/auth.js"
 
   Assert-MatchText $script 'function escapeHtml\(value\).*replaceAll\("&", "&amp;"\).*replaceAll\("<", "&lt;"\).*replaceAll\(">", "&gt;"\).*replaceAll\(''"'', "&quot;"\).*replaceAll\("''", "&#039;"\)' "escapeHtml escapa caracteres perigosos"
   Assert-MatchText $recordsApi 'JSON_COLUMNS[\s\S]*"hub_documentos_contratados"[\s\S]*"documentos"[\s\S]*"hub_malotes"[\s\S]*"colaboradores"[\s\S]*"hub_quadros"[\s\S]*"listas"[\s\S]*"hub_users"[\s\S]*"configuracoes"' "API serializa colunas JSON conhecidas"
   Assert-MatchText $recordsApi 'function normalizeDbValue[\s\S]*JSON\.stringify\(value\)[\s\S]*function placeholderFor[\s\S]*::jsonb' "API grava arrays e objetos como jsonb"
+  Assert-MatchText $authApi 'Set-Cookie[\s\S]*hub_auth_session[\s\S]*Max-Age=2592000' "API auth grava cookie persistente"
+  Assert-MatchText $authApi 'action === "session"[\s\S]*decodeCookiePayload\(getCookie\(req, "hub_auth_session"\)\)' "API auth restaura sessao por cookie"
+  Assert-MatchText $authApi 'action === "logout"[\s\S]*clearAuthCookie\(res\)' "API auth limpa cookie no logout"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
+  Assert-MatchText $index 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v5' "HUB carrega scripts com cache bust de sessao persistente"
   $encodingArtifacts = @(([char]0x00C3), ([char]0x00C2), ([char]0x00E2))
   Assert-True -Condition (-not ($encodingArtifacts | Where-Object { $index.Contains([string]$_) })) -Message "index.html nao possui caracteres corrompidos por encoding"
   Assert-MatchText $script 'function isValidCpf\(value\).*\/\^\\d\{11\}\$\/\.test\(cpf\).*\/\^\(\\d\)\\1\{10\}\$\/\.test\(cpf\)' "validacao de CPF rejeita formato invalido e sequencias repetidas"
@@ -147,9 +153,10 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $index '<section class="view" id="conta"[\s\S]*class="settings-shell"[\s\S]*class="settings-panel"[\s\S]*id="settings-search-input"[\s\S]*id="settings-user-avatar"[\s\S]*id="settings-user-name"[\s\S]*id="settings-list"[\s\S]*Conta[\s\S]*Privacidade[\s\S]*Conversas[\s\S]*Notificacoes[\s\S]*Atalhos de teclado[\s\S]*id="settings-logout-button"[\s\S]*Desconectar[\s\S]*id="conta-form"[\s\S]*data-settings-panel="settings-shortcuts-panel"[\s\S]*</section>' "painel de configuracoes do usuario possui busca perfil secoes e desconectar"
   Assert-True -Condition (-not ([regex]::Match($index, '<section class="view" id="conta"[\s\S]*?</section>').Value -match 'Ajuda|feedback|Feedback')) -Message "painel de configuracoes nao possui ajuda ou feedback"
   Assert-MatchText $script 'const settingsLogoutButton = document\.getElementById\("settings-logout-button"\)[\s\S]*settingsLogoutButton\?\.addEventListener\("click", logout\)' "desconectar do painel usa fluxo de logout"
-  Assert-MatchText $postgresClient 'readStoredSession[\s\S]*window\.localStorage\.getItem\(sessionStorageKey\)' "sessao auth e restaurada do localStorage"
-  Assert-MatchText $postgresClient 'persistSession[\s\S]*window\.localStorage\.setItem\(sessionStorageKey, serialized\)' "sessao auth persiste no localStorage"
-  Assert-MatchText $postgresClient 'persistSession[\s\S]*window\.localStorage\.removeItem\(sessionStorageKey\)' "sessao auth limpa localStorage no logout"
+  Assert-MatchText $postgresClient '(readStoredSession|readSession)[\s\S]*window\.localStorage\.getItem\((sessionStorageKey|SESSION_STORAGE_KEY)\)' "sessao auth e restaurada do localStorage"
+  Assert-MatchText $postgresClient 'persistSession[\s\S]*window\.localStorage\.setItem\((sessionStorageKey|SESSION_STORAGE_KEY), (serialized|raw)\)' "sessao auth persiste no localStorage"
+  Assert-MatchText $postgresClient '(persistSession|clearSession)[\s\S]*window\.localStorage\.removeItem\((sessionStorageKey|SESSION_STORAGE_KEY)\)' "sessao auth limpa localStorage no logout"
+  Assert-MatchText $postgresClient 'async getSession\(\)[\s\S]*action: "session"[\s\S]*persistSession\(session\)[\s\S]*async signOut\(\)[\s\S]*action: "logout"' "cliente auth restaura sessao por cookie sem quebrar DB"
   Assert-MatchText $script 'const PERSISTED_AUTH_USER_KEY = "hub-rh-persisted-auth-user"[\s\S]*storageService\.getLocalItem\(PERSISTED_AUTH_USER_KEY\)[\s\S]*storageService\.setLocalItem\(PERSISTED_AUTH_USER_KEY, persistedAuthUser\)[\s\S]*storageService\.removeLocalItem\(PERSISTED_AUTH_USER_KEY\)' "usuario autenticado persiste completo apos F5"
   Assert-MatchText $script 'function showSettingsPanel\(panelId\)[\s\S]*data-settings-panel[\s\S]*classList\.toggle\("active"[\s\S]*data-settings-target' "script alterna secoes de configuracoes"
   Assert-MatchText $script 'function filterSettingsItems\(query\)[\s\S]*data-settings-target[\s\S]*button\.hidden = Boolean\(normalizedQuery\)' "script filtra itens de configuracoes"

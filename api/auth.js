@@ -47,6 +47,36 @@ function publicUser(row) {
   };
 }
 
+function encodeCookiePayload(value) {
+  return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+}
+
+function decodeCookiePayload(value) {
+  try {
+    return JSON.parse(Buffer.from(String(value || ""), "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function getCookie(req, name) {
+  const cookies = String(req.headers.cookie || "").split(";");
+  for (const cookie of cookies) {
+    const [key, ...rest] = cookie.trim().split("=");
+    if (key === name) return decodeURIComponent(rest.join("="));
+  }
+  return "";
+}
+
+function setAuthCookie(res, session) {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  res.setHeader("Set-Cookie", `hub_auth_session=${encodeCookiePayload(session)}; Path=/; Max-Age=2592000; SameSite=Lax; HttpOnly${secure}`);
+}
+
+function clearAuthCookie(res) {
+  res.setHeader("Set-Cookie", "hub_auth_session=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly");
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") return json(res, 405, { error: "Metodo nao permitido." });
@@ -54,21 +84,30 @@ export default async function handler(req, res) {
     const body = await getBody(req);
     const action = body.action || "login";
 
-    if (action === "logout") return json(res, 200, { ok: true });
-    if (action === "session") return json(res, 200, { session: null });
+    if (action === "logout") {
+      clearAuthCookie(res);
+      return json(res, 200, { ok: true });
+    }
+    if (action === "session") {
+      const session = decodeCookiePayload(getCookie(req, "hub_auth_session"));
+      return json(res, 200, { session: session?.user ? session : null });
+    }
 
     const user = await findUser(body.identifier || body.email || body.cpf || body.nome);
     if (!user || !isPasswordValid(body.password || body.senha, user.password_hash)) {
       return json(res, 401, { error: "Credenciais invalidas." });
     }
 
+    const session = {
+      user: publicUser(user),
+      access_token: crypto.randomUUID(),
+      refresh_token: crypto.randomUUID(),
+    };
+    setAuthCookie(res, session);
+
     return json(res, 200, {
       user: publicUser(user),
-      session: {
-        user: publicUser(user),
-        access_token: crypto.randomUUID(),
-        refresh_token: crypto.randomUUID(),
-      },
+      session,
     });
   } catch (error) {
     return json(res, error.statusCode || 500, { error: error.message || "Erro de autenticacao." });
