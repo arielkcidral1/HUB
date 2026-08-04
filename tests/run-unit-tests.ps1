@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" autocomplete="off"' "formulario de login desativa autocomplete"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v19' "login carrega scripts com cache bust de sessao persistente"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v20' "login carrega scripts com cache bust de sessao persistente"
 }
 
 function Test-ClientSecurityFunctions {
@@ -67,17 +67,18 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $authApi 'action === "session"[\s\S]*decodeCookiePayload\(getCookie\(req, "hub_auth_session"\)\)' "API auth restaura sessao por cookie"
   Assert-MatchText $authApi 'action === "logout"[\s\S]*clearAuthCookie\(res\)' "API auth limpa cookie no logout"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v1[\s\S]*hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v19' "HUB valida a entrada antes de carregar o painel"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v2[\s\S]*hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v20' "HUB valida a entrada antes de carregar o painel"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
   Assert-True -Condition (-not ($index -match 'account-loading-guard\.js|Carregando sua conta')) -Message "index.html nao possui a tela de carregamento"
   $loading = Read-ProjectFile "account-loading.html"
   $loadingScript = Read-ProjectFile "account-loading.js"
   Assert-MatchText $loading '<main class="account-loading-screen"[\s\S]*Restaurando sua conta' "tela de carregamento possui HTML proprio"
+  Assert-MatchText $loading 'account-loading\.js\?v=auth-loading-v2' "tela de carregamento quebra cache do navegador"
   Assert-MatchText $loadingScript 'MINIMUM_LOADING_MS = 1000[\s\S]*function finishLoading\([\s\S]*setTimeout\(callback, remaining\)[\s\S]*function redirectToLogin\(\)[\s\S]*POSTGRES_SESSION_KEY[\s\S]*PERSISTED_USER_KEY[\s\S]*removeItem\(key\)[\s\S]*fetch\("/api/auth"[\s\S]*action: "session"[\s\S]*redirectToLogin\(\)' "tela de carregamento aguarda 1 segundo e envia sessao invalida para login"
   Assert-MatchText $loadingScript 'window\.localStorage\.setItem\(VERIFIED_KEY, "1"\)[\s\S]*finishLoading\(\(\) => window\.location\.replace\("index\.html"\)\)' "index so e liberado depois da autenticacao confirmada"
   Assert-MatchText $accountLoadingGuard 'const POSTGRES_SESSION_KEY = "hub-postgres-session"[\s\S]*const postgresUser = readJson\(POSTGRES_SESSION_KEY\)\?\.user[\s\S]*postgresUser\?\.email[\s\S]*normalizedName !== "usuario"[\s\S]*if \(active && hasStoredIdentity\(\)\)' "guard externo reconhece sessao postgres persistida sem destravar Usuario generico"
   Assert-MatchText $accountLoadingGuard 'function redirectToLogin\(\)[\s\S]*window\.location\.replace\(`login\.html\?next=' "guard externo envia para login sem sessao salva"
-  Assert-MatchText $style '\.account-loading-page[\s\S]*assets/hero-rh\.svg[\s\S]*\.account-loading-screen[\s\S]*\.account-loading-card' "loading da conta usa HTML proprio com cores do HUB"
+  Assert-MatchText $style 'html\.auth-entry-pending body[\s\S]*\.account-loading-page[\s\S]*assets/hero-rh\.svg[\s\S]*\.account-loading-screen[\s\S]*\.account-loading-card' "loading da conta usa HTML proprio com cores do HUB"
   $encodingArtifacts = @(([char]0x00C3), ([char]0x00C2), ([char]0x00E2))
   Assert-True -Condition (-not ($encodingArtifacts | Where-Object { $index.Contains([string]$_) })) -Message "index.html nao possui caracteres corrompidos por encoding"
   Assert-MatchText $script 'function isValidCpf\(value\).*\/\^\\d\{11\}\$\/\.test\(cpf\).*\/\^\(\\d\)\\1\{10\}\$\/\.test\(cpf\)' "validacao de CPF rejeita formato invalido e sequencias repetidas"
@@ -177,6 +178,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'const profileFilters = \[[\s\S]*email \? `email\.ilike\.\$\{email\}` : ""[\s\S]*displayName && displayName !== "usuario" \? `nome\.ilike\.\$\{displayName\}` : ""[\s\S]*if \(!profileFilters\)[\s\S]*if \(profileFilters\) query = query\.or\(profileFilters\)' "perfil do DB nao usa filtro vazio nem nome generico Usuario"
   Assert-MatchText $script 'function hasPersistedAuthIdentity\(\)[\s\S]*hasRealAuthIdentity\(currentAuthUser\)[\s\S]*hasRealAuthIdentity\(currentUserProfile\)[\s\S]*hasRealAuthIdentity\(persistedAuthUser\)[\s\S]*function isAuthenticated\(\)[\s\S]*sessionIsActive && hasPersistedAuthIdentity\(\)' "sessao ativa sem usuario real nao libera o index"
   Assert-MatchText $script 'async function restoreAuthenticatedSession\(\)[\s\S]*const persistedSession = buildPersistedAuthSession\(\)[\s\S]*if \(persistedSession\?\.user\)[\s\S]*setAuthenticatedUser\(persistedSession\.user, null\)[\s\S]*refreshSession\(\);[\s\S]*return true;' "reload restaura sessao local imediatamente antes de consultar remoto"
+  Assert-MatchText $script 'function setAuthenticatedUser\([\s\S]*renderCurrentUser\(\);[\s\S]*updateUserMenuHeader\(\);' "sessao restaurada atualiza o nome do usuario antes do painel"
   Assert-MatchText $script 'function withTimeout\(promise, ms, fallbackValue = null\)[\s\S]*setTimeout[\s\S]*async function restoreAuthenticatedSession\(\)[\s\S]*refreshSession = async \(\) =>[\s\S]*withTimeout\(getAuthSession\(\), 6000[\s\S]*withTimeout\(loadUserProfile\(sessionUser\), 6000' "refresh nao trava login aguardando auth perfil ou DB"
   Assert-MatchText $script 'const timeoutMarker = \{ timedOut: true \}[\s\S]*if \(authSession === timeoutMarker\)[\s\S]*if \(!authSession\?\.user\)[\s\S]*clearAuthenticatedUser\(\)[\s\S]*window\.location\.replace\(`login\.html\?next=' "sessao local invalida redireciona para login apos validar auth remoto"
   Assert-True -Condition (-not ($script -match 'catch\(\(error\)[\s\S]*if \(isAuthenticated\(\)\) \{[\s\S]*startAppInitialization\(\)')) -Message "erro de auth nao libera index privado com sessao local suspeita"

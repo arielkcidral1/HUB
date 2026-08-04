@@ -797,6 +797,8 @@ function setAuthenticatedUser(authUser, profile = null) {
   storageService.setSessionItem(`${SESSION_KEY}-role`, persistedAuthUser.app_metadata?.cargo || "");
   storageService.setLocalItem(`${SESSION_KEY}-role`, persistedAuthUser.app_metadata?.cargo || "");
   reloadUserSettingsForCurrentUser();
+  renderCurrentUser();
+  updateUserMenuHeader();
   return true;
 }
 
@@ -1110,6 +1112,7 @@ async function setupLogin() {
 
   // Redirecionamentos Inteligentes
   if (hasAuthSession) {
+    document.documentElement.classList.remove("auth-entry-pending");
     if (isLoginPage()) {
       window.location.replace(getLoginRedirectTarget());
       return false;

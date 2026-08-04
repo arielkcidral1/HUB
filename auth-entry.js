@@ -3,6 +3,7 @@
   const value = window.localStorage.getItem(VERIFIED_KEY);
   if (value === "1") {
     window.localStorage.removeItem(VERIFIED_KEY);
+    document.documentElement.classList.add("auth-entry-pending");
     return;
   }
 

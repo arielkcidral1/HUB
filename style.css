@@ -177,7 +177,7 @@ h2 {
   visibility: visible;
 }
 
-.auth-entry-pending body {
+html.auth-entry-pending body {
   visibility: hidden;
 }
 
