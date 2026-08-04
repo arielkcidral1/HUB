@@ -1125,6 +1125,23 @@ async function logout() {
 async function setupLogin() {
   const loginForm = document.getElementById("login-form");
   const settingsLogoutButton = document.getElementById("settings-logout-button");
+
+  // Bind before restoring the session so a fast click cannot submit credentials via GET.
+  loginForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const identifier = form.get("identificador") || form.get("email") || form.get("nome");
+    const loginOk = await validateLogin(identifier, form.get("senha"));
+
+    if (!loginOk) {
+      const errorEl = document.getElementById("login-error");
+      if (errorEl && !errorEl.textContent.trim()) errorEl.textContent = "E-mail ou senha incorretos.";
+      return;
+    }
+
+    window.location.replace(getLoginRedirectTarget());
+  });
+
   clearLegacyTeamCredentials();
   if (!isLoginPage() && !isPublicPage() && window.__hubAuthEntryPromise) {
     const entryAuthenticated = await window.__hubAuthEntryPromise;
@@ -1162,25 +1179,6 @@ async function setupLogin() {
     const value = String(input.value || "");
     if (/^[\d.\-\s]*$/.test(value)) input.value = formatCpf(value);
   });
-
-  if (loginForm) {
-    loginForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const form = new FormData(event.currentTarget);
-      const identifier = form.get("identificador") || form.get("email") || form.get("nome");
-      const loginOk = await validateLogin(identifier, form.get("senha"));
-  
-      if (!loginOk) {
-        const errorEl = document.getElementById("login-error");
-        if (errorEl && !errorEl.textContent.trim()) {
-          errorEl.textContent = "E-mail ou senha incorretos.";
-        }
-        return;
-      }
-  
-      window.location.replace(getLoginRedirectTarget());
-    });
-  }
 
   settingsLogoutButton?.addEventListener("click", logout);
 
