@@ -77,45 +77,13 @@
     });
   }
 
-  async function suspendPresenceOnReload(user) {
-    if (!user) return;
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 1000);
-    try {
-      await fetch("/api/auth/heartbeat", {
-        method: "POST",
-        credentials: "same-origin",
-        keepalive: true,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          online: false,
-          userId: user.id || "",
-          email: user.email || "",
-          nome: user.user_metadata?.nome || user.user_metadata?.name || "",
-        }),
-        signal: controller.signal,
-      });
-    } catch {
-      // A falha breve de presenca nao impede a reautenticacao da conta.
-    } finally {
-      window.clearTimeout(timeout);
-    }
-  }
-
   function redirectToLogin() {
     clearStoredSession();
     window.location.replace("login.html?next=index.html");
   }
 
   async function reauthenticateOnReload() {
-    const navigation = performance.getEntriesByType?.("navigation")?.[0];
-    if (navigation?.type !== "reload") return reauthenticateInDatabase();
-    const previousUser = getStoredUser();
-    await suspendPresenceOnReload(previousUser);
-    clearStoredSession();
-    // A sessao HttpOnly continua disponivel para a reautenticacao automatica.
-    // Durante o reload, a presenca fica suspensa e volta ao iniciar o painel.
-    await new Promise((resolve) => window.setTimeout(resolve, 500));
+    // O reload deve repetir a entrada normal sem limpar a sessao ou os dados.
     const authenticated = await reauthenticateInDatabase();
     if (authenticated) window.__hubReloadReauthenticated = true;
     return authenticated;
