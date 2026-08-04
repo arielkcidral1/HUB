@@ -17,7 +17,7 @@
 
   function redirectToLogin() {
     clearSession();
-    window.location.replace("login.html?next=index.html&reauth=1");
+    window.location.replace("login.html?next=index.html");
   }
 
   function verifyRenderedIdentity() {

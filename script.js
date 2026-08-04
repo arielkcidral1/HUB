@@ -1109,28 +1109,25 @@ async function logout() {
 async function setupLogin() {
   const loginForm = document.getElementById("login-form");
   const settingsLogoutButton = document.getElementById("settings-logout-button");
-  const forceReauthentication = new URLSearchParams(window.location.search).get("reauth") === "1";
   clearLegacyTeamCredentials();
   if (!isLoginPage() && !isPublicPage() && window.__hubAuthEntryPromise) {
     const entryAuthenticated = await window.__hubAuthEntryPromise;
     if (!entryAuthenticated) return false;
   }
   postgresClient = postgresClient || getPostgreSQLClient();
-  if (forceReauthentication && postgresClient?.auth) {
-    await postgresClient.auth.signOut();
-    clearAuthenticatedUser();
-  }
   const hasAuthSession = await restoreAuthenticatedSession();
   const hasValidDisplayIdentity = hasAuthSession && !isGenericAuthName(getCurrentUserName());
 
-  if (hasAuthSession && !hasValidDisplayIdentity && !isLoginPage() && !isPublicPage()) {
+  if (hasAuthSession && !hasValidDisplayIdentity) {
     clearAuthenticatedUser();
-    window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
-    return false;
+    if (!isLoginPage() && !isPublicPage()) {
+      window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
+      return false;
+    }
   }
 
   // Redirecionamentos Inteligentes
-  if (hasAuthSession) {
+  if (hasAuthSession && hasValidDisplayIdentity) {
     document.documentElement.classList.remove("auth-entry-pending");
     if (isLoginPage()) {
       window.location.replace(getLoginRedirectTarget());
