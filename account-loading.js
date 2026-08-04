@@ -6,6 +6,8 @@
   const POSTGRES_SESSION_KEY = "hub-postgres-session";
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
   const VERIFIED_KEY = "hub-auth-loading-verified";
+  const MINIMUM_LOADING_MS = 2000;
+  const loadingStartedAt = Date.now();
 
   function readJson(key) {
     try {
@@ -21,6 +23,11 @@
     return Boolean(email || (name && !["usuario", "voce", "persisted-user"].includes(name)));
   }
 
+  function finishLoading(callback) {
+    const remaining = Math.max(0, MINIMUM_LOADING_MS - (Date.now() - loadingStartedAt));
+    window.setTimeout(callback, remaining);
+  }
+
   function redirectToLogin() {
     [
       SESSION_KEY,
@@ -34,7 +41,7 @@
       window.localStorage.removeItem(key);
       window.sessionStorage.removeItem(key);
     });
-    window.location.replace("login.html?next=index.html");
+    finishLoading(() => window.location.replace("login.html?next=index.html"));
   }
 
   function persistSession(session) {
@@ -58,7 +65,7 @@
     window.localStorage.setItem(ROLE_KEY, JSON.stringify(role));
     window.sessionStorage.setItem(ROLE_KEY, JSON.stringify(role));
     window.localStorage.setItem(VERIFIED_KEY, "1");
-    window.location.replace("index.html");
+    finishLoading(() => window.location.replace("index.html"));
     return true;
   }
 
