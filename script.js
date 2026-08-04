@@ -487,7 +487,7 @@ function findLocalTeamUser(value) {
 
 function getCurrentUserRecord() {
   return currentUserProfile ||
-    findLocalTeamUser(currentAuthUser?.email || storageService.getSessionItem(`${SESSION_KEY}-email`)) ||
+    findLocalTeamUser(currentAuthUser?.email || storageService.getLocalItem(`${SESSION_KEY}-email`) || storageService.getSessionItem(`${SESSION_KEY}-email`)) ||
     findLocalTeamUser(getCurrentUserName());
 }
 
@@ -645,7 +645,7 @@ function isAuthenticated() {
 
 function getCurrentUserName() {
   if (!isAuthenticated() && isPublicPage()) return "Publico";
-  return storageService.getSessionItem(`${SESSION_KEY}-user`) || storageService.getLocalItem(`${SESSION_KEY}-user`) || "Voce";
+  return storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`) || "Voce";
 }
 
 /**
