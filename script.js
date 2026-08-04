@@ -348,6 +348,7 @@ const UNIT_OPTIONS = [
   "26- BNU 2",
   "28- ARA",
 ];
+UNIT_OPTIONS.splice(3, 1, "4- PL\u00C7");
 
 // Normaliza texto para comparação: remove acentos, caixa e espaços extras.
 function normalizeUnitText(value) {
@@ -11921,6 +11922,35 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
   }
 
+  function repairFeedbackEncoding(root = document) {
+    const decode = (value) => {
+      const source = String(value || "").replace(/\u00c3\u2021/g, "\u00c7").replace(/\ufffd/g, "");
+      if (!/[\u00c2\u00c3\u00e2]/.test(source)) return source;
+      try {
+        const bytes = Uint8Array.from(source, (char) => char.charCodeAt(0));
+        return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      } catch {
+        return source;
+      }
+    };
+
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((node) => {
+      const fixed = decode(node.nodeValue);
+      if (fixed !== node.nodeValue) node.nodeValue = fixed;
+    });
+
+    root.querySelectorAll?.("[placeholder], [value], [data-settings-keywords]").forEach((element) => {
+      ["placeholder", "value", "data-settings-keywords"].forEach((attribute) => {
+        if (!element.hasAttribute(attribute)) return;
+        const fixed = decode(element.getAttribute(attribute));
+        if (fixed !== element.getAttribute(attribute)) element.setAttribute(attribute, fixed);
+      });
+    });
+  }
+
   function createFeedbackDropdownButton() {
     const subtitle = isArielUser()
       ? "Visualizar feedbacks, reclamações e sugestões"
@@ -12021,6 +12051,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const shortcutsPanel = settingsDetail.querySelector('[data-settings-panel="settings-shortcuts-panel"]');
       shortcutsPanel?.insertAdjacentHTML("afterend", createFeedbackPanel());
     }
+
+    repairFeedbackEncoding(document);
 
     document.querySelectorAll(`[data-settings-target="${FEEDBACK_PANEL_ID}"]`).forEach(bindFeedbackSettingsButton);
     bindFeedbackForm();
