@@ -6039,7 +6039,7 @@ function renderDashboard() {
   if (previousDashboardButton) previousDashboardButton.hidden = true;
   if (nextDashboardButton) {
     nextDashboardButton.hidden = true;
-    nextDashboardButton.textContent = "Ver próximas";
+    nextDashboardButton.textContent = "Ver proximas";
   }
 
   const dashboardTarget = document.getElementById("dashboard-list");
@@ -6048,21 +6048,21 @@ function renderDashboard() {
       allDashboardActivityItems = [];
       dashboardActivityItemsReady = true;
       visibleDashboardActivityItems = [];
-      dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configura��es.</p>';
+      dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configuracoes.</p>';
       if (previousDashboardButton) previousDashboardButton.hidden = true;
       if (nextDashboardButton) nextDashboardButton.hidden = true;
       renderDashboardCalendar(upcomingEvents);
       return;
     }
     if (visibleDashboardItems.length === 0) {
-      dashboardTarget.innerHTML = '<p class="empty-state">Nenhuma pendência para acompanhar no momento.</p>';
+      dashboardTarget.innerHTML = '<p class="empty-state">Nenhuma pendencia para acompanhar no momento.</p>';
     } else {
       dashboardTarget.innerHTML = visibleDashboardItems
         .map((item, index) => {
           const itemRead = isDashboardActivityReadForOrdering(item);
           const visualTag = itemRead && !item.systemUpdate ? "Lida" : item.tag;
           const visualBadgeClass = item.systemUpdate ? "tag" : badgeClass(item.tag || visualTag);
-          return `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}" data-read="${itemRead ? "true" : "false"}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${visualBadgeClass}">${escapeHtml(item.systemUpdate ? "Sistema" : visualTag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "�" : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`;
+          return `<li class="dashboard-activity dashboard-activity-${escapeHtml(item.kind)}${item.systemUpdate ? " system-update" : ""}" data-read="${itemRead ? "true" : "false"}" data-action="open-dashboard-activity" data-index="${index}" tabindex="0" role="button"><span class="dashboard-activity-mark" aria-hidden="true"></span><div class="dashboard-activity-content"><div class="item-topline"><p class="item-title">${escapeHtml(item.title)}</p><span class="${visualBadgeClass}">${escapeHtml(item.systemUpdate ? "Sistema" : visualTag)}</span></div><p>${escapeHtml(String(item.text).slice(0, 96))}${String(item.text).length > 96 ? "..." : ""}</p><p class="item-meta meta-sm">${escapeHtml([item.date, item.meta].filter(Boolean).join(" | "))}</p></div></li>`;
         })
         .join("");
     }
@@ -6542,7 +6542,7 @@ function applyUserSettings() {
   const nextDashboardButton = document.getElementById("dashboard-notifications-next");
   if (!currentUserSettings.dashboardNotificationBadges) {
     visibleDashboardActivityItems = [];
-    if (dashboardTarget) dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configura��es.</p>';
+    if (dashboardTarget) dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configuracoes.</p>';
     if (previousDashboardButton) previousDashboardButton.hidden = true;
     if (nextDashboardButton) nextDashboardButton.hidden = true;
   }
