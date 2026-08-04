@@ -67,7 +67,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $authApi 'action === "session"[\s\S]*decodeCookiePayload\(getCookie\(req, "hub_auth_session"\)\)' "API auth restaura sessao por cookie"
   Assert-MatchText $authApi 'action === "logout"[\s\S]*clearAuthCookie\(res\)' "API auth limpa cookie no logout"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
-  Assert-MatchText $index 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*account-loading-guard\.js\?v=auth-guard-v5[\s\S]*script\.js\?v=auth-persist-v19' "HUB carrega guard e scripts com cache bust de sessao persistente"
+  Assert-MatchText $index 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*account-loading-guard\.js\?v=auth-guard-v6[\s\S]*script\.js\?v=auth-persist-v19' "HUB carrega guard e scripts com cache bust de sessao persistente"
   Assert-MatchText $index '<div class="app-shell is-locked" id="app-shell">' "HUB inicia travado ate validar sessao e DB"
   Assert-MatchText $accountLoadingGuard 'const POSTGRES_SESSION_KEY = "hub-postgres-session"[\s\S]*const postgresUser = readJson\(POSTGRES_SESSION_KEY\)\?\.user[\s\S]*postgresUser\?\.email[\s\S]*normalizedName !== "usuario"[\s\S]*if \(active && hasStoredIdentity\(\)\)' "guard externo reconhece sessao postgres persistida sem destravar Usuario generico"
   Assert-MatchText $accountLoadingGuard 'function redirectToLogin\(\)[\s\S]*window\.location\.replace\(`login\.html\?next=' "guard externo envia para login sem sessao salva"

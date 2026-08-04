@@ -2,7 +2,10 @@
   const SESSION_KEY = "hub-rh-session";
   const PERSISTED_AUTH_USER_KEY = "hub-rh-persisted-auth-user";
   const POSTGRES_SESSION_KEY = "hub-postgres-session";
-  const LIMIT_MS = 2000;
+  // O script principal restaura a sessao local imediatamente e, quando necessario,
+  // consulta o cookie persistente no PostgreSQL. O guard precisa aguardar essa
+  // segunda tentativa antes de concluir que a conta nao existe.
+  const LIMIT_MS = 8000;
 
   function readJson(key) {
     try {
