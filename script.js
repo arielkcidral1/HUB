@@ -3,6 +3,7 @@ const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const CONTRACTOR_PENDING_DOCUMENTS_KEY = "hub-contractor-pending-documents";
 const SESSION_KEY = "hub-rh-session";
 const PERSISTED_AUTH_USER_KEY = "hub-rh-persisted-auth-user";
+const LAST_ACCOUNT_KEY = "hub-rh-last-account";
 const POSTGRES_SESSION_KEY = "hub-postgres-session";
 const ACCOUNT_LOADING_REAUTH_MS = 2000;
 const POSTGRES_BOOT_TIMEOUT_MS = 8000;
@@ -790,6 +791,12 @@ function setAuthenticatedUser(authUser, profile = null) {
   storageService.setSessionItem(SESSION_KEY, "active");
   storageService.setLocalItem(SESSION_KEY, "active");
   storageService.setLocalItem(PERSISTED_AUTH_USER_KEY, persistedAuthUser);
+  storageService.setLocalItem(LAST_ACCOUNT_KEY, JSON.stringify({
+    id: persistedAuthUser.id || "",
+    email: persistedAuthUser.email || "",
+    nome: persistedAuthUser.user_metadata?.nome || displayName,
+    cargo: persistedAuthUser.app_metadata?.cargo || "",
+  }));
   storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
   storageService.setLocalItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
   storageService.setSessionItem(`${SESSION_KEY}-email`, persistedAuthUser.email || "");
@@ -950,22 +957,28 @@ async function restoreAuthenticatedSession() {
           if (!isLoginPage() && !isPublicPage()) {
             window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
           }
-          return;
+          return false;
         }
         if (!authSession?.user) {
           clearAuthenticatedUser();
           if (!isLoginPage() && !isPublicPage()) {
             window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
           }
-          return;
+          return false;
         }
         const sessionUser = hydratePersistedAuthUser(authSession.user);
         const profile = await withTimeout(loadUserProfile(sessionUser), 6000, null);
         setAuthenticatedUser(sessionUser, profile);
+        return true;
       } catch (error) {
         console.warn("Sessao restaurada localmente; atualizacao remota ficou pendente:", error);
+        return true;
       }
     };
+    if (window.__hubReloadReauthenticated) {
+      const refreshed = await refreshSession();
+      return refreshed !== false;
+    }
     refreshSession();
     return true;
   }
