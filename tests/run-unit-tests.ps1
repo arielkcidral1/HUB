@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" autocomplete="off"' "formulario de login desativa autocomplete"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v10' "login carrega scripts com cache bust de sessao persistente"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v11' "login carrega scripts com cache bust de sessao persistente"
 }
 
 function Test-ClientSecurityFunctions {
@@ -54,6 +54,7 @@ function Test-ClientSecurityFunctions {
   $docsAchei = Read-ProjectFile "documentos-achei.html"
   $docsTrinca = Read-ProjectFile "documentos-trinca.html"
   $style = Read-ProjectFile "style.css"
+  $accountLoadingGuard = Read-ProjectFile "account-loading-guard.js"
   $postgresClient = Read-ProjectFile "hub-postgres-client.js"
   $contractorApi = Read-ProjectFile "api/contractor-documents.js"
   $recordsApi = Read-ProjectFile "api/records.js"
@@ -66,8 +67,10 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $authApi 'action === "session"[\s\S]*decodeCookiePayload\(getCookie\(req, "hub_auth_session"\)\)' "API auth restaura sessao por cookie"
   Assert-MatchText $authApi 'action === "logout"[\s\S]*clearAuthCookie\(res\)' "API auth limpa cookie no logout"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
-  Assert-MatchText $index 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v10' "HUB carrega scripts com cache bust de sessao persistente"
+  Assert-MatchText $index 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*account-loading-guard\.js\?v=auth-guard-v1[\s\S]*script\.js\?v=auth-persist-v11' "HUB carrega guard e scripts com cache bust de sessao persistente"
   Assert-MatchText $index '<div class="app-shell is-locked" id="app-shell">' "HUB inicia travado ate validar sessao e DB"
+  Assert-MatchText $accountLoadingGuard 'const LIMIT_MS = 2000[\s\S]*classList\.contains\("is-locked"\)[\s\S]*active && hasStoredIdentity\(\)[\s\S]*classList\.remove\("is-locked"\)' "guard externo destrava loading com sessao salva"
+  Assert-MatchText $accountLoadingGuard 'function redirectToLogin\(\)[\s\S]*window\.location\.replace\(`login\.html\?next=' "guard externo envia para login sem sessao salva"
   Assert-MatchText $style '\.app-shell\.is-locked::after[\s\S]*HUB\\A Carregando sua conta[\s\S]*assets/logo\.svg[\s\S]*var\(--teal-dark\)' "loading da conta usa logo e cores do HUB"
   $encodingArtifacts = @(([char]0x00C3), ([char]0x00C2), ([char]0x00E2))
   Assert-True -Condition (-not ($encodingArtifacts | Where-Object { $index.Contains([string]$_) })) -Message "index.html nao possui caracteres corrompidos por encoding"
