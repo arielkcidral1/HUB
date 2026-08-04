@@ -6,7 +6,7 @@
   const POSTGRES_SESSION_KEY = "hub-postgres-session";
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
   const VERIFIED_KEY = "hub-auth-loading-verified";
-  const MINIMUM_LOADING_MS = 2000;
+  const MINIMUM_LOADING_MS = 1000;
   const loadingStartedAt = Date.now();
 
   function readJson(key) {
