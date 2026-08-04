@@ -777,6 +777,13 @@ async function getAuthSession() {
   return data?.session || null;
 }
 
+function withTimeout(promise, ms, fallbackValue = null) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => window.setTimeout(() => resolve(fallbackValue), ms)),
+  ]);
+}
+
 async function loadUserProfile(authUser) {
   if (!authUser || !postgresClient) return null;
   const email = normalizeLoginName(authUser.email);
@@ -858,15 +865,18 @@ async function loadUserProfile(authUser) {
 }
 
 async function restoreAuthenticatedSession() {
-  let session = await getAuthSession();
-  if (!session?.user) {
-    session = buildPersistedAuthSession();
+  let session = buildPersistedAuthSession();
+  const serverSession = await withTimeout(getAuthSession(), 2500, null);
+  if (serverSession?.user) {
+    session = serverSession;
   }
   if (!session?.user) {
     clearAuthenticatedUser();
     return false;
   }
-  const profile = await loadUserProfile(session.user);
+
+  setAuthenticatedUser(session.user, null);
+  const profile = await withTimeout(loadUserProfile(session.user), 2500, null);
   setAuthenticatedUser(session.user, profile);
   return true;
 }
@@ -9980,6 +9990,10 @@ setupLogin().then((canInitialize) => {
   if (canInitialize) initializeAppData();
 }).catch((error) => {
   console.error("Erro ao validar login:", error);
+  if (isAuthenticated()) {
+    initializeAppData();
+    return;
+  }
   if (!isLoginPage() && !isPublicPage()) {
     window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`;
     return;
