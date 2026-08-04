@@ -6031,7 +6031,7 @@ function renderDashboard() {
   // Quando todas estiverem lidas, a lista fica vazia.
   const unreadDashboardItems = sortedDashboardItems.filter((item) => !isDashboardActivityReadForOrdering(item));
   const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
-  allDashboardActivityItems = unreadDashboardItems;
+  allDashboardActivityItems = sortedDashboardItems;
   dashboardActivityItemsReady = true;
   visibleDashboardActivityItems = visibleDashboardItems;
   const previousDashboardButton = document.getElementById("dashboard-notifications-prev");
@@ -10886,6 +10886,7 @@ class NotificationTracker {
         const isRead = typeof isDashboardActivityReadForOrdering === "function"
           ? isDashboardActivityReadForOrdering(item)
           : false;
+        const originalStatus = isRead ? "pending" : (isUrgent ? "urgent" : "unread");
         pushNotification({
           id: item.notificationId || `${type}-${item.id || item._sortIndex || notifications.length}`,
           type,
@@ -10894,10 +10895,10 @@ class NotificationTracker {
           details: item.details || item.text || "",
           time: item.date || item.createdAt || "Recentemente",
           dateTime: item.dateTime || item.sortAt || item.updatedSortAt || item.date || item.createdAt || "Recentemente",
-          status: isUrgent ? "urgent" : "unread",
+          status: originalStatus,
           unread: !isRead,
           view: item.view || this.getViewForType(type),
-          badgeText: isUrgent ? "Urgente" : (isRead ? "" : "Nao lido"),
+          badgeText: isRead ? "" : (isUrgent ? "Urgente" : "Nao lido"),
           messageIds: Array.isArray(item.messageIds) ? item.messageIds.map(String) : [],
           chatMessages: Array.isArray(item.chatMessages) ? item.chatMessages : [],
         });
