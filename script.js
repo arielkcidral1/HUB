@@ -842,6 +842,21 @@ async function getAuthSession() {
   return data?.session || null;
 }
 
+async function getRemoteAuthSession() {
+  try {
+    const response = await fetch("/api/auth", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "session" }),
+    });
+    const result = await response.json().catch(() => ({}));
+    return response.ok ? result?.session || null : null;
+  } catch {
+    return null;
+  }
+}
+
 function withTimeout(promise, ms, fallbackValue = null) {
   return Promise.race([
     promise,
@@ -972,7 +987,8 @@ async function restoreAuthenticatedSession() {
 
   let session = null;
   try {
-    const authSession = await withTimeout(getAuthSession(), 6000, null);
+    const authRequest = isLoginPage() ? getRemoteAuthSession() : getAuthSession();
+    const authSession = await withTimeout(authRequest, 6000, null);
     if (authSession?.user) session = { ...authSession, user: hydratePersistedAuthUser(authSession.user) };
   } catch (error) {
     console.warn("Sessao auth remota indisponivel, usando sessao local persistida:", error);
