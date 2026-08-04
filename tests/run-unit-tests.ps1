@@ -233,6 +233,7 @@ Assert-MatchText $script 'document\.getElementById\("abrir-relatorio-vt"\)\?\.ad
 Assert-MatchText $script 'document\.getElementById\("abrir-relatorio-disciplinary"\)\?\.addEventListener\("click", showDisciplinaryReportMenu\)' "botao de relatorio disciplinar abre menu"
 Assert-MatchText $script "case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary\(target\.dataset\.scope\); break;" "acao de gerar relatorio disciplinar esta conectada"
 Assert-MatchText $script 'sourceData\.quadros[\s\S]*type: "quadro"[\s\S]*sourceData\.disciplinaryRecords[\s\S]*type: "disciplinar"' "acompanhamento inclui quadros e registros disciplinares"
+Assert-MatchText $script 'let allDashboardActivityItems = \[\][\s\S]*allDashboardActivityItems = unreadDashboardItems[\s\S]*if \(dashboardActivityItemsReady\)[\s\S]*dashboardItems\.forEach' "modal acompanhar usa a mesma lista de notificacoes do painel principal"
 Assert-MatchText $script 'function showVtReportMenu\(\).*data-action="gerar-relatorio-vt" data-scope="filtered"[\s\S]*data-action="gerar-relatorio-vt" data-scope="all"' "menu de relatorio VT permite exportar filtrados ou todos"
   Assert-MatchText $script 'function createVtReportXlsxBlob\(rows\).*"\[Content_Types\]\.xml"[\s\S]*xl/workbook\.xml[\s\S]*xl/styles\.xml[\s\S]*xl/worksheets/sheet1\.xml' "relatorio VT gera estrutura xlsx valida com estilos"
   Assert-True -Condition (-not $script.Contains('worksheetRowXml(["Escopo"')) -Message "relatorio VT nao possui linha de escopo"
