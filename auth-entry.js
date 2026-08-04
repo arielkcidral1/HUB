@@ -92,7 +92,8 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "logout" }),
     }).catch(() => {});
-    window.location.replace("login.html?next=index.html");
+    window.__hubReloadSignedOut = true;
+    document.documentElement.classList.remove("auth-entry-pending");
     return true;
   }
 
