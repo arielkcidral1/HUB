@@ -150,6 +150,14 @@ const CHAT_EMOJIS = [
   "?????","????","????","????","????","????","????","????","????","????","????","????","????","????","????",
   "????",
 ];
+// Replaces the legacy corrupted emoji payload with a small, valid picker set.
+CHAT_EMOJIS.splice(0, CHAT_EMOJIS.length,
+  "\u{1F600}", "\u{1F603}", "\u{1F604}", "\u{1F60A}", "\u{1F60D}", "\u{1F602}",
+  "\u{1F622}", "\u{1F62E}", "\u{1F914}", "\u{1F44D}", "\u{1F44F}", "\u{1F64F}",
+  "\u{1F4AA}", "\u{1F525}", "\u{2705}", "\u{26A0}", "\u{1F4CC}", "\u{1F4E2}",
+  "\u{1F4AC}", "\u{1F4E6}", "\u{1F4C5}", "\u{1F4C4}", "\u{1F680}", "\u{2764}",
+  "\u{1F389}", "\u{1F4AF}", "\u{1F31F}", "\u{1F3AF}", "\u{1F4A1}", "\u{1F91D}"
+);
 const USER_SETTINGS_STORAGE_KEY = "hub-user-settings-v1";
 const USER_SETTINGS_DEFAULTS = Object.freeze({
   hidePresence: false,
@@ -320,7 +328,7 @@ const UNIT_OPTIONS = [
   "1- MTZ",
   "2- SBS",
   "3- ITJ 1",
-  "4- PL�",
+  "4- PL",
   "5- GUA",
   "7- DPA JC",
   "9- DPA IRI",
@@ -3714,12 +3722,12 @@ function renderChatAttachmentPreview(files) {
         <button type="button" class="chat-preview-chip ${index === chatAttachmentPreviewIndex ? "is-active" : ""}" data-action="preview-chat-file" data-index="${index}" title="Visualizar ${escapeHtml(item.name)}" aria-label="Visualizar ${escapeHtml(item.name)}">
           ${chipContent}
         </button>
-        <button type="button" class="chat-preview-chip-remove" data-action="remove-chat-file" data-index="${index}" title="Remover ${escapeHtml(item.name)}" aria-label="Remover ${escapeHtml(item.name)}">�</button>
+        <button type="button" class="chat-preview-chip-remove" data-action="remove-chat-file" data-index="${index}" title="Remover ${escapeHtml(item.name)}" aria-label="Remover ${escapeHtml(item.name)}">&times;</button>
       </span>`;
   }).join("");
 
   preview.innerHTML = `
-    <button type="button" class="chat-preview-close" data-action="clear-chat-file" title="Remover anexo" aria-label="Remover anexo">�</button>
+    <button type="button" class="chat-preview-close" data-action="clear-chat-file" title="Remover anexo" aria-label="Remover anexo">&times;</button>
     <div class="chat-preview-title">${fileName}${selectedFiles.length > 1 ? ` + ${selectedFiles.length - 1} arquivo(s)` : ""}</div>
     <div class="chat-preview-body">${body}</div>
     <div class="chat-preview-strip" aria-label="Anexo selecionado">
@@ -6354,14 +6362,14 @@ function renderCalendar() {
   `);
 }
 
-// L�gica de abertura de denúncia para leitura e transi��o de estado autom�tica
+// Logica de abertura de denuncia para leitura e transicao de estado automatica
 async function lerDenuncia(id) {
   const denuncia = data.denuncias.find(item => String(item.id) === String(id));
   if (!denuncia) return;
 
   // Mostra o relato em formato de modal customizado
   showModal(
-    "Visualiza��o da Denúncia",
+    "Visualizacao da Denuncia",
     `Categoria: ${denuncia.categoria}\nRecebida em: ${denuncia.createdAt}\nStatus Atual: ${denuncia.status}\n\nRelato:\n"${denuncia.descricao}"`,
     "info"
   );
@@ -6388,7 +6396,7 @@ async function lerDenuncia(id) {
         renderAll();
       } catch (err) {
         console.error("Erro ao atualizar status da denúncia no PostgreSQL:", err);
-        showModal("Aviso de Permissão", "A denúncia não p�de ser atualizada. Você precisa rodar o script SQL de UPDATE no painel do PostgreSQL para consertar as permissões.", "error");
+        showModal("Aviso de Permissão", "A denúncia não pode ser atualizada. Você precisa rodar o script SQL de UPDATE no painel do PostgreSQL para consertar as permissões.", "error");
       }
     }
   }
@@ -6420,7 +6428,7 @@ async function atualizarStatusDenuncia(id, status) {
     return true;
   } catch (err) {
     console.error("Erro ao atualizar status da denúncia no PostgreSQL:", err);
-    showModal("Aviso de Permissão", "A denúncia não p�de ser atualizada. Rode o postgres-schema.sql atualizado para liberar UPDATE em hub_denuncias.", "error");
+    showModal("Aviso de Permissão", "A denúncia não pode ser atualizada. Rode o postgres-schema.sql atualizado para liberar UPDATE em hub_denuncias.", "error");
     return false;
   }
 }
@@ -6738,14 +6746,14 @@ async function registerHubNotificationServiceWorker() {
     });
     return hubNotificationServiceWorkerRegistration;
   } catch (error) {
-    console.warn("Service Worker de notificações não p�de ser registrado:", error);
+    console.warn("Service Worker de notificações não pode ser registrado:", error);
     return null;
   }
 }
 
 async function requestDesktopNotificationPermission({ showSuccess = true } = {}) {
   if (!isBrowserNotificationSupported()) {
-    showModal("Notificações indispon�veis", "Este navegador não suporta notificações do sistema.", "error");
+    showModal("Notificações indisponíveis", "Este navegador não suporta notificações do sistema.", "error");
     currentUserSettings.desktopNotifications = false;
     saveUserSettings(currentUserSettings);
     syncUserSettingsControls();
@@ -6767,7 +6775,7 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
     if (permission === "granted") {
       removeDesktopNotificationPermissionPrompt();
       if (showSuccess) {
-        await showBrowserDesktopNotification("Notificações ativadas", "Agora o HUB pode avisar mesmo quando voc� estiver em outra aba.", {
+        await showBrowserDesktopNotification("Notificações ativadas", "Agora o HUB pode avisar mesmo quando você estiver em outra aba.", {
           type: "geral",
           icon: "??",
           tag: "hub-rh-notificacoes-ativadas",
@@ -6777,7 +6785,7 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
           type: "geral",
           icon: "??",
           duration: 7000,
-          hint: "Você tamb�m receber� o aviso nativo do navegador",
+          hint: "Você também receberá o aviso nativo do navegador",
         });
       }
       return "granted";
@@ -6789,7 +6797,7 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
     showDesktopNotificationPermissionPrompt(true);
     return permission;
   } catch (error) {
-    console.warn("Permissão de notificações não p�de ser solicitada:", error);
+    console.warn("Permissão de notificações não pode ser solicitada:", error);
     showDesktopNotificationPermissionPrompt(true);
     return "error";
   }
@@ -6854,7 +6862,7 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
         return;
       }
 
-      const shown = await showBrowserDesktopNotification("Teste de notificação HUB", "Este - o aviso visual que aparecer� fora da aba do HUB.", {
+      const shown = await showBrowserDesktopNotification("Teste de notificação HUB", "Este é o aviso visual que aparecerá fora da aba do HUB.", {
         type: "geral",
         icon: "??",
         tag: `hub-rh-teste-${Date.now()}`,
@@ -6866,7 +6874,7 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
         type: "geral",
         icon: shown ? "??" : "??",
         duration: 10000,
-        hint: shown ? "Se estiver em outra aba, o aviso aparecer� fora do HUB" : "Cadeado do navegador > Notificações > Permitir",
+        hint: shown ? "Se estiver em outra aba, o aviso aparecerá fora do HUB" : "Cadeado do navegador > Notificações > Permitir",
       });
     });
     prompt.querySelector("[data-permission-dismiss]")?.addEventListener("click", () => {
@@ -6878,7 +6886,7 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
   const message = prompt.querySelector("[data-permission-message]");
   if (message) {
     message.textContent = isBlocked || Notification.permission === "denied"
-      ? "O navegador bloqueou a permissão. Libere notificações do site nas configura��es do navegador para receber avisos fora do HUB."
+      ? "O navegador bloqueou a permissão. Libere notificações do site nas configurações do navegador para receber avisos fora do HUB."
       : "Clique em Permitir para receber popout do navegador mesmo quando estiver em outra aba, como ChatGPT, e com som mais forte.";
   }
 }
@@ -6989,7 +6997,7 @@ function showUserNotificationPopout(title, message, options = {}) {
     heading.textContent = title || "Nova notificação";
 
     const body = document.createElement("p");
-    body.textContent = message || "Você possui uma nova atualiza��o no HUB.";
+    body.textContent = message || "Você possui uma nova atualização no HUB.";
 
     const hint = document.createElement("span");
     hint.textContent = options.hint || "Clique para abrir o acompanhamento";
@@ -7000,7 +7008,7 @@ function showUserNotificationPopout(title, message, options = {}) {
     closeButton.type = "button";
     closeButton.className = "hub-notification-popout-close";
     closeButton.setAttribute("aria-label", "Fechar notificação");
-    closeButton.textContent = "�";
+    closeButton.textContent = "×";
 
     popout.append(icon, content, closeButton);
     container.prepend(popout);
@@ -7986,7 +7994,7 @@ function openDashboardActivity(index) {
         </div>
       </div>`;
   } else {
-    const details = String(item.details || item.text || "Sem detalhes dispon�veis.")
+    const details = String(item.details || item.text || "Sem detalhes disponíveis.")
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
@@ -8762,7 +8770,7 @@ if (denunciaForm) {
       if (feedback) {
         feedback.textContent = "Denuncia enviada com sucesso. Obrigado pelo relato.";
       }
-      showModal("Denúncia enviada", "Seu relato foi enviado com sucesso e ser� analisado pela equipe respons�vel.", "info");
+      showModal("Denúncia enviada", "Seu relato foi enviado com sucesso e será analisado pela equipe responsável.", "info");
     }
   });
 }
@@ -8805,12 +8813,12 @@ if (chatForm) {
     chatForm.requestSubmit();
   });
 
-  // Garante que Enter em qualquer elemento do formulário (ex: apàs anexar arquivo) tamb�m envia
+  // Garante que Enter em qualquer elemento do formulario tambem envia.
   chatForm.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
     if (event.target === chatMessageInput) return; // já tratado acima
-    if (event.target.tagName === "BUTTON") return; // deixa bot�es funcionarem normalmente
+    if (event.target.tagName === "BUTTON") return; // Deixa botoes funcionarem normalmente.
     event.preventDefault();
     chatForm.requestSubmit();
   });
@@ -9876,7 +9884,7 @@ if (contratadoDocForm) {
     const password = String(form.get("senha_acesso") || "");
     const expectedPassword = String(contractorLayout?.dataset.contractorPassword || "");
     if (password !== expectedPassword) {
-      showModal("Senha incorreta", "A senha informada não libera esta p�gina.", "error");
+      showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
       return;
     }
     contractorAccessPassword = expectedPassword;
@@ -9916,7 +9924,7 @@ if (contratadoDocForm) {
     }
 
     if (!isValidCpf(cpf)) {
-      showModal("CPF inválido", "Informe um CPF v�lido no formato 000.000.000-00.", "error");
+      showModal("CPF inválido", "Informe um CPF válido no formato 000.000.000-00.", "error");
       return;
     }
 
@@ -10272,7 +10280,7 @@ function editarDocumento(id) {
     const btn = form.querySelector("button[type='submit']");
     if (btn) {
       if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
-      btn.textContent = "Salvar altera��es";
+      btn.textContent = "Salvar alterações";
     }
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -10432,14 +10440,14 @@ async function excluirDocumentoContratado(id) {
         data.documentosContratados = (data.documentosContratados || []).filter((item) => String(item.id) !== String(id));
         saveLocalData();
         renderDocumentosContratados();
-        showModal("Documentos exclu�dos", "Os documentos do contratado foram removidos.", "info");
+        showModal("Documentos excluídos", "Os documentos do contratado foram removidos.", "info");
         return;
       }
 
       const deleted = await deleteItem("documentosContratados", id);
       if (deleted) {
         removePendingContractorDocument(id);
-        showModal("Documentos exclu�dos", "Os documentos do contratado foram apagados com sucesso.", "info");
+        showModal("Documentos excluídos", "Os documentos do contratado foram apagados com sucesso.", "info");
       }
     },
   });
@@ -10458,7 +10466,7 @@ function editarVtRegistro(id) {
   form.elements.valor_passagem.value = formatCurrencyInput(String(Math.round(Number(registro.valorPassagem || 0) * 100)));
   form.elements.saldo_atual.value = registro.saldoAtual ?? "";
   document.getElementById("cancelar-edicao-vt")?.removeAttribute("hidden");
-  form.querySelector('button[type="submit"]').textContent = "Salvar altera��es";
+  form.querySelector('button[type="submit"]').textContent = "Salvar alterações";
   updateVtCalculation();
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 };
@@ -10541,7 +10549,7 @@ function baixarDocumentoMalote(id) {
               <p class="muted">Documento gerado automaticamente pelo sistema</p>
             </div>
             <div class="number">
-              <span class="field-label">N� do malote</span>
+              <span class="field-label">Nº do malote</span>
               <strong>${escapeHtml(String(malote.codigoSolicitacao || malote.id || ""))}</strong>
             </div>
             <div class="status">
@@ -10600,7 +10608,7 @@ function baixarDocumentoMalote(id) {
           <table>
             <tr>
               <td style="min-height:48px; height:48px;">
-                <div class="field-value" style="font-weight:normal; white-space:pre-wrap;">${malote.observacoes ? escapeHtml(malote.observacoes) : '<span style="color:#9ca3af;">Sem observa��es.</span>'}</div>
+                <div class="field-value" style="font-weight:normal; white-space:pre-wrap;">${malote.observacoes ? escapeHtml(malote.observacoes) : '<span style="color:#9ca3af;">Sem observações.</span>'}</div>
               </td>
             </tr>
           </table>
@@ -10671,29 +10679,29 @@ const documentFieldLabels = {
   cpf: "CPF",
   rg: "RG",
   cargo: "Cargo",
-  funcao: "Fun��o",
+  funcao: "Função",
   filial: "Filial / Unidade",
   setor: "Setor",
   data: "Data de admissão",
   data_admissao: "Data de admissão",
   data_desligamento: "Data de desligamento",
-  data_solicitacao: "Data da solicita��o",
+  data_solicitacao: "Data da solicitação",
   data_entrevista: "Data da entrevista",
-  data_ausencia: "Data(s) da aus�ncia",
+  data_ausencia: "Data(s) da ausência",
   data_feedback: "Data do feedback",
   data_registro: "Data do registro",
   data_abertura: "Data de abertura",
-  data_inicio: "Data de in�cio",
-  data_movimentacao: "Data da movimenta��o",
-  salario: "Sal�rio",
-  salario_atual: "Sal�rio atual",
-  salario_proposto: "Sal�rio proposto",
+  data_inicio: "Data de início",
+  data_movimentacao: "Data da movimentação",
+  salario: "Salário",
+  salario_atual: "Salário atual",
+  salario_proposto: "Salário proposto",
   faixa_salarial: "Faixa salarial",
-  horario_trabalho: "Hor�rio de trabalho",
-  horario_atraso: "Hor�rio / per�odo",
+  horario_trabalho: "Horário de trabalho",
+  horario_atraso: "Horário / período",
   centro_custo: "Centro de custo",
   requisitante: "Requisitante",
-  lider: "Gestor / l�der avaliador",
+  lider: "Gestor / líder avaliador",
   gestor: "Gestor imediato",
   gestor_aplicador: "Gestor aplicador",
   gestor_solicitante: "Gestor solicitante",
@@ -10703,13 +10711,13 @@ const documentFieldLabels = {
   feedback: "Feedback final",
   positivos: "Pontos positivos",
   melhorias: "Pontos a desenvolver",
-  acao: "Plano de a��o",
-  plano_acao: "Plano de a��o",
+  acao: "Plano de ação",
+  plano_acao: "Plano de ação",
   justificativa: "Justificativa",
-  justificativa_movimentacao: "Justificativa da movimenta��o",
-  descricao: "Descri��o",
+  justificativa_movimentacao: "Justificativa da movimentação",
+  descricao: "Descrição",
   requisitos: "Requisitos",
-  pontos_atencao: "Pontos de aten��o",
+  pontos_atencao: "Pontos de atenção",
 };
 
 const documentLongFieldKeys = new Set([
@@ -10865,7 +10873,7 @@ function downloadStyledRhDocument(doc, title) {
             </div>
             <div class="letterhead-meta">
               Emitido em <strong>${escapeHtml(emittedAt)}</strong><br />
-              Respons�vel: <strong>${escapeHtml(owner)}</strong>
+              Responsável: <strong>${escapeHtml(owner)}</strong>
             </div>
           </header>
 
@@ -10913,13 +10921,13 @@ document.addEventListener('click', (event) => {
 
   const { action, id } = target.dataset;
 
-  // A��o especial para não fazer nada, �til para checkboxes dentro de elementos clic�veis
+  // Acao especial para nao fazer nada, util para checkboxes dentro de elementos clicaveis.
   if (action === 'no-op') {
     event.stopPropagation();
     return;
   }
 
-  // A��es que precisam de stopPropagation
+  // Acoes que precisam de stopPropagation.
   if (['reabrir-denuncia', 'reabrir-chamado'].includes(action)) {
     event.stopPropagation();
   }
@@ -11287,7 +11295,7 @@ class NotificationTracker {
         type: "evento",
         title: `Evento - ${item.titulo || "Compromisso"}`,
         description: item.descricao || [formattedDate, formattedTime].filter(Boolean).join(" - "),
-        details: `T�tulo: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "Não informada"}\nHor�rio: ${formattedTime || "Não informado"}\nRespons�vel: ${item.responsavel || "Não informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descrição."}`,
+        details: `Título: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "Não informada"}\nHorário: ${formattedTime || "Não informado"}\nResponsável: ${item.responsavel || "Não informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descrição."}`,
         time: [formattedDate, formattedTime].filter(Boolean).join(" - ") || "Recentemente",
         dateTime: item.sortAt || item.updatedSortAt || item.createdAt || `${eventDate || ""}T${eventTime || "00:00"}`,
         status: "pending",
@@ -11387,19 +11395,19 @@ class NotificationTracker {
 
   getIconForType(type) {
     const icons = {
-      denuncia: "??",
-      mensagem: "??",
-      malote: "??",
-      chamado: "??",
-      vaga: "??",
-      evento: "??",
-      documento: "??",
-      atestado: "??",
-      quadro: "[]",
-      disciplinar: "!",
-      geral: "??",
+      denuncia: "&#128226;",
+      mensagem: "&#128172;",
+      malote: "&#128230;",
+      chamado: "&#128295;",
+      vaga: "&#128188;",
+      evento: "&#128197;",
+      documento: "&#128196;",
+      atestado: "&#128203;",
+      quadro: "&#9638;",
+      disciplinar: "&#9888;",
+      geral: "&#128276;",
     };
-    return icons[type] || "??";
+    return icons[type] || icons.geral;
   }
 
   getBadgeText(status) {
@@ -11639,12 +11647,12 @@ class NotificationTracker {
   }
 
   clearAll() {
-    if (!confirm("Tem certeza que deseja limpar a visualiza��o das notificações?")) return;
+    if (!confirm("Tem certeza que deseja limpar a visualização das notificações?")) return;
     this.notifications = [];
     this.filteredNotifications = [];
     this.renderNotifications();
     this.updateStats();
-    this.showNotification("Visualiza��o de notificações limpa.");
+    this.showNotification("Visualização de notificações limpa.");
   }
 
   showNotification(message) {
@@ -11766,7 +11774,7 @@ window.addEventListener("storage", (event) => {
   try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
 });
 
-// Manter compatibilidade com bot�es antigos
+// Manter compatibilidade com botoes antigos.
 document.addEventListener('DOMContentLoaded', () => {
   const prevBtn = document.getElementById('dashboard-notifications-prev');
   const nextBtn = document.getElementById('dashboard-notifications-next');
@@ -11859,7 +11867,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalActivateView = activateView;
     activateView = function patchedActivateView(viewId) {
       if (viewId === "equipe" && !isArielUser()) {
-        showModal?.("Acesso restrito", "A aba Equipe est� disponível somente para o usuário Ariel.", "warning");
+        showModal?.("Acesso restrito", "A aba Equipe está disponível somente para o usuário Ariel.", "warning");
         return originalActivateView?.(getFallbackViewForCurrentUser());
       }
       return originalActivateView?.(viewId);
@@ -11875,7 +11883,7 @@ document.addEventListener('DOMContentLoaded', () => {
     event.stopImmediatePropagation();
 
     if (!isArielUser()) {
-      showModal?.("Acesso restrito", "A aba Equipe est� disponível somente para o usuário Ariel.", "warning");
+        showModal?.("Acesso restrito", "A aba Equipe está disponível somente para o usuário Ariel.", "warning");
       activateView?.(getFallbackViewForCurrentUser());
       return;
     }
@@ -12156,7 +12164,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const feedbackId = button.dataset.feedbackDeleteId;
         if (!feedbackId) return;
 
-        const confirmed = window.confirm("Deseja excluir este envio? Esta a��o não poder� ser desfeita.");
+        const confirmed = window.confirm("Deseja excluir este envio? Esta ação não poderá ser desfeita.");
         if (!confirmed) return;
 
         const originalText = button.textContent || "Excluir envio";
@@ -12166,9 +12174,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await deleteFeedback(feedbackId);
 
         showModal?.(
-          "Envio exclu�do",
+          "Envio excluído",
           result.deletedOnPostgreSQL
-            ? "Seu envio foi exclu�do com sucesso."
+            ? "Seu envio foi excluído com sucesso."
             : "O envio foi removido localmente. Se ele ainda aparecer em outro dispositivo, confirme a permissão DELETE no PostgreSQL.",
           result.deletedOnPostgreSQL ? "success" : "info"
         );
@@ -12209,7 +12217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userArea) userArea.hidden = ariel;
     if (description) {
       description.textContent = ariel
-        ? "�rea exclusiva para visualizar feedbacks, reclama��es e sugest�es enviados pelos usuários."
+        ? "Área exclusiva para visualizar feedbacks, reclamações e sugestões enviados pelos usuários."
         : "Use este espaço para enviar melhorias, reclama��es ou sugest�es sobre o HUB e processos internos.";
     }
 
@@ -12446,7 +12454,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <label class="compact-status-label">Status
               <select data-atestado-status-id="${escapeHtml(item.id)}">
-                ${["Recebido", "Em an�lise", "Lan�ado", "Recusado"].map((option) => `<option${option === status ? " selected" : ""}>${option}</option>`).join("")}
+                ${["Recebido", "Em análise", "Lançado", "Recusado"].map((option) => `<option${option === status ? " selected" : ""}>${option}</option>`).join("")}
               </select>
             </label>
           </div>
@@ -12467,7 +12475,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!id) return;
     const item = (data.atestados || []).find((record) => String(record.id) === String(id));
     const label = item?.nome ? ` de ${item.nome}` : "";
-    if (!confirm(`Tem certeza que deseja apagar o atestado${label}? Essa a��o não poder� ser desfeita.`)) return;
+    if (!confirm(`Tem certeza que deseja apagar o atestado${label}? Essa ação não poderá ser desfeita.`)) return;
 
     const applyLocalDelete = () => {
       data.atestados = (data.atestados || []).filter((record) => String(record.id) !== String(id));
@@ -12609,11 +12617,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       if (!isValidCpf(cpf)) {
-        showModal?.("CPF inválido", "Informe um CPF v�lido no formato 000.000.000-00.", "error");
+        showModal?.("CPF inválido", "Informe um CPF válido no formato 000.000.000-00.", "error");
         return;
       }
       if (!telefone || normalizeCpf(telefone).length < 10) {
-        showModal?.("Telefone obrigatório", "Informe um telefone v�lido para contato.", "error");
+        showModal?.("Telefone obrigatório", "Informe um telefone válido para contato.", "error");
         return;
       }
       if (!unidade) {

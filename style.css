@@ -5400,6 +5400,21 @@ form.panel[data-public-chamados="true"].panel {
   color: #3f51b5;
 }
 
+.tracker-notification-item.atestado .tracker-notification-icon {
+  background: rgba(14, 165, 164, 0.1);
+  color: #0f766e;
+}
+
+.tracker-notification-item.quadro .tracker-notification-icon {
+  background: rgba(124, 58, 237, 0.1);
+  color: #7c3aed;
+}
+
+.tracker-notification-item.disciplinar .tracker-notification-icon {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
 .tracker-notification-content {
   flex: 1;
   min-width: 0;
