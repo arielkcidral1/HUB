@@ -16,6 +16,14 @@
     return Boolean(email || (name && !["usuario", "voce", "persisted-user"].includes(name)));
   }
 
+  function getSafeDisplayName(user) {
+    const candidate = String(user?.user_metadata?.nome || user?.user_metadata?.name || "").trim();
+    const normalized = candidate.toLowerCase();
+    return candidate && !["usuario", "voce", "persisted-user"].includes(normalized)
+      ? candidate
+      : String(user?.email || "").split("@")[0].trim() || "";
+  }
+
   function readJson(key) {
     try {
       return JSON.parse(window.localStorage.getItem(key) || "null");
@@ -92,7 +100,7 @@
   function persistAuthenticatedSession(session) {
     const user = session?.user;
     if (!isRealUser(user)) return false;
-    const name = user.user_metadata?.nome || user.user_metadata?.name || user.email?.split("@")[0] || "";
+    const name = getSafeDisplayName(user);
     const role = user.app_metadata?.cargo || user.user_metadata?.cargo || "";
     const raw = JSON.stringify(session);
     window.localStorage.setItem(POSTGRES_SESSION_KEY, raw);

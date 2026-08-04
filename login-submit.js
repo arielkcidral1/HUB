@@ -2,6 +2,15 @@
   const SESSION_KEY = "hub-rh-session";
   const POSTGRES_SESSION_KEY = "hub-postgres-session";
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
+  const LAST_ACCOUNT_KEY = "hub-rh-last-account";
+
+  function clearStaleClientSession() {
+    [SESSION_KEY, `${SESSION_KEY}-user`, `${SESSION_KEY}-email`, `${SESSION_KEY}-role`, POSTGRES_SESSION_KEY, PERSISTED_USER_KEY]
+      .forEach((key) => {
+        window.localStorage.removeItem(key);
+        window.sessionStorage.removeItem(key);
+      });
+  }
 
   function setJson(storage, key, value) {
     storage.setItem(key, JSON.stringify(value));
@@ -21,6 +30,12 @@
       setJson(storage, `${SESSION_KEY}-role`, role);
     });
     setJson(window.localStorage, PERSISTED_USER_KEY, user);
+    setJson(window.localStorage, LAST_ACCOUNT_KEY, {
+      id: user.id || "",
+      email: user.email || "",
+      nome: name,
+      cargo: role,
+    });
     return true;
   }
 
@@ -47,6 +62,7 @@
       if (button) button.disabled = true;
       if (error) error.textContent = "";
       try {
+        clearStaleClientSession();
         const response = await fetch("/api/auth", {
           method: "POST",
           credentials: "same-origin",

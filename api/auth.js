@@ -39,10 +39,15 @@ function isPasswordValid(password, hash) {
 }
 
 function publicUser(row) {
+  const databaseName = normalize(row.nome);
+  const genericName = ["usuario", "voce", "persisted-user"].includes(databaseName.toLowerCase());
+  const displayName = databaseName && !genericName
+    ? databaseName
+    : normalize(row.email).split("@")[0] || "Usuario";
   return {
     id: row.id,
     email: row.email || "",
-    user_metadata: { nome: row.nome || "", cargo: row.cargo || "" },
+    user_metadata: { nome: displayName, cargo: row.cargo || "" },
     app_metadata: { cargo: row.cargo || "" },
   };
 }
