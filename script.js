@@ -1107,6 +1107,10 @@ async function setupLogin() {
   const loginForm = document.getElementById("login-form");
   const settingsLogoutButton = document.getElementById("settings-logout-button");
   clearLegacyTeamCredentials();
+  if (!isLoginPage() && !isPublicPage() && window.__hubAuthEntryPromise) {
+    const entryAuthenticated = await window.__hubAuthEntryPromise;
+    if (!entryAuthenticated) return false;
+  }
   postgresClient = postgresClient || getPostgreSQLClient();
   const hasAuthSession = await restoreAuthenticatedSession();
 
