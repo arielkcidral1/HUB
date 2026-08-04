@@ -3,6 +3,7 @@ const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const CONTRACTOR_PENDING_DOCUMENTS_KEY = "hub-contractor-pending-documents";
 const SESSION_KEY = "hub-rh-session";
 const PERSISTED_AUTH_USER_KEY = "hub-rh-persisted-auth-user";
+const POSTGRES_BOOT_TIMEOUT_MS = 9000;
 const PUBLIC_CLIENT_ID_KEY = "hub-public-client-id";
 const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
@@ -9949,7 +9950,12 @@ async function initializeAppData() {
   renderAccountSettings();
   registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
-  await loadFromPostgreSQL({ setupLive: true });
+  const postgresLoad = loadFromPostgreSQL({ setupLive: true });
+  const postgresLoaded = await withTimeout(postgresLoad, POSTGRES_BOOT_TIMEOUT_MS, false);
+  if (postgresLoaded === false) {
+    setSyncStatus("PostgreSQL carregando em segundo plano", false);
+    renderAll();
+  }
   shell?.classList.remove("is-locked");
   shell?.classList.add("is-ready");
   setupPresenceHeartbeat();
