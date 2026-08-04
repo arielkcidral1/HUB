@@ -618,8 +618,26 @@ function debugLocalLoginNames() {
   return getAllLocalUsers().map((user) => normalizeLoginName(user.nome)).join(", ");
 }
 
+function hasPersistedAuthIdentity() {
+  const persistedAuthUser = storageService.getLocalItem(PERSISTED_AUTH_USER_KEY);
+  const persistedName = storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`);
+  const persistedEmail = storageService.getLocalItem(`${SESSION_KEY}-email`) || storageService.getSessionItem(`${SESSION_KEY}-email`);
+  return Boolean(
+    currentAuthUser?.id ||
+    currentAuthUser?.email ||
+    currentUserProfile?.id ||
+    currentUserProfile?.email ||
+    persistedAuthUser?.id ||
+    persistedAuthUser?.email ||
+    persistedAuthUser?.user_metadata?.nome ||
+    persistedName ||
+    persistedEmail
+  );
+}
+
 function isAuthenticated() {
-  return storageService.getSessionItem(SESSION_KEY) === "active" || storageService.getLocalItem(SESSION_KEY) === "active";
+  const sessionIsActive = storageService.getSessionItem(SESSION_KEY) === "active" || storageService.getLocalItem(SESSION_KEY) === "active";
+  return sessionIsActive && hasPersistedAuthIdentity();
 }
 
 function getCurrentUserName() {
@@ -866,7 +884,7 @@ async function loadUserProfile(authUser) {
 
 async function restoreAuthenticatedSession() {
   let session = buildPersistedAuthSession();
-  const serverSession = await withTimeout(getAuthSession(), 2500, null);
+  const serverSession = await withTimeout(getAuthSession(), 6000, null);
   if (serverSession?.user) {
     session = serverSession;
   }
@@ -876,7 +894,7 @@ async function restoreAuthenticatedSession() {
   }
 
   setAuthenticatedUser(session.user, null);
-  const profile = await withTimeout(loadUserProfile(session.user), 2500, null);
+  const profile = await withTimeout(loadUserProfile(session.user), 6000, null);
   setAuthenticatedUser(session.user, profile);
   return true;
 }
