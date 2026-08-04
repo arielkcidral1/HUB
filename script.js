@@ -1149,8 +1149,6 @@ async function setupLogin() {
 
   // Redirecionamentos Inteligentes
   if (hasAuthSession && hasValidDisplayIdentity) {
-    window.__hubAuthReady = true;
-    document.documentElement.classList.remove("auth-entry-pending");
     if (isLoginPage()) {
       window.location.replace(getLoginRedirectTarget());
       return false;
@@ -10046,6 +10044,8 @@ async function initializeAppData() {
     shell?.classList.add("is-ready");
     loadPublicData();
     startAuthenticatedNotificationsOnAnyPage();
+    window.__hubAuthReady = true;
+    document.documentElement.classList.remove("auth-entry-pending");
     return;
   }
   if (!isAuthenticated()) {
@@ -10074,6 +10074,10 @@ async function initializeAppData() {
     }
   }
   setupPresenceHeartbeat();
+  // The static HTML must never be exposed as an authenticated dashboard.
+  // Release it only after the profile and the initial database read finish.
+  window.__hubAuthReady = true;
+  document.documentElement.classList.remove("auth-entry-pending");
 }
 
 function startAppInitialization() {
