@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*login-submit\.js\?v=login-submit-v1[\s\S]*script\.js\?v=auth-persist-v26' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*login-submit\.js\?v=login-submit-v2[\s\S]*script\.js\?v=auth-persist-v27' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -65,10 +65,11 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $recordsApi 'function normalizeDbValue[\s\S]*JSON\.stringify\(value\)[\s\S]*function placeholderFor[\s\S]*::jsonb' "API grava arrays e objetos como jsonb"
   Assert-MatchText $authApi 'Set-Cookie[\s\S]*hub_auth_session[\s\S]*Max-Age=2592000' "API auth grava cookie persistente"
   Assert-MatchText $authApi 'ensureSessionVersionColumn[\s\S]*session_version[\s\S]*export async function validateAuthSession[\s\S]*action === "session"[\s\S]*validateAuthSession\(req\)' "API auth valida sessao exclusiva por usuario"
+  Assert-MatchText $authApi 'function publicUser\(row\)[\s\S]*genericName[\s\S]*displayName[\s\S]*user_metadata: \{ nome: displayName' "API nunca retorna Usuario quando existe identificador real"
   Assert-MatchText $authApi 'action === "logout"[\s\S]*clearAuthCookie\(res\)' "API auth limpa cookie no logout"
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v13[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v26[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v14[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v27[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
   Assert-True -Condition (-not ($index -match 'account-loading-guard\.js|Carregando sua conta')) -Message "index.html nao possui a tela de carregamento"
   $loading = Read-ProjectFile "account-loading.html"
@@ -193,6 +194,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'const hasAuthSession = isLoginPage\(\) \? false : await restoreAuthenticatedSession\(\)[\s\S]*const hasValidDisplayIdentity = hasAuthSession && !isGenericAuthName\(getCurrentUserName\(\)\)[\s\S]*if \(hasAuthSession && !hasValidDisplayIdentity\)[\s\S]*clearAuthenticatedUser\(\)[\s\S]*if \(!isLoginPage\(\) && !isPublicPage\(\)\)' "login manual rejeita usuario generico e nao restaura sessao"
   Assert-MatchText $script 'const hasAuthSession = isLoginPage\(\) \? false : await restoreAuthenticatedSession\(\)' "login nao restaura automaticamente a sessao anterior"
   Assert-MatchText (Read-ProjectFile "login-submit.js") 'form\.addEventListener\("submit"[\s\S]*event\.preventDefault\(\)[\s\S]*fetch\("/api/auth"[\s\S]*method: "POST"[\s\S]*persistSession\(result\.session\)[\s\S]*window\.location\.replace' "login intercepta o envio e autentica sem POST nativo"
+  Assert-MatchText (Read-ProjectFile "login-submit.js") 'LAST_ACCOUNT_KEY[\s\S]*function clearStaleClientSession\(\)[\s\S]*clearStaleClientSession\(\)[\s\S]*fetch\("/api/auth"' "novo login limpa sessao antiga antes de autenticar"
   Assert-MatchText $script 'function setAuthenticatedUser\(authUser, profile = null\)[\s\S]*const persisted = getPersistedAuthFields\(\)[\s\S]*const hydratedAuthUser = hydratePersistedAuthUser\(authUser \|\| \{\}\)[\s\S]*if \(!profile && !hydratedAuthUser\?\.email && isGenericAuthName\(displayName\)\) return false[\s\S]*storageService\.setLocalItem\(`\$\{SESSION_KEY\}-user`, getLoginDisplayName\(displayName\)\)' "F5 nao sobrescreve usuario persistido real com Usuario"
   Assert-MatchText $script 'function hydratePersistedAuthUser\(authUser = \{\}\)[\s\S]*getPersistedAuthFields\(\)[\s\S]*const nome = authUser\?\.user_metadata\?\.nome[\s\S]*persisted\.nome[\s\S]*const email = authUser\?\.email \|\| persisted\.email[\s\S]*function buildPersistedAuthSession\(\)[\s\S]*const postgresSession = storageService\.getLocalItem\(POSTGRES_SESSION_KEY[\s\S]*hydratePersistedAuthUser\(persistedAuthUser \|\| postgresSession\?\.user \|\| \{\}\)' "sessao restaurada reidrata nome email e cargo salvos"
   Assert-MatchText $script 'const profileFilters = \[[\s\S]*email \? `email\.ilike\.\$\{email\}` : ""[\s\S]*displayName && displayName !== "usuario" \? `nome\.ilike\.\$\{displayName\}` : ""[\s\S]*if \(!profileFilters\)[\s\S]*if \(profileFilters\) query = query\.or\(profileFilters\)' "perfil do DB nao usa filtro vazio nem nome generico Usuario"

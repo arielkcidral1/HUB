@@ -698,12 +698,10 @@ function refreshCurrentUserRoleFromData() {
 }
 
 function getAuthUserDisplayName(authUser) {
-  return (
-    authUser?.user_metadata?.nome ||
-    authUser?.user_metadata?.name ||
-    authUser?.email?.split("@")[0] ||
-    "Usuario"
-  );
+  const candidate = authUser?.user_metadata?.nome || authUser?.user_metadata?.name || "";
+  return !isGenericAuthName(candidate)
+    ? candidate
+    : authUser?.email?.split("@")[0] || "Usuario";
 }
 
 function isGenericAuthName(value) {
