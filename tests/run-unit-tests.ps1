@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" autocomplete="off"' "formulario de login desativa autocomplete"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v5' "login carrega scripts com cache bust de sessao persistente"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v6' "login carrega scripts com cache bust de sessao persistente"
 }
 
 function Test-ClientSecurityFunctions {
@@ -66,7 +66,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $authApi 'action === "session"[\s\S]*decodeCookiePayload\(getCookie\(req, "hub_auth_session"\)\)' "API auth restaura sessao por cookie"
   Assert-MatchText $authApi 'action === "logout"[\s\S]*clearAuthCookie\(res\)' "API auth limpa cookie no logout"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
-  Assert-MatchText $index 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v5' "HUB carrega scripts com cache bust de sessao persistente"
+  Assert-MatchText $index 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v6' "HUB carrega scripts com cache bust de sessao persistente"
   $encodingArtifacts = @(([char]0x00C3), ([char]0x00C2), ([char]0x00E2))
   Assert-True -Condition (-not ($encodingArtifacts | Where-Object { $index.Contains([string]$_) })) -Message "index.html nao possui caracteres corrompidos por encoding"
   Assert-MatchText $script 'function isValidCpf\(value\).*\/\^\\d\{11\}\$\/\.test\(cpf\).*\/\^\(\\d\)\\1\{10\}\$\/\.test\(cpf\)' "validacao de CPF rejeita formato invalido e sequencias repetidas"
@@ -161,6 +161,8 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'function hasPersistedAuthIdentity\(\)[\s\S]*PERSISTED_AUTH_USER_KEY[\s\S]*persistedName[\s\S]*persistedEmail[\s\S]*function isAuthenticated\(\)[\s\S]*sessionIsActive && hasPersistedAuthIdentity\(\)' "sessao ativa sem usuario nao libera o index"
   Assert-MatchText $script 'function withTimeout\(promise, ms, fallbackValue = null\)[\s\S]*setTimeout[\s\S]*async function restoreAuthenticatedSession\(\)[\s\S]*buildPersistedAuthSession\(\)[\s\S]*withTimeout\(getAuthSession\(\), 6000[\s\S]*setAuthenticatedUser\(session\.user, null\)[\s\S]*withTimeout\(loadUserProfile\(session\.user\), 6000' "refresh nao trava login aguardando perfil do DB"
   Assert-MatchText $script 'setupLogin\(\)\.then[\s\S]*catch\(\(error\)[\s\S]*if \(isAuthenticated\(\)\) \{[\s\S]*initializeAppData\(\)' "erro transitorio de auth nao bloqueia DB quando ha sessao local"
+  Assert-MatchText $script 'function initializeAppData\(\)[\s\S]*if \(!isAuthenticated\(\)\) \{[\s\S]*is-locked[\s\S]*window\.location\.replace\(`login\.html\?next=\$\{encodeURIComponent' "pagina privada sem sessao nao renderiza painel"
+  Assert-MatchText $script 'catch\(\(error\)[\s\S]*if \(!isLoginPage\(\) && !isPublicPage\(\)\)[\s\S]*return;[\s\S]*if \(isPublicPage\(\)\) initializeAppData\(\);' "falha de auth nao inicializa index privado"
   Assert-MatchText $script 'function showSettingsPanel\(panelId\)[\s\S]*data-settings-panel[\s\S]*classList\.toggle\("active"[\s\S]*data-settings-target' "script alterna secoes de configuracoes"
   Assert-MatchText $script 'function filterSettingsItems\(query\)[\s\S]*data-settings-target[\s\S]*button\.hidden = Boolean\(normalizedQuery\)' "script filtra itens de configuracoes"
   Assert-MatchText $index 'data-user-setting="hidePresence"[\s\S]*data-user-setting="blurChatPreviews"[\s\S]*data-user-setting="localPrivacyMode"[\s\S]*data-user-setting="compactMode"[\s\S]*data-user-setting="messageSize"[\s\S]*data-user-setting="showEmojiButton"[\s\S]*data-user-setting="enterToSend"[\s\S]*data-user-setting="notificationSound"[\s\S]*data-user-setting="desktopNotifications"[\s\S]*data-user-setting="dashboardNotificationBadges"[\s\S]*data-user-setting="keyboardShortcuts"' "configuracoes de usuario possuem opcionais funcionais"

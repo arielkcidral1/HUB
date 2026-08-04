@@ -9928,16 +9928,24 @@ function prefillChamadoRequester() {
 
 function initializeAppData() {
   const shell = document.getElementById("app-shell");
-  shell?.classList.remove("is-locked");
-  shell?.classList.add("is-ready");
   populateUnitSelects();
   populateEpiSelects();
   postgresClient = getPostgreSQLClient();
   if (isPublicPage()) {
+    shell?.classList.remove("is-locked");
+    shell?.classList.add("is-ready");
     loadPublicData();
     startAuthenticatedNotificationsOnAnyPage();
     return;
   }
+  if (!isAuthenticated()) {
+    shell?.classList.add("is-locked");
+    shell?.classList.remove("is-ready");
+    window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
+    return;
+  }
+  shell?.classList.remove("is-locked");
+  shell?.classList.add("is-ready");
   applyRoleAccess();
   prefillChamadoRequester();
   renderAccountSettings();
@@ -10016,7 +10024,7 @@ setupLogin().then((canInitialize) => {
     window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`;
     return;
   }
-  initializeAppData();
+  if (isPublicPage()) initializeAppData();
 });
 
 function reabrirChamado(id) {
