@@ -166,8 +166,4 @@
 
   // Do not initialize a private page until the persistent auth cookie is valid.
   window.__hubAuthEntryPromise = reauthenticateOnReload();
-  window.__hubAuthEntryPromise.then((authenticated) => {
-    if (!authenticated) return;
-    document.documentElement.classList.remove("auth-entry-pending");
-  });
 })();
