@@ -81,20 +81,13 @@
     window.location.replace("login.html?next=index.html");
   }
 
-  function disconnectOnReload() {
+  async function reauthenticateOnReload() {
     const navigation = performance.getEntriesByType?.("navigation")?.[0];
-    if (navigation?.type !== "reload") return false;
+    if (navigation?.type !== "reload") return reauthenticateInDatabase();
     clearStoredSession();
-    fetch("/api/auth", {
-      method: "POST",
-      credentials: "same-origin",
-      keepalive: true,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "logout" }),
-    }).catch(() => {});
-    window.__hubReloadSignedOut = true;
-    document.documentElement.classList.remove("auth-entry-pending");
-    return true;
+    // A sessao HttpOnly continua disponivel para a reautenticacao automatica.
+    // O logout real so deve ocorrer quando o usuario clicar em Desconectar.
+    return reauthenticateInDatabase();
   }
 
   function persistAuthenticatedSession(session) {
@@ -142,8 +135,10 @@
     }
   }
 
-  if (disconnectOnReload()) return;
-
   // Do not initialize a private page until the persistent auth cookie is valid.
-  window.__hubAuthEntryPromise = reauthenticateInDatabase();
+  window.__hubAuthEntryPromise = reauthenticateOnReload();
+  window.__hubAuthEntryPromise.then((authenticated) => {
+    if (!authenticated) return;
+    document.documentElement.classList.remove("auth-entry-pending");
+  });
 })();
