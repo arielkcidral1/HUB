@@ -6,13 +6,14 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
     <title>HUB | RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <script src="auth-entry.js?v=auth-entry-v1"></script>
     <link rel="stylesheet" href="style.css" />
        <link rel="stylesheet" href="message-size-enhancement.css" />
     <link rel="stylesheet" href="vagas-format.css" />
     <link rel="stylesheet" href="vagas-admin-enhance.css" />
   </head>
   <body>
-    <div class="app-shell is-locked" id="app-shell">
+    <div class="app-shell" id="app-shell">
       <aside class="sidebar" id="primary-sidebar" aria-label="Navegacao principal">
         <div class="brand">
           <img class="brand-logo" src="assets/logo.svg" alt="HUB RH" />
@@ -1482,7 +1483,6 @@
       </main>
     </div>
     <script src="hub-postgres-client.js?v=auth-cookie-v1"></script>
-    <script src="account-loading-guard.js?v=auth-guard-v6"></script>
     <script src="script.js?v=auth-persist-v19"></script>
     <script src="vagas-admin-filters.js"></script>
   </body>
