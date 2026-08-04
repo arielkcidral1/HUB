@@ -157,7 +157,25 @@
 
   window.HubPostgresClient = {
     createClient() {
-      let session = JSON.parse(window.sessionStorage.getItem("hub-postgres-session") || "null");
+      const sessionStorageKey = "hub-postgres-session";
+      const readStoredSession = () => {
+        try {
+          return JSON.parse(window.localStorage.getItem(sessionStorageKey) || window.sessionStorage.getItem(sessionStorageKey) || "null");
+        } catch {
+          return null;
+        }
+      };
+      const persistSession = (nextSession) => {
+        if (!nextSession) {
+          window.sessionStorage.removeItem(sessionStorageKey);
+          window.localStorage.removeItem(sessionStorageKey);
+          return;
+        }
+        const serialized = JSON.stringify(nextSession);
+        window.sessionStorage.setItem(sessionStorageKey, serialized);
+        window.localStorage.setItem(sessionStorageKey, serialized);
+      };
+      let session = readStoredSession();
       return {
         from(table) {
           return new Query(table);
@@ -181,7 +199,7 @@
           },
           async setSession(nextSession) {
             session = nextSession;
-            window.sessionStorage.setItem("hub-postgres-session", JSON.stringify(session));
+            persistSession(session);
             return { data: { session, user: session?.user || null }, error: null };
           },
           async signInWithPassword({ email, password }) {
@@ -192,7 +210,7 @@
             });
             if (result.error) return { data: null, error: result.error };
             session = result.data.session;
-            window.sessionStorage.setItem("hub-postgres-session", JSON.stringify(session));
+            persistSession(session);
             return { data: { session, user: session.user }, error: null };
           },
           async updateUser() {
@@ -200,7 +218,7 @@
           },
           async signOut() {
             session = null;
-            window.sessionStorage.removeItem("hub-postgres-session");
+            persistSession(null);
             return { error: null };
           },
         },
