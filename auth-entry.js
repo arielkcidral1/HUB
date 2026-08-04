@@ -114,6 +114,7 @@
     clearStoredSession();
     // A sessao HttpOnly continua disponivel para a reautenticacao automatica.
     // Durante o reload, a presenca fica suspensa e volta ao iniciar o painel.
+    await new Promise((resolve) => window.setTimeout(resolve, 500));
     return reauthenticateInDatabase();
   }
 
