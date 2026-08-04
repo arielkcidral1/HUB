@@ -1,6 +1,7 @@
 (function () {
   const SESSION_KEY = "hub-rh-session";
   const PERSISTED_AUTH_USER_KEY = "hub-rh-persisted-auth-user";
+  const POSTGRES_SESSION_KEY = "hub-postgres-session";
   const LIMIT_MS = 2000;
 
   function readJson(key) {
@@ -13,11 +14,14 @@
 
   function hasStoredIdentity() {
     const persistedUser = readJson(PERSISTED_AUTH_USER_KEY);
+    const postgresUser = readJson(POSTGRES_SESSION_KEY)?.user;
     const name = readJson(`${SESSION_KEY}-user`) || readJson(`${SESSION_KEY}-email`);
-    const normalizedName = String(persistedUser?.user_metadata?.nome || name || "").trim().toLowerCase();
+    const normalizedName = String(persistedUser?.user_metadata?.nome || postgresUser?.user_metadata?.nome || name || "").trim().toLowerCase();
     return Boolean(
       persistedUser?.email ||
+      postgresUser?.email ||
       (persistedUser?.user_metadata?.nome && normalizedName !== "usuario") ||
+      (postgresUser?.user_metadata?.nome && normalizedName !== "usuario") ||
       (name && normalizedName !== "usuario")
     );
   }
