@@ -199,9 +199,24 @@
         },
         auth: {
           async getUser() {
+            if (!session?.user) {
+              const restored = await this.getSession();
+              session = restored.data?.session || session;
+            }
             return { data: { user: session?.user || null }, error: null };
           },
           async getSession() {
+            if (!session?.user) {
+              const result = await request("/api/auth", {
+                method: "POST",
+                headers: jsonHeaders(),
+                body: JSON.stringify({ action: "session" }),
+              });
+              if (!result.error && result.data?.session?.user) {
+                session = result.data.session;
+                persistSession(session);
+              }
+            }
             return { data: { session }, error: null };
           },
           async setSession(nextSession) {
@@ -226,6 +241,11 @@
           async signOut() {
             session = null;
             clearSession();
+            await request("/api/auth", {
+              method: "POST",
+              headers: jsonHeaders(),
+              body: JSON.stringify({ action: "logout" }),
+            });
             return { error: null };
           },
         },
