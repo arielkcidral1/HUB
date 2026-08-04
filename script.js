@@ -941,8 +941,20 @@ async function restoreAuthenticatedSession() {
     if (!persisted) return false;
     const refreshSession = async () => {
       try {
-        const authSession = await withTimeout(getAuthSession(), 6000, null);
-        const sessionUser = authSession?.user ? hydratePersistedAuthUser(authSession.user) : persistedSession.user;
+        const timeoutMarker = { timedOut: true };
+        const authSession = await withTimeout(getAuthSession(), 6000, timeoutMarker);
+        if (authSession === timeoutMarker) {
+          console.warn("Nao foi possivel validar a sessao remota a tempo; mantendo a sessao local.");
+          return;
+        }
+        if (!authSession?.user) {
+          clearAuthenticatedUser();
+          if (!isLoginPage() && !isPublicPage()) {
+            window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
+          }
+          return;
+        }
+        const sessionUser = hydratePersistedAuthUser(authSession.user);
         const profile = await withTimeout(loadUserProfile(sessionUser), 6000, null);
         setAuthenticatedUser(sessionUser, profile);
       } catch (error) {
