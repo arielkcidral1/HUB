@@ -10002,7 +10002,12 @@ async function initializeAppData() {
   renderAccountSettings();
   registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
-  await loadFromPostgreSQL({ setupLive: true });
+  const postgresLoad = loadFromPostgreSQL({ setupLive: true });
+  const postgresLoaded = await withTimeout(postgresLoad, POSTGRES_BOOT_TIMEOUT_MS, false);
+  if (postgresLoaded === false) {
+    setSyncStatus("PostgreSQL carregando em segundo plano", false);
+    renderAll();
+  }
   shell?.classList.remove("is-locked");
   shell?.classList.add("is-ready");
   setupPresenceHeartbeat();
@@ -10020,7 +10025,12 @@ function startAppInitialization() {
 function unlockAccountLoadingWithSession() {
   const shell = document.getElementById("app-shell");
   if (!shell?.classList.contains("is-locked")) return true;
-  return false;
+  if (!isAuthenticated()) return false;
+  renderAll();
+  shell.classList.remove("is-locked");
+  shell.classList.add("is-ready");
+  setupPresenceHeartbeat();
+  return true;
 }
 
 function armAccountLoadingReauth() {
@@ -10035,7 +10045,7 @@ function armAccountLoadingReauth() {
         return;
       }
     }
-    await startAppInitialization();
+    await withTimeout(startAppInitialization(), POSTGRES_BOOT_TIMEOUT_MS, null);
     if (!unlockAccountLoadingWithSession()) {
       window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
     }
