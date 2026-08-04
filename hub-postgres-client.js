@@ -225,7 +225,11 @@
           },
           async signOut() {
             session = null;
+<<<<<<< HEAD
             clearSession();
+=======
+            persistSession(null);
+>>>>>>> cfddf49 (Mantem login apos recarregar pagina)
             return { error: null };
           },
         },

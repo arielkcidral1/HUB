@@ -53,6 +53,7 @@ function Test-ClientSecurityFunctions {
   $docsAchei = Read-ProjectFile "documentos-achei.html"
   $docsTrinca = Read-ProjectFile "documentos-trinca.html"
   $style = Read-ProjectFile "style.css"
+  $postgresClient = Read-ProjectFile "hub-postgres-client.js"
   $contractorApi = Read-ProjectFile "api/contractor-documents.js"
   $recordsApi = Read-ProjectFile "api/records.js"
 
@@ -145,6 +146,9 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $index '<section class="view" id="conta"[\s\S]*class="settings-shell"[\s\S]*class="settings-panel"[\s\S]*id="settings-search-input"[\s\S]*id="settings-user-avatar"[\s\S]*id="settings-user-name"[\s\S]*id="settings-list"[\s\S]*Conta[\s\S]*Privacidade[\s\S]*Conversas[\s\S]*Notificacoes[\s\S]*Atalhos de teclado[\s\S]*id="settings-logout-button"[\s\S]*Desconectar[\s\S]*id="conta-form"[\s\S]*data-settings-panel="settings-shortcuts-panel"[\s\S]*</section>' "painel de configuracoes do usuario possui busca perfil secoes e desconectar"
   Assert-True -Condition (-not ([regex]::Match($index, '<section class="view" id="conta"[\s\S]*?</section>').Value -match 'Ajuda|feedback|Feedback')) -Message "painel de configuracoes nao possui ajuda ou feedback"
   Assert-MatchText $script 'const settingsLogoutButton = document\.getElementById\("settings-logout-button"\)[\s\S]*settingsLogoutButton\?\.addEventListener\("click", logout\)' "desconectar do painel usa fluxo de logout"
+  Assert-MatchText $postgresClient '(readStoredSession|readSession)[\s\S]*window\.localStorage\.getItem\((sessionStorageKey|SESSION_STORAGE_KEY)\)' "sessao auth e restaurada do localStorage"
+  Assert-MatchText $postgresClient 'persistSession[\s\S]*window\.localStorage\.setItem\((sessionStorageKey|SESSION_STORAGE_KEY), (serialized|raw)\)' "sessao auth persiste no localStorage"
+  Assert-MatchText $postgresClient '(persistSession|clearSession)[\s\S]*window\.localStorage\.removeItem\((sessionStorageKey|SESSION_STORAGE_KEY)\)' "sessao auth limpa localStorage no logout"
   Assert-MatchText $script 'function showSettingsPanel\(panelId\)[\s\S]*data-settings-panel[\s\S]*classList\.toggle\("active"[\s\S]*data-settings-target' "script alterna secoes de configuracoes"
   Assert-MatchText $script 'function filterSettingsItems\(query\)[\s\S]*data-settings-target[\s\S]*button\.hidden = Boolean\(normalizedQuery\)' "script filtra itens de configuracoes"
   Assert-MatchText $index 'data-user-setting="hidePresence"[\s\S]*data-user-setting="blurChatPreviews"[\s\S]*data-user-setting="localPrivacyMode"[\s\S]*data-user-setting="compactMode"[\s\S]*data-user-setting="messageSize"[\s\S]*data-user-setting="showEmojiButton"[\s\S]*data-user-setting="enterToSend"[\s\S]*data-user-setting="notificationSound"[\s\S]*data-user-setting="desktopNotifications"[\s\S]*data-user-setting="dashboardNotificationBadges"[\s\S]*data-user-setting="keyboardShortcuts"' "configuracoes de usuario possuem opcionais funcionais"
