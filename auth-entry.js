@@ -5,6 +5,7 @@
   const ROLE_KEY = `${SESSION_KEY}-role`;
   const POSTGRES_SESSION_KEY = "hub-postgres-session";
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
+  const AUTH_REQUEST_TIMEOUT_MS = 3000;
   const RECOVERY_DELAY_MS = 8000;
 
   document.documentElement.classList.add("auth-entry-pending");
@@ -13,6 +14,27 @@
     const email = String(user?.email || "").trim();
     const name = String(user?.user_metadata?.nome || user?.user_metadata?.name || "").trim().toLowerCase();
     return Boolean(email || (name && !["usuario", "voce", "persisted-user"].includes(name)));
+  }
+
+  function readJson(key) {
+    try {
+      return JSON.parse(window.localStorage.getItem(key) || "null");
+    } catch {
+      return null;
+    }
+  }
+
+  function hasStoredIdentity() {
+    const persistedUser = readJson(PERSISTED_USER_KEY);
+    const postgresUser = readJson(POSTGRES_SESSION_KEY)?.user;
+    const storedEmail = readJson(EMAIL_KEY) || "";
+    const storedName = String(readJson(USER_KEY) || "").trim().toLowerCase();
+    return Boolean(
+      isRealUser(persistedUser) ||
+      isRealUser(postgresUser) ||
+      storedEmail ||
+      (storedName && !["usuario", "voce", "persisted-user"].includes(storedName))
+    );
   }
 
   function clearStoredSession() {
@@ -48,12 +70,16 @@
   }
 
   async function reauthenticateInDatabase() {
+    const localIdentityAvailable = hasStoredIdentity();
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
     try {
       const response = await fetch("/api/auth", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "session" }),
+        signal: controller.signal,
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !persistAuthenticatedSession(result?.session)) {
@@ -61,9 +87,13 @@
         return false;
       }
       return true;
-    } catch {
+    } catch (error) {
+      if (localIdentityAvailable && error?.name === "AbortError") return true;
+      if (localIdentityAvailable) return true;
       window.location.replace("account-loading.html?next=index.html");
       return false;
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
