@@ -73,7 +73,7 @@ function Test-ClientSecurityFunctions {
   $loading = Read-ProjectFile "account-loading.html"
   $loadingScript = Read-ProjectFile "account-loading.js"
   Assert-MatchText $loading '<main class="account-loading-screen"[\s\S]*Restaurando sua conta' "tela de carregamento possui HTML proprio"
-  Assert-MatchText $loadingScript 'fetch\("/api/auth"[\s\S]*action: "session"[\s\S]*redirectToLogin\(\)' "tela de carregamento valida sessao e envia para login quando necessario"
+  Assert-MatchText $loadingScript 'function redirectToLogin\(\)[\s\S]*POSTGRES_SESSION_KEY[\s\S]*PERSISTED_USER_KEY[\s\S]*removeItem\(key\)[\s\S]*fetch\("/api/auth"[\s\S]*action: "session"[\s\S]*redirectToLogin\(\)' "tela de carregamento limpa sessao invalida e envia para login quando necessario"
   Assert-MatchText $accountLoadingGuard 'const POSTGRES_SESSION_KEY = "hub-postgres-session"[\s\S]*const postgresUser = readJson\(POSTGRES_SESSION_KEY\)\?\.user[\s\S]*postgresUser\?\.email[\s\S]*normalizedName !== "usuario"[\s\S]*if \(active && hasStoredIdentity\(\)\)' "guard externo reconhece sessao postgres persistida sem destravar Usuario generico"
   Assert-MatchText $accountLoadingGuard 'function redirectToLogin\(\)[\s\S]*window\.location\.replace\(`login\.html\?next=' "guard externo envia para login sem sessao salva"
   Assert-MatchText $style '\.account-loading-page[\s\S]*assets/hero-rh\.svg[\s\S]*\.account-loading-screen[\s\S]*\.account-loading-card' "loading da conta usa HTML proprio com cores do HUB"
