@@ -1,4 +1,5 @@
 import { assertDatabaseUrl, getBody, json, pool } from "../db.js";
+import { validateAuthSession } from "../auth.js";
 
 function normalize(value) {
   return String(value || "").trim();
@@ -16,12 +17,14 @@ export default async function handler(req, res) {
   try {
     if (req.method !== "POST") return json(res, 405, { error: "Metodo nao permitido." });
     assertDatabaseUrl();
+    const session = await validateAuthSession(req);
+    if (!session?.user) return json(res, 401, { error: "Sessao encerrada por outro login." });
     await ensurePresenceColumns();
 
     const body = await getBody(req);
-    const userId = normalize(body.userId);
-    const email = normalize(body.email).toLowerCase();
-    const nome = normalize(body.nome);
+    const userId = normalize(session.user.id);
+    const email = normalize(session.user.email).toLowerCase();
+    const nome = normalize(session.user.user_metadata?.nome);
     const online = body.online !== false;
 
     if (!userId && !email && !nome) return json(res, 400, { error: "Usuario nao informado." });
