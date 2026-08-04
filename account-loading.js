@@ -22,6 +22,18 @@
   }
 
   function redirectToLogin() {
+    [
+      SESSION_KEY,
+      USER_KEY,
+      EMAIL_KEY,
+      ROLE_KEY,
+      POSTGRES_SESSION_KEY,
+      PERSISTED_USER_KEY,
+      VERIFIED_KEY,
+    ].forEach((key) => {
+      window.localStorage.removeItem(key);
+      window.sessionStorage.removeItem(key);
+    });
     window.location.replace("login.html?next=index.html");
   }
 
