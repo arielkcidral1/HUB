@@ -180,7 +180,9 @@ h2 {
 .app-shell.is-locked {
   grid-template-columns: 1fr;
   place-items: center;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 20% 15%, rgba(47, 166, 151, 0.2), transparent 34%),
+    linear-gradient(135deg, #061b17 0%, var(--teal-dark) 54%, #10221e 100%);
 }
 
 .app-shell.is-locked > * {
@@ -188,16 +190,40 @@ h2 {
 }
 
 .app-shell.is-locked::before {
-  content: "Carregando sua conta...";
+  content: "";
   visibility: visible;
   position: fixed;
   inset: 0;
+  background:
+    linear-gradient(120deg, rgba(12, 98, 89, 0.72), rgba(8, 25, 22, 0.88)),
+    url("assets/hero-rh.svg") center / cover no-repeat;
+  z-index: 9998;
+}
+
+.app-shell.is-locked::after {
+  content: "HUB\A Carregando sua conta...";
+  visibility: visible;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(360px, calc(100vw - 40px));
+  min-height: 210px;
+  transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
-  color: var(--ink);
-  font-size: 16px;
+  padding: 116px 28px 28px;
+  border: 1px solid rgba(61, 187, 171, 0.45);
+  border-radius: 14px;
+  color: #fff;
+  font-size: 15px;
   font-weight: 700;
-  background: var(--bg);
+  line-height: 1.7;
+  text-align: center;
+  white-space: pre-line;
+  background:
+    url("assets/logo.svg") center 28px / 64px 64px no-repeat,
+    linear-gradient(180deg, rgba(9, 77, 70, 0.96), rgba(5, 21, 18, 0.96));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
   z-index: 9999;
 }
 
