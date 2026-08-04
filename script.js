@@ -3251,7 +3251,7 @@ async function loadFromPostgreSQL(options = {}) {
   if (!postgresClient) {
     setSyncStatus("Modo local", false);
     renderAll();
-    return;
+    return false;
   }
 
   try {
@@ -3321,10 +3321,12 @@ async function loadFromPostgreSQL(options = {}) {
     setSyncStatus(hasFailures ? "PostgreSQL parcial" : "PostgreSQL EIXO online", !hasFailures);
     renderAll();
     if (setupLive) rememberCurrentNotificationKeysForPolling();
+    return !hasFailures;
   } catch (error) {
     console.error("Erro ao carregar PostgreSQL:", error);
     setSyncStatus("PostgreSQL pendente", false);
     renderAll();
+    return false;
   }
 }
 
@@ -10000,12 +10002,7 @@ async function initializeAppData() {
   renderAccountSettings();
   registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
-  const postgresLoad = loadFromPostgreSQL({ setupLive: true });
-  const postgresLoaded = await withTimeout(postgresLoad, POSTGRES_BOOT_TIMEOUT_MS, false);
-  if (postgresLoaded === false) {
-    setSyncStatus("PostgreSQL carregando em segundo plano", false);
-    renderAll();
-  }
+  await loadFromPostgreSQL({ setupLive: true });
   shell?.classList.remove("is-locked");
   shell?.classList.add("is-ready");
   setupPresenceHeartbeat();
@@ -10023,12 +10020,7 @@ function startAppInitialization() {
 function unlockAccountLoadingWithSession() {
   const shell = document.getElementById("app-shell");
   if (!shell?.classList.contains("is-locked")) return true;
-  if (!isAuthenticated()) return false;
-  renderAll();
-  shell.classList.remove("is-locked");
-  shell.classList.add("is-ready");
-  setupPresenceHeartbeat();
-  return true;
+  return false;
 }
 
 function armAccountLoadingReauth() {
@@ -10043,7 +10035,7 @@ function armAccountLoadingReauth() {
         return;
       }
     }
-    await withTimeout(startAppInitialization(), ACCOUNT_LOADING_REAUTH_MS, null);
+    await startAppInitialization();
     if (!unlockAccountLoadingWithSession()) {
       window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
     }
@@ -10113,10 +10105,6 @@ setupLogin().then((canInitialize) => {
   return null;
 }).catch((error) => {
   console.error("Erro ao validar login:", error);
-  if (isAuthenticated()) {
-    startAppInitialization();
-    return;
-  }
   if (!isLoginPage() && !isPublicPage()) {
     window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`;
     return;

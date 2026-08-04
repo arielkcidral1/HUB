@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" autocomplete="off"' "formulario de login desativa autocomplete"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v12' "login carrega scripts com cache bust de sessao persistente"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v13' "login carrega scripts com cache bust de sessao persistente"
 }
 
 function Test-ClientSecurityFunctions {
@@ -67,9 +67,9 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $authApi 'action === "session"[\s\S]*decodeCookiePayload\(getCookie\(req, "hub_auth_session"\)\)' "API auth restaura sessao por cookie"
   Assert-MatchText $authApi 'action === "logout"[\s\S]*clearAuthCookie\(res\)' "API auth limpa cookie no logout"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
-  Assert-MatchText $index 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*account-loading-guard\.js\?v=auth-guard-v1[\s\S]*script\.js\?v=auth-persist-v12' "HUB carrega guard e scripts com cache bust de sessao persistente"
+  Assert-MatchText $index 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*account-loading-guard\.js\?v=auth-guard-v2[\s\S]*script\.js\?v=auth-persist-v13' "HUB carrega guard e scripts com cache bust de sessao persistente"
   Assert-MatchText $index '<div class="app-shell is-locked" id="app-shell">' "HUB inicia travado ate validar sessao e DB"
-  Assert-MatchText $accountLoadingGuard 'const LIMIT_MS = 2000[\s\S]*classList\.contains\("is-locked"\)[\s\S]*active && hasStoredIdentity\(\)[\s\S]*classList\.remove\("is-locked"\)' "guard externo destrava loading com sessao salva"
+  Assert-MatchText $accountLoadingGuard 'const LIMIT_MS = 2000[\s\S]*classList\.contains\("is-locked"\)[\s\S]*if \(active && hasStoredIdentity\(\)\) return;[\s\S]*redirectToLogin\(\)' "guard externo nao libera index privado sem validacao do app"
   Assert-MatchText $accountLoadingGuard 'function redirectToLogin\(\)[\s\S]*window\.location\.replace\(`login\.html\?next=' "guard externo envia para login sem sessao salva"
   Assert-MatchText $style '\.app-shell\.is-locked::after[\s\S]*HUB\\A Carregando sua conta[\s\S]*assets/logo\.svg[\s\S]*var\(--teal-dark\)' "loading da conta usa logo e cores do HUB"
   $encodingArtifacts = @(([char]0x00C3), ([char]0x00C2), ([char]0x00E2))
@@ -168,11 +168,11 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'function hasPersistedAuthIdentity\(\)[\s\S]*PERSISTED_AUTH_USER_KEY[\s\S]*persistedName[\s\S]*persistedEmail[\s\S]*function isAuthenticated\(\)[\s\S]*sessionIsActive && hasPersistedAuthIdentity\(\)' "sessao ativa sem usuario nao libera o index"
   Assert-MatchText $script 'async function restoreAuthenticatedSession\(\)[\s\S]*const persistedSession = buildPersistedAuthSession\(\)[\s\S]*let session = persistedSession[\s\S]*withTimeout\(getAuthSession\(\), 6000[\s\S]*if \(authSession\?\.user\) session = authSession[\s\S]*clearAuthenticatedUser\(\)' "reload prioriza sessao local antes de limpar login"
   Assert-MatchText $script 'function withTimeout\(promise, ms, fallbackValue = null\)[\s\S]*setTimeout[\s\S]*async function restoreAuthenticatedSession\(\)[\s\S]*buildPersistedAuthSession\(\)[\s\S]*withTimeout\(getAuthSession\(\), 6000[\s\S]*setAuthenticatedUser\(session\.user, null\)[\s\S]*withTimeout\(loadUserProfile\(session\.user\), 6000' "refresh nao trava login aguardando perfil do DB"
-  Assert-MatchText $script 'setupLogin\(\)\.then[\s\S]*catch\(\(error\)[\s\S]*if \(isAuthenticated\(\)\) \{[\s\S]*startAppInitialization\(\)' "erro transitorio de auth nao bloqueia DB quando ha sessao local"
+  Assert-True -Condition (-not ($script -match 'catch\(\(error\)[\s\S]*if \(isAuthenticated\(\)\) \{[\s\S]*startAppInitialization\(\)')) -Message "erro de auth nao libera index privado com sessao local suspeita"
   Assert-MatchText $script 'const ACCOUNT_LOADING_REAUTH_MS = 2000[\s\S]*const POSTGRES_BOOT_TIMEOUT_MS = ACCOUNT_LOADING_REAUTH_MS' "HUB possui limite de 2s para reautenticar no loading"
-  Assert-MatchText $script 'async function initializeAppData\(\)[\s\S]*const postgresLoad = loadFromPostgreSQL\(\{ setupLive: true \}\);[\s\S]*withTimeout\(postgresLoad, POSTGRES_BOOT_TIMEOUT_MS, false\)[\s\S]*PostgreSQL carregando em segundo plano[\s\S]*renderAll\(\)[\s\S]*classList\.remove\("is-locked"\)[\s\S]*classList\.add\("is-ready"\)' "HUB libera tela privada se PostgreSQL demorar"
-  Assert-MatchText $script 'function unlockAccountLoadingWithSession\(\)[\s\S]*if \(!isAuthenticated\(\)\) return false;[\s\S]*renderAll\(\)[\s\S]*classList\.remove\("is-locked"\)[\s\S]*classList\.add\("is-ready"\)' "loading da conta destrava com sessao valida"
-  Assert-MatchText $script 'function armAccountLoadingReauth\(\)[\s\S]*setTimeout\(async \(\) =>[\s\S]*classList\.contains\("is-locked"\)[\s\S]*restoreAuthenticatedSession\(\)[\s\S]*withTimeout\(startAppInitialization\(\), ACCOUNT_LOADING_REAUTH_MS, null\)[\s\S]*if \(!unlockAccountLoadingWithSession\(\)\)[\s\S]*window\.location\.replace' "loading da conta reautentica ou redireciona apos 2s"
+  Assert-MatchText $script 'async function initializeAppData\(\)[\s\S]*if \(!isAuthenticated\(\)\)[\s\S]*window\.location\.replace[\s\S]*await loadFromPostgreSQL\(\{ setupLive: true \}\)[\s\S]*classList\.remove\("is-locked"\)[\s\S]*classList\.add\("is-ready"\)' "HUB so libera tela privada apos sessao e carga do PostgreSQL"
+  Assert-MatchText $script 'function unlockAccountLoadingWithSession\(\)[\s\S]*classList\.contains\("is-locked"\)[\s\S]*return false;' "loading da conta nao destrava index sozinho"
+  Assert-MatchText $script 'function armAccountLoadingReauth\(\)[\s\S]*setTimeout\(async \(\) =>[\s\S]*classList\.contains\("is-locked"\)[\s\S]*restoreAuthenticatedSession\(\)[\s\S]*await startAppInitialization\(\)[\s\S]*if \(!unlockAccountLoadingWithSession\(\)\)[\s\S]*window\.location\.replace' "loading da conta reautentica e aguarda DB antes de redirecionar"
   Assert-MatchText $script 'async function initializeAppData\(\)[\s\S]*if \(!isAuthenticated\(\)\) \{[\s\S]*is-locked[\s\S]*window\.location\.replace\(`login\.html\?next=\$\{encodeURIComponent' "pagina privada sem sessao nao renderiza painel"
   Assert-MatchText $script 'catch\(\(error\)[\s\S]*if \(!isLoginPage\(\) && !isPublicPage\(\)\)[\s\S]*return;[\s\S]*if \(isPublicPage\(\)\) startAppInitialization\(\);' "falha de auth nao inicializa index privado"
   Assert-MatchText $script 'function showSettingsPanel\(panelId\)[\s\S]*data-settings-panel[\s\S]*classList\.toggle\("active"[\s\S]*data-settings-target' "script alterna secoes de configuracoes"
