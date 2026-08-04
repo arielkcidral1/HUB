@@ -625,17 +625,10 @@ function hasPersistedAuthIdentity() {
   const persistedAuthUser = storageService.getLocalItem(PERSISTED_AUTH_USER_KEY);
   const persistedName = storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`);
   const persistedEmail = storageService.getLocalItem(`${SESSION_KEY}-email`) || storageService.getSessionItem(`${SESSION_KEY}-email`);
-  return Boolean(
-    currentAuthUser?.id ||
-    currentAuthUser?.email ||
-    currentUserProfile?.id ||
-    currentUserProfile?.email ||
-    persistedAuthUser?.id ||
-    persistedAuthUser?.email ||
-    persistedAuthUser?.user_metadata?.nome ||
-    persistedName ||
-    persistedEmail
-  );
+  return hasRealAuthIdentity(currentAuthUser) ||
+    hasRealAuthIdentity(currentUserProfile) ||
+    hasRealAuthIdentity(persistedAuthUser) ||
+    hasRealAuthIdentity({ email: persistedEmail, user_metadata: { nome: persistedName } });
 }
 
 function isAuthenticated() {
@@ -708,6 +701,17 @@ function getAuthUserDisplayName(authUser) {
   );
 }
 
+function isGenericAuthName(value) {
+  const normalized = normalizeLoginName(value);
+  return !normalized || normalized === "usuario" || normalized === "voce" || normalized === "você" || normalized === "persisted-user";
+}
+
+function hasRealAuthIdentity(authUser = {}) {
+  const email = String(authUser?.email || "").trim();
+  const name = authUser?.nome || authUser?.user_metadata?.nome || authUser?.user_metadata?.name || "";
+  return Boolean(email || !isGenericAuthName(name));
+}
+
 function getPersistedAuthFields() {
   return {
     nome: storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`) || "",
@@ -741,10 +745,11 @@ function buildPersistedAuthSession() {
   if (storageService.getLocalItem(SESSION_KEY) !== "active" && storageService.getSessionItem(SESSION_KEY) !== "active") return null;
   const persistedAuthUser = storageService.getLocalItem(PERSISTED_AUTH_USER_KEY);
   const { nome, email, cargo } = getPersistedAuthFields();
-  if (persistedAuthUser?.id || persistedAuthUser?.email || persistedAuthUser?.user_metadata?.nome || nome || email) {
-    return { user: hydratePersistedAuthUser(persistedAuthUser || {}) };
+  const hydratedPersistedUser = hydratePersistedAuthUser(persistedAuthUser || {});
+  if (hasRealAuthIdentity(hydratedPersistedUser)) {
+    return { user: hydratedPersistedUser };
   }
-  if (!nome && !email) return null;
+  if (!email && isGenericAuthName(nome)) return null;
 
   return {
     user: hydratePersistedAuthUser({
@@ -763,6 +768,7 @@ function setAuthenticatedUser(authUser, profile = null) {
   currentUserProfile = profile || null;
   const authDisplayName = getAuthUserDisplayName(hydratedAuthUser);
   const displayName = profile?.nome || (normalizeLoginName(authDisplayName) === "usuario" ? persisted.nome : authDisplayName) || persisted.nome;
+  if (!profile && !hydratedAuthUser?.email && isGenericAuthName(displayName)) return false;
   const persistedAuthUser = {
     ...hydratedAuthUser,
     email: profile?.email || hydratedAuthUser?.email || persisted.email || "",
@@ -786,6 +792,7 @@ function setAuthenticatedUser(authUser, profile = null) {
   storageService.setSessionItem(`${SESSION_KEY}-role`, persistedAuthUser.app_metadata?.cargo || "");
   storageService.setLocalItem(`${SESSION_KEY}-role`, persistedAuthUser.app_metadata?.cargo || "");
   reloadUserSettingsForCurrentUser();
+  return true;
 }
 
 function clearSensitiveClientCache() {
@@ -844,18 +851,7 @@ async function loadUserProfile(authUser) {
     displayName && displayName !== "usuario" ? `nome.ilike.${displayName}` : "",
   ].filter(Boolean).join(",");
 
-  if (!profileFilters) {
-    return {
-      id: authUser.id,
-      nome: getAuthUserDisplayName(authUser),
-      email: authUser.email || "",
-      cargo: authUser.app_metadata?.cargo || "",
-      foto_perfil: "",
-      configuracoes: {},
-      syncStatus: "auth",
-      createdAt: todayLabel(),
-    };
-  }
+  if (!profileFilters) return null;
 
   try {
     let query = postgresClient.from(USERS_TABLE).select("id, nome, email, cpf, cargo, foto_perfil, configuracoes, created_by, created_at");
@@ -890,7 +886,7 @@ async function loadUserProfile(authUser) {
         upsertLocalUser({ ...profileWithEmail, syncStatus: "active" });
         return profileWithEmail;
       }
-      return {
+      return hasRealAuthIdentity(authUser) ? {
         id: authUser.id,
         nome: getAuthUserDisplayName(authUser),
         email: authUser.email || "",
@@ -899,7 +895,7 @@ async function loadUserProfile(authUser) {
         configuracoes: {},
         syncStatus: "auth",
         createdAt: todayLabel(),
-      };
+      } : null;
     }
 
     if (error) throw error;
@@ -908,7 +904,7 @@ async function loadUserProfile(authUser) {
       upsertLocalUser({ ...profile, email: profile.email || authUser.email, syncStatus: "active" });
       return profile;
     }
-    return {
+    return hasRealAuthIdentity(authUser) ? {
       id: authUser.id,
       nome: getAuthUserDisplayName(authUser),
       email: authUser.email || "",
@@ -917,10 +913,10 @@ async function loadUserProfile(authUser) {
       configuracoes: {},
       syncStatus: "auth",
       createdAt: todayLabel(),
-    };
+    } : null;
   } catch (error) {
     console.error("Erro ao carregar perfil do usuario:", error);
-    return findLocalTeamUser(authUser.email) || findLocalTeamUser(getAuthUserDisplayName(authUser)) || {
+    return findLocalTeamUser(authUser.email) || findLocalTeamUser(getAuthUserDisplayName(authUser)) || (hasRealAuthIdentity(authUser) ? {
       id: authUser.id,
       nome: getAuthUserDisplayName(authUser),
       email: authUser.email || "",
@@ -929,7 +925,7 @@ async function loadUserProfile(authUser) {
       configuracoes: {},
       syncStatus: "auth",
       createdAt: todayLabel(),
-    };
+    } : null);
   }
 }
 
@@ -947,9 +943,11 @@ async function restoreAuthenticatedSession() {
     return false;
   }
 
-  setAuthenticatedUser(session.user, null);
+  const firstPersist = setAuthenticatedUser(session.user, null);
+  if (!firstPersist) return false;
   const profile = await withTimeout(loadUserProfile(session.user), 6000, null);
-  setAuthenticatedUser(session.user, profile);
+  const finalPersist = setAuthenticatedUser(session.user, profile);
+  if (!finalPersist) return false;
   return true;
 }
 
