@@ -2,6 +2,7 @@ const STORAGE_KEY = "hub-rh-data";
 const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const CONTRACTOR_PENDING_DOCUMENTS_KEY = "hub-contractor-pending-documents";
 const SESSION_KEY = "hub-rh-session";
+const PERSISTED_AUTH_USER_KEY = "hub-rh-persisted-auth-user";
 const PUBLIC_CLIENT_ID_KEY = "hub-public-client-id";
 const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
@@ -688,6 +689,10 @@ function getAuthUserDisplayName(authUser) {
 
 function buildPersistedAuthSession() {
   if (storageService.getLocalItem(SESSION_KEY) !== "active") return null;
+  const persistedAuthUser = storageService.getLocalItem(PERSISTED_AUTH_USER_KEY);
+  if (persistedAuthUser?.id || persistedAuthUser?.email || persistedAuthUser?.user_metadata?.nome) {
+    return { user: persistedAuthUser };
+  }
   const nome = storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`) || "";
   const email = storageService.getLocalItem(`${SESSION_KEY}-email`) || storageService.getSessionItem(`${SESSION_KEY}-email`) || "";
   const cargo = storageService.getLocalItem(`${SESSION_KEY}-role`) || storageService.getSessionItem(`${SESSION_KEY}-role`) || "";
@@ -707,8 +712,22 @@ function setAuthenticatedUser(authUser, profile = null) {
   currentAuthUser = authUser || null;
   currentUserProfile = profile || null;
   const displayName = profile?.nome || getAuthUserDisplayName(authUser);
+  const persistedAuthUser = {
+    ...(authUser || {}),
+    email: profile?.email || authUser?.email || "",
+    user_metadata: {
+      ...(authUser?.user_metadata || {}),
+      nome: displayName,
+      cargo: profile?.cargo || authUser?.cargo || authUser?.app_metadata?.cargo || authUser?.user_metadata?.cargo || "",
+    },
+    app_metadata: {
+      ...(authUser?.app_metadata || {}),
+      cargo: profile?.cargo || authUser?.cargo || authUser?.app_metadata?.cargo || authUser?.user_metadata?.cargo || "",
+    },
+  };
   storageService.setSessionItem(SESSION_KEY, "active");
   storageService.setLocalItem(SESSION_KEY, "active");
+  storageService.setLocalItem(PERSISTED_AUTH_USER_KEY, persistedAuthUser);
   storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
   storageService.setLocalItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
   storageService.setSessionItem(`${SESSION_KEY}-email`, profile?.email || authUser?.email || "");
@@ -732,6 +751,7 @@ function clearAuthenticatedUser() {
   storageService.removeSessionItem(`${SESSION_KEY}-user`);
   storageService.removeSessionItem(`${SESSION_KEY}-role`);
   storageService.removeSessionItem(`${SESSION_KEY}-email`);
+  storageService.removeLocalItem(PERSISTED_AUTH_USER_KEY);
   storageService.removeLocalItem(SESSION_KEY);
   storageService.removeLocalItem(`${SESSION_KEY}-user`);
   storageService.removeLocalItem(`${SESSION_KEY}-role`);
