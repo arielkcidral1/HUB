@@ -3,6 +3,7 @@ const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const CONTRACTOR_PENDING_DOCUMENTS_KEY = "hub-contractor-pending-documents";
 const SESSION_KEY = "hub-rh-session";
 const PERSISTED_AUTH_USER_KEY = "hub-rh-persisted-auth-user";
+const POSTGRES_SESSION_KEY = "hub-postgres-session";
 const ACCOUNT_LOADING_REAUTH_MS = 2000;
 const POSTGRES_BOOT_TIMEOUT_MS = ACCOUNT_LOADING_REAUTH_MS;
 const PUBLIC_CLIENT_ID_KEY = "hub-public-client-id";
@@ -713,10 +714,12 @@ function hasRealAuthIdentity(authUser = {}) {
 }
 
 function getPersistedAuthFields() {
+  const postgresSession = storageService.getLocalItem(POSTGRES_SESSION_KEY, {});
+  const postgresUser = postgresSession?.user || {};
   return {
-    nome: storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`) || "",
-    email: storageService.getLocalItem(`${SESSION_KEY}-email`) || storageService.getSessionItem(`${SESSION_KEY}-email`) || "",
-    cargo: storageService.getLocalItem(`${SESSION_KEY}-role`) || storageService.getSessionItem(`${SESSION_KEY}-role`) || "",
+    nome: storageService.getLocalItem(`${SESSION_KEY}-user`) || storageService.getSessionItem(`${SESSION_KEY}-user`) || postgresUser?.user_metadata?.nome || postgresUser?.user_metadata?.name || "",
+    email: storageService.getLocalItem(`${SESSION_KEY}-email`) || storageService.getSessionItem(`${SESSION_KEY}-email`) || postgresUser?.email || "",
+    cargo: storageService.getLocalItem(`${SESSION_KEY}-role`) || storageService.getSessionItem(`${SESSION_KEY}-role`) || postgresUser?.app_metadata?.cargo || postgresUser?.user_metadata?.cargo || "",
   };
 }
 
@@ -742,10 +745,12 @@ function hydratePersistedAuthUser(authUser = {}) {
 }
 
 function buildPersistedAuthSession() {
-  if (storageService.getLocalItem(SESSION_KEY) !== "active" && storageService.getSessionItem(SESSION_KEY) !== "active") return null;
+  const postgresSession = storageService.getLocalItem(POSTGRES_SESSION_KEY, null);
+  const hasHubSession = storageService.getLocalItem(SESSION_KEY) === "active" || storageService.getSessionItem(SESSION_KEY) === "active";
+  if (!hasHubSession && !postgresSession?.user) return null;
   const persistedAuthUser = storageService.getLocalItem(PERSISTED_AUTH_USER_KEY);
   const { nome, email, cargo } = getPersistedAuthFields();
-  const hydratedPersistedUser = hydratePersistedAuthUser(persistedAuthUser || {});
+  const hydratedPersistedUser = hydratePersistedAuthUser(persistedAuthUser || postgresSession?.user || {});
   if (hasRealAuthIdentity(hydratedPersistedUser)) {
     return { user: hydratedPersistedUser };
   }
@@ -931,7 +936,24 @@ async function loadUserProfile(authUser) {
 
 async function restoreAuthenticatedSession() {
   const persistedSession = buildPersistedAuthSession();
-  let session = persistedSession;
+  if (persistedSession?.user) {
+    const persisted = setAuthenticatedUser(persistedSession.user, null);
+    if (!persisted) return false;
+    const refreshSession = async () => {
+      try {
+        const authSession = await withTimeout(getAuthSession(), 6000, null);
+        const sessionUser = authSession?.user ? hydratePersistedAuthUser(authSession.user) : persistedSession.user;
+        const profile = await withTimeout(loadUserProfile(sessionUser), 6000, null);
+        setAuthenticatedUser(sessionUser, profile);
+      } catch (error) {
+        console.warn("Sessao restaurada localmente; atualizacao remota ficou pendente:", error);
+      }
+    };
+    refreshSession();
+    return true;
+  }
+
+  let session = null;
   try {
     const authSession = await withTimeout(getAuthSession(), 6000, null);
     if (authSession?.user) session = { ...authSession, user: hydratePersistedAuthUser(authSession.user) };
