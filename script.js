@@ -709,7 +709,7 @@ function getAuthUserDisplayName(authUser) {
 }
 
 function buildPersistedAuthSession() {
-  if (storageService.getLocalItem(SESSION_KEY) !== "active") return null;
+  if (storageService.getLocalItem(SESSION_KEY) !== "active" && storageService.getSessionItem(SESSION_KEY) !== "active") return null;
   const persistedAuthUser = storageService.getLocalItem(PERSISTED_AUTH_USER_KEY);
   if (persistedAuthUser?.id || persistedAuthUser?.email || persistedAuthUser?.user_metadata?.nome) {
     return { user: persistedAuthUser };
@@ -886,10 +886,13 @@ async function loadUserProfile(authUser) {
 }
 
 async function restoreAuthenticatedSession() {
-  let session = buildPersistedAuthSession();
-  const serverSession = await withTimeout(getAuthSession(), 6000, null);
-  if (serverSession?.user) {
-    session = serverSession;
+  const persistedSession = buildPersistedAuthSession();
+  let session = persistedSession;
+  try {
+    const authSession = await withTimeout(getAuthSession(), 6000, null);
+    if (authSession?.user) session = authSession;
+  } catch (error) {
+    console.warn("Sessao auth remota indisponivel, usando sessao local persistida:", error);
   }
   if (!session?.user) {
     clearAuthenticatedUser();
