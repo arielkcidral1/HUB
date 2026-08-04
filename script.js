@@ -1109,12 +1109,17 @@ async function logout() {
 async function setupLogin() {
   const loginForm = document.getElementById("login-form");
   const settingsLogoutButton = document.getElementById("settings-logout-button");
+  const forceReauthentication = new URLSearchParams(window.location.search).get("reauth") === "1";
   clearLegacyTeamCredentials();
   if (!isLoginPage() && !isPublicPage() && window.__hubAuthEntryPromise) {
     const entryAuthenticated = await window.__hubAuthEntryPromise;
     if (!entryAuthenticated) return false;
   }
   postgresClient = postgresClient || getPostgreSQLClient();
+  if (forceReauthentication && postgresClient?.auth) {
+    await postgresClient.auth.signOut();
+    clearAuthenticatedUser();
+  }
   const hasAuthSession = await restoreAuthenticatedSession();
   const hasValidDisplayIdentity = hasAuthSession && !isGenericAuthName(getCurrentUserName());
 

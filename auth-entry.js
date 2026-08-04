@@ -78,7 +78,7 @@
 
   function redirectToLogin() {
     clearStoredSession();
-    window.location.replace("login.html?next=index.html");
+    window.location.replace("login.html?next=index.html&reauth=1");
   }
 
   function persistAuthenticatedSession(session) {
