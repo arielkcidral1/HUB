@@ -5,6 +5,7 @@
   const ROLE_KEY = `${SESSION_KEY}-role`;
   const POSTGRES_SESSION_KEY = "hub-postgres-session";
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
+  const LAST_ACCOUNT_KEY = "hub-rh-last-account";
   const AUTH_REQUEST_TIMEOUT_MS = 3000;
 
   document.documentElement.classList.add("auth-entry-pending");
@@ -37,7 +38,7 @@
   }
 
   function getStoredUser() {
-    return readJson(PERSISTED_USER_KEY) || readJson(POSTGRES_SESSION_KEY)?.user || null;
+    return readJson(PERSISTED_USER_KEY) || readJson(POSTGRES_SESSION_KEY)?.user || readJson(LAST_ACCOUNT_KEY) || null;
   }
 
   async function hasRecentActivity() {
@@ -115,7 +116,9 @@
     // A sessao HttpOnly continua disponivel para a reautenticacao automatica.
     // Durante o reload, a presenca fica suspensa e volta ao iniciar o painel.
     await new Promise((resolve) => window.setTimeout(resolve, 500));
-    return reauthenticateInDatabase();
+    const authenticated = await reauthenticateInDatabase();
+    if (authenticated) window.__hubReloadReauthenticated = true;
+    return authenticated;
   }
 
   function persistAuthenticatedSession(session) {
@@ -127,6 +130,12 @@
     window.localStorage.setItem(POSTGRES_SESSION_KEY, raw);
     window.sessionStorage.setItem(POSTGRES_SESSION_KEY, raw);
     window.localStorage.setItem(PERSISTED_USER_KEY, JSON.stringify(user));
+    window.localStorage.setItem(LAST_ACCOUNT_KEY, JSON.stringify({
+      id: user.id || "",
+      email: user.email || "",
+      nome: user.user_metadata?.nome || user.user_metadata?.name || name,
+      cargo: user.app_metadata?.cargo || user.user_metadata?.cargo || role,
+    }));
     window.localStorage.setItem(SESSION_KEY, JSON.stringify("active"));
     window.sessionStorage.setItem(SESSION_KEY, JSON.stringify("active"));
     window.localStorage.setItem(USER_KEY, JSON.stringify(name));
