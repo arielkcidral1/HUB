@@ -283,6 +283,8 @@ let draggedBoardTabId = "";
 let suppressBoardCardClick = false;
 let dashboardNotificationOffset = 0;
 let visibleDashboardActivityItems = [];
+let allDashboardActivityItems = [];
+let dashboardActivityItemsReady = false;
 let presenceHeartbeatStarted = false;
 let currentUserSettings = loadUserSettings();
 let lastUnreadNotificationCount = 0;
@@ -6029,6 +6031,8 @@ function renderDashboard() {
   // Quando todas estiverem lidas, a lista fica vazia.
   const unreadDashboardItems = sortedDashboardItems.filter((item) => !isDashboardActivityReadForOrdering(item));
   const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
+  allDashboardActivityItems = unreadDashboardItems;
+  dashboardActivityItemsReady = true;
   visibleDashboardActivityItems = visibleDashboardItems;
   const previousDashboardButton = document.getElementById("dashboard-notifications-prev");
   const nextDashboardButton = document.getElementById("dashboard-notifications-next");
@@ -6041,6 +6045,8 @@ function renderDashboard() {
   const dashboardTarget = document.getElementById("dashboard-list");
   if (dashboardTarget) {
     if (!currentUserSettings.dashboardNotificationBadges) {
+      allDashboardActivityItems = [];
+      dashboardActivityItemsReady = true;
       visibleDashboardActivityItems = [];
       dashboardTarget.innerHTML = '<p class="empty-state">Novidades ocultas pelas suas configura��es.</p>';
       if (previousDashboardButton) previousDashboardButton.hidden = true;
@@ -10871,6 +10877,33 @@ class NotificationTracker {
         chatMessages: Array.isArray(item.chatMessages) ? item.chatMessages : [],
       });
     };
+
+    const dashboardItems = Array.isArray(allDashboardActivityItems) ? allDashboardActivityItems : [];
+    if (dashboardActivityItemsReady) {
+      dashboardItems.forEach((item = {}) => {
+        const type = item.kind === "notificacao" ? "mensagem" : (item.kind || "geral");
+        const isUrgent = String(item.tag || "").toLowerCase() === "urgente";
+        const isRead = typeof isDashboardActivityReadForOrdering === "function"
+          ? isDashboardActivityReadForOrdering(item)
+          : false;
+        pushNotification({
+          id: item.notificationId || `${type}-${item.id || item._sortIndex || notifications.length}`,
+          type,
+          title: item.title || "Notificacao",
+          description: item.text || "",
+          details: item.details || item.text || "",
+          time: item.date || item.createdAt || "Recentemente",
+          dateTime: item.dateTime || item.sortAt || item.updatedSortAt || item.date || item.createdAt || "Recentemente",
+          status: isUrgent ? "urgent" : "unread",
+          unread: !isRead,
+          view: item.view || this.getViewForType(type),
+          badgeText: isUrgent ? "Urgente" : (isRead ? "" : "Nao lido"),
+          messageIds: Array.isArray(item.messageIds) ? item.messageIds.map(String) : [],
+          chatMessages: Array.isArray(item.chatMessages) ? item.chatMessages : [],
+        });
+      });
+      return notifications.sort((a, b) => (b.dateTime - a.dateTime) || (a.sequence - b.sequence));
+    }
 
     const accessibleMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
     const sortedMessagesNewestFirst = [...accessibleMessages]
