@@ -8,8 +8,6 @@
   const AUTH_REQUEST_TIMEOUT_MS = 3000;
   const RECOVERY_DELAY_MS = 8000;
 
-  document.documentElement.classList.add("auth-entry-pending");
-
   function isRealUser(user) {
     const email = String(user?.email || "").trim();
     const name = String(user?.user_metadata?.nome || user?.user_metadata?.name || "").trim().toLowerCase();
@@ -148,10 +146,7 @@
     }
   }
 
+  // The persisted local identity is the bootstrap source after F5. Do not
+  // block or replace the page while the optional remote check is running.
   window.__hubAuthEntryPromise = reauthenticateInDatabase();
-  window.setTimeout(() => {
-    if (document.documentElement.classList.contains("auth-entry-pending")) {
-      window.location.replace("account-loading.html?next=index.html");
-    }
-  }, RECOVERY_DELAY_MS);
 })();
