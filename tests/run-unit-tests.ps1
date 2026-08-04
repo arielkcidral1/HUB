@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" autocomplete="off"' "formulario de login desativa autocomplete"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v8' "login carrega scripts com cache bust de sessao persistente"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v9' "login carrega scripts com cache bust de sessao persistente"
 }
 
 function Test-ClientSecurityFunctions {
@@ -66,7 +66,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $authApi 'action === "session"[\s\S]*decodeCookiePayload\(getCookie\(req, "hub_auth_session"\)\)' "API auth restaura sessao por cookie"
   Assert-MatchText $authApi 'action === "logout"[\s\S]*clearAuthCookie\(res\)' "API auth limpa cookie no logout"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
-  Assert-MatchText $index 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v8' "HUB carrega scripts com cache bust de sessao persistente"
+  Assert-MatchText $index 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v9' "HUB carrega scripts com cache bust de sessao persistente"
   Assert-MatchText $index '<div class="app-shell is-locked" id="app-shell">' "HUB inicia travado ate validar sessao e DB"
   Assert-MatchText $style '\.app-shell\.is-locked::after[\s\S]*HUB\\A Carregando sua conta[\s\S]*assets/logo\.svg[\s\S]*var\(--teal-dark\)' "loading da conta usa logo e cores do HUB"
   $encodingArtifacts = @(([char]0x00C3), ([char]0x00C2), ([char]0x00E2))
@@ -162,11 +162,12 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'const PERSISTED_AUTH_USER_KEY = "hub-rh-persisted-auth-user"[\s\S]*storageService\.getLocalItem\(PERSISTED_AUTH_USER_KEY\)[\s\S]*storageService\.setLocalItem\(PERSISTED_AUTH_USER_KEY, persistedAuthUser\)[\s\S]*storageService\.removeLocalItem\(PERSISTED_AUTH_USER_KEY\)' "usuario autenticado persiste completo apos F5"
   Assert-MatchText $script 'function hasPersistedAuthIdentity\(\)[\s\S]*PERSISTED_AUTH_USER_KEY[\s\S]*persistedName[\s\S]*persistedEmail[\s\S]*function isAuthenticated\(\)[\s\S]*sessionIsActive && hasPersistedAuthIdentity\(\)' "sessao ativa sem usuario nao libera o index"
   Assert-MatchText $script 'function withTimeout\(promise, ms, fallbackValue = null\)[\s\S]*setTimeout[\s\S]*async function restoreAuthenticatedSession\(\)[\s\S]*buildPersistedAuthSession\(\)[\s\S]*withTimeout\(getAuthSession\(\), 6000[\s\S]*setAuthenticatedUser\(session\.user, null\)[\s\S]*withTimeout\(loadUserProfile\(session\.user\), 6000' "refresh nao trava login aguardando perfil do DB"
-  Assert-MatchText $script 'setupLogin\(\)\.then[\s\S]*catch\(\(error\)[\s\S]*if \(isAuthenticated\(\)\) \{[\s\S]*initializeAppData\(\)' "erro transitorio de auth nao bloqueia DB quando ha sessao local"
-  Assert-MatchText $script 'const POSTGRES_BOOT_TIMEOUT_MS = 9000' "HUB possui limite de espera do PostgreSQL no F5"
+  Assert-MatchText $script 'setupLogin\(\)\.then[\s\S]*catch\(\(error\)[\s\S]*if \(isAuthenticated\(\)\) \{[\s\S]*startAppInitialization\(\)' "erro transitorio de auth nao bloqueia DB quando ha sessao local"
+  Assert-MatchText $script 'const ACCOUNT_LOADING_REAUTH_MS = 2000[\s\S]*const POSTGRES_BOOT_TIMEOUT_MS = ACCOUNT_LOADING_REAUTH_MS' "HUB possui limite de 2s para reautenticar no loading"
   Assert-MatchText $script 'async function initializeAppData\(\)[\s\S]*const postgresLoad = loadFromPostgreSQL\(\{ setupLive: true \}\);[\s\S]*withTimeout\(postgresLoad, POSTGRES_BOOT_TIMEOUT_MS, false\)[\s\S]*PostgreSQL carregando em segundo plano[\s\S]*renderAll\(\)[\s\S]*classList\.remove\("is-locked"\)[\s\S]*classList\.add\("is-ready"\)' "HUB libera tela privada se PostgreSQL demorar"
+  Assert-MatchText $script 'function armAccountLoadingReauth\(\)[\s\S]*setTimeout\(async \(\) =>[\s\S]*classList\.contains\("is-locked"\)[\s\S]*restoreAuthenticatedSession\(\)[\s\S]*startAppInitialization\(\)[\s\S]*ACCOUNT_LOADING_REAUTH_MS' "loading da conta reautentica apos 2s"
   Assert-MatchText $script 'async function initializeAppData\(\)[\s\S]*if \(!isAuthenticated\(\)\) \{[\s\S]*is-locked[\s\S]*window\.location\.replace\(`login\.html\?next=\$\{encodeURIComponent' "pagina privada sem sessao nao renderiza painel"
-  Assert-MatchText $script 'catch\(\(error\)[\s\S]*if \(!isLoginPage\(\) && !isPublicPage\(\)\)[\s\S]*return;[\s\S]*if \(isPublicPage\(\)\) initializeAppData\(\);' "falha de auth nao inicializa index privado"
+  Assert-MatchText $script 'catch\(\(error\)[\s\S]*if \(!isLoginPage\(\) && !isPublicPage\(\)\)[\s\S]*return;[\s\S]*if \(isPublicPage\(\)\) startAppInitialization\(\);' "falha de auth nao inicializa index privado"
   Assert-MatchText $script 'function showSettingsPanel\(panelId\)[\s\S]*data-settings-panel[\s\S]*classList\.toggle\("active"[\s\S]*data-settings-target' "script alterna secoes de configuracoes"
   Assert-MatchText $script 'function filterSettingsItems\(query\)[\s\S]*data-settings-target[\s\S]*button\.hidden = Boolean\(normalizedQuery\)' "script filtra itens de configuracoes"
   Assert-MatchText $index 'data-user-setting="hidePresence"[\s\S]*data-user-setting="blurChatPreviews"[\s\S]*data-user-setting="localPrivacyMode"[\s\S]*data-user-setting="compactMode"[\s\S]*data-user-setting="messageSize"[\s\S]*data-user-setting="showEmojiButton"[\s\S]*data-user-setting="enterToSend"[\s\S]*data-user-setting="notificationSound"[\s\S]*data-user-setting="desktopNotifications"[\s\S]*data-user-setting="dashboardNotificationBadges"[\s\S]*data-user-setting="keyboardShortcuts"' "configuracoes de usuario possuem opcionais funcionais"

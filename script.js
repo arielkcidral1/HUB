@@ -3,7 +3,8 @@ const DOCUMENT_RECORDS_KEY = "hub-document-records";
 const CONTRACTOR_PENDING_DOCUMENTS_KEY = "hub-contractor-pending-documents";
 const SESSION_KEY = "hub-rh-session";
 const PERSISTED_AUTH_USER_KEY = "hub-rh-persisted-auth-user";
-const POSTGRES_BOOT_TIMEOUT_MS = 9000;
+const ACCOUNT_LOADING_REAUTH_MS = 2000;
+const POSTGRES_BOOT_TIMEOUT_MS = ACCOUNT_LOADING_REAUTH_MS;
 const PUBLIC_CLIENT_ID_KEY = "hub-public-client-id";
 const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
@@ -267,6 +268,7 @@ let readRhMessageIds = loadReadRhMessageIds();
 let readNotificationIds = loadReadNotificationIds();
 let currentAuthUser = null;
 let currentUserProfile = null;
+let appInitializationPromise = null;
 const privateAvatarUrlCache = new Map();
 const privateAvatarUrlRequests = new Map();
 const chatMediaSignedUrlCache = new Map();
@@ -9961,6 +9963,31 @@ async function initializeAppData() {
   setupPresenceHeartbeat();
 }
 
+function startAppInitialization() {
+  if (!appInitializationPromise) {
+    appInitializationPromise = initializeAppData().finally(() => {
+      appInitializationPromise = null;
+    });
+  }
+  return appInitializationPromise;
+}
+
+function armAccountLoadingReauth() {
+  if (isLoginPage() || isPublicPage()) return;
+  window.setTimeout(async () => {
+    const shell = document.getElementById("app-shell");
+    if (!shell?.classList.contains("is-locked")) return;
+    if (!isAuthenticated()) {
+      const restored = await withTimeout(restoreAuthenticatedSession(), ACCOUNT_LOADING_REAUTH_MS, false);
+      if (!restored) {
+        window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
+        return;
+      }
+    }
+    startAppInitialization();
+  }, ACCOUNT_LOADING_REAUTH_MS);
+}
+
 function setupPresenceHeartbeat() {
   if (presenceHeartbeatStarted) return;
   presenceHeartbeatStarted = true;
@@ -10017,21 +10044,22 @@ function setupPresencePolling() {
 }
 
 disableSensitiveFieldAutofill();
+armAccountLoadingReauth();
 
 setupLogin().then((canInitialize) => {
-  if (canInitialize) return initializeAppData();
+  if (canInitialize) return startAppInitialization();
   return null;
 }).catch((error) => {
   console.error("Erro ao validar login:", error);
   if (isAuthenticated()) {
-    initializeAppData();
+    startAppInitialization();
     return;
   }
   if (!isLoginPage() && !isPublicPage()) {
     window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`;
     return;
   }
-  if (isPublicPage()) initializeAppData();
+  if (isPublicPage()) startAppInitialization();
 });
 
 function reabrirChamado(id) {
