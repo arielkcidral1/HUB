@@ -1116,6 +1116,13 @@ async function setupLogin() {
   }
   postgresClient = postgresClient || getPostgreSQLClient();
   const hasAuthSession = await restoreAuthenticatedSession();
+  const hasValidDisplayIdentity = hasAuthSession && !isGenericAuthName(getCurrentUserName());
+
+  if (hasAuthSession && !hasValidDisplayIdentity && !isLoginPage() && !isPublicPage()) {
+    clearAuthenticatedUser();
+    window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
+    return false;
+  }
 
   // Redirecionamentos Inteligentes
   if (hasAuthSession) {
