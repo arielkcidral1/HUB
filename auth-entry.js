@@ -117,6 +117,7 @@
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !persistAuthenticatedSession(result?.session)) {
+        if (localIdentityAvailable) return true;
         redirectToLogin();
         return false;
       }
