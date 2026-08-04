@@ -32,11 +32,7 @@
     if (!shell?.classList.contains("is-locked")) return;
 
     const active = readJson(SESSION_KEY) === "active";
-    if (active && hasStoredIdentity()) {
-      shell.classList.remove("is-locked");
-      shell.classList.add("is-ready");
-      return;
-    }
+    if (active && hasStoredIdentity()) return;
 
     redirectToLogin();
   }, LIMIT_MS);
