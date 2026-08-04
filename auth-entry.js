@@ -6,7 +6,6 @@
   const POSTGRES_SESSION_KEY = "hub-postgres-session";
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
   const AUTH_REQUEST_TIMEOUT_MS = 3000;
-  const RECOVERY_DELAY_MS = 8000;
 
   function isRealUser(user) {
     const email = String(user?.email || "").trim();
@@ -101,24 +100,6 @@
   }
 
   async function reauthenticateInDatabase() {
-    const localIdentityAvailable = hasStoredIdentity();
-    // A local identity is enough to paint the authenticated shell after F5.
-    // Remote validation continues in the background and must not blank the app.
-    if (localIdentityAvailable) {
-      window.setTimeout(() => {
-        fetch("/api/auth", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "session" }),
-        }).then((response) => response.json().catch(() => ({})))
-          .then((result) => {
-            if (result?.session?.user) persistAuthenticatedSession(result.session);
-          })
-          .catch(() => {});
-      }, 0);
-      return true;
-    }
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
     try {
@@ -131,22 +112,18 @@
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !persistAuthenticatedSession(result?.session)) {
-        if (localIdentityAvailable) return true;
         redirectToLogin();
         return false;
       }
       return true;
     } catch (error) {
-      if (localIdentityAvailable && error?.name === "AbortError") return true;
-      if (localIdentityAvailable) return true;
-      window.location.replace("account-loading.html?next=index.html");
+      redirectToLogin();
       return false;
     } finally {
       window.clearTimeout(timeout);
     }
   }
 
-  // The persisted local identity is the bootstrap source after F5. Do not
-  // block or replace the page while the optional remote check is running.
+  // Do not initialize a private page until the persistent auth cookie is valid.
   window.__hubAuthEntryPromise = reauthenticateInDatabase();
 })();
