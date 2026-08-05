@@ -12,6 +12,11 @@ const DATABASE_URL = firstValidDatabaseUrl(
   process.env.DATABASE_URL
 );
 
+function getPoolMax() {
+  const value = Number(process.env.POSTGRES_POOL_MAX || 1);
+  return Number.isInteger(value) && value > 0 ? value : 1;
+}
+
 export function assertDatabaseUrl() {
   if (!DATABASE_URL) {
     const error = new Error("DATABASE_URL nao configurada no ambiente do deploy.");
@@ -21,11 +26,14 @@ export function assertDatabaseUrl() {
 }
 
 export const pool = DATABASE_URL
-  ? new Pool({
+  ? (globalThis.__hubPostgresPool ||= new Pool({
       connectionString: DATABASE_URL,
       ssl: { rejectUnauthorized: false },
-      max: 5,
-    })
+      max: getPoolMax(),
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 5_000,
+      allowExitOnIdle: true,
+    }))
   : null;
 
 export const TABLES = new Set([
