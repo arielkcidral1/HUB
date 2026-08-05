@@ -10,6 +10,7 @@ Origem: `VAGAS 04.08.26.xlsx`
 - Validacao inicial: registros abertos conferidos sem caracteres quebrados como `�`.
 - Correcao posterior: todas as 76 vagas do PostgreSQL foram revisadas e padronizadas com os mesmos rotulos, incluindo 22 abertas e 54 fechadas.
 - Validacao final: 0 vagas fora do padrao, sem `�`, sem data recebida e sem salario/base.
+- Registro: as 22 vagas abertas importadas da planilha foram atribuidas a conta `Ariel`.
 
 Distribuicao por unidade:
 
