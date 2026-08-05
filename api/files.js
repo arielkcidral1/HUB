@@ -6,6 +6,13 @@ function safeName(name) {
   return String(name || "arquivo").replace(/[^a-z0-9_.-]/gi, "-");
 }
 
+function isValidStoragePath(path) {
+  const value = String(path || "");
+  if (!value || value.length > 512) return false;
+  if (/^(data:|https?:)/i.test(value)) return false;
+  return /^[a-z0-9][a-z0-9_.\/-]*$/i.test(value);
+}
+
 async function ensureFilesTable() {
   await pool.query(`
     create table if not exists public.hub_files (
@@ -54,10 +61,11 @@ export default async function handler(req, res) {
     if (req.method !== "POST") return json(res, 405, { error: "Metodo nao permitido." });
     const body = await getBody(req);
     const name = safeName(body.name);
-    const path = String(body.path || body.dataUrl || "");
+    const path = String(body.path || "");
     const dataUrl = String(body.dataUrl || "");
 
     if (!path || !dataUrl) return json(res, 400, { error: "Arquivo invalido." });
+    if (!isValidStoragePath(path)) return json(res, 400, { error: "Caminho do arquivo invalido." });
 
     await pool.query(
       `insert into public.hub_files (path, name, size, type, data_url)
