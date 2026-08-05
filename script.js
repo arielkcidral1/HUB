@@ -3911,6 +3911,16 @@ function readFileAsDataUrl(file) {
   });
 }
 
+function safePublicFileName(fileName = "arquivo") {
+  return String(fileName || "arquivo")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9_.-]/gi, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase() || "arquivo";
+}
+
 function createContractorDocumentField(required = false) {
   return `
     <div class="contractor-document-field">
@@ -3941,12 +3951,13 @@ async function buildContractorDocumentPayload(documentos) {
   return embeddedDocuments;
 }
 
-async function uploadPublicFile(file) {
+async function uploadPublicFile(file, path = "") {
   if (!file || !file.name) return null;
   const response = await fetch("/api/files", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      path,
       name: file.name,
       size: file.size,
       type: file.type || "application/octet-stream",
@@ -4047,7 +4058,9 @@ async function submitPublicRecord(collection, payload, turnstileToken = "") {
 }
 
 async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, curriculo, turnstileToken }) {
-  const upload = await uploadPublicFile(curriculo);
+  const safeName = safePublicFileName(curriculo?.name || "curriculo.pdf");
+  const resumePath = `${RESUME_PUBLIC_PREFIX}/${generateUUID()}/${safeName}`;
+  const upload = await uploadPublicFile(curriculo, resumePath);
   const response = await fetch(`/api/records?table=${encodeURIComponent(TABLES.candidaturas)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-hub-client-id": getPublicClientId() },
@@ -4057,7 +4070,7 @@ async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, c
         nome,
         telefone,
         cpf,
-        curriculo_url: upload?.path || "",
+        curriculo_url: upload?.path || resumePath,
         created_by: "Publico",
       }],
     }),
