@@ -3363,10 +3363,9 @@ async function loadFromPostgreSQL(options = {}) {
       data.usuarios = mergeUsersByName(data.usuarios, mappedUsers);
     }
 
-    const requests = await Promise.allSettled(
-      Object.entries(TABLES)
-        .filter(([collection]) => collection !== "usuarios")
-        .map(async ([collection, table]) => {
+    const requests = [];
+    for (const [collection, table] of Object.entries(TABLES).filter(([collection]) => collection !== "usuarios")) {
+      try {
         const { data: rows, error } = await selectPostgreSQLRows(table, {
           orderBy: "created_at",
           ascending: false,
@@ -3377,9 +3376,11 @@ async function loadFromPostgreSQL(options = {}) {
           },
         });
         if (error) throw error;
-        return [collection, mapRows(collection, rows || [])];
-      })
-    );
+        requests.push({ status: "fulfilled", value: [collection, mapRows(collection, rows || [])] });
+      } catch (error) {
+        requests.push({ status: "rejected", reason: error });
+      }
+    }
 
     requests.forEach((result) => {
       if (result.status === "fulfilled") {
