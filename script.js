@@ -2894,7 +2894,7 @@ if (collection === "eventos") {
       projeto: "",
       descricao: row.descricao || legacyDetails.descricao,
       requisitos: row.requisitos || legacyDetails.requisitos,
-      status: row.status,
+      status: normalizeJobStatus(row.status),
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
@@ -3297,6 +3297,21 @@ function parseLegacyJobDetails(projeto) {
       requisitos: "",
     };
   }
+}
+
+function normalizeJobStatus(value) {
+  const normalized = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+  if (!normalized || normalized === "aberta" || normalized === "aberto") return "Aberta";
+  if (normalized === "fechada" || normalized === "fechado") return "Fechada";
+  return String(value || "Aberta").trim() || "Aberta";
+}
+
+function isOpenJobStatus(value) {
+  return normalizeJobStatus(value) === "Aberta";
 }
 
 function withoutOptionalJobColumns(payload) {
@@ -6456,7 +6471,7 @@ function renderPublicVagas() {
   const cargoFilter = String(publicVagaCargoFilter || "").trim().toLowerCase();
   const unidadeFilter = String(publicVagaUnidadeFilter || "").trim().toLowerCase();
   const openVagas = data.vagas
-    .filter(v => v.status === "Aberta")
+    .filter(v => isOpenJobStatus(v.status))
     .filter(v => !cargoFilter || String(v.cargo || "").toLowerCase().includes(cargoFilter))
     .filter(v => !unidadeFilter || String(v.unidade || "").toLowerCase().includes(unidadeFilter));
   const selectedVaga = new URLSearchParams(window.location.search).get("vaga");
