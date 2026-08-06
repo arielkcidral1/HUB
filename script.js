@@ -2100,8 +2100,39 @@ function getHolidayForDate(date) {
   return getJoinvilleHolidayMap(Number(date.slice(0, 4))).get(date) || null;
 }
 
+function getCompanyBirthdayEvents() {
+  const birthdays = Array.isArray(window.HUB_COMPANY_BIRTHDAYS) ? window.HUB_COMPANY_BIRTHDAYS : [];
+  const visibleYear = visibleCalendarDate instanceof Date ? visibleCalendarDate.getFullYear() : new Date().getFullYear();
+  const currentYear = new Date().getFullYear();
+  const years = [...new Set([currentYear, currentYear + 1, visibleYear])];
+  return years.flatMap((year) => birthdays.map((item, index) => {
+    const birthDate = String(item.nascimento || "");
+    const monthDay = birthDate.slice(5);
+    const date = /^\d{2}-\d{2}$/.test(monthDay) ? `${year}-${monthDay}` : "";
+    const nome = String(item.nome || "").trim();
+    return {
+      id: `birthday-${year}-${index}`,
+      titulo: "Aniversario",
+      data: date,
+      horario: "",
+      responsavel: "",
+      tipo: "Aniversario",
+      descricao: nome,
+      aniversariante: nome,
+      createdBy: "Planilha de aniversariantes",
+      createdAt: date,
+      sortAt: date,
+      systemBirthday: true,
+    };
+  })).filter((item) => item.data && item.aniversariante);
+}
+
+function getAllEvents() {
+  return [...(data.eventos || []), ...getCompanyBirthdayEvents()];
+}
+
 function getSortedEvents() {
-  return (data.eventos || [])
+  return getAllEvents()
     .slice()
     .sort((a, b) => `${a.data || ""}T${a.horario || "00:00"}`.localeCompare(`${b.data || ""}T${b.horario || "00:00"}`));
 }
@@ -2161,7 +2192,7 @@ function getEventListMeta(item = {}) {
   return `${formatEventDate(item.data)} | ${getEventScheduleMeta(item)}`;
 }
 
-function getUpcomingEvents(daysAhead = 14) {
+function getUpcomingEvents(daysAhead = 7) {
   const today = getLocalDateKey();
   const maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + daysAhead);
@@ -5138,10 +5169,17 @@ async function handleBoardContextAction(event, type, payload) {
         showModal("Coluna obrigatoria", "E preciso manter pelo menos uma coluna no quadro.", "info");
         return;
       }
-      if (!confirm(`Excluir "${list.titulo || "esta coluna"}"? Os cartoes desta coluna tambem serao removidos.`)) return;
-      resetBoardCardFormIfEditing(payload.listIndex, null);
-      board.listas.splice(payload.listIndex, 1);
-      await persistBoard(board);
+      showConfirmActionModal({
+        title: "Excluir coluna",
+        text: `Excluir "${list.titulo || "esta coluna"}"? Os cartoes desta coluna tambem serao removidos.`,
+        confirmText: "Excluir coluna",
+        danger: true,
+        onConfirm: async () => {
+          resetBoardCardFormIfEditing(payload.listIndex, null);
+          board.listas.splice(payload.listIndex, 1);
+          await persistBoard(board);
+        },
+      });
     }
     return;
   }
@@ -6208,21 +6246,6 @@ function renderDashboard() {
         date: item.createdAt,
         dateTime: item.sortAt || item.createdAt,
       })),
-    ...(data.candidaturas || [])
-      .map((item) => {
-        const vaga = (data.vagas || []).find((vagaItem) => String(vagaItem.id) === String(item.vaga_id));
-        return {
-          kind: "candidatura",
-          notificationId: getDashboardNotificationId("candidatura", item),
-          title: `Curriculo - ${item.nome || "Candidato"}`,
-          text: `${vaga?.cargo || "Vaga"} - ${formatCpf(item.cpf || "") || "CPF nao informado"}`,
-          details: `Candidato: ${item.nome || "Nao informado"}\nCPF: ${formatCpf(item.cpf || "") || "Nao informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Nao informado"}\nVaga: ${vaga?.cargo || item.vaga_id || "Nao informada"}\nCurriculo: ${item.curriculo_url || "Nao informado"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
-          tag: "Curriculo",
-          date: item.createdAt,
-          dateTime: item.sortAt || item.createdAt,
-          view: "vagas",
-        };
-      }),
     ...(data.documentosContratados || [])
       .map((item) => ({
         kind: "contratado",
@@ -6330,7 +6353,7 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
     : "";
   strip.innerHTML = monthHeader + leadingCells + visibleDates
     .map((date) => {
-      const dayEvents = (data.eventos || []).filter((item) => item.data === date);
+      const dayEvents = getSortedEvents().filter((item) => item.data === date);
       const holiday = getHolidayForDate(date);
       const isToday = date === todayKey;
       const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
@@ -6379,7 +6402,7 @@ function renderCalendar() {
 
   for (let day = 1; day <= totalDays; day += 1) {
     const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const dayEvents = (data.eventos || []).filter((item) => item.data === date);
+    const dayEvents = getSortedEvents().filter((item) => item.data === date);
     const holiday = getHolidayForDate(date);
     const isToday = date === todayKey;
     const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
@@ -6411,10 +6434,10 @@ function renderCalendar() {
       ${renderEventDescription(item)}
       <p class="item-meta">${escapeHtml(getEventListMeta(item))}</p>
       <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
-      <div class="job-actions">
+      ${item.systemBirthday ? "" : `<div class="job-actions">
         <button class="secondary-link" type="button" data-action="editar-evento" data-id="${escapeHtml(item.id)}">Editar</button>
         <button class="danger-button" type="button" data-action="excluir-evento" data-id="${escapeHtml(item.id)}">Deletar</button>
-      </div>
+      </div>`}
     </article>
   `);
 }
@@ -7328,16 +7351,6 @@ function getRealtimeNotificationText(collection, item = {}) {
     };
   }
 
-  if (collection === "candidaturas") {
-    return {
-      title: "Curriculo recebido",
-      message: [item.nome, item.telefone].filter(Boolean).join(" - ") || "Uma nova candidatura foi enviada.",
-      icon: "??",
-      type: "candidatura",
-      tag: `hub-rh-curriculo-${item.id || Date.now()}`,
-    };
-  }
-
   if (collection === "documentosContratados") {
     return {
       title: "Documentos recebidos",
@@ -7380,7 +7393,7 @@ function getNotificationPollingKey(collection, item = {}) {
 function getNotificationPollingCandidates() {
   const sourceData = typeof data === "object" && data ? data : {};
   const candidates = [];
-  const allowedCollections = ["comunicados", "denuncias", "chamados", "malotes", "vagas", "candidaturas", "documentosContratados"];
+  const allowedCollections = ["comunicados", "denuncias", "chamados", "malotes", "vagas", "documentosContratados"];
 
   allowedCollections.forEach((collection) => {
     const rows = Array.isArray(sourceData[collection]) ? sourceData[collection] : [];
@@ -11346,23 +11359,6 @@ class NotificationTracker {
         });
       });
 
-    (sourceData.candidaturas || [])
-      .forEach((item) => {
-        const vaga = (sourceData.vagas || []).find((vagaItem) => String(vagaItem.id) === String(item.vaga_id));
-        pushNotification({
-          id: `candidatura-${item.id}`,
-          type: "candidatura",
-          title: `Curriculo - ${item.nome || "Candidato"}`,
-          description: `${vaga?.cargo || "Vaga"} - ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "CPF nao informado"}`,
-          details: `Candidato: ${item.nome || "Nao informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Nao informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Nao informado"}\nVaga: ${vaga?.cargo || item.vaga_id || "Nao informada"}\nCurriculo: ${item.curriculo_url || "Nao informado"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
-          time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.createdAt || "Recentemente",
-          status: "pending",
-          unread: true,
-          view: "vagas",
-        });
-      });
-
     (sourceData.documentosContratados || [])
       .forEach((item) => {
         pushNotification({
@@ -11479,7 +11475,6 @@ class NotificationTracker {
       malote: "malotes",
       chamado: "chamados",
       vaga: "vagas",
-      candidatura: "vagas",
       evento: "calendario",
       documento: "documentos",
       contratado: "documentos-contratados",
@@ -11497,7 +11492,6 @@ class NotificationTracker {
       malote: "&#128230;",
       chamado: "&#128295;",
       vaga: "&#128188;",
-      candidatura: "&#128196;",
       evento: "&#128197;",
       documento: "&#128196;",
       contratado: "&#128193;",
@@ -11706,7 +11700,6 @@ class NotificationTracker {
       malote: "Malote",
       chamado: "Chamado",
       vaga: "Vaga",
-      candidatura: "Curriculo",
       evento: "Evento",
       documento: "Documento",
       contratado: "Documento de Contratado",

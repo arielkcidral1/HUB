@@ -42,8 +42,6 @@
   --dashboard-vaga-border: #bbf7d0;
   --dashboard-documento-bg: #f8fafc;
   --dashboard-documento-border: #e2e8f0;
-  --dashboard-candidatura-bg: #fffbeb;
-  --dashboard-candidatura-border: #fcd34d;
   --dashboard-contratado-bg: #eef2ff;
   --dashboard-contratado-border: #c7d2fe;
 
@@ -107,8 +105,6 @@
   --dashboard-vaga-border: #275c44;
   --dashboard-documento-bg: #202832;
   --dashboard-documento-border: #333d49;
-  --dashboard-candidatura-bg: #2e2614;
-  --dashboard-candidatura-border: #7c5b16;
   --dashboard-contratado-bg: #1d2438;
   --dashboard-contratado-border: #3d4d7c;
 
@@ -2158,7 +2154,6 @@ textarea {
 .dashboard-activity-notificacao .dashboard-activity-mark { background: #0ea5a4; }
 .dashboard-activity-vaga .dashboard-activity-mark { background: #16a34a; }
 .dashboard-activity-documento .dashboard-activity-mark { background: #64748b; }
-.dashboard-activity-candidatura .dashboard-activity-mark { background: #d97706; }
 .dashboard-activity-contratado .dashboard-activity-mark { background: #4f46e5; }
 .dashboard-activity.system-update .dashboard-activity-mark { background: var(--teal-dark); }
 
@@ -2168,7 +2163,6 @@ textarea {
 .dashboard-activity-notificacao { background-color: var(--dashboard-notificacao-bg); border-color: var(--dashboard-notificacao-border); }
 .dashboard-activity-vaga { background-color: var(--dashboard-vaga-bg); border-color: var(--dashboard-vaga-border); }
 .dashboard-activity-documento { background-color: var(--dashboard-documento-bg); border-color: var(--dashboard-documento-border); }
-.dashboard-activity-candidatura { background-color: var(--dashboard-candidatura-bg); border-color: var(--dashboard-candidatura-border); }
 .dashboard-activity-contratado { background-color: var(--dashboard-contratado-bg); border-color: var(--dashboard-contratado-border); }
 .dashboard-activity.system-update { border-color: rgba(12, 98, 89, 0.28); }
 
@@ -2202,7 +2196,6 @@ textarea {
 .dashboard-activity-notificacao:hover { border-color: #6ee7b7; }
 .dashboard-activity-vaga:hover { border-color: #86efac; }
 .dashboard-activity-documento:hover { border-color: #cbd5e1; }
-.dashboard-activity-candidatura:hover { border-color: #fbbf24; }
 .dashboard-activity-contratado:hover { border-color: #818cf8; }
 
 .dashboard-activity-content { min-width: 0; flex: 1; }
@@ -5402,11 +5395,6 @@ form.panel[data-public-chamados="true"].panel {
 .tracker-notification-item.vaga .tracker-notification-icon {
   background: rgba(156, 39, 176, 0.1);
   color: #9c27b0;
-}
-
-.tracker-notification-item.candidatura .tracker-notification-icon {
-  background: rgba(217, 119, 6, 0.14);
-  color: #d97706;
 }
 
 .tracker-notification-item.evento .tracker-notification-icon {
