@@ -1133,10 +1133,12 @@ html.auth-entry-pending body {
 .calendar-day.has-birthday,
 .calendar-cell.has-birthday {
   position: relative;
-  border-color: rgba(251, 191, 36, 0.42);
-  background: linear-gradient(135deg, rgba(255, 247, 237, 0.96), rgba(251, 191, 36, 0.2));
-  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.12);
-  color: var(--ink);
+  border-color: rgba(251, 191, 36, 0.9);
+  background:
+    linear-gradient(135deg, rgba(146, 64, 14, 0.92), rgba(157, 23, 77, 0.76)),
+    #78350f;
+  box-shadow: inset 0 0 0 2px rgba(251, 191, 36, 0.28), 0 10px 24px rgba(251, 191, 36, 0.22);
+  color: #fff7ed;
 }
 
 .calendar-day .calendar-today-label,
