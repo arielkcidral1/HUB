@@ -1130,15 +1130,6 @@ html.auth-entry-pending body {
   background: rgba(79, 70, 229, 0.09);
 }
 
-.calendar-day.has-birthday,
-.calendar-cell.has-birthday {
-  position: relative;
-  border-color: rgba(251, 191, 36, 0.42);
-  background: rgba(251, 191, 36, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.12);
-  color: var(--ink);
-}
-
 .calendar-day .calendar-today-label,
 .calendar-cell .calendar-today-label,
 .calendar-day .calendar-holiday-label,
@@ -1248,6 +1239,15 @@ html.auth-entry-pending body {
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.calendar-event-preview,
+.calendar-cell span.event-type-default,
+.calendar-cell span.event-type-birthday,
+.calendar-cell span.event-type-interview {
+  background: transparent;
+  color: var(--muted);
+  padding: 0;
 }
 
 .chat-workspace {
@@ -3245,18 +3245,6 @@ textarea {
 
 .disciplinary-card-attachment {
   margin-top: 14px;
-}
-
-.calendar-event-preview.event-type-birthday,
-.calendar-cell span.event-type-birthday {
-  background: rgba(251, 191, 36, 0.16);
-  color: #92400e;
-}
-
-.calendar-event-preview.event-type-interview,
-.calendar-cell span.event-type-interview {
-  background: rgba(79, 70, 229, 0.14);
-  color: #312e81;
 }
 
 .document-card {
