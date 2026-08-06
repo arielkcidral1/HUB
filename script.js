@@ -8887,13 +8887,13 @@ if (denunciaForm) {
     const turnstileToken = getPublicChallengeToken(formElement);
     const message = String(form.get("mensagem") || form.get("descricao") || "").trim();
     if (message.length < 1 || message.length > 4000) {
-      showModal("Mensagem invalida", "Descreva a situacao com ate 4000 caracteres.", "error");
+      showModal("Mensagem inválida", "Descreva a situação com até 4000 caracteres.", "error");
       return;
     }
 
     const success = await addItem("denuncias", {
-      identificacao: "Anonimo",
-      categoria: "Denuncia anonima",
+      identificacao: "Anônimo",
+      categoria: "Denúncia anônima",
       descricao: message,
       status: "Aberta",
       _turnstileToken: turnstileToken,
@@ -8903,7 +8903,7 @@ if (denunciaForm) {
       formElement.reset();
       const feedback = document.getElementById("denuncia-feedback");
       if (feedback) {
-        feedback.textContent = "Denuncia enviada com sucesso. Obrigado pelo relato.";
+        feedback.textContent = "Denúncia enviada com sucesso. Obrigado pelo relato.";
       }
       showModal("Denúncia enviada", "Seu relato foi enviado com sucesso e será analisado pela equipe responsável.", "info");
     }
