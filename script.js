@@ -2200,6 +2200,49 @@ function getUpcomingEvents(daysAhead = 7) {
   return getSortedEvents().filter((item) => !isArchivedRecord(item) && item.data && item.data >= today && item.data <= maxDateKey);
 }
 
+function getCompactAgendaItems(events = []) {
+  const items = [];
+  const birthdayGroups = new Map();
+
+  events.forEach((item) => {
+    if (normalizeEventType(item.tipo) !== "aniversario") {
+      items.push({ kind: "event", event: item, dateTime: item.sortAt || item.data || "" });
+      return;
+    }
+
+    const key = item.data || "";
+    if (!birthdayGroups.has(key)) birthdayGroups.set(key, []);
+    birthdayGroups.get(key).push(item);
+  });
+
+  birthdayGroups.forEach((birthdays, date) => {
+    items.push({ kind: "birthdays", events: birthdays, date, dateTime: date });
+  });
+
+  return items.sort((a, b) => String(a.dateTime || "").localeCompare(String(b.dateTime || "")));
+}
+
+function renderCompactAgendaItem(item) {
+  if (item.kind !== "birthdays") {
+    const event = item.event || {};
+    return `<li class="${getEventTypeClass(event)}"><div class="item-topline">${renderEventTitle(event)}<span class="tag ${getEventTagClass(event)}">${escapeHtml(event.tipo)}</span></div>${renderEventDescription(event)}<p>${escapeHtml(getEventListMeta(event))}</p></li>`;
+  }
+
+  const birthdays = item.events || [];
+  const title = birthdays.length === 1 ? "Aniversario" : `${birthdays.length} aniversariantes`;
+  return `
+    <li class="event-type-birthday compact-birthday-group">
+      <div class="item-topline">
+        <p class="item-title">${escapeHtml(title)}</p>
+        <span class="tag event-tag event-type-birthday">${escapeHtml(formatEventDate(item.date))}</span>
+      </div>
+      <div class="birthday-chip-list">
+        ${birthdays.map((birthday) => `<span>${escapeHtml(getBirthdayPerson(birthday))}</span>`).join("")}
+      </div>
+    </li>
+  `;
+}
+
 function renderEventAudit(item) {
   return `
     <span>Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</span>
@@ -6376,9 +6419,9 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
     return;
   }
 
-  list.innerHTML = visibleEvents
-    .slice(0, dashboardCalendarViewMode === "week" ? 4 : 6)
-    .map((item) => `<li class="${getEventTypeClass(item)}"><div class="item-topline">${renderEventTitle(item)}<span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>${renderEventDescription(item)}<p>${escapeHtml(getEventListMeta(item))}</p></li>`)
+  list.innerHTML = getCompactAgendaItems(visibleEvents)
+    .slice(0, dashboardCalendarViewMode === "week" ? 5 : 8)
+    .map(renderCompactAgendaItem)
     .join("");
 }
 
@@ -11853,10 +11896,20 @@ function setupEquipeFormScrollGrid() {
   });
 }
 
+function setupCalendarioFormScrollGrid() {
+  setupFormScrollGrid({
+    listId: "eventos-list",
+    formId: "evento-form",
+    expandedWorkspaceClass: "calendario-workspace-expanded",
+    expandedListClass: "calendario-two-col",
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setupVagasFormScrollGrid();
   setupMalotesFormScrollGrid();
   setupEquipeFormScrollGrid();
+  setupCalendarioFormScrollGrid();
 });
 
 window.addEventListener("storage", (event) => {

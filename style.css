@@ -1018,6 +1018,18 @@ html.auth-entry-pending body {
   margin-top: 20px;
 }
 
+#dashboard-events-list {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: start;
+  gap: 8px;
+  padding: 12px;
+}
+
+#dashboard-events-list > li {
+  min-height: 0;
+  padding: 12px;
+}
+
 .calendar-strip {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -1379,23 +1391,27 @@ textarea {
 
 .workspace.vagas-workspace-expanded,
 .workspace.malotes-workspace-expanded,
-.workspace.equipe-workspace-expanded {
+.workspace.equipe-workspace-expanded,
+.workspace.calendario-workspace-expanded {
   grid-template-columns: minmax(300px, 0.62fr) minmax(0, 1.38fr);
 }
 
 .card-list.vagas-two-col,
 .card-list.malotes-two-col,
-.card-list.equipe-two-col {
+.card-list.equipe-two-col,
+.card-list.calendario-two-col {
   grid-template-columns: repeat(2, minmax(260px, 1fr));
   align-items: start;
   gap: 16px;
 }
 
-.workspace.equipe-workspace-expanded {
+.workspace.equipe-workspace-expanded,
+.workspace.calendario-workspace-expanded {
   align-items: start;
 }
 
-.card-list.equipe-two-col {
+.card-list.equipe-two-col,
+.card-list.calendario-two-col {
   min-width: 0;
 }
 
@@ -3407,6 +3423,32 @@ textarea {
 .day-event-card.event-type-birthday .item-title,
 .calendar-preview-panel li.event-type-birthday .item-title {
   color: #fbbf24;
+}
+
+.calendar-preview-panel li.compact-birthday-group {
+  padding: 12px;
+}
+
+.birthday-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.birthday-chip-list span {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 4px 8px;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.16);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .item-card.event-type-interview,
