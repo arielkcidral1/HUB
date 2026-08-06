@@ -2301,9 +2301,17 @@ function badgeClass(value) {
   return ["Urgente", "Alta", "Aberta"].includes(value) ? "tag alert" : "tag";
 }
 
+function getFriendlyErrorMessage(message) {
+  const text = String(message || "");
+  return /remaining connection slots|pg_use_reserved_connections/i.test(text)
+    ? "Aguarde e tente novamente"
+    : text;
+}
+
 function showModal(title, text, type = "info") {
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
+  const safeText = getFriendlyErrorMessage(text);
 
   const overlay = document.createElement("div");
   overlay.id = "custom-modal";
@@ -2314,7 +2322,7 @@ function showModal(title, text, type = "info") {
       <div class="modal-header ${type}">
         ${escapeHtml(title)}
       </div>
-      <div class="modal-body">${escapeHtml(text)}</div>
+      <div class="modal-body">${escapeHtml(safeText)}</div>
       <div class="modal-footer">
         <button class="primary-button" data-action="close-modal">Entendi</button>
       </div>
