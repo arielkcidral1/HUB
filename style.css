@@ -3412,15 +3412,25 @@ textarea {
 .item-card.event-type-birthday,
 .day-event-card.event-type-birthday,
 .calendar-preview-panel li.event-type-birthday {
-  border-color: rgba(251, 191, 36, 0.32);
-  background: rgba(251, 191, 36, 0.08);
-  box-shadow: none;
+  border-color: rgba(251, 191, 36, 0.72);
+  background:
+    linear-gradient(135deg, rgba(146, 64, 14, 0.92), rgba(157, 23, 77, 0.76)),
+    #78350f;
+  box-shadow: 0 14px 30px rgba(251, 191, 36, 0.18);
+  color: #fff7ed;
 }
 
 .item-card.event-type-birthday .item-title,
 .day-event-card.event-type-birthday .item-title,
 .calendar-preview-panel li.event-type-birthday .item-title {
-  color: #92400e;
+  color: #fff7ed;
+}
+
+.item-card.event-type-birthday p,
+.item-card.event-type-birthday .item-meta,
+.day-event-card.event-type-birthday p,
+.calendar-preview-panel li.event-type-birthday p {
+  color: rgba(255, 247, 237, 0.86);
 }
 
 .calendar-preview-panel li.compact-birthday-group {
@@ -3440,10 +3450,10 @@ textarea {
   max-width: 100%;
   min-height: 24px;
   padding: 4px 8px;
-  border: 1px solid rgba(251, 191, 36, 0.45);
+  border: 1px solid rgba(251, 191, 36, 0.55);
   border-radius: 999px;
-  background: rgba(251, 191, 36, 0.16);
-  color: var(--ink);
+  background: rgba(255, 247, 237, 0.14);
+  color: #fff7ed;
   font-size: 11px;
   font-weight: 800;
   line-height: 1.2;
@@ -3457,9 +3467,9 @@ textarea {
 }
 
 .tag.event-tag.event-type-birthday {
-  border-color: rgba(251, 191, 36, 0.42);
-  background: rgba(251, 191, 36, 0.16);
-  color: #92400e;
+  border-color: rgba(251, 191, 36, 0.75);
+  background: #fbbf24;
+  color: #1f1300;
 }
 
 .tag.event-tag.event-type-interview {
