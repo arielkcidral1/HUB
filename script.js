@@ -6555,10 +6555,11 @@ async function atualizarStatusDenuncia(id, status) {
   const denuncia = data.denuncias.find((item) => String(item.id) === String(id));
   if (!denuncia) return false;
 
+  denuncia.status = status;
+  saveLocalData();
+  renderAll();
+
   if (!postgresClient) {
-    denuncia.status = status;
-    saveLocalData();
-    renderAll();
     return true;
   }
 
@@ -6577,8 +6578,27 @@ async function atualizarStatusDenuncia(id, status) {
     return true;
   } catch (err) {
     console.error("Erro ao atualizar status da denúncia no PostgreSQL:", err);
-    showModal("Aviso de Permissão", "A denúncia não pode ser atualizada. Rode o postgres-schema.sql atualizado para liberar UPDATE em hub_denuncias.", "error");
-    return false;
+    setSyncStatus("Sincronizacao pendente", false);
+    return true;
+  }
+}
+
+async function syncRecordStatusSilently(collection, id, status) {
+  if (!postgresClient || !TABLES[collection]) return;
+  try {
+    const { data: updated, error } = await postgresClient
+      .from(TABLES[collection])
+      .update({ status })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error || !updated) throw error || new Error("Nenhuma linha alterada.");
+    mergeRealtimeRow(collection, updated, "UPDATE");
+    renderRealtimeUpdate(collection);
+    setSyncStatus("PostgreSQL EIXO online", true);
+  } catch (error) {
+    console.error("Erro ao sincronizar arquivamento no PostgreSQL:", error);
+    setSyncStatus("Sincronizacao pendente", false);
   }
 }
 
@@ -10377,8 +10397,13 @@ async function arquivarDenunciaPorContexto(id) {
 
 async function arquivarChamadoPorContexto(id) {
   if (!id) return;
-  const success = await updateItem("chamados", id, { status: "Arquivado" });
-  if (success) showModal("Chamado arquivado", "O chamado foi movido para Arquivados.", "info");
+  const chamado = data.chamados.find((item) => String(item.id) === String(id));
+  if (!chamado) return;
+  chamado.status = "Arquivado";
+  saveLocalData();
+  renderAll();
+  syncRecordStatusSilently("chamados", id, "Arquivado");
+  showModal("Chamado arquivado", "O chamado foi movido para Arquivados.", "info");
 }
 
 function openRecordContextMenu(event, type, id) {
@@ -10391,8 +10416,11 @@ function openRecordContextMenu(event, type, id) {
   const label = type === "denuncia" ? "Arquivar denúncia" : "Arquivar chamado";
   menu.innerHTML = `<button type="button" class="danger" data-record-menu-action="archive">${label}</button>`;
   menu.addEventListener("click", async (clickEvent) => {
-    const action = clickEvent.target.closest("[data-record-menu-action]")?.dataset.recordMenuAction;
+    const actionButton = clickEvent.target.closest("[data-record-menu-action]");
+    const action = actionButton?.dataset.recordMenuAction;
     if (action !== "archive") return;
+    actionButton.disabled = true;
+    actionButton.textContent = "Arquivando...";
     menu.remove();
     if (type === "denuncia") await arquivarDenunciaPorContexto(id);
     if (type === "chamado") await arquivarChamadoPorContexto(id);
