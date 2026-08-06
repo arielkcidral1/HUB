@@ -1133,12 +1133,10 @@ html.auth-entry-pending body {
 .calendar-day.has-birthday,
 .calendar-cell.has-birthday {
   position: relative;
-  border-color: rgba(251, 191, 36, 0.9);
-  background:
-    linear-gradient(135deg, rgba(146, 64, 14, 0.92), rgba(157, 23, 77, 0.76)),
-    #78350f;
-  box-shadow: inset 0 0 0 2px rgba(251, 191, 36, 0.28), 0 10px 24px rgba(251, 191, 36, 0.22);
-  color: #fff7ed;
+  border-color: rgba(251, 191, 36, 0.42);
+  background: rgba(251, 191, 36, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.12);
+  color: var(--ink);
 }
 
 .calendar-day .calendar-today-label,
@@ -1172,7 +1170,8 @@ html.auth-entry-pending body {
 }
 
 .calendar-workspace {
-  grid-template-columns: minmax(280px, 0.65fr) minmax(0, 1.35fr);
+  grid-template-columns: minmax(280px, 0.62fr) minmax(0, 1.38fr);
+  align-items: start;
 }
 
 .calendar-panel {
@@ -1391,28 +1390,30 @@ textarea {
 
 .workspace.vagas-workspace-expanded,
 .workspace.malotes-workspace-expanded,
-.workspace.equipe-workspace-expanded,
-.workspace.calendario-workspace-expanded {
+.workspace.equipe-workspace-expanded {
   grid-template-columns: minmax(300px, 0.62fr) minmax(0, 1.38fr);
 }
 
 .card-list.vagas-two-col,
 .card-list.malotes-two-col,
-.card-list.equipe-two-col,
-.card-list.calendario-two-col {
+.card-list.equipe-two-col {
   grid-template-columns: repeat(2, minmax(260px, 1fr));
   align-items: start;
   gap: 16px;
 }
 
-.workspace.equipe-workspace-expanded,
-.workspace.calendario-workspace-expanded {
+.workspace.equipe-workspace-expanded {
   align-items: start;
 }
 
-.card-list.equipe-two-col,
-.card-list.calendario-two-col {
+.card-list.equipe-two-col {
   min-width: 0;
+}
+
+#eventos-list {
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  align-items: start;
+  gap: 16px;
 }
 
 .activity-list {
@@ -3248,8 +3249,8 @@ textarea {
 
 .calendar-event-preview.event-type-birthday,
 .calendar-cell span.event-type-birthday {
-  background: #fbbf24;
-  color: #1f1300;
+  background: rgba(251, 191, 36, 0.16);
+  color: #92400e;
 }
 
 .calendar-event-preview.event-type-interview,
@@ -3412,17 +3413,15 @@ textarea {
 .item-card.event-type-birthday,
 .day-event-card.event-type-birthday,
 .calendar-preview-panel li.event-type-birthday {
-  border-color: rgba(251, 191, 36, 0.65);
-  background:
-    linear-gradient(135deg, rgba(120, 53, 15, 0.42), rgba(131, 24, 67, 0.28)),
-    var(--surface);
-  box-shadow: 0 14px 30px rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.32);
+  background: rgba(251, 191, 36, 0.08);
+  box-shadow: none;
 }
 
 .item-card.event-type-birthday .item-title,
 .day-event-card.event-type-birthday .item-title,
 .calendar-preview-panel li.event-type-birthday .item-title {
-  color: #fbbf24;
+  color: #92400e;
 }
 
 .calendar-preview-panel li.compact-birthday-group {
@@ -3459,9 +3458,9 @@ textarea {
 }
 
 .tag.event-tag.event-type-birthday {
-  border-color: rgba(251, 191, 36, 0.75);
-  background: #fbbf24;
-  color: #1f1300;
+  border-color: rgba(251, 191, 36, 0.42);
+  background: rgba(251, 191, 36, 0.16);
+  color: #92400e;
 }
 
 .tag.event-tag.event-type-interview {

@@ -2134,7 +2134,14 @@ function getAllEvents() {
 function getSortedEvents() {
   return getAllEvents()
     .slice()
-    .sort((a, b) => `${a.data || ""}T${a.horario || "00:00"}`.localeCompare(`${b.data || ""}T${b.horario || "00:00"}`));
+    .sort((a, b) => {
+      const dateCompare = String(a.data || "").localeCompare(String(b.data || ""));
+      if (dateCompare) return dateCompare;
+      const aBirthday = normalizeEventType(a.tipo) === "aniversario";
+      const bBirthday = normalizeEventType(b.tipo) === "aniversario";
+      if (aBirthday !== bBirthday) return aBirthday ? 1 : -1;
+      return String(a.horario || "00:00").localeCompare(String(b.horario || "00:00"));
+    });
 }
 
 function normalizeEventType(value = "") {
@@ -2159,6 +2166,10 @@ function getEventTagClass(item = {}) {
 
 function dayHasEventType(events = [], type) {
   return events.some((item) => normalizeEventType(item.tipo) === type);
+}
+
+function dayHasNonBirthdayEvent(events = []) {
+  return events.some((item) => normalizeEventType(item.tipo) !== "aniversario");
 }
 
 function getEventScheduleMeta(item = {}) {
@@ -2206,7 +2217,7 @@ function getCompactAgendaItems(events = []) {
 
   events.forEach((item) => {
     if (normalizeEventType(item.tipo) !== "aniversario") {
-      items.push({ kind: "event", event: item, dateTime: item.sortAt || item.data || "" });
+      items.push({ kind: "event", event: item, dateTime: item.sortAt || item.data || "", priority: 0 });
       return;
     }
 
@@ -2216,10 +2227,14 @@ function getCompactAgendaItems(events = []) {
   });
 
   birthdayGroups.forEach((birthdays, date) => {
-    items.push({ kind: "birthdays", events: birthdays, date, dateTime: date });
+    items.push({ kind: "birthdays", events: birthdays, date, dateTime: date, priority: 1 });
   });
 
-  return items.sort((a, b) => String(a.dateTime || "").localeCompare(String(b.dateTime || "")));
+  return items.sort((a, b) => {
+    const dateCompare = String(a.dateTime || "").localeCompare(String(b.dateTime || ""));
+    if (dateCompare) return dateCompare;
+    return (a.priority || 0) - (b.priority || 0);
+  });
 }
 
 function renderCompactAgendaItem(item) {
@@ -6401,9 +6416,10 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
       const isToday = date === todayKey;
       const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
       const hasBirthday = dayHasEventType(dayEvents, "aniversario");
+      const hasMainEvent = dayHasNonBirthdayEvent(dayEvents);
       const hasInterview = dayHasEventType(dayEvents, "entrevista");
       return `
-        <button class="calendar-day ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+        <button class="calendar-day ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday && !hasMainEvent ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
           <span class="calendar-weekday-label">${escapeHtml(formatWeekday(date))}</span>
           <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
           ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
@@ -6450,9 +6466,10 @@ function renderCalendar() {
     const isToday = date === todayKey;
     const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
     const hasBirthday = dayHasEventType(dayEvents, "aniversario");
+    const hasMainEvent = dayHasNonBirthdayEvent(dayEvents);
     const hasInterview = dayHasEventType(dayEvents, "entrevista");
     cells.push(`
-      <button class="calendar-cell ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+      <button class="calendar-cell ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday && !hasMainEvent ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
         <strong>${day}</strong>
         ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
         ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
@@ -11896,20 +11913,10 @@ function setupEquipeFormScrollGrid() {
   });
 }
 
-function setupCalendarioFormScrollGrid() {
-  setupFormScrollGrid({
-    listId: "eventos-list",
-    formId: "evento-form",
-    expandedWorkspaceClass: "calendario-workspace-expanded",
-    expandedListClass: "calendario-two-col",
-  });
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   setupVagasFormScrollGrid();
   setupMalotesFormScrollGrid();
   setupEquipeFormScrollGrid();
-  setupCalendarioFormScrollGrid();
 });
 
 window.addEventListener("storage", (event) => {
