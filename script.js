@@ -6207,6 +6207,33 @@ function renderDashboard() {
         tag: "Atestado",
         date: item.createdAt,
         dateTime: item.sortAt || item.createdAt,
+      })),
+    ...(data.candidaturas || [])
+      .map((item) => {
+        const vaga = (data.vagas || []).find((vagaItem) => String(vagaItem.id) === String(item.vaga_id));
+        return {
+          kind: "candidatura",
+          notificationId: getDashboardNotificationId("candidatura", item),
+          title: `Curriculo - ${item.nome || "Candidato"}`,
+          text: `${vaga?.cargo || "Vaga"} - ${formatCpf(item.cpf || "") || "CPF nao informado"}`,
+          details: `Candidato: ${item.nome || "Nao informado"}\nCPF: ${formatCpf(item.cpf || "") || "Nao informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Nao informado"}\nVaga: ${vaga?.cargo || item.vaga_id || "Nao informada"}\nCurriculo: ${item.curriculo_url || "Nao informado"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
+          tag: "Curriculo",
+          date: item.createdAt,
+          dateTime: item.sortAt || item.createdAt,
+          view: "vagas",
+        };
+      }),
+    ...(data.documentosContratados || [])
+      .map((item) => ({
+        kind: "contratado",
+        notificationId: getDashboardNotificationId("contratado", item),
+        title: `Documentos - ${item.nome || "Contratado"}`,
+        text: `${item.empresa || item.origemHtml || "Empresa nao informada"} - ${formatCpf(item.cpf || "") || "CPF nao informado"}`,
+        details: `Contratado: ${item.nome || "Nao informado"}\nCPF: ${formatCpf(item.cpf || "") || "Nao informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Nao informado"}\nEmpresa: ${item.empresa || item.origemHtml || "Nao informada"}\nDocumentos: ${(item.documentos || []).length || "Nao informado"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
+        tag: "Documentos",
+        date: item.createdAt,
+        dateTime: item.sortAt || item.createdAt,
+        view: "documentos-contratados",
       }))
   ];
 
@@ -7293,16 +7320,21 @@ function getRealtimeNotificationText(collection, item = {}) {
 
   if (collection === "atestados") {
     return {
-      nome: values.nome || "",
-      cpf: values.cpf || "",
-      telefone: values.telefone || "",
-      unidade: values.unidade || "",
-      arquivo_nome: values.arquivoNome || "Atestado",
-      arquivo_tamanho: values.arquivoTamanho || 0,
-      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
-      arquivo_url: values.arquivoUrl || "",
-      status: values.status || "Recebido",
-      created_by: values.createdBy || "Publico",
+      title: "Atestado recebido",
+      message: [item.nome, item.unidade].filter(Boolean).join(" - ") || "Um novo atestado foi enviado.",
+      icon: "??",
+      type: "atestado",
+      tag: `hub-rh-atestado-${item.id || Date.now()}`,
+    };
+  }
+
+  if (collection === "candidaturas") {
+    return {
+      title: "Curriculo recebido",
+      message: [item.nome, item.telefone].filter(Boolean).join(" - ") || "Uma nova candidatura foi enviada.",
+      icon: "??",
+      type: "candidatura",
+      tag: `hub-rh-curriculo-${item.id || Date.now()}`,
     };
   }
 
@@ -7311,7 +7343,7 @@ function getRealtimeNotificationText(collection, item = {}) {
       title: "Documentos recebidos",
       message: [item.nome, item.empresa].filter(Boolean).join(" - ") || "Novos documentos foram enviados.",
       icon: "??",
-      type: "documento",
+      type: "contratado",
       tag: `hub-rh-documento-${item.id || Date.now()}`,
     };
   }
@@ -7348,7 +7380,7 @@ function getNotificationPollingKey(collection, item = {}) {
 function getNotificationPollingCandidates() {
   const sourceData = typeof data === "object" && data ? data : {};
   const candidates = [];
-  const allowedCollections = ["comunicados", "denuncias", "chamados", "malotes", "vagas", "documentosContratados"];
+  const allowedCollections = ["comunicados", "denuncias", "chamados", "malotes", "vagas", "candidaturas", "documentosContratados"];
 
   allowedCollections.forEach((collection) => {
     const rows = Array.isArray(sourceData[collection]) ? sourceData[collection] : [];
@@ -11314,6 +11346,39 @@ class NotificationTracker {
         });
       });
 
+    (sourceData.candidaturas || [])
+      .forEach((item) => {
+        const vaga = (sourceData.vagas || []).find((vagaItem) => String(vagaItem.id) === String(item.vaga_id));
+        pushNotification({
+          id: `candidatura-${item.id}`,
+          type: "candidatura",
+          title: `Curriculo - ${item.nome || "Candidato"}`,
+          description: `${vaga?.cargo || "Vaga"} - ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "CPF nao informado"}`,
+          details: `Candidato: ${item.nome || "Nao informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Nao informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Nao informado"}\nVaga: ${vaga?.cargo || item.vaga_id || "Nao informada"}\nCurriculo: ${item.curriculo_url || "Nao informado"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
+          time: item.createdAt || "Recentemente",
+          dateTime: item.sortAt || item.createdAt || "Recentemente",
+          status: "pending",
+          unread: true,
+          view: "vagas",
+        });
+      });
+
+    (sourceData.documentosContratados || [])
+      .forEach((item) => {
+        pushNotification({
+          id: `contratado-${item.id}`,
+          type: "contratado",
+          title: `Documentos - ${item.nome || "Contratado"}`,
+          description: `${item.empresa || item.origemHtml || "Empresa nao informada"} - ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "CPF nao informado"}`,
+          details: `Contratado: ${item.nome || "Nao informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Nao informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Nao informado"}\nEmpresa: ${item.empresa || item.origemHtml || "Nao informada"}\nDocumentos: ${(item.documentos || []).length || "Nao informado"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
+          time: item.createdAt || "Recentemente",
+          dateTime: item.sortAt || item.createdAt || "Recentemente",
+          status: "pending",
+          unread: true,
+          view: "documentos-contratados",
+        });
+      });
+
     const upcoming = typeof getUpcomingEvents === "function" ? getUpcomingEvents() : [];
     upcoming.forEach((item) => {
       const eventDate = item.data || "";
@@ -11414,8 +11479,10 @@ class NotificationTracker {
       malote: "malotes",
       chamado: "chamados",
       vaga: "vagas",
+      candidatura: "vagas",
       evento: "calendario",
       documento: "documentos",
+      contratado: "documentos-contratados",
       atestado: "atestados",
       quadro: "quadros",
       disciplinar: "advertencias-suspensoes",
@@ -11430,8 +11497,10 @@ class NotificationTracker {
       malote: "&#128230;",
       chamado: "&#128295;",
       vaga: "&#128188;",
+      candidatura: "&#128196;",
       evento: "&#128197;",
       documento: "&#128196;",
+      contratado: "&#128193;",
       atestado: "&#128203;",
       quadro: "&#9638;",
       disciplinar: "&#9888;",
@@ -11637,8 +11706,10 @@ class NotificationTracker {
       malote: "Malote",
       chamado: "Chamado",
       vaga: "Vaga",
+      candidatura: "Curriculo",
       evento: "Evento",
       documento: "Documento",
+      contratado: "Documento de Contratado",
       atestado: "Atestado",
       geral: "Geral",
     };

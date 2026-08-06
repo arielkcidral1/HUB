@@ -5390,12 +5390,22 @@ form.panel[data-public-chamados="true"].panel {
   color: #9c27b0;
 }
 
+.tracker-notification-item.candidatura .tracker-notification-icon {
+  background: rgba(156, 39, 176, 0.1);
+  color: #9c27b0;
+}
+
 .tracker-notification-item.evento .tracker-notification-icon {
   background: rgba(0, 150, 136, 0.1);
   color: #009688;
 }
 
 .tracker-notification-item.documento .tracker-notification-icon {
+  background: rgba(63, 81, 181, 0.1);
+  color: #3f51b5;
+}
+
+.tracker-notification-item.contratado .tracker-notification-icon {
   background: rgba(63, 81, 181, 0.1);
   color: #3f51b5;
 }
