@@ -2297,6 +2297,7 @@ function escapeHtml(value) {
 }
 
 function badgeClass(value) {
+  if (value === "Aberto") return "tag chamado-open";
   return ["Urgente", "Alta", "Aberta"].includes(value) ? "tag alert" : "tag";
 }
 

@@ -1497,6 +1497,16 @@ textarea {
   color: var(--gold);
 }
 
+.tag.chamado-open {
+  border: 1px solid var(--dashboard-chamado-border);
+  background: var(--dashboard-chamado-bg);
+  color: #1d4ed8;
+}
+
+:root[data-theme="dark"] .tag.chamado-open {
+  color: #bfdbfe;
+}
+
 .empty-state {
   margin: 0;
   color: var(--muted);
@@ -1510,8 +1520,8 @@ textarea {
 }
 
 .chamado-list .item-card {
-  background: #EFF6FF;
-  border-color: #BFDBFE;
+  background: var(--dashboard-chamado-bg);
+  border-color: var(--dashboard-chamado-border);
 }
 
 .chamados-records-header {
