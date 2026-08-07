@@ -1898,7 +1898,8 @@ textarea {
 }
 
 .chat-panel.chat-panel-empty {
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto auto;
+  align-content: start;
 }
 
 .chat-panel.chat-panel-empty .chat-message-filter {
@@ -1989,8 +1990,14 @@ textarea {
   align-items: flex-start;
   justify-content: flex-start;
   min-height: 0;
-  height: clamp(210px, 32vh, 330px);
+  height: clamp(300px, 54vh, 430px);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.chat-panel.chat-panel-empty .chat-composer {
+  min-height: 0;
+  padding-block: 8px;
+  align-items: center;
 }
 
 .chat-empty-state {
