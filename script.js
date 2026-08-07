@@ -2326,13 +2326,13 @@ function getCompactAgendaItems(events = []) {
 function renderCompactAgendaItem(item) {
   if (item.kind !== "birthdays") {
     const event = item.event || {};
-    return `<li class="${getEventTypeClass(event)}"><div class="item-topline">${renderEventTitle(event)}<span class="tag ${getEventTagClass(event)}">${escapeHtml(event.tipo)}</span></div>${renderEventDescription(event)}<p>${escapeHtml(getEventListMeta(event))}</p></li>`;
+    return `<li class="calendar-event-block ${getEventTypeClass(event)}"><div class="item-topline">${renderEventTitle(event)}<span class="tag ${getEventTagClass(event)}">${escapeHtml(event.tipo)}</span></div>${renderEventDescription(event)}<p>${escapeHtml(getEventListMeta(event))}</p></li>`;
   }
 
   const birthdays = item.events || [];
   const title = birthdays.length === 1 ? getEventDisplayTitle(birthdays[0]) : `${birthdays.length} aniversários`;
   return `
-    <li class="event-type-birthday compact-birthday-group">
+    <li class="calendar-event-block event-type-birthday compact-birthday-group">
       <div class="item-topline">
         <p class="item-title">${escapeHtml(title)}</p>
         <span class="tag event-tag event-type-birthday">${escapeHtml(formatEventDate(item.date))}</span>
@@ -6567,7 +6567,7 @@ function renderCalendar() {
   `;
 
   renderCards("eventos-list", visibleEvents, (item) => `
-    <article class="item-card ${getEventTypeClass(item)}">
+    <article class="calendar-event-block calendar-event-manage-block ${getEventTypeClass(item)}">
       <div class="item-topline">${renderEventTitle(item)}<span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>
       ${renderEventDescription(item)}
       <p class="item-meta">${escapeHtml(getEventListMeta(item))}</p>

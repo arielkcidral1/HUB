@@ -265,6 +265,8 @@ Assert-MatchText $script 'function getCompanyBirthdayEvents\(\)[\s\S]*admissionD
 Assert-MatchText $script 'edit-calendar-events[\s\S]*eventos-list[\s\S]*scrollIntoView' "botao do calendario leva para lista de edicao"
 Assert-MatchText $script "case 'editar-evento':[\s\S]*editarEvento\(id\)" "modal do calendario abre edicao de eventos"
 Assert-MatchText $style '\.calendar-day\.has-birthday[\s\S]*rgba\(92, 65, 22, 0\.38\)[\s\S]*\.tag\.event-tag\.event-type-birthday[\s\S]*rgba\(202, 138, 4, 0\.18\)' "aniversarios usam cor mais apagada"
+Assert-MatchText $script 'renderCompactAgendaItem\(item\)[\s\S]*calendar-event-block[\s\S]*renderCards\("eventos-list", visibleEvents[\s\S]*calendar-event-block calendar-event-manage-block' "eventos do painel e calendario usam blocos compactos"
+Assert-MatchText $style '#eventos-list[\s\S]*repeat\(auto-fit, minmax\(190px, 1fr\)\)[\s\S]*\.calendar-event-block[\s\S]*border-left: 3px solid var\(--teal-border\)' "blocos de eventos do calendario possuem layout compacto"
 Assert-MatchText $companyBirthdays '"admissao"[\s\S]*"unidade"[\s\S]*"4- PL."[\s\S]*"28- ARA"' "planilha de aniversariantes inclui admissao e unidades oficiais"
   Assert-MatchText $script 'function calculateVtValue\(diasUteis, valorPassagem, saldoAtual\).*Math\.max\(0, \(Number\(diasUteis\).*Number\(valorPassagem\).*Number\(saldoAtual\)' "VT calcula dias uteis vezes passagem menos saldo"
   Assert-MatchText $script 'function parseBrazilianCurrency\(value\).*replace\(/\[\^\\d,\]/g, ""\).*replace\(",", "\."\)' "VT interpreta valor de passagem com virgula"
