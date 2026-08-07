@@ -311,6 +311,8 @@ let hubPollingNotificationsReady = false;
 const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
+const CHAT_LOCAL_ECHO_GRACE_MS = 30000;
+const recentlyDeletedChatMessageIds = new Map();
 window.editingDocId = null;
 
 const documentLabels = {
@@ -3313,13 +3315,41 @@ function removePendingContractorDocument(id) {
   return remaining;
 }
 
-function mergePendingChatMessages(freshMessages = [], currentMessages = data.comunicados || []) {
-  const pendingMessages = (currentMessages || []).filter((item) => item?._pending);
-  if (!pendingMessages.length) return freshMessages;
+function pruneRecentlyDeletedChatMessages(now = Date.now()) {
+  recentlyDeletedChatMessageIds.forEach((expiresAt, id) => {
+    if (expiresAt <= now) recentlyDeletedChatMessageIds.delete(id);
+  });
+}
 
-  const freshIds = new Set((freshMessages || []).map((item) => String(item.id)));
-  const pendingWithoutServerMatch = pendingMessages.filter((item) => !freshIds.has(String(item.id)));
-  return [...pendingWithoutServerMatch, ...(freshMessages || [])];
+function rememberDeletedChatMessage(id) {
+  if (!id) return;
+  recentlyDeletedChatMessageIds.set(String(id), Date.now() + CHAT_LOCAL_ECHO_GRACE_MS);
+}
+
+function forgetDeletedChatMessage(id) {
+  if (!id) return;
+  recentlyDeletedChatMessageIds.delete(String(id));
+}
+
+function markChatMessageAsLocalEcho(message) {
+  return message ? { ...message, _localEchoUntil: Date.now() + CHAT_LOCAL_ECHO_GRACE_MS } : message;
+}
+
+function shouldKeepLocalChatMessage(item, freshIds, now = Date.now()) {
+  if (!item || freshIds.has(String(item.id))) return false;
+  if (item._pending) return true;
+  return Number(item._localEchoUntil || 0) > now;
+}
+
+function mergeLocalChatMessages(freshMessages = [], currentMessages = data.comunicados || []) {
+  const now = Date.now();
+  pruneRecentlyDeletedChatMessages(now);
+
+  const visibleFreshMessages = (freshMessages || []).filter((item) => !recentlyDeletedChatMessageIds.has(String(item.id)));
+  const freshIds = new Set(visibleFreshMessages.map((item) => String(item.id)));
+  const localMessages = (currentMessages || []).filter((item) => shouldKeepLocalChatMessage(item, freshIds, now));
+
+  return [...localMessages, ...visibleFreshMessages];
 }
 
 function isMatchingPendingChatMessage(pending, saved) {
@@ -3338,18 +3368,20 @@ function mergeRealtimeRow(collection, row, action = "INSERT") {
       removeLocalUser(row.id);
       return;
     }
+    if (collection === "comunicados") rememberDeletedChatMessage(row.id);
     const current = data[collection] || [];
     data[collection] = current.filter((item) => String(item.id) !== String(row.id));
     return;
   }
 
   const mapped = mapRows(collection, [row])[0];
+  if (collection === "comunicados" && recentlyDeletedChatMessageIds.has(String(mapped.id))) return;
   const current = data[collection] || [];
 
   if (collection === "comunicados") {
     const pendingIndex = current.findIndex((item) => isMatchingPendingChatMessage(item, mapped));
     if (pendingIndex >= 0) {
-      data[collection] = current.map((item, itemIndex) => (itemIndex === pendingIndex ? mapped : item));
+      data[collection] = current.map((item, itemIndex) => (itemIndex === pendingIndex ? markChatMessageAsLocalEcho(mapped) : item));
       return;
     }
   }
@@ -3717,7 +3749,7 @@ async function loadFromPostgreSQL(options = {}) {
         const [collection, rows] = result.value;
 
         data[collection] = collection === "comunicados"
-          ? mergePendingChatMessages(rows, data.comunicados)
+          ? mergeLocalChatMessages(rows, data.comunicados)
           : rows;
       } else {
         console.error("Erro ao carregar colecao do PostgreSQL:", result.reason);
@@ -4721,6 +4753,7 @@ async function deleteChatMessageRecord(id) {
   const removed = current.find((item) => String(item.id) === String(id));
   if (!removed) return false;
 
+  rememberDeletedChatMessage(id);
   data.comunicados = current.filter((item) => String(item.id) !== String(id));
   saveLocalDataDebounced();
   renderChat({ skipPostRender: true });
@@ -4745,6 +4778,7 @@ async function deleteChatMessageRecord(id) {
     return true;
   } catch (error) {
     console.error("Erro ao excluir mensagem no PostgreSQL:", error);
+    forgetDeletedChatMessage(id);
     data.comunicados = [removed, ...(data.comunicados || []).filter((item) => String(item.id) !== String(id))];
     saveLocalDataDebounced();
     renderChat({ skipPostRender: true });
@@ -9382,7 +9416,8 @@ if (chatForm) {
         arquivo: null,
       }];
 
-    const savedMessages = await Promise.all(payloads.map((payload) => addChatMessage(payload)));
+    const savedMessages = (await Promise.all(payloads.map((payload) => addChatMessage(payload))))
+      .map((savedMessage) => markChatMessageAsLocalEcho(savedMessage));
     const replacements = new Map(pendingMessages.map((pending, index) => [pending.id, savedMessages[index]]));
     data.comunicados = (data.comunicados || [])
       .map((item) => replacements.get(item.id) || item)
