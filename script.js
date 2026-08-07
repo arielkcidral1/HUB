@@ -2581,7 +2581,6 @@ function showConfirmActionModal({ title, text, confirmText = "Confirmar", danger
   overlay.querySelector('[data-action="close-modal"]').addEventListener("click", close);
   overlay.querySelector('[data-action="modal-confirm"]').addEventListener("click", async () => {
     close();
-    await paintNextFrame();
     await onConfirm();
   });
 
@@ -4724,10 +4723,11 @@ async function deleteChatMessageRecord(id) {
 
   data.comunicados = current.filter((item) => String(item.id) !== String(id));
   saveLocalDataDebounced();
-  renderDashboard();
-  renderChatChannels();
-  renderChat();
-  await paintNextFrame();
+  renderChat({ skipPostRender: true });
+  window.setTimeout(() => {
+    renderDashboard();
+    renderChatChannels();
+  }, 0);
 
   if (!postgresClient || String(id).startsWith("pending-")) return true;
 
@@ -4747,9 +4747,11 @@ async function deleteChatMessageRecord(id) {
     console.error("Erro ao excluir mensagem no PostgreSQL:", error);
     data.comunicados = [removed, ...(data.comunicados || []).filter((item) => String(item.id) !== String(id))];
     saveLocalDataDebounced();
-    renderDashboard();
-    renderChatChannels();
-    renderChat();
+    renderChat({ skipPostRender: true });
+    window.setTimeout(() => {
+      renderDashboard();
+      renderChatChannels();
+    }, 0);
     setSyncStatus("Erro no chat", false);
     showModal("Erro ao excluir", "Nao foi possivel excluir a mensagem. Confira a conexao e tente novamente.", "error");
     return false;
@@ -8552,7 +8554,8 @@ function renderDocumentRecords() {
     .join("");
 }
 
-function renderChat() {
+function renderChat(options = {}) {
+  const { skipPostRender = false } = options;
   const target = document.getElementById("chat-feed");
   if (!target) return;
   const currentUser = getCurrentUserName();
@@ -8674,6 +8677,8 @@ function renderChat() {
   target.innerHTML = chatHtml;
 
   target.scrollTop = target.scrollHeight;
+  if (skipPostRender) return;
+
   hydrateChatMediaPreviews();
 
   checkAndMarkChatAsRead();
@@ -9336,12 +9341,16 @@ if (chatForm) {
       }];
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
     data.comunicados = [...pendingMessages, ...(data.comunicados || [])];
-    renderChat();
-    await paintNextFrame();
+    renderChat({ skipPostRender: true });
     // Limpa o formulário imediatamente
     formElement.reset();
     clearChatSelectedFile();
+    window.setTimeout(() => {
+      renderDashboard();
+      renderChatChannels();
+    }, 0);
 
+    window.setTimeout(async () => {
     // -- UPLOAD de arquivos em background ----------------------------------
     const uploadedFiles = [];
     try {
@@ -9354,7 +9363,7 @@ if (chatForm) {
       console.error("Erro ao enviar arquivo:", error);
       // Remove mensagens otimistas em caso de falha
       data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
-      renderChat();
+      renderChat({ skipPostRender: true });
       setSyncStatus("Erro no anexo", false);
       showModal("Erro no Anexo", error?.message || "Nao foi possivel enviar um dos arquivos. Verifique a conexao e tente novamente.", "error");
       return;
@@ -9381,11 +9390,12 @@ if (chatForm) {
     saveLocalDataDebounced();
     renderDashboard();
     renderChatChannels();
-    renderChat();
+    renderChat({ skipPostRender: true });
 
     if (savedMessages.some((message) => !message)) {
-      renderChat();
+      renderChat({ skipPostRender: true });
     }
+    }, 0);
   });
 }
 
@@ -10793,8 +10803,8 @@ async function deleteChatMessage(id) {
     text: "Deseja excluir esta mensagem do chat?",
     danger: true,
     confirmText: "Excluir",
-    onConfirm: async () => {
-      await deleteChatMessageRecord(id);
+    onConfirm: () => {
+      deleteChatMessageRecord(id);
     },
   });
 }
