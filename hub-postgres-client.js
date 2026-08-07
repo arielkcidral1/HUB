@@ -252,12 +252,12 @@
         storage: {
           from() {
             return {
-              async upload(path, file) {
+              async upload(path, file, options = {}) {
                 const dataUrl = await fileToDataUrl(file);
                 const result = await request("/api/files", {
                   method: "POST",
                   headers: jsonHeaders(),
-                  body: JSON.stringify({ path, name: file.name, size: file.size, type: file.type, dataUrl }),
+                  body: JSON.stringify({ path, name: file.name, size: file.size, type: options.contentType || file.type || "application/octet-stream", dataUrl }),
                 });
                 return { data: result.data, error: result.error };
               },
