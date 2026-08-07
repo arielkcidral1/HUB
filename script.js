@@ -27,6 +27,8 @@ const GENERAL_CHANNEL = "geral";
 const MANAGER_GENERAL_CHANNEL = "geral-gerentes";
 const CASHIER_GENERAL_CHANNEL = "geral-caixa";
 const CHAT_POLL_PREFIX = "__HUB_POLL__:";
+const CHAT_EDIT_PREFIX = "__HUB_EDIT__:";
+const CHAT_EDIT_WINDOW_MS = 15 * 60 * 1000;
 const RESUME_BUCKET = "hub-curriculos";
 const RESUME_PUBLIC_PREFIX = "candidaturas";
 const CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos";
@@ -1205,6 +1207,7 @@ function loadLocalData() {
     canal: normalizeChatChannel(item.canal),
     arquivo: item.arquivo || null,
     createdAt: item.createdAt || "Hoje",
+    sortAt: item.sortAt || "",
   }));
   return {
     denuncias: parsed.denuncias || [],
@@ -2595,11 +2598,16 @@ async function createPrivateStorageUrl(bucket, value) {
   }
 
   const path = getStoragePath(value, bucket);
-  const { data: signedData, error } = await postgresClient.storage
-    .from(bucket)
-    .createSignedUrl(path, 60 * 5);
-  if (error) throw error;
-  return signedData.signedUrl;
+  try {
+    const { data: signedData, error } = await postgresClient.storage
+      .from(bucket)
+      .createSignedUrl(path, 60 * 5);
+    if (!error && signedData?.signedUrl) return signedData.signedUrl;
+    console.warn("URL assinada indisponivel, usando API local:", error);
+  } catch (error) {
+    console.warn("Falha ao assinar arquivo, usando API local:", error);
+  }
+  return `/api/files?path=${encodeURIComponent(path)}`;
 }
 
 function replacePrivateAvatarPlaceholders(path, signedUrl) {
@@ -2710,7 +2718,7 @@ function parseChatMessage(row) {
 }
 
 function parseChatPollMessage(value) {
-  const text = String(value || "");
+  const text = getChatMessageText(value);
   if (!text.startsWith(CHAT_POLL_PREFIX)) return null;
 
   try {
@@ -2732,6 +2740,36 @@ function parseChatPollMessage(value) {
     console.warn("Enquete do chat invalida:", error);
     return null;
   }
+}
+
+function parseChatMessageEnvelope(value) {
+  const text = String(value || "");
+  if (!text.startsWith(CHAT_EDIT_PREFIX)) {
+    return { text, edited: false, editedAt: "" };
+  }
+
+  try {
+    const payload = JSON.parse(text.slice(CHAT_EDIT_PREFIX.length));
+    return {
+      text: String(payload.text || ""),
+      edited: Boolean(payload.edited),
+      editedAt: String(payload.editedAt || ""),
+    };
+  } catch {
+    return { text, edited: false, editedAt: "" };
+  }
+}
+
+function getChatMessageText(value) {
+  return parseChatMessageEnvelope(value).text;
+}
+
+function serializeEditedChatMessage(text) {
+  return `${CHAT_EDIT_PREFIX}${JSON.stringify({
+    text: String(text || "").trim(),
+    edited: true,
+    editedAt: new Date().toISOString(),
+  })}`;
 }
 
 function serializeChatPoll(poll) {
@@ -3576,15 +3614,24 @@ function setupRealtime() {
 }
 
 async function uploadChatFile(file) {
-  if (!postgresClient || !file || !file.name) return null;
+  if (!file || !file.name) return null;
 
   const bucket = getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files";
   const safeName = file.name.replace(/[^a-z0-9_.-]/gi, "-");
   const channel = normalizeChatChannel(activeChatChannel || GENERAL_CHANNEL);
   const path = `chat/${channel}/${Date.now()}-${generateUUID()}-${safeName}`;
-  const { error } = await postgresClient.storage.from(bucket).upload(path, file, { contentType: getChatFileMimeType(file), upsert: false });
-  if (error) throw error;
 
+  if (postgresClient?.storage?.from) {
+    try {
+      const { error } = await postgresClient.storage.from(bucket).upload(path, file, { contentType: getChatFileMimeType(file), upsert: false });
+      if (!error) return path;
+      console.warn("Storage do chat indisponivel, tentando API local:", error);
+    } catch (error) {
+      console.warn("Falha no storage do chat, tentando API local:", error);
+    }
+  }
+
+  await uploadPublicFile(file, path);
   return path;
 }
 
@@ -7424,7 +7471,7 @@ function showHubCrossPageNotification(title, message, options = {}) {
 function getRealtimeNotificationText(collection, item = {}) {
   if (collection === "comunicados") {
     const author = item.autor || "Comunicação RH";
-    const text = item.mensagem || "Nova mensagem recebida.";
+    const text = getChatMessageText(item.mensagem) || "Nova mensagem recebida.";
     return {
       title: `Comunicação RH - ${author}`,
       message: text.length > 110 ? `${text.slice(0, 107)}...` : text,
@@ -7635,7 +7682,7 @@ function getChatMessageFilterText(item = {}) {
   const attachment = item.arquivo && typeof item.arquivo === "object" ? item.arquivo : null;
   return normalizeSettingsText([
     item.autor,
-    item.mensagem,
+    getChatMessageText(item.mensagem),
     item.createdAt,
     attachment?.name,
     attachment?.type,
@@ -8107,8 +8154,9 @@ function renderNotificationChatThread(messages = [], options = {}) {
     const authorName = item.autor || "Equipe";
     const initial = escapeHtml(String(authorName).trim().charAt(0).toUpperCase() || "?");
     const avatar = `<div class="chat-avatar-fallback">${initial}</div>`;
-    const formattedMessage = item.mensagem
-      ? (typeof renderFormattedChatText === "function" ? renderFormattedChatText(item.mensagem) : escapeHtml(item.mensagem))
+    const visibleMessage = typeof getChatMessageText === "function" ? getChatMessageText(item.mensagem) : item.mensagem;
+    const formattedMessage = visibleMessage
+      ? (typeof renderFormattedChatText === "function" ? renderFormattedChatText(visibleMessage) : escapeHtml(visibleMessage))
       : "";
     const attachment = item.arquivo && typeof renderChatAttachment === "function" ? renderChatAttachment(item.arquivo) : "";
 
@@ -8407,14 +8455,16 @@ function renderChat() {
   let previousDate = "";
   const chatHtml = messages.map((item) => {
     const attachment = renderChatAttachment(item.arquivo);
+    const envelope = parseChatMessageEnvelope(item.mensagem);
     const poll = parseChatPollMessage(item.mensagem);
     const messageBody = poll
       ? renderChatPoll(item, poll)
-      : item.mensagem
-        ? `<p>${renderFormattedChatText(item.mensagem)}</p>`
+      : envelope.text
+        ? `<p>${renderFormattedChatText(envelope.text)}</p>`
         : "";
     const messageDate = getChatMessageDate(item.createdAt);
     const messageTime = getChatMessageTimeLabel(item.createdAt);
+    const editedLabel = envelope.edited ? '<span class="chat-edited-label">Editada</span>' : "";
 
     const separator = messageDate && messageDate !== previousDate
       ? `<div class="chat-date-separator">${escapeHtml(messageDate)}</div>`
@@ -8423,12 +8473,12 @@ function renderChat() {
     previousDate = messageDate || previousDate;
 
     return `${separator}
-      <article class="chat-message ${item.autor === currentUser ? "own" : ""}">
+      <article class="chat-message ${item.autor === currentUser ? "own" : ""}" data-chat-message-id="${escapeHtml(item.id)}">
         <div class="chat-message-header">
           ${getAuthorAvatar(item.autor)}
           <div class="chat-author">
             <span>${escapeHtml(item.autor)}</span>
-            <time>${escapeHtml(messageTime)}</time>
+            <time>${escapeHtml(messageTime)}</time>${editedLabel}
           </div>
         </div>
         ${messageBody}
@@ -9115,7 +9165,7 @@ if (chatForm) {
       data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
       renderChat();
       setSyncStatus("Erro no anexo", false);
-      showModal("Erro no Anexo", "Nao foi possivel enviar um dos arquivos. Confira o bucket hub-chat-files no PostgreSQL.", "error");
+      showModal("Erro no Anexo", "Nao foi possivel enviar um dos arquivos. Verifique a conexao e tente novamente.", "error");
       return;
     }
 
@@ -9734,6 +9784,7 @@ document.addEventListener("click", (event) => {
   if (!event.target.closest("#board-context-menu") && !event.target.closest("#board-list-context-menu") && !event.target.closest("[data-board-tab]") && !event.target.closest("[data-board-list]")) closeBoardContextMenu();
   if (!event.target.closest("#board-card-action-menu") && !event.target.closest("[data-board-card]")) closeBoardCardActionMenu();
   if (!event.target.closest("#record-context-menu")) document.getElementById("record-context-menu")?.remove();
+  if (!event.target.closest("#chat-message-context-menu")) document.getElementById("chat-message-context-menu")?.remove();
   const addListButton = event.target.closest("[data-action='add-board-list']");
   if (addListButton) {
     const board = getActiveBoard();
@@ -9757,6 +9808,12 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("contextmenu", (event) => {
+  const chatMessage = event.target.closest("[data-chat-message-id]");
+  if (chatMessage) {
+    event.preventDefault();
+    openChatMessageContextMenu(event, chatMessage.dataset.chatMessageId);
+    return;
+  }
   const recordCard = event.target.closest("[data-record-context]");
   if (recordCard) {
     const type = recordCard.dataset.recordContext;
@@ -10463,6 +10520,83 @@ async function arquivarChamadoPorContexto(id) {
   renderAll();
   syncRecordStatusSilently("chamados", id, "Arquivado");
   showModal("Chamado arquivado", "O chamado foi movido para Arquivados.", "info");
+}
+
+function getChatMessageById(id) {
+  return (data.comunicados || []).find((item) => String(item.id) === String(id));
+}
+
+function canEditChatMessage(message) {
+  if (!message || message.autor !== getCurrentUserName()) return false;
+  if (parseChatPollMessage(message.mensagem)) return false;
+  const sentAt = getChatMessageTime(message.sortAt || message.createdAt);
+  return sentAt > 0 && Date.now() - sentAt <= CHAT_EDIT_WINDOW_MS;
+}
+
+async function editChatMessage(id) {
+  const message = getChatMessageById(id);
+  if (!message) return;
+  if (!canEditChatMessage(message)) {
+    showModal("Edicao indisponivel", "A mensagem so pode ser editada em ate 15 minutos apos o envio.", "error");
+    return;
+  }
+  const nextText = window.prompt("Editar mensagem", getChatMessageText(message.mensagem));
+  if (nextText == null) return;
+  const trimmed = String(nextText || "").trim();
+  if (!trimmed) {
+    showModal("Mensagem obrigatoria", "A mensagem editada nao pode ficar vazia.", "error");
+    return;
+  }
+  if (trimmed.length > 4000) {
+    showModal("Mensagem muito longa", "A mensagem deve ter no maximo 4000 caracteres.", "error");
+    return;
+  }
+  await updateItem("comunicados", id, {
+    autor: message.autor,
+    canal: message.canal,
+    mensagem: serializeEditedChatMessage(trimmed),
+    arquivo: message.arquivo || null,
+    createdBy: message.createdBy || message.autor,
+  });
+}
+
+async function deleteChatMessage(id) {
+  const message = getChatMessageById(id);
+  if (!message || message.autor !== getCurrentUserName()) return;
+  showConfirmActionModal({
+    title: "Excluir mensagem",
+    text: "Deseja excluir esta mensagem do chat?",
+    danger: true,
+    confirmText: "Excluir",
+    onConfirm: async () => {
+      await deleteItem("comunicados", id);
+    },
+  });
+}
+
+function openChatMessageContextMenu(event, id) {
+  document.getElementById("chat-message-context-menu")?.remove();
+  const message = getChatMessageById(id);
+  if (!message || message.autor !== getCurrentUserName()) return;
+  const canEdit = canEditChatMessage(message);
+  const menu = document.createElement("div");
+  menu.id = "chat-message-context-menu";
+  menu.className = "board-context-menu chat-message-context-menu";
+  menu.style.left = `${event.clientX}px`;
+  menu.style.top = `${event.clientY}px`;
+  menu.innerHTML = `
+    <button type="button" data-chat-message-action="edit" ${canEdit ? "" : "disabled"}>Editar mensagem</button>
+    <button type="button" class="danger" data-chat-message-action="delete">Excluir mensagem</button>
+  `;
+  menu.addEventListener("click", async (clickEvent) => {
+    const actionButton = clickEvent.target.closest("[data-chat-message-action]");
+    if (!actionButton || actionButton.disabled) return;
+    const action = actionButton.dataset.chatMessageAction;
+    menu.remove();
+    if (action === "edit") await editChatMessage(id);
+    if (action === "delete") await deleteChatMessage(id);
+  });
+  document.body.appendChild(menu);
 }
 
 function openRecordContextMenu(event, type, id) {
