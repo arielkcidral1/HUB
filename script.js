@@ -4683,6 +4683,44 @@ async function addChatMessage(values) {
   }
 }
 
+async function deleteChatMessageRecord(id) {
+  const current = data.comunicados || [];
+  const removed = current.find((item) => String(item.id) === String(id));
+  if (!removed) return false;
+
+  data.comunicados = current.filter((item) => String(item.id) !== String(id));
+  saveLocalDataDebounced();
+  renderDashboard();
+  renderChatChannels();
+  renderChat();
+
+  if (!postgresClient || String(id).startsWith("pending-")) return true;
+
+  try {
+    const { data: deletedRows, error } = await postgresClient
+      .from(TABLES.comunicados)
+      .delete()
+      .eq("id", id)
+      .select("id");
+
+    if (error) throw error;
+    if (!deletedRows?.length) throw new Error("Delete nao confirmado pelo PostgreSQL.");
+
+    setSyncStatus("PostgreSQL EIXO online", true);
+    return true;
+  } catch (error) {
+    console.error("Erro ao excluir mensagem no PostgreSQL:", error);
+    data.comunicados = [removed, ...(data.comunicados || []).filter((item) => String(item.id) !== String(id))];
+    saveLocalDataDebounced();
+    renderDashboard();
+    renderChatChannels();
+    renderChat();
+    setSyncStatus("Erro no chat", false);
+    showModal("Erro ao excluir", "Nao foi possivel excluir a mensagem. Confira a conexao e tente novamente.", "error");
+    return false;
+  }
+}
+
 /**
  * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente.
  * Sem uma política de Row Level Security (RLS) no PostgreSQL, um usuário autenticado
@@ -10714,7 +10752,7 @@ async function deleteChatMessage(id) {
     danger: true,
     confirmText: "Excluir",
     onConfirm: async () => {
-      await deleteItem("comunicados", id);
+      await deleteChatMessageRecord(id);
     },
   });
 }
