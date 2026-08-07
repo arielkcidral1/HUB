@@ -1942,6 +1942,7 @@ textarea {
   gap: 0;
   height: min(72vh, 640px);
   min-height: 420px;
+  align-content: stretch;
 }
 
 .chat-panel.chat-panel-empty {
@@ -2378,11 +2379,13 @@ textarea {
   flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
-  padding: 9px 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface-soft);
+  align-self: end;
+  margin-top: 0;
+  padding: 10px 8px 8px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
   position: relative;
 }
 
