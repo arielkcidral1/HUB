@@ -2136,29 +2136,65 @@ function getCompanyBirthdayEvents() {
   const visibleYear = visibleCalendarDate instanceof Date ? visibleCalendarDate.getFullYear() : new Date().getFullYear();
   const currentYear = new Date().getFullYear();
   const years = [...new Set([currentYear, currentYear + 1, visibleYear])];
-  return years.flatMap((year) => birthdays.map((item, index) => {
+  return years.flatMap((year) => birthdays.flatMap((item, index) => {
     const birthDate = String(item.nascimento || "");
-    const monthDay = birthDate.slice(5);
-    const date = /^\d{2}-\d{2}$/.test(monthDay) ? `${year}-${monthDay}` : "";
+    const admissionDate = String(item.admissao || "");
+    const birthMonthDay = birthDate.slice(5);
+    const admissionMonthDay = admissionDate.slice(5);
+    const birthEventDate = /^\d{2}-\d{2}$/.test(birthMonthDay) ? `${year}-${birthMonthDay}` : "";
+    const companyEventDate = /^\d{2}-\d{2}$/.test(admissionMonthDay) ? `${year}-${admissionMonthDay}` : "";
     const nome = String(item.nome || "").trim();
     const usuario = (data.usuarios || []).find((user) => normalizeLoginName(user.nome) === normalizeLoginName(nome));
     const unidade = item.unidade || usuario?.unidade || usuario?.cargoUnidade || "";
-    return {
-      id: `birthday-${year}-${index}`,
-      titulo: "Aniversario",
-      data: date,
-      horario: "",
-      responsavel: "",
-      tipo: "Aniversario",
-      descricao: nome,
-      aniversariante: nome,
-      unidade,
-      createdBy: "Planilha de aniversariantes",
-      createdAt: date,
-      sortAt: date,
-      systemBirthday: true,
-    };
+    return [
+      {
+        id: `birthday-${year}-${index}`,
+        titulo: "Aniversário",
+        data: birthEventDate,
+        horario: "",
+        responsavel: "",
+        tipo: "Aniversário",
+        descricao: nome,
+        aniversariante: nome,
+        unidade,
+        createdBy: "Planilha de aniversariantes",
+        createdAt: birthEventDate,
+        sortAt: birthEventDate,
+        systemBirthday: true,
+      },
+      {
+        id: `company-birthday-${year}-${index}`,
+        titulo: "Aniversário de empresa",
+        data: companyEventDate,
+        horario: "",
+        responsavel: "",
+        tipo: "Aniversário de empresa",
+        descricao: nome,
+        aniversariante: nome,
+        unidade,
+        admissao: admissionDate,
+        createdBy: "Planilha de aniversariantes",
+        createdAt: companyEventDate,
+        sortAt: companyEventDate,
+        systemBirthday: true,
+      },
+    ];
   })).filter((item) => item.data && item.aniversariante);
+}
+
+function isBirthdayEvent(itemOrType = "") {
+  const type = typeof itemOrType === "object" ? itemOrType.tipo : itemOrType;
+  return normalizeEventType(type).startsWith("aniversario");
+}
+
+function isCompanyBirthdayEvent(item = {}) {
+  return normalizeEventType(item.tipo) === "aniversario de empresa";
+}
+
+function getEventDisplayTitle(item = {}) {
+  if (isCompanyBirthdayEvent(item)) return "Aniversário de empresa";
+  if (isBirthdayEvent(item)) return "Aniversário";
+  return item.titulo || "Evento";
 }
 
 function getAllEvents() {
@@ -2171,8 +2207,8 @@ function getSortedEvents() {
     .sort((a, b) => {
       const dateCompare = String(a.data || "").localeCompare(String(b.data || ""));
       if (dateCompare) return dateCompare;
-      const aBirthday = normalizeEventType(a.tipo) === "aniversario";
-      const bBirthday = normalizeEventType(b.tipo) === "aniversario";
+      const aBirthday = isBirthdayEvent(a);
+      const bBirthday = isBirthdayEvent(b);
       if (aBirthday !== bBirthday) return aBirthday ? 1 : -1;
       return String(a.horario || "00:00").localeCompare(String(b.horario || "00:00"));
     });
@@ -2188,7 +2224,7 @@ function normalizeEventType(value = "") {
 
 function getEventTypeClass(item = {}) {
   const type = normalizeEventType(item.tipo);
-  if (type === "aniversario") return "event-type-birthday";
+  if (type.startsWith("aniversario")) return "event-type-birthday";
   if (type === "entrevista") return "event-type-interview";
   return "";
 }
@@ -2199,15 +2235,15 @@ function getEventTagClass(item = {}) {
 }
 
 function dayHasEventType(events = [], type) {
-  return events.some((item) => normalizeEventType(item.tipo) === type);
+  return events.some((item) => type === "aniversario" ? isBirthdayEvent(item) : normalizeEventType(item.tipo) === type);
 }
 
 function dayHasNonBirthdayEvent(events = []) {
-  return events.some((item) => normalizeEventType(item.tipo) !== "aniversario");
+  return events.some((item) => !isBirthdayEvent(item));
 }
 
 function getEventScheduleMeta(item = {}) {
-  if (normalizeEventType(item.tipo) === "aniversario") return "Dia inteiro";
+  if (isBirthdayEvent(item)) return "Dia inteiro";
   return `${formatEventTime(item.horario)} | Responsavel: ${item.responsavel || "Nao informado"}`;
 }
 
@@ -2224,17 +2260,17 @@ function getBirthdayUnit(item = {}) {
 }
 
 function renderEventTitle(item = {}) {
-  const isBirthday = normalizeEventType(item.tipo) === "aniversario";
-  const title = isBirthday ? item.tipo || "Aniversário" : item.titulo;
+  const isBirthday = isBirthdayEvent(item);
+  const title = isBirthday ? getEventDisplayTitle(item) : item.titulo;
   return `<p class="item-title">${escapeHtml(title || "Evento")}</p>`;
 }
 
 function renderEventDescription(item = {}, className = "") {
-  if (normalizeEventType(item.tipo) === "aniversario") {
+  if (isBirthdayEvent(item)) {
     const aniversariante = getBirthdayPerson(item);
     const unidade = getBirthdayUnit(item);
     const lines = [
-      aniversariante ? `Aniversariante: ${escapeHtml(aniversariante)}` : "",
+      aniversariante ? `${isCompanyBirthdayEvent(item) ? "Colaborador" : "Aniversariante"}: ${escapeHtml(aniversariante)}` : "",
       unidade ? `Unidade: ${escapeHtml(unidade)}` : "",
     ].filter(Boolean);
     return lines.length ? `<p${className ? ` class="${className}"` : ""}>${lines.join("<br>")}</p>` : "";
@@ -2246,7 +2282,7 @@ function renderEventDescription(item = {}, className = "") {
 }
 
 function getEventListMeta(item = {}) {
-  if (normalizeEventType(item.tipo) === "aniversario") return `Data: ${formatEventDate(item.data)}`;
+  if (isBirthdayEvent(item)) return `Data: ${formatEventDate(item.data)}`;
   return `${formatEventDate(item.data)} | ${getEventScheduleMeta(item)}`;
 }
 
@@ -2263,7 +2299,7 @@ function getCompactAgendaItems(events = []) {
   const birthdayGroups = new Map();
 
   events.forEach((item) => {
-    if (normalizeEventType(item.tipo) !== "aniversario") {
+    if (!isBirthdayEvent(item)) {
       items.push({ kind: "event", event: item, dateTime: item.sortAt || item.data || "", priority: 0 });
       return;
     }
@@ -2291,7 +2327,7 @@ function renderCompactAgendaItem(item) {
   }
 
   const birthdays = item.events || [];
-  const title = birthdays.length === 1 ? "Aniversario" : `${birthdays.length} aniversariantes`;
+  const title = birthdays.length === 1 ? getEventDisplayTitle(birthdays[0]) : `${birthdays.length} aniversários`;
   return `
     <li class="event-type-birthday compact-birthday-group">
       <div class="item-topline">
@@ -2569,6 +2605,9 @@ function showDayEventsModal(date) {
             ${renderEventDescription(item, "day-event-description")}
             <p class="item-meta">${escapeHtml(getEventListMeta(item))}</p>
             <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
+            ${item.systemBirthday ? "" : `<div class="job-actions">
+              <button class="secondary-link" type="button" data-action="editar-evento" data-id="${escapeHtml(item.id)}">Editar evento</button>
+            </div>`}
           </article>
         `)
         .join("")
@@ -9280,7 +9319,7 @@ document.getElementById("cancelar-edicao-vaga")?.addEventListener("click", () =>
 const eventoForm = document.getElementById("evento-form");
 if (eventoForm) {
   const updateEventoFormByType = () => {
-    const isBirthday = normalizeEventType(eventoForm.elements.tipo?.value) === "aniversario";
+    const isBirthday = isBirthdayEvent(eventoForm.elements.tipo?.value);
     eventoForm.querySelectorAll("[data-event-title-field], [data-event-required-field], [data-event-optional-field]").forEach((field) => {
       field.hidden = isBirthday;
       field.querySelectorAll("input, textarea, select").forEach((input) => {
@@ -9342,16 +9381,16 @@ if (eventoForm) {
     }
     eventoDataInput?.setCustomValidity("");
 
-    const isBirthday = normalizeEventType(form.get("tipo")) === "aniversario";
+    const isBirthday = isBirthdayEvent(form.get("tipo"));
     const aniversariante = String(form.get("aniversariante") || "").trim();
     const unidadeAniversariante = String(form.get("unidade_aniversariante") || "").trim();
     const editingEvent = id ? (data.eventos || []).find((item) => String(item.id) === String(id)) : null;
     const payload = {
-      titulo: isBirthday ? "Aniversário" : form.get("titulo"),
+      titulo: isBirthday ? getEventDisplayTitle({ tipo: form.get("tipo") }) : form.get("titulo"),
       data: dataIso,
       horario: isBirthday ? "" : form.get("horario"),
       responsavel: isBirthday ? "" : form.get("responsavel"),
-      tipo: isBirthday ? "Aniversário" : form.get("tipo"),
+      tipo: isBirthday ? getEventDisplayTitle({ tipo: form.get("tipo") }) : form.get("tipo"),
       descricao: isBirthday ? aniversariante : form.get("descricao"),
       unidade: isBirthday ? unidadeAniversariante : "",
       createdBy: editingEvent?.createdBy || getCurrentUserName(),
@@ -9382,6 +9421,10 @@ document.getElementById("cancelar-edicao-evento")?.addEventListener("click", () 
 document.getElementById("toggle-dashboard-calendar-view")?.addEventListener("click", () => {
   dashboardCalendarViewMode = dashboardCalendarViewMode === "week" ? "month" : "week";
   renderDashboardCalendar();
+});
+
+document.getElementById("edit-calendar-events")?.addEventListener("click", () => {
+  document.getElementById("eventos-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.getElementById("previous-calendar-month")?.addEventListener("click", () => {
@@ -10680,10 +10723,10 @@ function editarEvento(id) {
   form.elements.tipo.value = evento.tipo || "Evento";
   form.elements.descricao.value = evento.descricao || "";
   if (form.elements.aniversariante) {
-    form.elements.aniversariante.value = normalizeEventType(evento.tipo) === "aniversario" ? getBirthdayPerson(evento) : "";
+    form.elements.aniversariante.value = isBirthdayEvent(evento) ? getBirthdayPerson(evento) : "";
   }
   if (form.elements.unidade_aniversariante) {
-    setFieldValue(form.elements.unidade_aniversariante, normalizeEventType(evento.tipo) === "aniversario" ? getBirthdayUnit(evento) : "");
+    setFieldValue(form.elements.unidade_aniversariante, isBirthdayEvent(evento) ? getBirthdayUnit(evento) : "");
   }
   form.elements.tipo?.dispatchEvent(new Event("change"));
   document.getElementById("cancelar-edicao-evento")?.removeAttribute("hidden");
@@ -11267,7 +11310,10 @@ document.addEventListener('click', (event) => {
     case 'open-dashboard-activity': openDashboardActivity(target.dataset.index); break;
     case 'editar-vaga': editarVaga(id); break;
     case 'excluir-vaga': excluirVaga(id); break;
-    case 'editar-evento': editarEvento(id); break;
+    case 'editar-evento':
+      document.getElementById("custom-modal")?.remove();
+      editarEvento(id);
+      break;
     case 'excluir-evento': excluirEvento(id); break;
     case 'editar-vt': editarVtRegistro(id); break;
     case 'excluir-vt': excluirVtRegistro(id); break;
