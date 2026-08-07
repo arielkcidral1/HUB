@@ -2556,7 +2556,7 @@ textarea {
 
 .chat-composer {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
   align-self: end;
@@ -2567,6 +2567,7 @@ textarea {
   border-radius: 0;
   background: transparent;
   position: relative;
+  z-index: 5;
 }
 
 .chat-composer textarea[name="mensagem"],
@@ -3008,13 +3009,15 @@ textarea {
 }
 
 .chat-attachment-preview {
-  order: -1;
-  flex: 1 0 100%;
-  position: relative;
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(100% + 10px);
+  z-index: 30;
   display: grid;
-  grid-template-rows: auto minmax(220px, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 0;
-  max-height: min(360px, 42vh);
+  max-height: min(320px, calc(100vh - 260px));
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -4663,23 +4666,27 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer {
-    align-items: flex-end;
+    align-items: center;
+    flex-wrap: nowrap;
     gap: 8px;
   }
 
   .chat-composer textarea[name="mensagem"] {
-    flex: 1 1 100%;
-    order: 2;
+    flex: 1 1 auto;
+    min-width: 0;
+    order: 0;
   }
 
   .chat-message-editor {
-    flex: 1 1 100%;
-    order: 2;
+    flex: 1 1 auto;
+    min-width: 0;
+    order: 0;
   }
 
   .chat-attachment-preview {
-    order: -1;
-    flex-basis: 100%;
+    left: 8px;
+    right: 8px;
+    bottom: calc(100% + 8px);
   }
 
   .chat-attach-menu-wrap,
@@ -4687,7 +4694,7 @@ form.panel[data-public-chamados="true"].panel {
   .poll-button,
   .record-audio-button,
   .send-button {
-    order: 3;
+    order: 0;
   }
 
   .calendar-actions {
@@ -4745,8 +4752,8 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-attachment-preview {
     min-height: 0;
-    max-height: min(300px, 38vh);
-    grid-template-rows: auto minmax(180px, 1fr) auto;
+    max-height: min(260px, 34vh);
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
   .chat-preview-image {
