@@ -313,6 +313,9 @@ let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
 const localChatEchoMessages = new Map();
 const locallyDeletedChatMessageIds = new Set();
+let chatMutationInFlight = 0;
+let chatMutationVersion = 0;
+let chatRefreshQueuedAfterMutation = false;
 window.editingDocId = null;
 
 const documentLabels = {
@@ -3359,6 +3362,37 @@ function mergeLocalChatMessages(freshMessages = [], currentMessages = data.comun
   return [...localById.values(), ...visibleFreshMessages];
 }
 
+function beginChatMutation() {
+  chatMutationInFlight += 1;
+  chatMutationVersion += 1;
+  return chatMutationVersion;
+}
+
+function shouldDeferChatRefresh(loadMutationVersion) {
+  return chatMutationInFlight > 0 || loadMutationVersion !== chatMutationVersion;
+}
+
+function runQueuedChatRefreshAfterMutation() {
+  if (!chatRefreshQueuedAfterMutation || chatMutationInFlight > 0) return;
+  if (refreshInProgress) {
+    window.setTimeout(runQueuedChatRefreshAfterMutation, 100);
+    return;
+  }
+
+  chatRefreshQueuedAfterMutation = false;
+  refreshFromPostgreSQL();
+}
+
+function queueChatRefreshAfterMutation() {
+  chatRefreshQueuedAfterMutation = true;
+  window.setTimeout(runQueuedChatRefreshAfterMutation, 0);
+}
+
+function endChatMutation() {
+  chatMutationInFlight = Math.max(0, chatMutationInFlight - 1);
+  runQueuedChatRefreshAfterMutation();
+}
+
 function isMatchingPendingChatMessage(pending, saved) {
   if (!pending?._pending || !saved) return false;
   if (normalizeChatChannel(pending.canal) !== normalizeChatChannel(saved.canal)) return false;
@@ -3695,6 +3729,7 @@ function withoutOptionalApplicationColumns(payload) {
 
 async function loadFromPostgreSQL(options = {}) {
   const { setupLive = true } = options;
+  const chatLoadMutationVersion = chatMutationVersion;
 
   if (!postgresClient) {
     setSyncStatus("Modo local", false);
@@ -3755,9 +3790,16 @@ async function loadFromPostgreSQL(options = {}) {
       if (result.status === "fulfilled") {
         const [collection, rows] = result.value;
 
-        data[collection] = collection === "comunicados"
-          ? mergeLocalChatMessages(rows, data.comunicados)
-          : rows;
+        if (collection === "comunicados") {
+          if (shouldDeferChatRefresh(chatLoadMutationVersion)) {
+            queueChatRefreshAfterMutation();
+            return;
+          }
+          data[collection] = mergeLocalChatMessages(rows, data.comunicados);
+          return;
+        }
+
+        data[collection] = rows;
       } else {
         console.error("Erro ao carregar colecao do PostgreSQL:", result.reason);
       }
@@ -4756,9 +4798,13 @@ async function addChatMessage(values) {
 }
 
 async function deleteChatMessageRecord(id) {
+  beginChatMutation();
   const current = data.comunicados || [];
   const removed = current.find((item) => String(item.id) === String(id));
-  if (!removed) return false;
+  if (!removed) {
+    endChatMutation();
+    return false;
+  }
 
   rememberDeletedChatMessage(id);
   data.comunicados = current.filter((item) => String(item.id) !== String(id));
@@ -4769,7 +4815,10 @@ async function deleteChatMessageRecord(id) {
     renderChatChannels();
   }, 0);
 
-  if (!postgresClient || String(id).startsWith("pending-")) return true;
+  if (!postgresClient || String(id).startsWith("pending-")) {
+    endChatMutation();
+    return true;
+  }
 
   try {
     const { data: deletedRows, error } = await postgresClient
@@ -4796,6 +4845,8 @@ async function deleteChatMessageRecord(id) {
     setSyncStatus("Erro no chat", false);
     showModal("Erro ao excluir", "Nao foi possivel excluir a mensagem. Confira a conexao e tente novamente.", "error");
     return false;
+  } finally {
+    endChatMutation();
   }
 }
 
@@ -9354,6 +9405,7 @@ if (chatForm) {
     const messageAuthor = getCurrentUserName();
     const messageChannel = activeChatChannel;
     const pendingCreatedAt = new Date().toISOString();
+    beginChatMutation();
 
     // -- OTIMISMO: mostra a mensagem imediatamente --------------------------
     const pendingMessages = files.length
@@ -9393,6 +9445,7 @@ if (chatForm) {
     }, 0);
 
     window.setTimeout(async () => {
+    try {
     // -- UPLOAD de arquivos em background ----------------------------------
     const uploadedFiles = [];
     try {
@@ -9439,6 +9492,9 @@ if (chatForm) {
 
     if (savedMessages.some((message) => !message)) {
       renderChat({ skipPostRender: true });
+    }
+    } finally {
+      endChatMutation();
     }
     }, 0);
   });
