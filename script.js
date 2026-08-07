@@ -2138,7 +2138,8 @@ function getCompanyBirthdayEvents() {
   const birthdays = Array.isArray(window.HUB_COMPANY_BIRTHDAYS) ? window.HUB_COMPANY_BIRTHDAYS : [];
   const visibleYear = visibleCalendarDate instanceof Date ? visibleCalendarDate.getFullYear() : new Date().getFullYear();
   const currentYear = new Date().getFullYear();
-  const years = [...new Set([currentYear, currentYear + 1, visibleYear])];
+  const years = [...new Set([currentYear, currentYear + 1, visibleYear])].filter((year) => year <= 2026);
+  const seenBirthdayNames = new Set();
   return years.flatMap((year) => birthdays.flatMap((item, index) => {
     const birthDate = String(item.nascimento || "");
     const admissionDate = String(item.admissao || "");
@@ -2147,6 +2148,9 @@ function getCompanyBirthdayEvents() {
     const birthEventDate = /^\d{2}-\d{2}$/.test(birthMonthDay) ? `${year}-${birthMonthDay}` : "";
     const companyEventDate = /^\d{2}-\d{2}$/.test(admissionMonthDay) ? `${year}-${admissionMonthDay}` : "";
     const nome = String(item.nome || "").trim();
+    const nameKey = `${year}:${normalizeLoginName(nome)}`;
+    if (!nome || seenBirthdayNames.has(nameKey)) return [];
+    seenBirthdayNames.add(nameKey);
     const usuario = (data.usuarios || []).find((user) => normalizeLoginName(user.nome) === normalizeLoginName(nome));
     const unidade = item.unidade || usuario?.unidade || usuario?.cargoUnidade || "";
     return [
@@ -12730,7 +12734,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /* ========================================================================
-   ATESTADOS PUBLICOS + ABA INTERNA DE VISUALIZA��O
+   ATESTADOS PUBLICOS + ABA INTERNA DE VISUALIZAÇÃO
    ======================================================================== */
 (function setupAtestadosModule() {
   const ATESTADOS_TABLE = "hub_atestados";
@@ -12951,11 +12955,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     applyLocal();
-    showModal?.("Status atualizado localmente", "Sem PostgreSQL ativo, a altera��o ficou salva apenas neste navegador.", "info");
+    showModal?.("Status atualizado localmente", "Sem PostgreSQL ativo, a alteração ficou salva apenas neste navegador.", "info");
   }
 
   async function uploadPublicAtestado({ nome, cpf, telefone, unidade, file }) {
-    if (!postgresClient) throw new Error("PostgreSQL indisponível. Verifique a configura��o p�blica do HUB.");
+    if (!postgresClient) throw new Error("PostgreSQL indisponível. Verifique a configuração pública do HUB.");
 
     const cpfDigits = normalizeCpf(cpf);
     const safeName = safeStorageFileName(file.name || "atestado.pdf");
@@ -12980,7 +12984,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // IMPORTANTE:
-    // Não usar .select().single() no envio p�blico.
+    // Não usar .select().single() no envio público.
     // O visitante/anon tem permissão apenas para INSERIR, não para LER a tabela.
     // Quando o INSERT pede retorno com .select(), o PostgreSQL tenta aplicar SELECT
     // e pode retornar erro de RLS mesmo com a policy de INSERT correta.
