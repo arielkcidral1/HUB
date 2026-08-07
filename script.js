@@ -196,7 +196,6 @@ const TABLES = {
 };
 let publicVagaCargoFilter = "";
 let publicVagaCidadeFilter = "";
-let publicVagaUnidadeFilter = "";
 let chatAudioRecorder = null;
 let chatAudioChunks = [];
 let chatAudioStream = null;
@@ -379,6 +378,34 @@ function getCanonicalUnit(value) {
   if (exactMatch) return exactMatch;
   if (UNIT_ALIASES[normalized]) return UNIT_ALIASES[normalized];
   return raw;
+}
+
+const UNIT_CITY_ALIASES = {
+  mtz: "Joinville",
+  sbs: "Sao Bento do Sul",
+  itj: "Itajai",
+  plc: "Balneario Picarras",
+  gua: "Guaramirim",
+  "dpa jc": "Jaragua do Sul",
+  "dpa iri": "Irineopolis",
+  jpl: "Joinville",
+  bc: "Balneario Camboriu",
+  gcs: "Joinville",
+  jrg: "Jaragua do Sul",
+  brq: "Brusque",
+  fln: "Florianopolis",
+  fac: "Florianopolis",
+  rng: "Rio Negrinho",
+  bnu: "Blumenau",
+  trinca: "Joinville",
+  ara: "Araquari",
+};
+
+function getUnitCity(value) {
+  const unit = getCanonicalUnit(value);
+  const text = normalizeUnitText(unit).replace(/^\d+\s*-\s*/, "");
+  const key = Object.keys(UNIT_CITY_ALIASES).find((alias) => text.includes(alias));
+  return key ? UNIT_CITY_ALIASES[key] : "";
 }
 
 const EPI_OPTIONS = [
@@ -2114,6 +2141,8 @@ function getCompanyBirthdayEvents() {
     const monthDay = birthDate.slice(5);
     const date = /^\d{2}-\d{2}$/.test(monthDay) ? `${year}-${monthDay}` : "";
     const nome = String(item.nome || "").trim();
+    const usuario = (data.usuarios || []).find((user) => normalizeLoginName(user.nome) === normalizeLoginName(nome));
+    const unidade = item.unidade || usuario?.unidade || usuario?.cargoUnidade || "";
     return {
       id: `birthday-${year}-${index}`,
       titulo: "Aniversario",
@@ -2123,6 +2152,7 @@ function getCompanyBirthdayEvents() {
       tipo: "Aniversario",
       descricao: nome,
       aniversariante: nome,
+      unidade,
       createdBy: "Planilha de aniversariantes",
       createdAt: date,
       sortAt: date,
@@ -2185,6 +2215,14 @@ function getBirthdayPerson(item = {}) {
   return String(item.aniversariante || item.descricao || "").trim();
 }
 
+function getBirthdayUnit(item = {}) {
+  const directUnit = String(item.unidade || "").trim();
+  if (directUnit) return getCanonicalUnit(directUnit);
+  const name = getBirthdayPerson(item);
+  const usuario = (data.usuarios || []).find((user) => normalizeLoginName(user.nome) === normalizeLoginName(name));
+  return getCanonicalUnit(usuario?.unidade || usuario?.cargoUnidade || "");
+}
+
 function renderEventTitle(item = {}) {
   const isBirthday = normalizeEventType(item.tipo) === "aniversario";
   const title = isBirthday ? item.tipo || "Aniversário" : item.titulo;
@@ -2194,7 +2232,12 @@ function renderEventTitle(item = {}) {
 function renderEventDescription(item = {}, className = "") {
   if (normalizeEventType(item.tipo) === "aniversario") {
     const aniversariante = getBirthdayPerson(item);
-    return aniversariante ? `<p${className ? ` class="${className}"` : ""}>Aniversariante: ${escapeHtml(aniversariante)}</p>` : "";
+    const unidade = getBirthdayUnit(item);
+    const lines = [
+      aniversariante ? `Aniversariante: ${escapeHtml(aniversariante)}` : "",
+      unidade ? `Unidade: ${escapeHtml(unidade)}` : "",
+    ].filter(Boolean);
+    return lines.length ? `<p${className ? ` class="${className}"` : ""}>${lines.join("<br>")}</p>` : "";
   }
   const description = String(item.descricao || "").trim();
   const text = description || "Sem observacoes adicionais.";
@@ -2427,7 +2470,6 @@ function showPublicVagaFiltersModal() {
       <div class="modal-header info">Filtrar vagas</div>
       <div class="modal-body public-filter-modal-body">
         <button class="secondary-link public-filter-option" type="button" data-action="open-cargo-filter">Filtrar por Cargo</button>
-        <button class="secondary-link public-filter-option" type="button" data-action="open-unidade-filter">Filtrar por Unidade</button>
       </div>
       <div class="modal-footer modal-footer-split">
         <button class="secondary-link" type="button" data-action="clear-vaga-filters">Limpar</button>
@@ -2442,17 +2484,13 @@ function showPublicVagaFiltersModal() {
   });
   overlay.querySelector('[data-action="clear-vaga-filters"]')?.addEventListener("click", () => {
     publicVagaCargoFilter = "";
-    publicVagaUnidadeFilter = "";
+    publicVagaCidadeFilter = "";
     renderPublicVagas();
     close();
   });
   overlay.querySelector('[data-action="open-cargo-filter"]')?.addEventListener("click", () => {
     close();
     showPublicVagaSingleFilterModal("cargo");
-  });
-  overlay.querySelector('[data-action="open-unidade-filter"]')?.addEventListener("click", () => {
-    close();
-    showPublicVagaSingleFilterModal("unidade");
   });
   overlay.querySelector('[data-action="close-modal"]')?.addEventListener("click", close);
 
@@ -2461,11 +2499,10 @@ function showPublicVagaFiltersModal() {
 }
 
 function showPublicVagaSingleFilterModal(type) {
-  const isCargo = type === "cargo";
-  const title = isCargo ? "Filtrar por Cargo" : "Filtrar por Unidade";
-  const label = isCargo ? "Cargo" : "Unidade destinada";
-  const inputId = isCargo ? "modal-vaga-cargo-filter" : "modal-vaga-unidade-filter";
-  const currentValue = isCargo ? publicVagaCargoFilter : publicVagaUnidadeFilter;
+  const title = "Filtrar por Cargo";
+  const label = "Cargo";
+  const inputId = "modal-vaga-cargo-filter";
+  const currentValue = publicVagaCargoFilter;
 
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
@@ -2491,8 +2528,7 @@ function showPublicVagaSingleFilterModal(type) {
   const close = () => overlay.remove();
   const apply = () => {
     const value = overlay.querySelector(`#${inputId}`)?.value.trim() || "";
-    if (isCargo) publicVagaCargoFilter = value;
-    else publicVagaUnidadeFilter = value;
+    publicVagaCargoFilter = value;
     renderPublicVagas();
     close();
   };
@@ -6619,17 +6655,15 @@ function fillPublicVagaDatalist(id, values = []) {
 function updatePublicVagaFilterOptions(openVagas = []) {
   fillPublicVagaDatalist("public-vaga-cargo-options", openVagas.map((vaga) => vaga.cargo));
   fillPublicVagaDatalist("public-vaga-cidade-options", openVagas.map(getPublicVagaCidade));
-  fillPublicVagaDatalist("public-vaga-unidade-options", openVagas.map((vaga) => getCanonicalUnit(vaga.unidade) || vaga.unidade));
 }
 
 function updatePublicVagaFilterControls(openVagas = []) {
   syncPublicVagaFilterInput("public-vaga-cargo-filter", publicVagaCargoFilter);
   syncPublicVagaFilterInput("public-vaga-cidade-filter", publicVagaCidadeFilter);
-  syncPublicVagaFilterInput("public-vaga-unidade-filter", publicVagaUnidadeFilter);
   updatePublicVagaFilterOptions(openVagas);
   const clearButton = document.getElementById("clear-public-vaga-filters");
   if (clearButton) {
-    clearButton.hidden = !Boolean(publicVagaCargoFilter || publicVagaCidadeFilter || publicVagaUnidadeFilter);
+    clearButton.hidden = !Boolean(publicVagaCargoFilter || publicVagaCidadeFilter);
   }
 }
 
@@ -6641,13 +6675,11 @@ function renderPublicVagas() {
 
   const cargoFilter = String(publicVagaCargoFilter || "").trim().toLowerCase();
   const cidadeFilter = String(publicVagaCidadeFilter || "").trim().toLowerCase();
-  const unidadeFilter = String(publicVagaUnidadeFilter || "").trim().toLowerCase();
   const allOpenVagas = data.vagas.filter(v => isOpenJobStatus(v.status));
   updatePublicVagaFilterControls(allOpenVagas);
   const openVagas = allOpenVagas
     .filter(v => !cargoFilter || String(v.cargo || "").toLowerCase().includes(cargoFilter))
-    .filter(v => !cidadeFilter || getPublicVagaCidade(v).toLowerCase().includes(cidadeFilter))
-    .filter(v => !unidadeFilter || String(getCanonicalUnit(v.unidade) || v.unidade || "").toLowerCase().includes(unidadeFilter));
+    .filter(v => !cidadeFilter || getPublicVagaCidade(v).toLowerCase().includes(cidadeFilter));
   const selectedVaga = new URLSearchParams(window.location.search).get("vaga");
 
   if (!openVagas.length) {
@@ -8794,14 +8826,9 @@ document.getElementById("public-vaga-cidade-filter")?.addEventListener("input", 
   publicVagaCidadeFilter = event.currentTarget.value.trim();
   renderPublicVagas();
 });
-document.getElementById("public-vaga-unidade-filter")?.addEventListener("input", (event) => {
-  publicVagaUnidadeFilter = event.currentTarget.value.trim();
-  renderPublicVagas();
-});
 document.getElementById("clear-public-vaga-filters")?.addEventListener("click", () => {
   publicVagaCargoFilter = "";
   publicVagaCidadeFilter = "";
-  publicVagaUnidadeFilter = "";
   renderPublicVagas();
 });
 
@@ -9078,7 +9105,7 @@ if (chatForm) {
       data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
       renderChat();
       setSyncStatus("Erro no anexo", false);
-      showModal("Erro no Anexo", "Nao foi possivel enviar um dos arquivos. Verifique a conexao e tente novamente.", "error");
+      showModal("Erro no Anexo", error?.message || "Nao foi possivel enviar um dos arquivos. Verifique a conexao e tente novamente.", "error");
       return;
     }
 
@@ -9264,7 +9291,7 @@ if (eventoForm) {
     });
     eventoForm.querySelectorAll("[data-event-birthday-field]").forEach((field) => {
       field.hidden = !isBirthday;
-      field.querySelectorAll("input").forEach((input) => {
+      field.querySelectorAll("input, select").forEach((input) => {
         input.required = isBirthday;
         if (!isBirthday) {
           input.value = "";
@@ -9315,6 +9342,7 @@ if (eventoForm) {
 
     const isBirthday = normalizeEventType(form.get("tipo")) === "aniversario";
     const aniversariante = String(form.get("aniversariante") || "").trim();
+    const unidadeAniversariante = String(form.get("unidade_aniversariante") || "").trim();
     const editingEvent = id ? (data.eventos || []).find((item) => String(item.id) === String(id)) : null;
     const payload = {
       titulo: isBirthday ? "Aniversário" : form.get("titulo"),
@@ -9323,6 +9351,7 @@ if (eventoForm) {
       responsavel: isBirthday ? "" : form.get("responsavel"),
       tipo: isBirthday ? "Aniversário" : form.get("tipo"),
       descricao: isBirthday ? aniversariante : form.get("descricao"),
+      unidade: isBirthday ? unidadeAniversariante : "",
       createdBy: editingEvent?.createdBy || getCurrentUserName(),
     };
     const success = id ? await updateItem("eventos", id, { ...payload, updatedBy: getCurrentUserName() }) : await addItem("eventos", payload);
@@ -9454,6 +9483,13 @@ document.querySelectorAll("[data-disciplinary-doc]").forEach((button) => {
 });
 
 document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
+  const unitField = formElement.elements.unidade;
+  const localField = formElement.elements.local;
+  unitField?.addEventListener("change", () => {
+    const city = getUnitCity(unitField.value);
+    if (localField && city) localField.value = city;
+  });
+
   formElement.addEventListener("submit", (event) => {
     event.preventDefault();
     const form = new FormData(formElement);
@@ -10498,7 +10534,7 @@ function openChatMessageContextMenu(event, id) {
   menu.style.left = `${event.clientX}px`;
   menu.style.top = `${event.clientY}px`;
   menu.innerHTML = `
-    <button type="button" data-chat-message-action="edit" ${canEdit ? "" : "disabled"}>Editar mensagem</button>
+    ${canEdit ? '<button type="button" data-chat-message-action="edit">Editar mensagem</button>' : ""}
     <button type="button" class="danger" data-chat-message-action="delete">Excluir mensagem</button>
   `;
   menu.addEventListener("click", async (clickEvent) => {
@@ -10643,6 +10679,9 @@ function editarEvento(id) {
   form.elements.descricao.value = evento.descricao || "";
   if (form.elements.aniversariante) {
     form.elements.aniversariante.value = normalizeEventType(evento.tipo) === "aniversario" ? getBirthdayPerson(evento) : "";
+  }
+  if (form.elements.unidade_aniversariante) {
+    setFieldValue(form.elements.unidade_aniversariante, normalizeEventType(evento.tipo) === "aniversario" ? getBirthdayUnit(evento) : "");
   }
   form.elements.tipo?.dispatchEvent(new Event("change"));
   document.getElementById("cancelar-edicao-evento")?.removeAttribute("hidden");
