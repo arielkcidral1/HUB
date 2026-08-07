@@ -1511,33 +1511,33 @@ textarea {
   border-radius: 999px;
   background: var(--surface);
   color: var(--teal-dark);
-  font-size: 12px;
+  font-size: 9.5px;
   font-weight: 900;
   line-height: 1;
 }
 
 .event-icon-default {
-  border-color: rgba(12, 98, 89, 0.28);
-  background: rgba(12, 98, 89, 0.1);
-  color: var(--teal-dark);
+  border-color: rgba(13, 148, 136, 0.55);
+  background: rgba(13, 148, 136, 0.18);
+  color: #0f766e;
 }
 
 .event-icon-birthday {
-  border-color: rgba(202, 138, 4, 0.38);
-  background: rgba(202, 138, 4, 0.16);
-  color: #7c4a03;
+  border-color: rgba(245, 158, 11, 0.65);
+  background: rgba(245, 158, 11, 0.22);
+  color: #92400e;
 }
 
 .event-icon-company {
-  border-color: rgba(92, 65, 22, 0.35);
-  background: rgba(92, 65, 22, 0.14);
-  color: #5c4116;
+  border-color: rgba(147, 51, 234, 0.58);
+  background: rgba(147, 51, 234, 0.18);
+  color: #6d28d9;
 }
 
 .event-icon-interview {
-  border-color: rgba(79, 70, 229, 0.32);
-  background: rgba(79, 70, 229, 0.12);
-  color: #312e81;
+  border-color: rgba(37, 99, 235, 0.58);
+  background: rgba(37, 99, 235, 0.16);
+  color: #1d4ed8;
 }
 
 .calendar-event-block .item-title {
@@ -3679,7 +3679,8 @@ textarea {
   margin-top: 8px;
 }
 
-.birthday-chip-list span {
+.birthday-chip-list span,
+.birthday-chip-list button {
   display: inline-flex;
   align-items: center;
   max-width: 100%;
@@ -3692,6 +3693,18 @@ textarea {
   font-size: 11px;
   font-weight: 800;
   line-height: 1.2;
+}
+
+.birthday-chip-list button {
+  cursor: pointer;
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+.birthday-chip-list button:hover {
+  border-color: rgba(245, 158, 11, 0.58);
+  background: rgba(245, 158, 11, 0.18);
+  color: #92400e;
 }
 
 .item-card.event-type-interview,

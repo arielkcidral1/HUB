@@ -2238,10 +2238,10 @@ function getEventTagClass(item = {}) {
 }
 
 function getEventIcon(item = {}) {
-  if (isCompanyBirthdayEvent(item)) return { icon: "◆", className: "event-icon-company", label: "Aniversário de empresa" };
-  if (isBirthdayEvent(item)) return { icon: "★", className: "event-icon-birthday", label: "Aniversário" };
-  if (normalizeEventType(item.tipo) === "entrevista") return { icon: "✦", className: "event-icon-interview", label: "Entrevista" };
-  return { icon: "•", className: "event-icon-default", label: "Evento" };
+  if (isCompanyBirthdayEvent(item)) return { icon: "AE", className: "event-icon-company", label: "Aniversário de empresa" };
+  if (isBirthdayEvent(item)) return { icon: "AN", className: "event-icon-birthday", label: "Aniversário" };
+  if (normalizeEventType(item.tipo) === "entrevista") return { icon: "EN", className: "event-icon-interview", label: "Entrevista" };
+  return { icon: "EV", className: "event-icon-default", label: "Evento" };
 }
 
 function dayHasEventType(events = [], type) {
@@ -2373,13 +2373,13 @@ function renderCompactAgendaItem(item) {
   const birthdays = item.events || [];
   const title = birthdays.length === 1 ? getEventDisplayTitle(birthdays[0]) : `${birthdays.length} aniversários`;
   return `
-    <li class="calendar-event-block calendar-event-dashboard-block event-type-birthday compact-birthday-group" data-action="visualizar-evento" data-id="${escapeHtml(birthdays[0]?.id || "")}" role="button" tabindex="0">
+    <li class="calendar-event-block calendar-event-dashboard-block event-type-birthday compact-birthday-group">
       <div class="item-topline">
         <p class="item-title">${escapeHtml(title)}</p>
         <span class="tag event-tag event-type-birthday">${escapeHtml(formatEventDate(item.date))}</span>
       </div>
       <div class="birthday-chip-list">
-        ${birthdays.map((birthday) => `<span>${escapeHtml(getBirthdayPerson(birthday))}</span>`).join("")}
+        ${birthdays.map((birthday) => `<button type="button" data-action="visualizar-evento" data-id="${escapeHtml(birthday.id)}">${escapeHtml(getBirthdayPerson(birthday))}</button>`).join("")}
       </div>
     </li>
   `;
