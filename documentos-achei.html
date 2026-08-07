@@ -25,8 +25,11 @@
             <h2>Acesso restrito</h2>
           </div>
           <p class="item-meta">Informe a senha recebida para acessar o envio de documentos.</p>
-          <label>Senha de acesso
-            <input name="senha_acesso" type="password" autocomplete="off" required />
+          <label class="public-password-label">Senha de acesso
+            <span class="public-password-control">
+              <input id="contractor-access-password" name="senha_acesso" type="password" autocomplete="off" required />
+              <button class="password-visibility-button" type="button" data-toggle-public-password="contractor-access-password" aria-pressed="false">Exibir</button>
+            </span>
           </label>
           <button class="primary-button" type="submit">Acessar</button>
         </form>

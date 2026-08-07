@@ -1464,6 +1464,7 @@ function getSelectedMaloteDestino() {
 function getMaloteFilterValues() {
   return {
     destino: String(document.getElementById("malote-destino-filter")?.value || "").trim().toLowerCase(),
+    status: normalizeEventType(document.getElementById("malote-status-filter")?.value || ""),
     colaborador: String(document.getElementById("malote-filter-colaborador")?.value || "").trim().toLowerCase(),
     codigo: String(document.getElementById("malote-code-search")?.value || "").trim(),
   };
@@ -1486,12 +1487,14 @@ function getMaloteCodeSearch() {
 function getFilteredMalotes() {
   const filters = getMaloteFilterValues();
   const selectedDestino = filters.destino;
+  const selectedStatus = filters.status;
   const selectedColaborador = filters.colaborador;
   const search = filters.codigo;
   const searchDigits = search.replace(/\D/g, "");
 
   return data.malotes.filter((item) => {
     if (selectedDestino && String(item.destino || "").toLowerCase() !== selectedDestino) return false;
+    if (selectedStatus && normalizeEventType(item.status) !== selectedStatus) return false;
     if (selectedColaborador && !getMaloteCollaboratorSearchText(item).includes(selectedColaborador)) return false;
     if (!searchDigits) return true;
 
@@ -7881,6 +7884,7 @@ function getVagasFilterValues() {
     unidade: String(document.getElementById("vaga-filter-unidade")?.value || "").trim(),
     nome: String(document.getElementById("vaga-filter-nome")?.value || "").trim().toLowerCase(),
     cpf: String(document.getElementById("vaga-filter-cpf")?.value || "").replace(/\D/g, ""),
+    cargo: String(document.getElementById("vaga-filter-cargo")?.value || "").trim().toLowerCase(),
   };
 }
 
@@ -7899,16 +7903,25 @@ function filterVagasByCurrentFilters(items = []) {
   const filters = getVagasFilterValues();
   return items.filter((item) => {
     if (filters.unidade && getCanonicalUnit(item.unidade) !== filters.unidade) return false;
+    if (filters.cargo && !String(item.cargo || "").toLowerCase().includes(filters.cargo)) return false;
     if ((filters.nome || filters.cpf) && !getVagaCandidaturas(item.id, filters).length) return false;
     return true;
   });
+}
+
+function updateVagaCargoFilterOptions(items = data.vagas || []) {
+  const datalist = document.getElementById("vaga-cargo-options");
+  if (!datalist) return;
+  const cargos = [...new Set(items.map((item) => String(item.cargo || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  datalist.innerHTML = cargos.map((cargo) => `<option value="${escapeHtml(cargo)}"></option>`).join("");
 }
 
 function updateVagasFilterClearButton() {
   const clearButton = document.getElementById("limpar-filtros-vagas");
   if (!clearButton) return;
   const filters = getVagasFilterValues();
-  clearButton.hidden = !Boolean(filters.unidade || filters.nome || filters.cpf);
+  clearButton.hidden = !Boolean(filters.unidade || filters.nome || filters.cpf || filters.cargo);
 }
 
 function updateChamadosFilterClearButton() {
@@ -8033,6 +8046,7 @@ function renderAll() {
   renderChamadosSection();
   renderBoards();
 
+  updateVagaCargoFilterOptions(data.vagas || []);
   updateVagasFilterClearButton();
   const vagasFilters = getVagasFilterValues();
   renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
@@ -8780,6 +8794,10 @@ document.getElementById("malote-destino-filter")?.addEventListener("change", () 
   renderAll();
 });
 
+document.getElementById("malote-status-filter")?.addEventListener("change", () => {
+  renderAll();
+});
+
 document.getElementById("malote-filter-colaborador")?.addEventListener("input", renderAll);
 
 document.getElementById("malote-code-search")?.addEventListener("input", () => {
@@ -8805,12 +8823,13 @@ document.getElementById("limpar-filtros-chamados")?.addEventListener("click", ()
 
 document.getElementById("vaga-filter-unidade")?.addEventListener("change", renderAll);
 document.getElementById("vaga-filter-nome")?.addEventListener("input", renderAll);
+document.getElementById("vaga-filter-cargo")?.addEventListener("input", renderAll);
 document.getElementById("vaga-filter-cpf")?.addEventListener("input", (event) => {
   event.currentTarget.value = formatCpf(event.currentTarget.value);
   renderAll();
 });
 document.getElementById("limpar-filtros-vagas")?.addEventListener("click", () => {
-  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf"].forEach((id) => {
+  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf", "vaga-filter-cargo"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
@@ -10157,13 +10176,24 @@ if (contratadoDocForm) {
     const form = new FormData(event.currentTarget);
     const password = String(form.get("senha_acesso") || "");
     const expectedPassword = String(contractorLayout?.dataset.contractorPassword || "");
-    if (password !== expectedPassword) {
+    if (!matchesContractorAccessPassword(password, expectedPassword)) {
       showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
       return;
     }
     contractorAccessPassword = expectedPassword;
     contractorPasswordForm.hidden = true;
     contratadoDocForm.hidden = false;
+  });
+
+  document.querySelectorAll("[data-toggle-public-password]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const input = document.getElementById(button.dataset.togglePublicPassword || "");
+      if (!input) return;
+      const isVisible = input.type === "text";
+      input.type = isVisible ? "password" : "text";
+      button.textContent = isVisible ? "Exibir" : "Ocultar";
+      button.setAttribute("aria-pressed", String(!isVisible));
+    });
   });
 
   document.getElementById("telefone-input")?.addEventListener("input", (event) => {

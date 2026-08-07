@@ -409,6 +409,13 @@
                   <option value="">Todos os destinos</option>
                 </select>
               </label>
+              <label>Filtrar por status
+                <select id="malote-status-filter" aria-label="Filtrar malotes por status">
+                  <option value="">Todos os status</option>
+                  <option value="Entrega">Entregues</option>
+                  <option value="Separacao">Em separação</option>
+                </select>
+              </label>
               <label>Filtrar por colaborador
                 <input id="malote-filter-colaborador" type="search" placeholder="Colaborador" autocomplete="off" />
               </label>
@@ -547,6 +554,8 @@
                   <div class="chamados-filter-fields vaga-filter-fields">
                     <input id="vaga-filter-nome" type="search" placeholder="Nome do candidato" autocomplete="off" aria-label="Filtrar vagas por nome do candidato" />
                     <input id="vaga-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF do candidato" autocomplete="off" aria-label="Filtrar vagas por CPF do candidato" />
+                    <input id="vaga-filter-cargo" type="search" list="vaga-cargo-options" placeholder="Cargo" autocomplete="off" aria-label="Filtrar vagas por cargo" />
+                    <datalist id="vaga-cargo-options"></datalist>
                     <select id="vaga-filter-unidade" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar vagas por unidade"></select>
                   </div>
                   <button class="secondary-link compact-filter-button" id="limpar-filtros-vagas" type="button" hidden>Limpar</button>
