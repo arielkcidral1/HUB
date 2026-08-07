@@ -1703,7 +1703,9 @@ textarea {
   gap: 6px;
   justify-items: end;
   margin-left: auto;
-  flex-shrink: 0;
+  max-width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .chamados-filter-fields {
@@ -1714,28 +1716,33 @@ textarea {
 }
 
 .chamados-filter-fields.vaga-filter-fields {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  justify-content: stretch;
+  width: min(100%, 560px);
   max-width: 100%;
   min-width: 0;
-  grid-template-columns: unset;
+}
+
+.chamados-filter-fields.vaga-filter-fields input,
+.chamados-filter-fields.vaga-filter-fields select {
+  width: 100%;
 }
 
 #vaga-filter-nome {
-  width: clamp(118px, 18vw, 150px);
+  width: 150px;
 }
 
 #vaga-filter-cpf {
-  width: clamp(92px, 13vw, 105px);
+  width: 105px;
 }
 
 #vaga-filter-cargo {
-  width: clamp(112px, 17vw, 150px);
+  width: 150px;
 }
 
 #vaga-filter-unidade {
-  width: clamp(104px, 15vw, 130px);
+  width: 130px;
 }
 
 .chamados-filter-fields input,
