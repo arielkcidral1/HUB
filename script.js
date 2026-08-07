@@ -6741,14 +6741,21 @@ function uniqueSortedValues(values = []) {
     .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
 }
 
+function isDatalistInUse(datalistId) {
+  const active = document.activeElement;
+  return Boolean(active?.matches?.(`input[list="${datalistId}"]`));
+}
+
 function syncPublicVagaFilterInput(id, value) {
   const input = document.getElementById(id);
+  if (input && document.activeElement === input) return;
   if (input && input.value !== value) input.value = value;
 }
 
 function fillPublicVagaDatalist(id, values = []) {
   const datalist = document.getElementById(id);
   if (!datalist) return;
+  if (isDatalistInUse(id)) return;
   datalist.innerHTML = uniqueSortedValues(values)
     .map((value) => `<option value="${escapeHtml(value)}"></option>`)
     .join("");
@@ -7972,6 +7979,7 @@ function filterVagasByCurrentFilters(items = []) {
 function updateVagaCargoFilterOptions(items = data.vagas || []) {
   const datalist = document.getElementById("vaga-cargo-options");
   if (!datalist) return;
+  if (isDatalistInUse("vaga-cargo-options")) return;
   const cargos = [...new Set(items.map((item) => String(item.cargo || "").trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, "pt-BR"));
   datalist.innerHTML = cargos.map((cargo) => `<option value="${escapeHtml(cargo)}"></option>`).join("");
