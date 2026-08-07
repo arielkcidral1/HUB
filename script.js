@@ -1350,15 +1350,22 @@ function reloadReadStateForCurrentUser() {
 }
 
 function getNotificationAccountKey() {
-  return String(
+  return getNotificationAccountAliases()[0] || "local";
+}
+
+function getNotificationAccountAliases() {
+  return [
     currentAuthUser?.id ||
-    currentUserProfile?.id ||
-    currentAuthUser?.email ||
-    currentUserProfile?.email ||
-    currentUserProfile?.cpf ||
-    getCurrentUserName() ||
-    "local"
-  ).trim();
+      "",
+    currentUserProfile?.id || "",
+    normalizeLoginName(currentAuthUser?.email || ""),
+    normalizeLoginName(currentUserProfile?.email || ""),
+    normalizeLoginName(currentUserProfile?.cpf || ""),
+    normalizeLoginName(getCurrentUserName() || ""),
+  ]
+    .map((value) => String(value || "").trim())
+    .filter((value) => value && value !== "usuario" && value !== "local")
+    .filter((value, index, list) => list.indexOf(value) === index);
 }
 
 function getAccountScopedStorageKey(baseKey) {
@@ -1380,13 +1387,13 @@ function mergeReadReceiptRows(rows = []) {
 
 async function loadReadReceiptsFromPostgreSQL() {
   if (!postgresClient || !TABLES.readReceipts) return;
-  const userKey = getNotificationAccountKey();
-  if (!userKey || userKey === "local") return;
+  const userKeys = getNotificationAccountAliases();
+  if (!userKeys.length) return;
   try {
     const { data: rows, error } = await postgresClient
       .from(TABLES.readReceipts)
       .select("*")
-      .eq("user_id", userKey)
+      .in("user_id", userKeys)
       .limit(2000);
     if (error) throw error;
     mergeReadReceiptRows(rows || []);
@@ -1399,13 +1406,13 @@ async function loadReadReceiptsFromPostgreSQL() {
 
 function syncReadReceiptsToPostgreSQL(notificationIds = [], messageIds = []) {
   if (!postgresClient || !TABLES.readReceipts) return;
-  const userKey = getNotificationAccountKey();
-  if (!userKey || userKey === "local") return;
+  const userKeys = getNotificationAccountAliases().slice(0, 3);
+  if (!userKeys.length) return;
   const now = new Date().toISOString();
-  const rows = [
+  const rows = userKeys.flatMap((userKey) => [
     ...notificationIds.map((id) => ({ user_id: userKey, item_type: "notification", item_id: String(id), read_at: now })),
     ...messageIds.map((id) => ({ user_id: userKey, item_type: "message", item_id: String(id), read_at: now })),
-  ].filter((row) => row.item_id);
+  ]).filter((row) => row.item_id);
   if (!rows.length) return;
   postgresClient
     .from(TABLES.readReceipts)
@@ -3862,7 +3869,7 @@ function setupRealtime() {
 
         const mappedRealtimeItem = mapRows(collection, [row])[0] || row;
         if (collection === "readReceipts") {
-          if (String(mappedRealtimeItem.userKey || "") !== getNotificationAccountKey()) return;
+          if (!getNotificationAccountAliases().includes(String(mappedRealtimeItem.userKey || ""))) return;
           mergeReadReceiptRows([mappedRealtimeItem]);
           try { renderDashboard?.(); } catch (_) {}
           try { renderChatChannels?.(); } catch (_) {}
