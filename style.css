@@ -1019,15 +1019,14 @@ html.auth-entry-pending body {
 }
 
 #dashboard-events-list {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   align-items: start;
-  gap: 8px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px 0 0;
 }
 
 #dashboard-events-list > li {
   min-height: 0;
-  padding: 12px;
 }
 
 .calendar-strip {
@@ -1422,7 +1421,7 @@ textarea {
 }
 
 #eventos-list {
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   align-items: start;
   gap: 10px;
 }
@@ -1457,11 +1456,13 @@ textarea {
   display: grid;
   gap: 5px;
   min-height: 0;
+  min-width: 0;
   border: 1px solid var(--line);
   border-left: 3px solid var(--teal-border);
   border-radius: var(--radius-sm);
   background: linear-gradient(135deg, rgba(12, 98, 89, 0.08), var(--surface-soft));
   padding: 9px 10px;
+  cursor: pointer;
   transition: var(--transition);
 }
 
@@ -1489,6 +1490,20 @@ textarea {
   line-height: 1.35;
 }
 
+.calendar-event-date {
+  color: var(--teal-dark);
+  font-weight: 800;
+}
+
+.calendar-event-summary {
+  display: -webkit-box;
+  min-height: 32px;
+  overflow: hidden;
+  color: var(--muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .calendar-event-block .tag {
   padding: 2px 7px;
   font-size: 10.5px;
@@ -1504,6 +1519,26 @@ textarea {
   min-height: 28px;
   padding: 0 9px;
   font-size: 12px;
+}
+
+.calendar-event-modal {
+  width: min(100%, 560px);
+}
+
+.calendar-event-modal-meta,
+.calendar-event-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.calendar-event-modal-meta {
+  margin-bottom: 14px;
+}
+
+.calendar-event-modal-description {
+  margin-bottom: 14px;
 }
 
 .item-topline {

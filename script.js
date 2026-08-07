@@ -2284,6 +2284,36 @@ function renderEventDescription(item = {}, className = "") {
   return `<p${classAttribute}>${escapeHtml(text).replace(/\n/g, "<br>")}</p>`;
 }
 
+function getEventSummary(item = {}) {
+  if (isBirthdayEvent(item)) {
+    const person = getBirthdayPerson(item);
+    const unit = getBirthdayUnit(item);
+    return [person, unit].filter(Boolean).join(" | ") || formatEventDate(item.data);
+  }
+  const description = String(item.descricao || "").trim().replace(/\s+/g, " ");
+  return description || getEventScheduleMeta(item);
+}
+
+function renderCalendarEventCard(item = {}, tagName = "article", extraClass = "") {
+  const isManageable = !item.systemBirthday;
+  const summary = getEventSummary(item);
+  const escapedId = escapeHtml(item.id);
+  return `
+    <${tagName} class="calendar-event-block ${extraClass} ${getEventTypeClass(item)}" data-action="visualizar-evento" data-id="${escapedId}" role="button" tabindex="0">
+      <div class="item-topline">
+        ${renderEventTitle(item)}
+        <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
+      </div>
+      <p class="calendar-event-date">${escapeHtml(formatEventDate(item.data))}</p>
+      <p class="calendar-event-summary">${escapeHtml(summary)}</p>
+      ${isManageable && extraClass.includes("calendar-event-manage-block") ? `<div class="job-actions calendar-event-inline-actions">
+        <button class="secondary-link" type="button" data-action="editar-evento" data-id="${escapedId}">Editar</button>
+        <button class="danger-button" type="button" data-action="excluir-evento" data-id="${escapedId}">Deletar</button>
+      </div>` : ""}
+    </${tagName}>
+  `;
+}
+
 function getEventListMeta(item = {}) {
   if (isBirthdayEvent(item)) return `Data: ${formatEventDate(item.data)}`;
   return `${formatEventDate(item.data)} | ${getEventScheduleMeta(item)}`;
@@ -2326,13 +2356,13 @@ function getCompactAgendaItems(events = []) {
 function renderCompactAgendaItem(item) {
   if (item.kind !== "birthdays") {
     const event = item.event || {};
-    return `<li class="calendar-event-block ${getEventTypeClass(event)}"><div class="item-topline">${renderEventTitle(event)}<span class="tag ${getEventTagClass(event)}">${escapeHtml(event.tipo)}</span></div>${renderEventDescription(event)}<p>${escapeHtml(getEventListMeta(event))}</p></li>`;
+    return renderCalendarEventCard(event, "li", "calendar-event-dashboard-block");
   }
 
   const birthdays = item.events || [];
   const title = birthdays.length === 1 ? getEventDisplayTitle(birthdays[0]) : `${birthdays.length} aniversários`;
   return `
-    <li class="calendar-event-block event-type-birthday compact-birthday-group">
+    <li class="calendar-event-block calendar-event-dashboard-block event-type-birthday compact-birthday-group" data-action="visualizar-evento" data-id="${escapeHtml(birthdays[0]?.id || "")}" role="button" tabindex="0">
       <div class="item-topline">
         <p class="item-title">${escapeHtml(title)}</p>
         <span class="tag event-tag event-type-birthday">${escapeHtml(formatEventDate(item.date))}</span>
@@ -2349,6 +2379,45 @@ function renderEventAudit(item) {
     <span>Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</span>
     ${item.updatedBy ? `<span>Editado por ${escapeHtml(item.updatedBy)}</span>` : ""}
   `;
+}
+
+function visualizarEvento(id) {
+  const item = getAllEvents().find((eventItem) => String(eventItem.id) === String(id));
+  if (!item) return;
+
+  const existing = document.getElementById("custom-modal");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "custom-modal";
+  overlay.className = "modal-overlay";
+  const canManage = !item.systemBirthday;
+  overlay.innerHTML = `
+    <div class="modal-card calendar-event-modal">
+      <div class="modal-header info">${escapeHtml(getEventDisplayTitle(item))}</div>
+      <div class="modal-body">
+        <div class="calendar-event-modal-meta">
+          <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
+          <span>${escapeHtml(formatEventDate(item.data))}</span>
+          <span>${escapeHtml(getEventScheduleMeta(item))}</span>
+        </div>
+        ${renderEventDescription(item, "calendar-event-modal-description")}
+        <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
+      </div>
+      <div class="modal-footer modal-footer-split">
+        <button class="secondary-link" type="button" data-action="close-modal">Fechar</button>
+        ${canManage ? `<div class="calendar-event-modal-actions">
+          <button class="secondary-link" type="button" data-action="editar-evento" data-id="${escapeHtml(item.id)}">Editar</button>
+          <button class="danger-button" type="button" data-action="excluir-evento" data-id="${escapeHtml(item.id)}">Deletar</button>
+        </div>` : ""}
+      </div>
+    </div>
+  `;
+  overlay.querySelector('[data-action="close-modal"]').addEventListener("click", () => overlay.remove());
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) overlay.remove();
+  });
+  document.body.appendChild(overlay);
 }
 
 function getCurrentWeekDates() {
@@ -6566,18 +6635,7 @@ function renderCalendar() {
     <div class="calendar-grid">${cells.join("")}</div>
   `;
 
-  renderCards("eventos-list", visibleEvents, (item) => `
-    <article class="calendar-event-block calendar-event-manage-block ${getEventTypeClass(item)}">
-      <div class="item-topline">${renderEventTitle(item)}<span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>
-      ${renderEventDescription(item)}
-      <p class="item-meta">${escapeHtml(getEventListMeta(item))}</p>
-      <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
-      ${item.systemBirthday ? "" : `<div class="job-actions">
-        <button class="secondary-link" type="button" data-action="editar-evento" data-id="${escapeHtml(item.id)}">Editar</button>
-        <button class="danger-button" type="button" data-action="excluir-evento" data-id="${escapeHtml(item.id)}">Deletar</button>
-      </div>`}
-    </article>
-  `);
+  renderCards("eventos-list", visibleEvents, (item) => renderCalendarEventCard(item, "article", "calendar-event-manage-block"));
 }
 
 // Logica de abertura de denuncia para leitura e transicao de estado automatica
@@ -11320,7 +11378,7 @@ document.addEventListener('click', (event) => {
   }
 
   // Acoes que precisam de stopPropagation.
-  if (['reabrir-denuncia', 'reabrir-chamado'].includes(action)) {
+  if (['reabrir-denuncia', 'reabrir-chamado', 'editar-evento', 'excluir-evento'].includes(action)) {
     event.stopPropagation();
   }
 
@@ -11338,6 +11396,7 @@ document.addEventListener('click', (event) => {
     case 'baixar-documento-malote': baixarDocumentoMalote(id); break;
     case 'excluir-malote': excluirMalote(id); break;
     case 'open-dashboard-activity': openDashboardActivity(target.dataset.index); break;
+    case 'visualizar-evento': visualizarEvento(id); break;
     case 'editar-vaga': editarVaga(id); break;
     case 'excluir-vaga': excluirVaga(id); break;
     case 'editar-evento':
