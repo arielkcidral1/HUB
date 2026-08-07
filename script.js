@@ -3314,6 +3314,25 @@ function removePendingContractorDocument(id) {
   return remaining;
 }
 
+function mergePendingChatMessages(freshMessages = [], currentMessages = data.comunicados || []) {
+  const pendingMessages = (currentMessages || []).filter((item) => item?._pending);
+  if (!pendingMessages.length) return freshMessages;
+
+  const freshIds = new Set((freshMessages || []).map((item) => String(item.id)));
+  const pendingWithoutServerMatch = pendingMessages.filter((item) => !freshIds.has(String(item.id)));
+  return [...pendingWithoutServerMatch, ...(freshMessages || [])];
+}
+
+function isMatchingPendingChatMessage(pending, saved) {
+  if (!pending?._pending || !saved) return false;
+  if (normalizeChatChannel(pending.canal) !== normalizeChatChannel(saved.canal)) return false;
+  if (pending.autor !== saved.autor) return false;
+  if ((pending.mensagem || "") !== (saved.mensagem || "")) return false;
+  if ((pending.arquivo?.name || "") !== (saved.arquivo?.name || "")) return false;
+  if ((pending.arquivo?.size || 0) !== (saved.arquivo?.size || 0)) return false;
+  return true;
+}
+
 function mergeRealtimeRow(collection, row, action = "INSERT") {
   if (action === "DELETE") {
     if (collection === "usuarios") {
@@ -3327,6 +3346,14 @@ function mergeRealtimeRow(collection, row, action = "INSERT") {
 
   const mapped = mapRows(collection, [row])[0];
   const current = data[collection] || [];
+
+  if (collection === "comunicados") {
+    const pendingIndex = current.findIndex((item) => isMatchingPendingChatMessage(item, mapped));
+    if (pendingIndex >= 0) {
+      data[collection] = current.map((item, itemIndex) => (itemIndex === pendingIndex ? mapped : item));
+      return;
+    }
+  }
 
   const index = current.findIndex((item) => String(item.id) === String(mapped.id) || (collection === "usuarios" && normalizeLoginName(item.nome) === normalizeLoginName(mapped.nome)));
   if (index >= 0) {
@@ -3690,7 +3717,9 @@ async function loadFromPostgreSQL(options = {}) {
       if (result.status === "fulfilled") {
         const [collection, rows] = result.value;
 
-        data[collection] = rows;
+        data[collection] = collection === "comunicados"
+          ? mergePendingChatMessages(rows, data.comunicados)
+          : rows;
       } else {
         console.error("Erro ao carregar colecao do PostgreSQL:", result.reason);
       }
@@ -9276,27 +9305,33 @@ if (chatForm) {
       return;
     }
 
+    const messageAuthor = getCurrentUserName();
+    const messageChannel = activeChatChannel;
+    const pendingCreatedAt = new Date().toISOString();
+
     // -- OTIMISMO: mostra a mensagem imediatamente --------------------------
     const pendingMessages = files.length
       ? files.map((file, index) => {
         const attachmentType = getChatFileMimeType(file);
         return {
           id: "pending-" + generateUUID(),
-          autor: getCurrentUserName(),
-          canal: activeChatChannel,
+          autor: messageAuthor,
+          canal: messageChannel,
           mensagem: index === 0 ? message : "",
           arquivo: { name: file.name, size: file.size, type: attachmentType, url: null },
-          createdAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+          createdAt: pendingCreatedAt,
+          sortAt: pendingCreatedAt,
           _pending: true,
         };
       })
       : [{
         id: "pending-" + generateUUID(),
-        autor: getCurrentUserName(),
-        canal: activeChatChannel,
+        autor: messageAuthor,
+        canal: messageChannel,
         mensagem: message,
         arquivo: null,
-        createdAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        createdAt: pendingCreatedAt,
+        sortAt: pendingCreatedAt,
         _pending: true,
       }];
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
@@ -9326,14 +9361,14 @@ if (chatForm) {
     }
     const payloads = uploadedFiles.length
       ? uploadedFiles.map((arquivo, index) => ({
-        autor: getCurrentUserName(),
-        canal: activeChatChannel,
+        autor: messageAuthor,
+        canal: messageChannel,
         mensagem: index === 0 ? message : "",
         arquivo,
       }))
       : [{
-        autor: getCurrentUserName(),
-        canal: activeChatChannel,
+        autor: messageAuthor,
+        canal: messageChannel,
         mensagem: message,
         arquivo: null,
       }];
