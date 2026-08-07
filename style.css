@@ -1940,8 +1940,8 @@ textarea {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 0;
-  height: min(72vh, 640px);
-  min-height: 420px;
+  height: min(78vh, 760px);
+  min-height: 540px;
   align-content: stretch;
 }
 
@@ -2025,7 +2025,7 @@ textarea {
 .chat-panel > .panel-header {
   align-items: flex-start;
   margin: 0;
-  padding: 0 0 14px;
+  padding: 16px 20px 14px;
 }
 
 .chat-panel > .panel-header h2,
