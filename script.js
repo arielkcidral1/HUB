@@ -1287,6 +1287,7 @@ function saveDocumentRecords() {
 }
 
 function saveLocalData() {
+  applyLocalChatState();
   if (data?.usuarios) {
     data.usuarios = data.usuarios.map(sanitizeUserRecord);
     saveTeamUsersStore(data.usuarios);
@@ -3322,30 +3323,39 @@ function rememberDeletedChatMessage(id) {
   if (!id) return;
   locallyDeletedChatMessageIds.add(String(id));
   localChatEchoMessages.delete(String(id));
+  data.comunicados = (data.comunicados || []).filter((item) => String(item.id) !== String(id));
 }
 
 function forgetDeletedChatMessage(id) {
   if (!id) return;
   locallyDeletedChatMessageIds.delete(String(id));
+  applyLocalChatState();
+}
+
+function applyLocalChatState() {
+  data.comunicados = mergeLocalChatMessages(data.comunicados || [], data.comunicados || []);
+  return data.comunicados;
 }
 
 function markChatMessageAsLocalEcho(message) {
   if (!message?.id) return message;
   const localMessage = { ...message, _localEcho: true };
   localChatEchoMessages.set(String(localMessage.id), localMessage);
+  applyLocalChatState();
   return localMessage;
 }
 
 function forgetLocalChatEchoMessage(id) {
   if (!id) return;
   localChatEchoMessages.delete(String(id));
+  applyLocalChatState();
 }
 
 function mergeLocalChatMessages(freshMessages = [], currentMessages = data.comunicados || []) {
   const visibleFreshMessages = (freshMessages || []).filter((item) => !locallyDeletedChatMessageIds.has(String(item.id)));
   const freshIds = new Set(visibleFreshMessages.map((item) => String(item.id)));
   visibleFreshMessages.forEach((item) => {
-    if (item?.id && !item._pending && !item._localEcho) forgetLocalChatEchoMessage(item.id);
+    if (item?.id && !item._pending && !item._localEcho) localChatEchoMessages.delete(String(item.id));
   });
 
   const currentLocalMessages = (currentMessages || []).filter((item) => {
@@ -3436,6 +3446,7 @@ function mergeRealtimeRow(collection, row, action = "INSERT") {
 }
 
 function renderRealtimeUpdate(collection) {
+  if (collection === "comunicados") applyLocalChatState();
   saveLocalDataDebounced();
 
   if (collection === "comunicados") {
@@ -8299,6 +8310,7 @@ function renderDenunciasSection() {
   renderCards("denuncias-lidas", lidas, (item) => cardTemplate(item, false));
 }
 function renderAll() {
+  applyLocalChatState();
   renderCurrentUser();
   applyRoleAccess();
   renderAccountSettings();
@@ -9434,7 +9446,7 @@ if (chatForm) {
       }];
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
     pendingMessages.forEach((item) => markChatMessageAsLocalEcho(item));
-    data.comunicados = [...pendingMessages, ...(data.comunicados || [])];
+    data.comunicados = mergeLocalChatMessages([...pendingMessages, ...(data.comunicados || [])], data.comunicados);
     renderChat({ skipPostRender: true });
     // Limpa o formulário imediatamente
     formElement.reset();
