@@ -1996,7 +1996,7 @@ textarea {
   overflow-y: auto;
   min-height: 0;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  border-radius: var(--radius-md);
   background: transparent;
   padding: 18px;
 }
@@ -2006,7 +2006,7 @@ textarea {
   justify-content: flex-start;
   min-height: 0;
   height: auto;
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  border-radius: var(--radius-md);
 }
 
 .chat-panel.chat-panel-empty .chat-composer {
@@ -2329,12 +2329,11 @@ textarea {
   flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
-  margin-top: 0;
+  margin-top: 8px;
   padding: 9px 8px;
   border: 1px solid var(--line);
-  border-top: none;
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
-  background: transparent;
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
   position: relative;
 }
 
