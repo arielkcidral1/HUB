@@ -2237,6 +2237,13 @@ function getEventTagClass(item = {}) {
   return typeClass ? `event-tag ${typeClass}` : "";
 }
 
+function getEventIcon(item = {}) {
+  if (isCompanyBirthdayEvent(item)) return { icon: "◆", className: "event-icon-company", label: "Aniversário de empresa" };
+  if (isBirthdayEvent(item)) return { icon: "★", className: "event-icon-birthday", label: "Aniversário" };
+  if (normalizeEventType(item.tipo) === "entrevista") return { icon: "✦", className: "event-icon-interview", label: "Entrevista" };
+  return { icon: "•", className: "event-icon-default", label: "Evento" };
+}
+
 function dayHasEventType(events = [], type) {
   return events.some((item) => type === "aniversario" ? isBirthdayEvent(item) : normalizeEventType(item.tipo) === type);
 }
@@ -2298,10 +2305,14 @@ function renderCalendarEventCard(item = {}, tagName = "article", extraClass = ""
   const isManageable = !item.systemBirthday;
   const summary = getEventSummary(item);
   const escapedId = escapeHtml(item.id);
+  const eventIcon = getEventIcon(item);
   return `
     <${tagName} class="calendar-event-block ${extraClass} ${getEventTypeClass(item)}" data-action="visualizar-evento" data-id="${escapedId}" role="button" tabindex="0">
       <div class="item-topline">
-        ${renderEventTitle(item)}
+        <div class="calendar-event-heading">
+          <span class="event-icon ${eventIcon.className}" aria-label="${escapeHtml(eventIcon.label)}">${escapeHtml(eventIcon.icon)}</span>
+          ${renderEventTitle(item)}
+        </div>
         <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
       </div>
       <p class="calendar-event-date">${escapeHtml(formatEventDate(item.data))}</p>
@@ -2392,9 +2403,13 @@ function visualizarEvento(id) {
   overlay.id = "custom-modal";
   overlay.className = "modal-overlay";
   const canManage = !item.systemBirthday;
+  const eventIcon = getEventIcon(item);
   overlay.innerHTML = `
     <div class="modal-card calendar-event-modal">
-      <div class="modal-header info">${escapeHtml(getEventDisplayTitle(item))}</div>
+      <div class="modal-header info calendar-event-modal-title">
+        <span class="event-icon ${eventIcon.className}" aria-label="${escapeHtml(eventIcon.label)}">${escapeHtml(eventIcon.icon)}</span>
+        ${escapeHtml(getEventDisplayTitle(item))}
+      </div>
       <div class="modal-body">
         <div class="calendar-event-modal-meta">
           <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>

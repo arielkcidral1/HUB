@@ -1036,6 +1036,23 @@ html.auth-entry-pending body {
   margin-bottom: 16px;
 }
 
+.calendar-event-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: -2px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.calendar-event-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .calendar-strip.calendar-strip-month {
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
@@ -1476,6 +1493,53 @@ textarea {
   gap: 8px;
 }
 
+.calendar-event-heading {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 7px;
+}
+
+.event-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.event-icon-default {
+  border-color: rgba(12, 98, 89, 0.28);
+  background: rgba(12, 98, 89, 0.1);
+  color: var(--teal-dark);
+}
+
+.event-icon-birthday {
+  border-color: rgba(202, 138, 4, 0.38);
+  background: rgba(202, 138, 4, 0.16);
+  color: #7c4a03;
+}
+
+.event-icon-company {
+  border-color: rgba(92, 65, 22, 0.35);
+  background: rgba(92, 65, 22, 0.14);
+  color: #5c4116;
+}
+
+.event-icon-interview {
+  border-color: rgba(79, 70, 229, 0.32);
+  background: rgba(79, 70, 229, 0.12);
+  color: #312e81;
+}
+
 .calendar-event-block .item-title {
   overflow: hidden;
   font-size: 13px;
@@ -1523,6 +1587,12 @@ textarea {
 
 .calendar-event-modal {
   width: min(100%, 560px);
+}
+
+.calendar-event-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .calendar-event-modal-meta,
