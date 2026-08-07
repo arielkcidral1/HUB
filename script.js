@@ -6573,7 +6573,7 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
           <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
           ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
           ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
-          ${dayEvents.slice(0, 2).map((item) => `<span class="calendar-event-preview ${getEventTypeClass(item)}">${escapeHtml(item.titulo)}</span>`).join("")}
+          ${dayEvents.slice(0, 2).map((item) => `<span class="calendar-event-preview ${getEventTypeClass(item)}" data-event-card="true" data-id="${escapeHtml(item.id)}">${escapeHtml(item.titulo)}</span>`).join("")}
         </button>
       `;
     })
@@ -6622,7 +6622,7 @@ function renderCalendar() {
         <strong>${day}</strong>
         ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
         ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
-        ${dayEvents.slice(0, 2).map((item) => `<span class="${getEventTypeClass(item)}">${escapeHtml(item.titulo)}</span>`).join("")}
+        ${dayEvents.slice(0, 2).map((item) => `<span class="${getEventTypeClass(item)}" data-event-card="true" data-id="${escapeHtml(item.id)}">${escapeHtml(item.titulo)}</span>`).join("")}
       </button>
     `);
   }
