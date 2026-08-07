@@ -4653,6 +4653,42 @@ if (collection === "eventos") {
   }
 }
 
+async function addChatMessage(values) {
+  if (!postgresClient) {
+    appendLocalInsertedItem("comunicados", values);
+    saveLocalData();
+    renderChatChannels();
+    renderChat();
+    return true;
+  }
+
+  try {
+    const { data: inserted, error } = await postgresClient
+      .from(TABLES.comunicados)
+      .insert(toDbPayload("comunicados", values))
+      .select("*")
+      .single();
+
+    if (error) throw error;
+
+    data.comunicados = [
+      mapRows("comunicados", [inserted])[0],
+      ...(data.comunicados || []),
+    ];
+    saveLocalDataDebounced();
+    setSyncStatus("PostgreSQL EIXO online", true);
+    renderDashboard();
+    renderChatChannels();
+    renderChat();
+    return true;
+  } catch (error) {
+    console.error("Erro ao salvar mensagem no PostgreSQL:", error);
+    setSyncStatus("Erro no chat", false);
+    showModal("Erro ao enviar", "Nao foi possivel enviar a mensagem. Confira a conexao e tente novamente.", "error");
+    return false;
+  }
+}
+
 /**
  * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente.
  * Sem uma política de Row Level Security (RLS) no PostgreSQL, um usuário autenticado
@@ -6566,7 +6602,7 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
 
   const todayKey = getLocalDateKey(today);
   const monthHeader = dashboardCalendarViewMode === "month"
-    ? "<span class=\"calendar-strip-weekday\">Dom</span><span class=\"calendar-strip-weekday\">Seg</span><span class=\"calendar-strip-weekday\">Ter</span><span class=\"calendar-strip-weekday\">Qua</span><span class=\"calendar-strip-weekday\">Qui</span><span class=\"calendar-strip-weekday\">Sex</span><span class=\"calendar-strip-weekday\">Sab</span>"
+    ? '<span class="calendar-strip-weekday">Dom</span><span class="calendar-strip-weekday">Seg</span><span class="calendar-strip-weekday">Ter</span><span class="calendar-strip-weekday">Qua</span><span class="calendar-strip-weekday">Qui</span><span class="calendar-strip-weekday">Sex</span><span class="calendar-strip-weekday">Sab</span>'
     : "";
   const leadingCells = dashboardCalendarViewMode === "month"
     ? Array.from({ length: leadingDays }, () => '<div class="calendar-day muted"></div>').join("")
@@ -9249,10 +9285,6 @@ if (chatForm) {
       showModal("Erro no Anexo", error?.message || "Nao foi possivel enviar um dos arquivos. Verifique a conexao e tente novamente.", "error");
       return;
     }
-
-    // -- PERSISTÊNCIA: remove otimistas e deixa o realtime confirmar -------
-    data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
-
     const payloads = uploadedFiles.length
       ? uploadedFiles.map((arquivo, index) => ({
         autor: getCurrentUserName(),
@@ -9267,10 +9299,9 @@ if (chatForm) {
         arquivo: null,
       }];
 
-    const results = [];
-    for (const payload of payloads) {
-      results.push(await addItem("comunicados", payload));
-    }
+    const results = await Promise.all(payloads.map((payload) => addChatMessage(payload)));
+    data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
+    renderChat();
 
     if (results.some((success) => !success)) {
       // Restaura o campo se o envio falhar
