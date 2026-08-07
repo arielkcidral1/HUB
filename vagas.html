@@ -30,7 +30,22 @@
           <div class="panel-header public-jobs-header">
             <h2>Oportunidades disponiveis</h2>
             <div class="public-job-filters" aria-label="Filtros de vagas">
-              <button class="secondary-link public-filter-button" id="open-vaga-filters" type="button">Filtrar</button>
+              <label>
+                <span>Cargo</span>
+                <input id="public-vaga-cargo-filter" type="search" list="public-vaga-cargo-options" placeholder="Cargo" autocomplete="off" />
+                <datalist id="public-vaga-cargo-options"></datalist>
+              </label>
+              <label>
+                <span>Cidade</span>
+                <input id="public-vaga-cidade-filter" type="search" list="public-vaga-cidade-options" placeholder="Cidade" autocomplete="off" />
+                <datalist id="public-vaga-cidade-options"></datalist>
+              </label>
+              <label>
+                <span>Unidade</span>
+                <input id="public-vaga-unidade-filter" type="search" list="public-vaga-unidade-options" placeholder="Unidade" autocomplete="off" />
+                <datalist id="public-vaga-unidade-options"></datalist>
+              </label>
+              <button class="secondary-link public-filter-clear" id="clear-public-vaga-filters" type="button" hidden>Limpar</button>
             </div>
           </div>
           <div class="public-job-grid" id="public-vagas-list">
@@ -40,7 +55,7 @@
       </div>
     </div>
     <script src="hub-postgres-client.js"></script>
-    <script src="script.js?v=restauracao-v8"></script>
+    <script src="script.js?v=vagas-filtros-dinamicos-v1"></script>
   </body>
 </html>
 

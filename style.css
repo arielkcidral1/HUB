@@ -3765,13 +3765,44 @@ form.panel[data-public-chamados="true"].panel {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
+  flex-wrap: wrap;
 }
 
-.public-filter-button {
-  min-height: 34px;
-  padding-inline: 18px;
+.public-job-filters label {
+  display: grid;
+  gap: 5px;
+  min-width: 150px;
+}
+
+.public-job-filters label span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.public-job-filters input {
+  min-height: 38px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  padding: 0 14px;
+  font: inherit;
+  outline: none;
+}
+
+.public-job-filters input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.16);
+}
+
+.public-filter-clear {
+  align-self: end;
+  min-height: 38px;
+  padding-inline: 16px;
   border-radius: 999px;
 }
 
@@ -4248,7 +4279,8 @@ form.panel[data-public-chamados="true"].panel {
     justify-content: stretch;
   }
 
-  .public-filter-button {
+  .public-job-filters label,
+  .public-filter-clear {
     width: 100%;
   }
 

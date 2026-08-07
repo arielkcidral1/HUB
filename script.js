@@ -193,6 +193,7 @@ const TABLES = {
   usuarios: USERS_TABLE,
 };
 let publicVagaCargoFilter = "";
+let publicVagaCidadeFilter = "";
 let publicVagaUnidadeFilter = "";
 let chatAudioRecorder = null;
 let chatAudioChunks = [];
@@ -6434,6 +6435,46 @@ async function atualizarStatusDenuncia(id, status) {
   }
 }
 
+function getPublicVagaCidade(vaga = {}) {
+  const match = String(vaga.descricao || "").match(/(?:^|\n)Cidade:\s*([^\n]+)/i);
+  return match ? match[1].trim() : "";
+}
+
+function uniqueSortedValues(values = []) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+}
+
+function syncPublicVagaFilterInput(id, value) {
+  const input = document.getElementById(id);
+  if (input && input.value !== value) input.value = value;
+}
+
+function fillPublicVagaDatalist(id, values = []) {
+  const datalist = document.getElementById(id);
+  if (!datalist) return;
+  datalist.innerHTML = uniqueSortedValues(values)
+    .map((value) => `<option value="${escapeHtml(value)}"></option>`)
+    .join("");
+}
+
+function updatePublicVagaFilterOptions(openVagas = []) {
+  fillPublicVagaDatalist("public-vaga-cargo-options", openVagas.map((vaga) => vaga.cargo));
+  fillPublicVagaDatalist("public-vaga-cidade-options", openVagas.map(getPublicVagaCidade));
+  fillPublicVagaDatalist("public-vaga-unidade-options", openVagas.map((vaga) => getCanonicalUnit(vaga.unidade) || vaga.unidade));
+}
+
+function updatePublicVagaFilterControls(openVagas = []) {
+  syncPublicVagaFilterInput("public-vaga-cargo-filter", publicVagaCargoFilter);
+  syncPublicVagaFilterInput("public-vaga-cidade-filter", publicVagaCidadeFilter);
+  syncPublicVagaFilterInput("public-vaga-unidade-filter", publicVagaUnidadeFilter);
+  updatePublicVagaFilterOptions(openVagas);
+  const clearButton = document.getElementById("clear-public-vaga-filters");
+  if (clearButton) {
+    clearButton.hidden = !Boolean(publicVagaCargoFilter || publicVagaCidadeFilter || publicVagaUnidadeFilter);
+  }
+}
+
 function renderPublicVagas() {
   const selectedInput = document.getElementById("vaga-id");
   const selectedPanel = document.getElementById("selected-public-job");
@@ -6441,11 +6482,14 @@ function renderPublicVagas() {
   if (!selectedInput && !selectedPanel && !list) return;
 
   const cargoFilter = String(publicVagaCargoFilter || "").trim().toLowerCase();
+  const cidadeFilter = String(publicVagaCidadeFilter || "").trim().toLowerCase();
   const unidadeFilter = String(publicVagaUnidadeFilter || "").trim().toLowerCase();
-  const openVagas = data.vagas
-    .filter(v => v.status === "Aberta")
+  const allOpenVagas = data.vagas.filter(v => isOpenJobStatus(v.status));
+  updatePublicVagaFilterControls(allOpenVagas);
+  const openVagas = allOpenVagas
     .filter(v => !cargoFilter || String(v.cargo || "").toLowerCase().includes(cargoFilter))
-    .filter(v => !unidadeFilter || String(v.unidade || "").toLowerCase().includes(unidadeFilter));
+    .filter(v => !cidadeFilter || getPublicVagaCidade(v).toLowerCase().includes(cidadeFilter))
+    .filter(v => !unidadeFilter || String(getCanonicalUnit(v.unidade) || v.unidade || "").toLowerCase().includes(unidadeFilter));
   const selectedVaga = new URLSearchParams(window.location.search).get("vaga");
 
   if (!openVagas.length) {
@@ -8616,8 +8660,23 @@ document.getElementById("clear-contratado-filters")?.addEventListener("click", (
   renderDocumentosContratados();
 });
 
-document.getElementById("open-vaga-filters")?.addEventListener("click", () => {
-  showPublicVagaFiltersModal();
+document.getElementById("public-vaga-cargo-filter")?.addEventListener("input", (event) => {
+  publicVagaCargoFilter = event.currentTarget.value.trim();
+  renderPublicVagas();
+});
+document.getElementById("public-vaga-cidade-filter")?.addEventListener("input", (event) => {
+  publicVagaCidadeFilter = event.currentTarget.value.trim();
+  renderPublicVagas();
+});
+document.getElementById("public-vaga-unidade-filter")?.addEventListener("input", (event) => {
+  publicVagaUnidadeFilter = event.currentTarget.value.trim();
+  renderPublicVagas();
+});
+document.getElementById("clear-public-vaga-filters")?.addEventListener("click", () => {
+  publicVagaCargoFilter = "";
+  publicVagaCidadeFilter = "";
+  publicVagaUnidadeFilter = "";
+  renderPublicVagas();
 });
 
 
