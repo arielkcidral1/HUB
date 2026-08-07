@@ -4690,8 +4690,8 @@ form.panel[data-public-chamados="true"].panel {
 
 .candidate-row {
   align-items: center;
-  background: linear-gradient(135deg, rgba(47, 178, 162, 0.06), rgba(47, 178, 162, 0.025));
-  border: 1px solid rgba(47, 178, 162, 0.16);
+  background: linear-gradient(135deg, rgba(7, 42, 36, 0.92), rgba(12, 77, 69, 0.72));
+  border: 1px solid rgba(47, 178, 162, 0.22);
   border-radius: var(--radius-md);
   display: flex;
   gap: 12px;
