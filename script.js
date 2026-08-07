@@ -2104,10 +2104,48 @@ function getHolidayForDate(date) {
   return getJoinvilleHolidayMap(Number(date.slice(0, 4))).get(date) || null;
 }
 
+function getCompanyBirthdayEvents() {
+  const birthdays = Array.isArray(window.HUB_COMPANY_BIRTHDAYS) ? window.HUB_COMPANY_BIRTHDAYS : [];
+  const visibleYear = visibleCalendarDate instanceof Date ? visibleCalendarDate.getFullYear() : new Date().getFullYear();
+  const currentYear = new Date().getFullYear();
+  const years = [...new Set([currentYear, currentYear + 1, visibleYear])];
+  return years.flatMap((year) => birthdays.map((item, index) => {
+    const birthDate = String(item.nascimento || "");
+    const monthDay = birthDate.slice(5);
+    const date = /^\d{2}-\d{2}$/.test(monthDay) ? `${year}-${monthDay}` : "";
+    const nome = String(item.nome || "").trim();
+    return {
+      id: `birthday-${year}-${index}`,
+      titulo: "Aniversario",
+      data: date,
+      horario: "",
+      responsavel: "",
+      tipo: "Aniversario",
+      descricao: nome,
+      aniversariante: nome,
+      createdBy: "Planilha de aniversariantes",
+      createdAt: date,
+      sortAt: date,
+      systemBirthday: true,
+    };
+  })).filter((item) => item.data && item.aniversariante);
+}
+
+function getAllEvents() {
+  return [...(data.eventos || []), ...getCompanyBirthdayEvents()];
+}
+
 function getSortedEvents() {
-  return (data.eventos || [])
+  return getAllEvents()
     .slice()
-    .sort((a, b) => `${a.data || ""}T${a.horario || "00:00"}`.localeCompare(`${b.data || ""}T${b.horario || "00:00"}`));
+    .sort((a, b) => {
+      const dateCompare = String(a.data || "").localeCompare(String(b.data || ""));
+      if (dateCompare) return dateCompare;
+      const aBirthday = normalizeEventType(a.tipo) === "aniversario";
+      const bBirthday = normalizeEventType(b.tipo) === "aniversario";
+      if (aBirthday !== bBirthday) return aBirthday ? 1 : -1;
+      return String(a.horario || "00:00").localeCompare(String(b.horario || "00:00"));
+    });
 }
 
 function normalizeEventType(value = "") {
@@ -2132,6 +2170,10 @@ function getEventTagClass(item = {}) {
 
 function dayHasEventType(events = [], type) {
   return events.some((item) => normalizeEventType(item.tipo) === type);
+}
+
+function dayHasNonBirthdayEvent(events = []) {
+  return events.some((item) => normalizeEventType(item.tipo) !== "aniversario");
 }
 
 function getEventScheduleMeta(item = {}) {
@@ -2165,12 +2207,59 @@ function getEventListMeta(item = {}) {
   return `${formatEventDate(item.data)} | ${getEventScheduleMeta(item)}`;
 }
 
-function getUpcomingEvents(daysAhead = 14) {
+function getUpcomingEvents(daysAhead = 7) {
   const today = getLocalDateKey();
   const maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + daysAhead);
   const maxDateKey = getLocalDateKey(maxDate);
   return getSortedEvents().filter((item) => !isArchivedRecord(item) && item.data && item.data >= today && item.data <= maxDateKey);
+}
+
+function getCompactAgendaItems(events = []) {
+  const items = [];
+  const birthdayGroups = new Map();
+
+  events.forEach((item) => {
+    if (normalizeEventType(item.tipo) !== "aniversario") {
+      items.push({ kind: "event", event: item, dateTime: item.sortAt || item.data || "", priority: 0 });
+      return;
+    }
+
+    const key = item.data || "";
+    if (!birthdayGroups.has(key)) birthdayGroups.set(key, []);
+    birthdayGroups.get(key).push(item);
+  });
+
+  birthdayGroups.forEach((birthdays, date) => {
+    items.push({ kind: "birthdays", events: birthdays, date, dateTime: date, priority: 1 });
+  });
+
+  return items.sort((a, b) => {
+    const dateCompare = String(a.dateTime || "").localeCompare(String(b.dateTime || ""));
+    if (dateCompare) return dateCompare;
+    return (a.priority || 0) - (b.priority || 0);
+  });
+}
+
+function renderCompactAgendaItem(item) {
+  if (item.kind !== "birthdays") {
+    const event = item.event || {};
+    return `<li class="${getEventTypeClass(event)}"><div class="item-topline">${renderEventTitle(event)}<span class="tag ${getEventTagClass(event)}">${escapeHtml(event.tipo)}</span></div>${renderEventDescription(event)}<p>${escapeHtml(getEventListMeta(event))}</p></li>`;
+  }
+
+  const birthdays = item.events || [];
+  const title = birthdays.length === 1 ? "Aniversario" : `${birthdays.length} aniversariantes`;
+  return `
+    <li class="event-type-birthday compact-birthday-group">
+      <div class="item-topline">
+        <p class="item-title">${escapeHtml(title)}</p>
+        <span class="tag event-tag event-type-birthday">${escapeHtml(formatEventDate(item.date))}</span>
+      </div>
+      <div class="birthday-chip-list">
+        ${birthdays.map((birthday) => `<span>${escapeHtml(getBirthdayPerson(birthday))}</span>`).join("")}
+      </div>
+    </li>
+  `;
 }
 
 function renderEventAudit(item) {
@@ -2212,12 +2301,21 @@ function escapeHtml(value) {
 }
 
 function badgeClass(value) {
+  if (value === "Aberto") return "tag chamado-open";
   return ["Urgente", "Alta", "Aberta"].includes(value) ? "tag alert" : "tag";
+}
+
+function getFriendlyErrorMessage(message) {
+  const text = String(message || "");
+  return /remaining connection slots|pg_use_reserved_connections/i.test(text)
+    ? "Aguarde e tente novamente"
+    : text;
 }
 
 function showModal(title, text, type = "info") {
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
+  const safeText = getFriendlyErrorMessage(text);
 
   const overlay = document.createElement("div");
   overlay.id = "custom-modal";
@@ -2228,7 +2326,7 @@ function showModal(title, text, type = "info") {
       <div class="modal-header ${type}">
         ${escapeHtml(title)}
       </div>
-      <div class="modal-body">${escapeHtml(text)}</div>
+      <div class="modal-body">${escapeHtml(safeText)}</div>
       <div class="modal-footer">
         <button class="primary-button" data-action="close-modal">Entendi</button>
       </div>
@@ -2933,7 +3031,7 @@ if (collection === "eventos") {
       projeto: "",
       descricao: row.descricao || legacyDetails.descricao,
       requisitos: row.requisitos || legacyDetails.requisitos,
-      status: row.status,
+      status: normalizeJobStatus(row.status),
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
@@ -3338,6 +3436,21 @@ function parseLegacyJobDetails(projeto) {
   }
 }
 
+function normalizeJobStatus(value) {
+  const normalized = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+  if (!normalized || normalized === "aberta" || normalized === "aberto") return "Aberta";
+  if (normalized === "fechada" || normalized === "fechado") return "Fechada";
+  return String(value || "Aberta").trim() || "Aberta";
+}
+
+function isOpenJobStatus(value) {
+  return normalizeJobStatus(value) === "Aberta";
+}
+
 function withoutOptionalJobColumns(payload) {
   const { descricao, requisitos, unidade, created_by, ...rest } = payload;
   return rest;
@@ -3387,10 +3500,9 @@ async function loadFromPostgreSQL(options = {}) {
       data.usuarios = mergeUsersByName(data.usuarios, mappedUsers);
     }
 
-    const requests = await Promise.allSettled(
-      Object.entries(TABLES)
-        .filter(([collection]) => collection !== "usuarios")
-        .map(async ([collection, table]) => {
+    const requests = [];
+    for (const [collection, table] of Object.entries(TABLES).filter(([collection]) => collection !== "usuarios")) {
+      try {
         const { data: rows, error } = await selectPostgreSQLRows(table, {
           orderBy: "created_at",
           ascending: false,
@@ -3401,9 +3513,11 @@ async function loadFromPostgreSQL(options = {}) {
           },
         });
         if (error) throw error;
-        return [collection, mapRows(collection, rows || [])];
-      })
-    );
+        requests.push({ status: "fulfilled", value: [collection, mapRows(collection, rows || [])] });
+      } catch (error) {
+        requests.push({ status: "rejected", reason: error });
+      }
+    }
 
     requests.forEach((result) => {
       if (result.status === "fulfilled") {
@@ -3959,6 +4073,16 @@ function readFileAsDataUrl(file) {
   });
 }
 
+function safePublicFileName(fileName = "arquivo") {
+  return String(fileName || "arquivo")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9_.-]/gi, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase() || "arquivo";
+}
+
 function createContractorDocumentField(required = false) {
   return `
     <div class="contractor-document-field">
@@ -3989,12 +4113,13 @@ async function buildContractorDocumentPayload(documentos) {
   return embeddedDocuments;
 }
 
-async function uploadPublicFile(file) {
+async function uploadPublicFile(file, path = "") {
   if (!file || !file.name) return null;
   const response = await fetch("/api/files", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      path,
       name: file.name,
       size: file.size,
       type: file.type || "application/octet-stream",
@@ -4095,7 +4220,9 @@ async function submitPublicRecord(collection, payload, turnstileToken = "") {
 }
 
 async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, curriculo, turnstileToken }) {
-  const upload = await uploadPublicFile(curriculo);
+  const safeName = safePublicFileName(curriculo?.name || "curriculo.pdf");
+  const resumePath = `${RESUME_PUBLIC_PREFIX}/${generateUUID()}/${safeName}`;
+  const upload = await uploadPublicFile(curriculo, resumePath);
   const response = await fetch(`/api/records?table=${encodeURIComponent(TABLES.candidaturas)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-hub-client-id": getPublicClientId() },
@@ -4105,7 +4232,7 @@ async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, c
         nome,
         telefone,
         cpf,
-        curriculo_url: upload?.path || "",
+        curriculo_url: upload?.path || resumePath,
         created_by: "Publico",
       }],
     }),
@@ -5157,10 +5284,17 @@ async function handleBoardContextAction(event, type, payload) {
         showModal("Coluna obrigatoria", "E preciso manter pelo menos uma coluna no quadro.", "info");
         return;
       }
-      if (!confirm(`Excluir "${list.titulo || "esta coluna"}"? Os cartoes desta coluna tambem serao removidos.`)) return;
-      resetBoardCardFormIfEditing(payload.listIndex, null);
-      board.listas.splice(payload.listIndex, 1);
-      await persistBoard(board);
+      showConfirmActionModal({
+        title: "Excluir coluna",
+        text: `Excluir "${list.titulo || "esta coluna"}"? Os cartoes desta coluna tambem serao removidos.`,
+        confirmText: "Excluir coluna",
+        danger: true,
+        onConfirm: async () => {
+          resetBoardCardFormIfEditing(payload.listIndex, null);
+          board.listas.splice(payload.listIndex, 1);
+          await persistBoard(board);
+        },
+      });
     }
     return;
   }
@@ -6086,7 +6220,7 @@ function renderDashboard() {
     document.getElementById("metric-malotes").textContent = data.malotes.filter((item) => !isArchivedRecord(item) && isTodayLabel(item.createdAt)).length;
   }
   if (document.getElementById("metric-vagas")) {
-    document.getElementById("metric-vagas").textContent = data.vagas.filter((item) => !isArchivedRecord(item) && item.status !== "Fechada").length;
+    document.getElementById("metric-vagas").textContent = (data.candidaturas || []).filter((item) => isTodayLabel(item.createdAt)).length;
   }
   const upcomingEvents = getUpcomingEvents();
   if (document.getElementById("metric-eventos")) {
@@ -6168,66 +6302,21 @@ function renderDashboard() {
           meta: getDashboardSystemUpdateMeta(item),
         };
       }),
-    ...data.malotes
-      .filter((item) => !isArchivedRecord(item))
+    ...(data.candidaturas || [])
       .map((item) => {
-        const items = parseEpiItems(item.epis);
-        const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` - Tam. ${epi.tamanho}` : ""} - Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
+        const vaga = (data.vagas || []).find((vagaItem) => String(vagaItem.id) === String(item.vaga_id));
         return {
-          kind: "malote",
-          notificationId: getDashboardNotificationId("malote", item),
-          title: `Malote - ${item.destino}`,
-          text: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
-          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
-          tag: item.status,
+          kind: "vaga",
+          notificationId: getDashboardNotificationId("candidatura", item),
+          title: `Curriculo - ${vaga?.cargo || "Vaga"}`,
+          text: item.nome || "Novo curriculo recebido.",
+          details: `Candidato: ${item.nome || "Nao informado"}\nCPF: ${formatCpf(item.cpf || "") || "Nao informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Nao informado"}\nVaga: ${vaga?.cargo || item.vaga_id || "Nao informada"}\nUnidade: ${vaga?.unidade || "Nao informada"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
+          tag: "Curriculo",
           date: item.createdAt,
-          dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
-          systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
-          meta: getDashboardSystemUpdateMeta(item),
+          dateTime: item.sortAt || item.createdAt,
+          view: "vagas",
         };
-      }),
-    ...data.vagas
-      .filter((item) => !isArchivedRecord(item))
-      .map((item) => ({
-        kind: "vaga",
-        notificationId: getDashboardNotificationId("vaga", item),
-        title: `Vaga - ${item.cargo}`,
-        text: item.descricao || "Vaga atualizada.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
-        tag: item.status,
-        date: item.createdAt,
-        dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
-        systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
-        meta: getDashboardSystemUpdateMeta(item),
-      })),
-    ...documentRecords
-      .filter((item) => !isArchivedRecord(item))
-      .map((item) => ({
-        kind: "documento",
-        notificationId: getDashboardNotificationId("documento", item),
-        title: `Documento - ${documentLabels[item.type] || item.type}`,
-        text: item.summary || "Documento registrado.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${documentLabels[item.type] || item.type}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
-        tag: "Registro",
-        date: item.createdAt,
-        dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
-        systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
-        meta: getDashboardSystemUpdateMeta(item),
-      })),
-    ...(data.atestados || [])
-      .map((item) => ({
-        kind: "atestado",
-        notificationId: getDashboardNotificationId("atestado", item),
-        title: `Atestado - ${item.nome || "Colaborador"}`,
-        text: `${item.unidade || "Unidade não informada"} - ${item.arquivoNome || "Atestado anexado"}`,
-        details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${formatCpf(item.cpf || "") || "Não informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
-        tag: "Atestado",
-        date: item.createdAt,
-        dateTime: item.sortAt || item.createdAt,
-      }))
-  ];
+      })  ];
 
   const sortedDashboardItems = dashboardItems.map((item, index) => ({ ...item, _sortIndex: index }));
   sortedDashboardItems.sort((a, b) => {
@@ -6322,14 +6411,15 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
     : "";
   strip.innerHTML = monthHeader + leadingCells + visibleDates
     .map((date) => {
-      const dayEvents = (data.eventos || []).filter((item) => item.data === date);
+      const dayEvents = getSortedEvents().filter((item) => item.data === date);
       const holiday = getHolidayForDate(date);
       const isToday = date === todayKey;
       const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
       const hasBirthday = dayHasEventType(dayEvents, "aniversario");
+      const hasMainEvent = dayHasNonBirthdayEvent(dayEvents);
       const hasInterview = dayHasEventType(dayEvents, "entrevista");
       return `
-        <button class="calendar-day ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+        <button class="calendar-day ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday && !hasMainEvent ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
           <span class="calendar-weekday-label">${escapeHtml(formatWeekday(date))}</span>
           <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
           ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
@@ -6345,9 +6435,9 @@ function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
     return;
   }
 
-  list.innerHTML = visibleEvents
-    .slice(0, dashboardCalendarViewMode === "week" ? 4 : 6)
-    .map((item) => `<li class="${getEventTypeClass(item)}"><div class="item-topline">${renderEventTitle(item)}<span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span></div>${renderEventDescription(item)}<p>${escapeHtml(getEventListMeta(item))}</p></li>`)
+  list.innerHTML = getCompactAgendaItems(visibleEvents)
+    .slice(0, dashboardCalendarViewMode === "week" ? 5 : 8)
+    .map(renderCompactAgendaItem)
     .join("");
 }
 
@@ -6371,14 +6461,15 @@ function renderCalendar() {
 
   for (let day = 1; day <= totalDays; day += 1) {
     const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const dayEvents = (data.eventos || []).filter((item) => item.data === date);
+    const dayEvents = getSortedEvents().filter((item) => item.data === date);
     const holiday = getHolidayForDate(date);
     const isToday = date === todayKey;
     const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
     const hasBirthday = dayHasEventType(dayEvents, "aniversario");
+    const hasMainEvent = dayHasNonBirthdayEvent(dayEvents);
     const hasInterview = dayHasEventType(dayEvents, "entrevista");
     cells.push(`
-      <button class="calendar-cell ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
+      <button class="calendar-cell ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday && !hasMainEvent ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
         <strong>${day}</strong>
         ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
         ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
@@ -6403,10 +6494,10 @@ function renderCalendar() {
       ${renderEventDescription(item)}
       <p class="item-meta">${escapeHtml(getEventListMeta(item))}</p>
       <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
-      <div class="job-actions">
+      ${item.systemBirthday ? "" : `<div class="job-actions">
         <button class="secondary-link" type="button" data-action="editar-evento" data-id="${escapeHtml(item.id)}">Editar</button>
         <button class="danger-button" type="button" data-action="excluir-evento" data-id="${escapeHtml(item.id)}">Deletar</button>
-      </div>
+      </div>`}
     </article>
   `);
 }
@@ -6455,10 +6546,11 @@ async function atualizarStatusDenuncia(id, status) {
   const denuncia = data.denuncias.find((item) => String(item.id) === String(id));
   if (!denuncia) return false;
 
+  denuncia.status = status;
+  saveLocalData();
+  renderAll();
+
   if (!postgresClient) {
-    denuncia.status = status;
-    saveLocalData();
-    renderAll();
     return true;
   }
 
@@ -6477,8 +6569,27 @@ async function atualizarStatusDenuncia(id, status) {
     return true;
   } catch (err) {
     console.error("Erro ao atualizar status da denúncia no PostgreSQL:", err);
-    showModal("Aviso de Permissão", "A denúncia não pode ser atualizada. Rode o postgres-schema.sql atualizado para liberar UPDATE em hub_denuncias.", "error");
-    return false;
+    setSyncStatus("Sincronizacao pendente", false);
+    return true;
+  }
+}
+
+async function syncRecordStatusSilently(collection, id, status) {
+  if (!postgresClient || !TABLES[collection]) return;
+  try {
+    const { data: updated, error } = await postgresClient
+      .from(TABLES[collection])
+      .update({ status })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error || !updated) throw error || new Error("Nenhuma linha alterada.");
+    mergeRealtimeRow(collection, updated, "UPDATE");
+    renderRealtimeUpdate(collection);
+    setSyncStatus("PostgreSQL EIXO online", true);
+  } catch (error) {
+    console.error("Erro ao sincronizar arquivamento no PostgreSQL:", error);
+    setSyncStatus("Sincronizacao pendente", false);
   }
 }
 
@@ -7333,51 +7444,16 @@ function getRealtimeNotificationText(collection, item = {}) {
     };
   }
 
-  if (collection === "malotes") {
+  if (collection === "candidaturas") {
+    const vaga = (data.vagas || []).find((vagaItem) => String(vagaItem.id) === String(item.vaga_id));
     return {
-      title: "Atualização de malote",
-      message: [item.codigoSolicitacao, item.destino, item.status].filter(Boolean).join(" - ") || "Um malote foi atualizado.",
-      icon: "??",
-      type: "malote",
-      tag: `hub-rh-malote-${item.id || Date.now()}`,
-    };
-  }
-
-  if (collection === "vagas") {
-    return {
-      title: "Atualização de vaga",
-      message: [item.cargo, item.unidade, item.status].filter(Boolean).join(" - ") || "Uma vaga foi atualizada.",
+      title: "Curriculo recebido",
+      message: [item.nome, vaga?.cargo].filter(Boolean).join(" - ") || "Um curriculo foi enviado para uma vaga.",
       icon: "??",
       type: "vaga",
-      tag: `hub-rh-vaga-${item.id || Date.now()}`,
+      tag: `hub-rh-candidatura-${item.id || Date.now()}`,
     };
   }
-
-  if (collection === "atestados") {
-    return {
-      nome: values.nome || "",
-      cpf: values.cpf || "",
-      telefone: values.telefone || "",
-      unidade: values.unidade || "",
-      arquivo_nome: values.arquivoNome || "Atestado",
-      arquivo_tamanho: values.arquivoTamanho || 0,
-      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
-      arquivo_url: values.arquivoUrl || "",
-      status: values.status || "Recebido",
-      created_by: values.createdBy || "Publico",
-    };
-  }
-
-  if (collection === "documentosContratados") {
-    return {
-      title: "Documentos recebidos",
-      message: [item.nome, item.empresa].filter(Boolean).join(" - ") || "Novos documentos foram enviados.",
-      icon: "??",
-      type: "documento",
-      tag: `hub-rh-documento-${item.id || Date.now()}`,
-    };
-  }
-
   return null;
 }
 
@@ -7385,7 +7461,7 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!isAuthenticated()) return false;
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
-  if (collection === "usuarios" || collection === "eventos" || collection === "vtRegistros") return false;
+  if (["usuarios", "eventos", "vtRegistros", "malotes", "vagas", "atestados", "documentosContratados", "quadros"].includes(collection)) return false;
 
   const signature = [collection, action, item.id || "", item.updatedAt || item.updated_at || item.createdAt || item.created_at || ""].join("|");
   if (signature && signature === lastRealtimeNotificationSignature) return false;
@@ -7410,7 +7486,7 @@ function getNotificationPollingKey(collection, item = {}) {
 function getNotificationPollingCandidates() {
   const sourceData = typeof data === "object" && data ? data : {};
   const candidates = [];
-  const allowedCollections = ["comunicados", "denuncias", "chamados", "malotes", "vagas", "documentosContratados"];
+  const allowedCollections = ["comunicados", "denuncias", "chamados", "candidaturas"];
 
   allowedCollections.forEach((collection) => {
     const rows = Array.isArray(sourceData[collection]) ? sourceData[collection] : [];
@@ -8862,13 +8938,13 @@ if (denunciaForm) {
     const turnstileToken = getPublicChallengeToken(formElement);
     const message = String(form.get("mensagem") || form.get("descricao") || "").trim();
     if (message.length < 1 || message.length > 4000) {
-      showModal("Mensagem invalida", "Descreva a situacao com ate 4000 caracteres.", "error");
+      showModal("Mensagem inválida", "Descreva a situação com até 4000 caracteres.", "error");
       return;
     }
 
     const success = await addItem("denuncias", {
-      identificacao: "Anonimo",
-      categoria: "Denuncia anonima",
+      identificacao: "Anônimo",
+      categoria: "Denúncia anônima",
       descricao: message,
       status: "Aberta",
       _turnstileToken: turnstileToken,
@@ -8878,7 +8954,7 @@ if (denunciaForm) {
       formElement.reset();
       const feedback = document.getElementById("denuncia-feedback");
       if (feedback) {
-        feedback.textContent = "Denuncia enviada com sucesso. Obrigado pelo relato.";
+        feedback.textContent = "Denúncia enviada com sucesso. Obrigado pelo relato.";
       }
       showModal("Denúncia enviada", "Seu relato foi enviado com sucesso e será analisado pela equipe responsável.", "info");
     }
@@ -10350,8 +10426,13 @@ async function arquivarDenunciaPorContexto(id) {
 
 async function arquivarChamadoPorContexto(id) {
   if (!id) return;
-  const success = await updateItem("chamados", id, { status: "Arquivado" });
-  if (success) showModal("Chamado arquivado", "O chamado foi movido para Arquivados.", "info");
+  const chamado = data.chamados.find((item) => String(item.id) === String(id));
+  if (!chamado) return;
+  chamado.status = "Arquivado";
+  saveLocalData();
+  renderAll();
+  syncRecordStatusSilently("chamados", id, "Arquivado");
+  showModal("Chamado arquivado", "O chamado foi movido para Arquivados.", "info");
 }
 
 function getChatMessageById(id) {
@@ -10441,8 +10522,11 @@ function openRecordContextMenu(event, type, id) {
   const label = type === "denuncia" ? "Arquivar denúncia" : "Arquivar chamado";
   menu.innerHTML = `<button type="button" class="danger" data-record-menu-action="archive">${label}</button>`;
   menu.addEventListener("click", async (clickEvent) => {
-    const action = clickEvent.target.closest("[data-record-menu-action]")?.dataset.recordMenuAction;
+    const actionButton = clickEvent.target.closest("[data-record-menu-action]");
+    const action = actionButton?.dataset.recordMenuAction;
     if (action !== "archive") return;
+    actionButton.disabled = true;
+    actionButton.textContent = "Arquivando...";
     menu.remove();
     if (type === "denuncia") await arquivarDenunciaPorContexto(id);
     if (type === "chamado") await arquivarChamadoPorContexto(id);
@@ -11402,137 +11486,22 @@ class NotificationTracker {
         });
       });
 
-    (sourceData.malotes || [])
-      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
+    (sourceData.candidaturas || [])
       .forEach((item) => {
-        const items = typeof parseEpiItems === "function" ? parseEpiItems(item.epis) : [];
-        const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` - Tam. ${epi.tamanho}` : ""} - Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
-        const statusText = String(item.status || "").toLowerCase();
-        const isResolved = statusText.includes("entreg") || statusText.includes("conclu") || statusText.includes("finaliz");
+        const vaga = (sourceData.vagas || []).find((vagaItem) => String(vagaItem.id) === String(item.vaga_id));
         pushNotification({
-          id: `malote-${item.id}`,
-          type: "malote",
-          title: `Malote - ${item.destino || "Destino não informado"}`,
-          description: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
-          time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
-          status: isResolved ? "resolved" : "pending",
-          unread: !isResolved,
-          view: "malotes",
-        });
-      });
-
-    (sourceData.vagas || [])
-      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
-      .forEach((item) => {
-        const isClosed = String(item.status || "").toLowerCase() === "fechada";
-        pushNotification({
-          id: `vaga-${item.id}`,
+          id: `candidatura-${item.id}`,
           type: "vaga",
-          title: `Vaga - ${item.cargo || "Cargo não informado"}`,
-          description: item.descricao || "Vaga atualizada.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
-          time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
-          status: isClosed ? "resolved" : "pending",
-          unread: !isClosed,
-          view: "vagas",
-        });
-      });
-
-    const docs = typeof documentRecords !== "undefined" && Array.isArray(documentRecords) ? documentRecords : [];
-    docs
-      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
-      .forEach((item) => {
-        const label = typeof documentLabels === "object" && documentLabels ? documentLabels[item.type] || item.type : item.type;
-        pushNotification({
-          id: `documento-${item.id}`,
-          type: "documento",
-          title: `Documento - ${label || "Registro"}`,
-          description: item.summary || "Documento registrado.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${label || "Registro"}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
-          time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
-          status: "pending",
-          unread: true,
-          view: "documentos",
-        });
-      });
-
-    (sourceData.atestados || [])
-      .forEach((item) => {
-        pushNotification({
-          id: `atestado-${item.id}`,
-          type: "atestado",
-          title: `Atestado - ${item.nome || "Colaborador"}`,
-          description: `${item.unidade || "Unidade não informada"} - ${item.arquivoNome || "Atestado anexado"}`,
-          details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Não informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
+          title: `Curriculo - ${vaga?.cargo || "Vaga"}`,
+          description: item.nome || "Novo curriculo recebido.",
+          details: `Candidato: ${item.nome || "Nao informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Nao informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Nao informado"}\nVaga: ${vaga?.cargo || item.vaga_id || "Nao informada"}\nUnidade: ${vaga?.unidade || "Nao informada"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
           time: item.createdAt || "Recentemente",
           dateTime: item.sortAt || item.createdAt || "Recentemente",
           status: "pending",
           unread: true,
-          view: "atestados",
+          view: "vagas",
         });
       });
-
-    const upcoming = typeof getUpcomingEvents === "function" ? getUpcomingEvents() : [];
-    upcoming.forEach((item) => {
-      const eventDate = item.data || "";
-      const eventTime = item.horario || "";
-      const formattedDate = typeof formatEventDate === "function" ? formatEventDate(eventDate) : eventDate;
-      const formattedTime = typeof formatEventTime === "function" ? formatEventTime(eventTime) : eventTime;
-      pushNotification({
-        id: `evento-${item.id}`,
-        type: "evento",
-        title: `Evento - ${item.titulo || "Compromisso"}`,
-        description: item.descricao || [formattedDate, formattedTime].filter(Boolean).join(" - "),
-        details: `Título: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "Não informada"}\nHorário: ${formattedTime || "Não informado"}\nResponsável: ${item.responsavel || "Não informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descrição."}`,
-        time: [formattedDate, formattedTime].filter(Boolean).join(" - ") || "Recentemente",
-        dateTime: item.sortAt || item.updatedSortAt || item.createdAt || `${eventDate || ""}T${eventTime || "00:00"}`,
-        status: "pending",
-        unread: false,
-        view: "calendario",
-      });
-    });
-
-    (sourceData.quadros || [])
-      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
-      .forEach((item) => {
-        const lists = Array.isArray(item.listas) ? item.listas : [];
-        const cardsCount = lists.reduce((total, list) => total + (Array.isArray(list.cards) ? list.cards.length : 0), 0);
-        pushNotification({
-          id: `quadro-${item.id}`,
-          type: "quadro",
-          title: `Quadro - ${item.nome || "Sem nome"}`,
-          description: `${cardsCount} card(s) em acompanhamento`,
-          details: `Quadro: ${item.nome || "Sem nome"}\nListas: ${lists.length}\nCards: ${cardsCount}\nAtualizado por: ${item.updatedBy || item.createdBy || "Nao informado"}\nCriado em: ${item.createdAt || "Nao informado"}`,
-          time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
-          status: "pending",
-          unread: true,
-          view: "quadros",
-        });
-      });
-
-    (sourceData.disciplinaryRecords || [])
-      .forEach((item) => {
-        pushNotification({
-          id: `disciplinary-${item.id}`,
-          type: "disciplinar",
-          title: `${getDisciplinaryTypeLabel(item.tipo)} - ${item.colaborador || "Funcionario"}`,
-          description: item.motivo || "Medida disciplinar registrada.",
-          details: `Tipo: ${getDisciplinaryTypeLabel(item.tipo)}\nFuncionario: ${item.colaborador || "Nao informado"}\nUnidade: ${item.unidade || "Nao informada"}\nData: ${formatEventDate(item.dataMedida || "")}\nLocal: ${item.local || "Nao informado"}\nMotivo: ${item.motivo || "Nao informado"}`,
-          time: item.createdAt || item.dataMedida || "Recentemente",
-          dateTime: item.sortAt || item.dataMedida || item.createdAt || "Recentemente",
-          status: "pending",
-          unread: true,
-          view: "advertencias-suspensoes",
-        });
-      });
-
     return notifications.sort((a, b) => (b.dateTime - a.dateTime) || (a.sequence - b.sequence));
   }
 
@@ -11580,6 +11549,7 @@ class NotificationTracker {
       vaga: "vagas",
       evento: "calendario",
       documento: "documentos",
+      contratado: "documentos-contratados",
       atestado: "atestados",
       quadro: "quadros",
       disciplinar: "advertencias-suspensoes",
@@ -11596,6 +11566,7 @@ class NotificationTracker {
       vaga: "&#128188;",
       evento: "&#128197;",
       documento: "&#128196;",
+      contratado: "&#128193;",
       atestado: "&#128203;",
       quadro: "&#9638;",
       disciplinar: "&#9888;",
@@ -11803,6 +11774,7 @@ class NotificationTracker {
       vaga: "Vaga",
       evento: "Evento",
       documento: "Documento",
+      contratado: "Documento de Contratado",
       atestado: "Atestado",
       geral: "Geral",
     };
