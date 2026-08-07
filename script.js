@@ -316,6 +316,9 @@ const locallyDeletedChatMessageIds = new Set();
 let chatMutationInFlight = 0;
 let chatMutationVersion = 0;
 let chatRefreshQueuedAfterMutation = false;
+const chatClientId = generateUUID();
+let realtimeBroadcastReady = false;
+const pendingChatBroadcasts = [];
 window.editingDocId = null;
 
 const documentLabels = {
@@ -3405,12 +3408,93 @@ function endChatMutation() {
 
 function isMatchingPendingChatMessage(pending, saved) {
   if (!pending?._pending || !saved) return false;
+  if (pending._clientMutationId && saved._clientMutationId && pending._clientMutationId === saved._clientMutationId) return true;
   if (normalizeChatChannel(pending.canal) !== normalizeChatChannel(saved.canal)) return false;
   if (pending.autor !== saved.autor) return false;
   if ((pending.mensagem || "") !== (saved.mensagem || "")) return false;
   if ((pending.arquivo?.name || "") !== (saved.arquivo?.name || "")) return false;
   if ((pending.arquivo?.size || 0) !== (saved.arquivo?.size || 0)) return false;
   return true;
+}
+
+function applyChatMessageUpsert(message, options = {}) {
+  if (!message?.id || !canAccessChatChannel(message.canal)) return false;
+  if (options.forceRestore) forgetDeletedChatMessage(message.id);
+  if (locallyDeletedChatMessageIds.has(String(message.id))) return false;
+
+  const nextMessage = options.localEcho ? markChatMessageAsLocalEcho(message) : message;
+  const current = data.comunicados || [];
+  const clientMutationId = nextMessage._clientMutationId || "";
+  const index = current.findIndex((item) =>
+    String(item.id) === String(nextMessage.id) ||
+    (clientMutationId && item._clientMutationId === clientMutationId) ||
+    isMatchingPendingChatMessage(item, nextMessage)
+  );
+
+  if (index >= 0) {
+    data.comunicados = current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...nextMessage } : item));
+  } else {
+    data.comunicados = [nextMessage, ...current];
+  }
+
+  applyLocalChatState();
+  return true;
+}
+
+function renderInstantChatUpdate() {
+  saveLocalDataDebounced();
+  renderDashboard();
+  renderChatChannels();
+  renderChat({ skipPostRender: true });
+}
+
+function flushPendingChatBroadcasts() {
+  if (!realtimeChannel || !realtimeBroadcastReady) return;
+  while (pendingChatBroadcasts.length) {
+    const { event, payload } = pendingChatBroadcasts.shift();
+    sendChatRealtimeBroadcast(event, payload);
+  }
+}
+
+function sendChatRealtimeBroadcastNow(event, payload = {}) {
+  if (!realtimeChannel || !realtimeBroadcastReady) return false;
+  try {
+    const result = realtimeChannel.send({
+      type: "broadcast",
+      event,
+      payload: {
+        ...payload,
+        senderClientId: chatClientId,
+      },
+    });
+    if (result?.catch) result.catch((error) => console.warn("Broadcast do chat recusado:", error));
+    return true;
+  } catch (error) {
+    console.warn("Nao foi possivel enviar broadcast do chat:", error);
+    return false;
+  }
+}
+
+function sendChatRealtimeBroadcast(event, payload = {}) {
+  if (sendChatRealtimeBroadcastNow(event, payload)) return;
+  pendingChatBroadcasts.push({ event, payload });
+  if (!realtimeChannel && postgresClient) setupRealtime();
+}
+
+function handleChatRealtimeBroadcast(payload = {}) {
+  if (!payload || payload.senderClientId === chatClientId) return;
+
+  if (payload.action === "upsert" && payload.message) {
+    if (applyChatMessageUpsert(payload.message, { localEcho: Boolean(payload.localEcho), forceRestore: Boolean(payload.forceRestore) })) {
+      renderInstantChatUpdate();
+    }
+    return;
+  }
+
+  if (payload.action === "delete" && payload.id) {
+    rememberDeletedChatMessage(payload.id);
+    renderInstantChatUpdate();
+  }
 }
 
 function mergeRealtimeRow(collection, row, action = "INSERT") {
@@ -3860,7 +3944,13 @@ function setupAutoRefresh() {
 function setupRealtime() {
   if (!postgresClient || realtimeChannel) return;
 
-  realtimeChannel = postgresClient.channel("hub-realtime-updates");
+  realtimeChannel = postgresClient.channel("hub-realtime-updates", {
+    config: { broadcast: { self: false } },
+  });
+
+  realtimeChannel.on("broadcast", { event: "chat" }, ({ payload }) => {
+    handleChatRealtimeBroadcast(payload);
+  });
 
   Object.entries(TABLES).forEach(([collection, table]) => {
     realtimeChannel.on(
@@ -3881,9 +3971,12 @@ function setupRealtime() {
 
   realtimeChannel.subscribe((status) => {
     if (status === "SUBSCRIBED") {
+      realtimeBroadcastReady = true;
       console.info("HUB realtime conectado");
       setSyncStatus("Tempo real online", true);
+      flushPendingChatBroadcasts();
     } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+      realtimeBroadcastReady = false;
       console.warn("HUB realtime desconectado:", status);
       setSyncStatus("Reconectando...", false);
       // Remove canal atual e agenda reconexão
@@ -4818,6 +4911,7 @@ async function deleteChatMessageRecord(id) {
   }
 
   rememberDeletedChatMessage(id);
+  sendChatRealtimeBroadcast("chat", { action: "delete", id });
   data.comunicados = current.filter((item) => String(item.id) !== String(id));
   saveLocalDataDebounced();
   renderChat({ skipPostRender: true });
@@ -4846,6 +4940,7 @@ async function deleteChatMessageRecord(id) {
   } catch (error) {
     console.error("Erro ao excluir mensagem no PostgreSQL:", error);
     forgetDeletedChatMessage(id);
+    sendChatRealtimeBroadcast("chat", { action: "upsert", message: removed, localEcho: true, forceRestore: true });
     data.comunicados = [removed, ...(data.comunicados || []).filter((item) => String(item.id) !== String(id))];
     saveLocalDataDebounced();
     renderChat({ skipPostRender: true });
@@ -9417,6 +9512,7 @@ if (chatForm) {
     const messageAuthor = getCurrentUserName();
     const messageChannel = activeChatChannel;
     const pendingCreatedAt = new Date().toISOString();
+    const clientMutationId = generateUUID();
     beginChatMutation();
 
     // -- OTIMISMO: mostra a mensagem imediatamente --------------------------
@@ -9432,6 +9528,7 @@ if (chatForm) {
           createdAt: pendingCreatedAt,
           sortAt: pendingCreatedAt,
           _pending: true,
+          _clientMutationId: `${clientMutationId}-${index}`,
         };
       })
       : [{
@@ -9443,10 +9540,14 @@ if (chatForm) {
         createdAt: pendingCreatedAt,
         sortAt: pendingCreatedAt,
         _pending: true,
+        _clientMutationId: clientMutationId,
       }];
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
     pendingMessages.forEach((item) => markChatMessageAsLocalEcho(item));
     data.comunicados = mergeLocalChatMessages([...pendingMessages, ...(data.comunicados || [])], data.comunicados);
+    pendingMessages.forEach((item) => {
+      sendChatRealtimeBroadcast("chat", { action: "upsert", message: item, localEcho: true });
+    });
     renderChat({ skipPostRender: true });
     // Limpa o formulário imediatamente
     formElement.reset();
@@ -9469,6 +9570,9 @@ if (chatForm) {
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
       // Remove mensagens otimistas em caso de falha
+      pendingMessages.forEach((item) => {
+        sendChatRealtimeBroadcast("chat", { action: "delete", id: item.id });
+      });
       pendingMessages.forEach((item) => forgetLocalChatEchoMessage(item.id));
       data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
       renderChat({ skipPostRender: true });
@@ -9482,17 +9586,28 @@ if (chatForm) {
         canal: messageChannel,
         mensagem: index === 0 ? message : "",
         arquivo,
+        _clientMutationId: `${clientMutationId}-${index}`,
       }))
       : [{
         autor: messageAuthor,
         canal: messageChannel,
         mensagem: message,
         arquivo: null,
+        _clientMutationId: clientMutationId,
       }];
 
     const savedMessages = (await Promise.all(payloads.map((payload) => addChatMessage(payload))))
-      .map((savedMessage) => markChatMessageAsLocalEcho(savedMessage));
+      .map((savedMessage, index) => markChatMessageAsLocalEcho(savedMessage ? {
+        ...savedMessage,
+        _clientMutationId: payloads[index]._clientMutationId,
+      } : savedMessage));
     pendingMessages.forEach((item) => forgetLocalChatEchoMessage(item.id));
+    savedMessages.filter(Boolean).forEach((item) => {
+      sendChatRealtimeBroadcast("chat", { action: "upsert", message: item, localEcho: true });
+    });
+    pendingMessages.forEach((item, index) => {
+      if (!savedMessages[index]) sendChatRealtimeBroadcast("chat", { action: "delete", id: item.id });
+    });
     const replacements = new Map(pendingMessages.map((pending, index) => [pending.id, savedMessages[index]]));
     data.comunicados = (data.comunicados || [])
       .map((item) => replacements.get(item.id) || item)
