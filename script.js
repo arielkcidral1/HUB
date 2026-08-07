@@ -206,6 +206,7 @@ let chatAttachmentPreviewUrl = "";
 let chatAttachmentPreviewUrls = [];
 let chatSelectedFiles = [];
 let chatAttachmentPreviewIndex = 0;
+let lastChatClientTimestamp = 0;
 
 function getHubPostgreSQLConfig() {
   return {
@@ -3432,6 +3433,45 @@ function removePendingContractorDocument(id) {
   return remaining;
 }
 
+function isMatchingPendingChatMessage(pending = {}, saved = {}) {
+  if (!pending?._pending || !saved) return false;
+  if (normalizeChatChannel(pending.canal) !== normalizeChatChannel(saved.canal)) return false;
+  if (String(pending.autor || "") !== String(saved.autor || "")) return false;
+  if (String(pending.mensagem || "") !== String(saved.mensagem || "")) return false;
+  if (String(pending.arquivo?.name || "") !== String(saved.arquivo?.name || "")) return false;
+
+  const pendingTime = getChatMessageTime(pending.sortAt || pending.createdAt);
+  const savedTime = getChatMessageTime(saved.sortAt || saved.createdAt);
+  if (!pendingTime || !savedTime) return true;
+  return Math.abs(savedTime - pendingTime) < 120000;
+}
+
+function mergePendingChatMessages(remoteRows = []) {
+  const remote = Array.isArray(remoteRows) ? remoteRows : [];
+  const pending = (data.comunicados || []).filter((item) =>
+    item?._pending && !remote.some((row) => isMatchingPendingChatMessage(item, row))
+  );
+  return [...pending, ...remote];
+}
+
+function dedupeChatMessages(messages = []) {
+  const unique = [];
+  (messages || []).forEach((message) => {
+    if (!message) return;
+    const duplicateIndex = unique.findIndex((item) =>
+      String(item.id) === String(message.id) ||
+      isMatchingPendingChatMessage(item, message) ||
+      isMatchingPendingChatMessage(message, item)
+    );
+    if (duplicateIndex >= 0) {
+      unique[duplicateIndex] = { ...unique[duplicateIndex], ...message, _pending: unique[duplicateIndex]._pending && message._pending };
+    } else {
+      unique.push(message);
+    }
+  });
+  return unique;
+}
+
 function mergeRealtimeRow(collection, row, action = "INSERT") {
   if (action === "DELETE") {
     if (collection === "usuarios") {
@@ -3446,12 +3486,17 @@ function mergeRealtimeRow(collection, row, action = "INSERT") {
   const mapped = mapRows(collection, [row])[0];
   const current = data[collection] || [];
 
-  const index = current.findIndex((item) => String(item.id) === String(mapped.id) || (collection === "usuarios" && normalizeLoginName(item.nome) === normalizeLoginName(mapped.nome)));
+  const index = current.findIndex((item) =>
+    String(item.id) === String(mapped.id) ||
+    (collection === "usuarios" && normalizeLoginName(item.nome) === normalizeLoginName(mapped.nome)) ||
+    (collection === "comunicados" && isMatchingPendingChatMessage(item, mapped))
+  );
   if (index >= 0) {
     data[collection] = current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...mapped } : item));
   } else {
     data[collection] = [mapped, ...current];
   }
+  if (collection === "comunicados") data[collection] = dedupeChatMessages(data[collection]);
 }
 
 function renderRealtimeUpdate(collection) {
@@ -3810,7 +3855,7 @@ async function loadFromPostgreSQL(options = {}) {
       if (result.status === "fulfilled") {
         const [collection, rows] = result.value;
 
-        data[collection] = rows;
+        data[collection] = collection === "comunicados" ? dedupeChatMessages(mergePendingChatMessages(rows)) : rows;
       } else {
         console.error("Erro ao carregar colecao do PostgreSQL:", result.reason);
       }
@@ -9406,7 +9451,8 @@ if (chatForm) {
     }
 
     // -- OTIMISMO: mostra a mensagem imediatamente --------------------------
-    const pendingBaseTime = Date.now();
+    const pendingBaseTime = Math.max(Date.now(), lastChatClientTimestamp + 1);
+    lastChatClientTimestamp = pendingBaseTime + Math.max(files.length, 1);
     const pendingMessages = files.length
       ? files.map((file, index) => {
         const attachmentType = getChatFileMimeType(file);
@@ -9488,9 +9534,9 @@ if (chatForm) {
         _clientOrder: pending._clientOrder,
       } : pending];
     }));
-    data.comunicados = (data.comunicados || [])
+    data.comunicados = dedupeChatMessages((data.comunicados || [])
       .map((item) => replacements.get(item.id) || item)
-      .filter((item) => item && (!item._pending || !pendingIds.has(item.id)));
+      .filter((item) => item && (!item._pending || !pendingIds.has(item.id))));
     saveLocalDataDebounced();
     renderDashboard();
     renderChatChannels();
