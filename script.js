@@ -2201,7 +2201,8 @@ function getEventDisplayTitle(item = {}) {
 }
 
 function getAllEvents() {
-  return [...(data.eventos || []), ...getCompanyBirthdayEvents()];
+  return [...(data.eventos || []), ...getCompanyBirthdayEvents()]
+    .filter((item) => !isCompanyBirthdayEvent(item) && !String(item.id || "").startsWith("company-birthday-"));
 }
 
 function getSortedEvents() {
@@ -2302,12 +2303,11 @@ function getEventSummary(item = {}) {
 }
 
 function renderCalendarEventCard(item = {}, tagName = "article", extraClass = "") {
-  const isManageable = !item.systemBirthday;
   const summary = getEventSummary(item);
   const escapedId = escapeHtml(item.id);
   const eventIcon = getEventIcon(item);
   return `
-    <${tagName} class="calendar-event-block ${extraClass} ${getEventTypeClass(item)}" data-action="visualizar-evento" data-id="${escapedId}" role="button" tabindex="0">
+    <${tagName} class="calendar-event-block ${extraClass} ${getEventTypeClass(item)}" data-event-card="true" data-action="visualizar-evento" data-id="${escapedId}" role="button" tabindex="0">
       <div class="item-topline">
         <div class="calendar-event-heading">
           <span class="event-icon ${eventIcon.className}" aria-label="${escapeHtml(eventIcon.label)}">${escapeHtml(eventIcon.icon)}</span>
@@ -2316,10 +2316,6 @@ function renderCalendarEventCard(item = {}, tagName = "article", extraClass = ""
       </div>
       <p class="calendar-event-date">${escapeHtml(formatEventDate(item.data))}</p>
       <p class="calendar-event-summary">${escapeHtml(summary)}</p>
-      ${isManageable && extraClass.includes("calendar-event-manage-block") ? `<div class="job-actions calendar-event-inline-actions">
-        <button class="secondary-link" type="button" data-action="editar-evento" data-id="${escapedId}">Editar</button>
-        <button class="danger-button" type="button" data-action="excluir-evento" data-id="${escapedId}">Deletar</button>
-      </div>` : ""}
     </${tagName}>
   `;
 }
@@ -2401,7 +2397,6 @@ function visualizarEvento(id) {
   const overlay = document.createElement("div");
   overlay.id = "custom-modal";
   overlay.className = "modal-overlay";
-  const canManage = !item.systemBirthday;
   const eventIcon = getEventIcon(item);
   overlay.innerHTML = `
     <div class="modal-card calendar-event-modal">
@@ -2420,10 +2415,6 @@ function visualizarEvento(id) {
       </div>
       <div class="modal-footer modal-footer-split">
         <button class="secondary-link" type="button" data-action="close-modal">Fechar</button>
-        ${canManage ? `<div class="calendar-event-modal-actions">
-          <button class="secondary-link" type="button" data-action="editar-evento" data-id="${escapeHtml(item.id)}">Editar</button>
-          <button class="danger-button" type="button" data-action="excluir-evento" data-id="${escapeHtml(item.id)}">Deletar</button>
-        </div>` : ""}
       </div>
     </div>
   `;
@@ -2683,7 +2674,7 @@ function showDayEventsModal(date) {
   const eventContent = dayEvents.length
     ? dayEvents
       .map((item) => `
-          <article class="day-event-card ${getEventTypeClass(item)}">
+          <article class="day-event-card ${getEventTypeClass(item)}" data-event-card="true" data-id="${escapeHtml(item.id)}">
             <div class="item-topline">
               ${renderEventTitle(item)}
               <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
@@ -2691,9 +2682,6 @@ function showDayEventsModal(date) {
             ${renderEventDescription(item, "day-event-description")}
             <p class="item-meta">${escapeHtml(getEventListMeta(item))}</p>
             <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
-            ${item.systemBirthday ? "" : `<div class="job-actions">
-              <button class="secondary-link" type="button" data-action="editar-evento" data-id="${escapeHtml(item.id)}">Editar evento</button>
-            </div>`}
           </article>
         `)
         .join("")
@@ -9514,10 +9502,6 @@ document.getElementById("toggle-dashboard-calendar-view")?.addEventListener("cli
   renderDashboardCalendar();
 });
 
-document.getElementById("edit-calendar-events")?.addEventListener("click", () => {
-  document.getElementById("eventos-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
-});
-
 document.getElementById("previous-calendar-month")?.addEventListener("click", () => {
   visibleCalendarDate = new Date(visibleCalendarDate.getFullYear(), visibleCalendarDate.getMonth() - 1, 1);
   renderCalendar();
@@ -9870,6 +9854,7 @@ document.addEventListener("click", (event) => {
   if (!event.target.closest("#board-card-action-menu") && !event.target.closest("[data-board-card]")) closeBoardCardActionMenu();
   if (!event.target.closest("#record-context-menu")) document.getElementById("record-context-menu")?.remove();
   if (!event.target.closest("#chat-message-context-menu")) document.getElementById("chat-message-context-menu")?.remove();
+  if (!event.target.closest("#event-context-menu")) document.getElementById("event-context-menu")?.remove();
   const addListButton = event.target.closest("[data-action='add-board-list']");
   if (addListButton) {
     const board = getActiveBoard();
@@ -9893,6 +9878,13 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("contextmenu", (event) => {
+  const eventCard = event.target.closest("[data-event-card]");
+  if (eventCard) {
+    event.preventDefault();
+    document.getElementById("custom-modal")?.remove();
+    openEventContextMenu(event, eventCard.dataset.id);
+    return;
+  }
   const chatMessage = event.target.closest("[data-chat-message-id]");
   if (chatMessage) {
     event.preventDefault();
@@ -10713,6 +10705,30 @@ function openRecordContextMenu(event, type, id) {
     menu.remove();
     if (type === "denuncia") await arquivarDenunciaPorContexto(id);
     if (type === "chamado") await arquivarChamadoPorContexto(id);
+  });
+  document.body.appendChild(menu);
+}
+
+function openEventContextMenu(event, id) {
+  document.getElementById("event-context-menu")?.remove();
+  const item = getAllEvents().find((eventItem) => String(eventItem.id) === String(id));
+  if (!item || item.systemBirthday) return;
+  const menu = document.createElement("div");
+  menu.id = "event-context-menu";
+  menu.className = "board-context-menu event-context-menu";
+  menu.style.left = `${event.clientX}px`;
+  menu.style.top = `${event.clientY}px`;
+  menu.innerHTML = `
+    <button type="button" data-event-menu-action="edit">Editar evento</button>
+    <button type="button" class="danger" data-event-menu-action="delete">Deletar evento</button>
+  `;
+  menu.addEventListener("click", (clickEvent) => {
+    const actionButton = clickEvent.target.closest("[data-event-menu-action]");
+    if (!actionButton) return;
+    const action = actionButton.dataset.eventMenuAction;
+    menu.remove();
+    if (action === "edit") editarEvento(id);
+    if (action === "delete") excluirEvento(id);
   });
   document.body.appendChild(menu);
 }
