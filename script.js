@@ -1703,8 +1703,11 @@ function getChatMessageTime(value) {
 }
 
 function compareChatMessagesOldestFirst(a, b) {
-  const timeDiff = getChatMessageTime(a.createdAt) - getChatMessageTime(b.createdAt);
+  const timeDiff = getChatMessageTime(a.sortAt || a.createdAt) - getChatMessageTime(b.sortAt || b.createdAt);
   if (timeDiff !== 0) return timeDiff;
+
+  const orderDiff = Number(a._clientOrder || 0) - Number(b._clientOrder || 0);
+  if (orderDiff !== 0) return orderDiff;
 
   const idA = Number(a.id);
   const idB = Number(b.id);
@@ -3526,7 +3529,7 @@ function toggleMobileMenu() {
 
 function toDbPayload(collection, values) {
   if (collection === "comunicados") {
-    return {
+    const payload = {
       autor: values.autor,
       canal: normalizeChatChannel(values.canal),
       mensagem: values.mensagem || "",
@@ -3536,6 +3539,8 @@ function toDbPayload(collection, values) {
       arquivo_tipo: values.arquivo?.type || null,
       arquivo_url: values.arquivo?.url || null,
     };
+    if (values.sortAt || values.createdAt) payload.created_at = values.sortAt || values.createdAt;
+    return payload;
   }
 
   if (collection === "usuarios") {
@@ -9401,28 +9406,37 @@ if (chatForm) {
     }
 
     // -- OTIMISMO: mostra a mensagem imediatamente --------------------------
+    const pendingBaseTime = Date.now();
     const pendingMessages = files.length
       ? files.map((file, index) => {
         const attachmentType = getChatFileMimeType(file);
+        const pendingIso = new Date(pendingBaseTime + index).toISOString();
         return {
           id: "pending-" + generateUUID(),
           autor: getCurrentUserName(),
           canal: activeChatChannel,
           mensagem: index === 0 ? message : "",
           arquivo: { name: file.name, size: file.size, type: attachmentType, url: null },
-          createdAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+          createdAt: formatDateTime(pendingIso),
+          sortAt: pendingIso,
+          _clientOrder: index,
           _pending: true,
         };
       })
-      : [{
-        id: "pending-" + generateUUID(),
-        autor: getCurrentUserName(),
-        canal: activeChatChannel,
-        mensagem: message,
-        arquivo: null,
-        createdAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-        _pending: true,
-      }];
+      : (() => {
+        const pendingIso = new Date(pendingBaseTime).toISOString();
+        return [{
+          id: "pending-" + generateUUID(),
+          autor: getCurrentUserName(),
+          canal: activeChatChannel,
+          mensagem: message,
+          arquivo: null,
+          createdAt: formatDateTime(pendingIso),
+          sortAt: pendingIso,
+          _clientOrder: 0,
+          _pending: true,
+        }];
+      })();
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
     data.comunicados = [...pendingMessages, ...(data.comunicados || [])];
     renderChat();
@@ -9454,16 +9468,26 @@ if (chatForm) {
         canal: activeChatChannel,
         mensagem: index === 0 ? message : "",
         arquivo,
+        sortAt: pendingMessages[index]?.sortAt,
       }))
       : [{
         autor: getCurrentUserName(),
         canal: activeChatChannel,
         mensagem: message,
         arquivo: null,
+        sortAt: pendingMessages[0]?.sortAt,
       }];
 
     const savedMessages = await Promise.all(payloads.map((payload) => addChatMessage(payload)));
-    const replacements = new Map(pendingMessages.map((pending, index) => [pending.id, savedMessages[index]]));
+    const replacements = new Map(pendingMessages.map((pending, index) => {
+      const saved = savedMessages[index];
+      return [pending.id, saved ? {
+        ...saved,
+        createdAt: saved.createdAt || pending.createdAt,
+        sortAt: saved.sortAt || pending.sortAt,
+        _clientOrder: pending._clientOrder,
+      } : pending];
+    }));
     data.comunicados = (data.comunicados || [])
       .map((item) => replacements.get(item.id) || item)
       .filter((item) => item && (!item._pending || !pendingIds.has(item.id)));
