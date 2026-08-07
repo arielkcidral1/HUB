@@ -3012,15 +3012,15 @@ textarea {
   position: absolute;
   left: 8px;
   right: 8px;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 6px);
   z-index: 30;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
   min-height: 0;
-  max-height: min(320px, calc(100vh - 260px));
-  overflow: auto;
+  max-height: 104px;
+  overflow: visible;
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-sm);
@@ -3138,8 +3138,8 @@ textarea {
 
 .chat-preview-close {
   position: absolute;
-  top: 12px;
-  left: 14px;
+  top: 8px;
+  left: 10px;
   z-index: 2;
   display: inline-grid;
   place-items: center;
@@ -3160,7 +3160,7 @@ textarea {
 }
 
 .chat-preview-title {
-  padding: 16px 56px 0;
+  padding: 8px 46px 0;
   text-align: center;
   color: var(--ink);
   font-size: 13px;
@@ -3171,10 +3171,7 @@ textarea {
 }
 
 .chat-preview-body {
-  display: grid;
-  place-items: center;
-  min-height: 0;
-  padding: 18px;
+  display: none;
 }
 
 .chat-preview-image {
@@ -3294,8 +3291,8 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 14px 14px;
-  border-top: 1px solid var(--line);
+  padding: 8px 14px 10px;
+  border-top: 0;
   background: var(--surface-soft);
 }
 
@@ -3309,8 +3306,8 @@ textarea {
 .chat-preview-add {
   display: inline-grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   background: var(--surface);
@@ -3321,7 +3318,7 @@ textarea {
 }
 
 .chat-preview-chip.is-active {
-  border: 4px solid #22c55e;
+  border: 3px solid #22c55e;
   background: var(--surface);
   color: #166534;
 }
@@ -4752,19 +4749,19 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-attachment-preview {
     min-height: 0;
-    max-height: min(260px, 34vh);
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    max-height: 104px;
+    grid-template-rows: auto auto;
   }
 
   .chat-preview-image {
     max-width: 94%;
-    max-height: 220px;
+    max-height: 44px;
   }
 
   .chat-preview-unavailable {
     width: 94%;
-    min-height: 190px;
-    padding: 24px;
+    min-height: 0;
+    padding: 10px;
   }
 
   .chat-preview-unavailable strong {
