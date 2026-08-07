@@ -1133,12 +1133,12 @@ html.auth-entry-pending body {
 .calendar-day.has-birthday,
 .calendar-cell.has-birthday {
   position: relative;
-  border-color: rgba(251, 191, 36, 0.9);
+  border-color: rgba(202, 138, 4, 0.42);
   background:
-    linear-gradient(135deg, rgba(146, 64, 14, 0.92), rgba(157, 23, 77, 0.76)),
-    #78350f;
-  box-shadow: inset 0 0 0 2px rgba(251, 191, 36, 0.28), 0 10px 24px rgba(251, 191, 36, 0.22);
-  color: #fff7ed;
+    linear-gradient(135deg, rgba(92, 65, 22, 0.38), rgba(69, 35, 47, 0.28)),
+    rgba(120, 83, 25, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(202, 138, 4, 0.18);
+  color: var(--ink);
 }
 
 .calendar-day .calendar-today-label,
@@ -3478,25 +3478,25 @@ textarea {
 .item-card.event-type-birthday,
 .day-event-card.event-type-birthday,
 .calendar-preview-panel li.event-type-birthday {
-  border-color: rgba(251, 191, 36, 0.72);
+  border-color: rgba(202, 138, 4, 0.36);
   background:
-    linear-gradient(135deg, rgba(146, 64, 14, 0.92), rgba(157, 23, 77, 0.76)),
-    #78350f;
-  box-shadow: 0 14px 30px rgba(251, 191, 36, 0.18);
-  color: #fff7ed;
+    linear-gradient(135deg, rgba(92, 65, 22, 0.18), rgba(69, 35, 47, 0.12)),
+    var(--surface-soft);
+  box-shadow: 0 10px 22px rgba(92, 65, 22, 0.08);
+  color: var(--ink);
 }
 
 .item-card.event-type-birthday .item-title,
 .day-event-card.event-type-birthday .item-title,
 .calendar-preview-panel li.event-type-birthday .item-title {
-  color: #fff7ed;
+  color: var(--ink);
 }
 
 .item-card.event-type-birthday p,
 .item-card.event-type-birthday .item-meta,
 .day-event-card.event-type-birthday p,
 .calendar-preview-panel li.event-type-birthday p {
-  color: rgba(255, 247, 237, 0.86);
+  color: var(--muted);
 }
 
 .calendar-preview-panel li.compact-birthday-group {
@@ -3516,10 +3516,10 @@ textarea {
   max-width: 100%;
   min-height: 24px;
   padding: 4px 8px;
-  border: 1px solid rgba(251, 191, 36, 0.55);
+  border: 1px solid rgba(202, 138, 4, 0.32);
   border-radius: 999px;
-  background: rgba(255, 247, 237, 0.14);
-  color: #fff7ed;
+  background: rgba(202, 138, 4, 0.1);
+  color: var(--ink);
   font-size: 11px;
   font-weight: 800;
   line-height: 1.2;
@@ -3533,9 +3533,9 @@ textarea {
 }
 
 .tag.event-tag.event-type-birthday {
-  border-color: rgba(251, 191, 36, 0.75);
-  background: #fbbf24;
-  color: #1f1300;
+  border-color: rgba(202, 138, 4, 0.42);
+  background: rgba(202, 138, 4, 0.18);
+  color: #7c4a03;
 }
 
 .tag.event-tag.event-type-interview {
