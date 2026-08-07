@@ -10832,6 +10832,7 @@ function editarEvento(id) {
   const form = document.getElementById("evento-form");
   if (!evento || !form) return;
 
+  activateView("calendario");
   form.elements.id.value = evento.id;
   form.elements.titulo.value = evento.titulo || "";
   // converte ISO yyyy-mm-dd para dd/mm/aaaa na màscara
@@ -10850,6 +10851,7 @@ function editarEvento(id) {
   document.getElementById("cancelar-edicao-evento")?.removeAttribute("hidden");
   form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
   form.scrollIntoView({ behavior: "smooth", block: "start" });
+  form.querySelector("input, select, textarea")?.focus({ preventScroll: true });
 };
 
 async function excluirEvento(id) {
