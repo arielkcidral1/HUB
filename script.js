@@ -2140,6 +2140,10 @@ function getCompanyBirthdayEvents() {
   const currentYear = new Date().getFullYear();
   const years = [...new Set([currentYear, currentYear + 1, visibleYear])].filter((year) => year <= 2026);
   const seenBirthdayNames = new Set();
+  const editedBirthdayNames = new Set((data.eventos || [])
+    .map((item) => item.systemBirthdaySource || "")
+    .filter(Boolean)
+    .map((name) => normalizeLoginName(name)));
   return years.flatMap((year) => birthdays.flatMap((item, index) => {
     const birthDate = String(item.nascimento || "");
     const admissionDate = String(item.admissao || "");
@@ -2148,8 +2152,9 @@ function getCompanyBirthdayEvents() {
     const birthEventDate = /^\d{2}-\d{2}$/.test(birthMonthDay) ? `${year}-${birthMonthDay}` : "";
     const companyEventDate = /^\d{2}-\d{2}$/.test(admissionMonthDay) ? `${year}-${admissionMonthDay}` : "";
     const nome = String(item.nome || "").trim();
-    const nameKey = `${year}:${normalizeLoginName(nome)}`;
-    if (!nome || seenBirthdayNames.has(nameKey)) return [];
+    const normalizedName = normalizeLoginName(nome);
+    const nameKey = `${year}:${normalizedName}`;
+    if (!nome || seenBirthdayNames.has(nameKey) || editedBirthdayNames.has(normalizedName)) return [];
     seenBirthdayNames.add(nameKey);
     const usuario = (data.usuarios || []).find((user) => normalizeLoginName(user.nome) === normalizeLoginName(nome));
     const unidade = item.unidade || usuario?.unidade || usuario?.cargoUnidade || "";
@@ -2207,6 +2212,10 @@ function getEventDisplayTitle(item = {}) {
 function getAllEvents() {
   return [...(data.eventos || []), ...getCompanyBirthdayEvents()]
     .filter((item) => !isCompanyBirthdayEvent(item) && !String(item.id || "").startsWith("company-birthday-"));
+}
+
+function findCalendarEventById(id) {
+  return getAllEvents().find((item) => String(item.id) === String(id));
 }
 
 function getSortedEvents() {
@@ -9454,7 +9463,7 @@ if (eventoForm) {
     event.preventDefault();
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
-    const id = form.get("id");
+    const id = form.get("id") || formElement.dataset.editEventId || "";
 
     // converte dd/mm/aaaa ? yyyy-mm-dd para salvar
     const dataDisplay = String(form.get("data") || "");
@@ -9475,7 +9484,7 @@ if (eventoForm) {
     const isBirthday = isBirthdayEvent(form.get("tipo"));
     const aniversariante = String(form.get("aniversariante") || "").trim();
     const unidadeAniversariante = String(form.get("unidade_aniversariante") || "").trim();
-    const editingEvent = id ? (data.eventos || []).find((item) => String(item.id) === String(id)) : null;
+    const editingEvent = id ? findCalendarEventById(id) : null;
     const payload = {
       titulo: isBirthday ? getEventDisplayTitle({ tipo: form.get("tipo") }) : form.get("titulo"),
       data: dataIso,
@@ -9486,10 +9495,15 @@ if (eventoForm) {
       unidade: isBirthday ? unidadeAniversariante : "",
       createdBy: editingEvent?.createdBy || getCurrentUserName(),
     };
-    const success = id ? await updateItem("eventos", id, { ...payload, updatedBy: getCurrentUserName() }) : await addItem("eventos", payload);
+    if (editingEvent?.systemBirthdaySource || editingEvent?.systemBirthday) {
+      payload.systemBirthdaySource = editingEvent.systemBirthdaySource || getBirthdayPerson(editingEvent);
+    }
+    const editableId = editingEvent?.systemBirthday ? "" : id;
+    const success = editableId ? await updateItem("eventos", editableId, { ...payload, updatedBy: getCurrentUserName() }) : await addItem("eventos", payload);
     if (success) {
       formElement.reset();
       formElement.elements.id.value = "";
+      delete formElement.dataset.editEventId;
       document.getElementById("cancelar-edicao-evento")?.setAttribute("hidden", "");
       formElement.querySelector('button[type="submit"]').textContent = "Registrar evento";
       updateEventoFormByType();
@@ -9504,6 +9518,7 @@ document.getElementById("cancelar-edicao-evento")?.addEventListener("click", () 
   if (!eventoForm) return;
   eventoForm.reset();
   eventoForm.elements.id.value = "";
+  delete eventoForm.dataset.editEventId;
   document.getElementById("cancelar-edicao-evento").setAttribute("hidden", "");
   eventoForm.querySelector('button[type="submit"]').textContent = "Registrar evento";
   eventoForm.elements.tipo?.dispatchEvent(new Event("change"));
@@ -10723,8 +10738,9 @@ function openRecordContextMenu(event, type, id) {
 
 function openEventContextMenu(event, id) {
   document.getElementById("event-context-menu")?.remove();
-  const item = getAllEvents().find((eventItem) => String(eventItem.id) === String(id));
-  if (!item || item.systemBirthday) return;
+  const item = findCalendarEventById(id);
+  if (!item) return;
+  const canDelete = !item.systemBirthday;
   const menu = document.createElement("div");
   menu.id = "event-context-menu";
   menu.className = "board-context-menu event-context-menu";
@@ -10732,7 +10748,7 @@ function openEventContextMenu(event, id) {
   menu.style.top = `${event.clientY}px`;
   menu.innerHTML = `
     <button type="button" data-event-menu-action="edit">Editar evento</button>
-    <button type="button" class="danger" data-event-menu-action="delete">Deletar evento</button>
+    ${canDelete ? '<button type="button" class="danger" data-event-menu-action="delete">Deletar evento</button>' : ""}
   `;
   menu.addEventListener("click", (clickEvent) => {
     const actionButton = clickEvent.target.closest("[data-event-menu-action]");
@@ -10840,12 +10856,13 @@ async function excluirVaga(id) {
 };
 
 function editarEvento(id) {
-  const evento = (data.eventos || []).find((item) => String(item.id) === String(id));
+  const evento = findCalendarEventById(id);
   const form = document.getElementById("evento-form");
   if (!evento || !form) return;
 
   activateView("calendario");
-  form.elements.id.value = evento.id;
+  form.elements.id.value = evento.systemBirthday ? "" : evento.id;
+  form.dataset.editEventId = String(evento.id || "");
   form.elements.titulo.value = evento.titulo || "";
   // converte ISO yyyy-mm-dd para dd/mm/aaaa na màscara
   form.elements.data.value = formatEventoDate(evento.data || "");
