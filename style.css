@@ -1422,9 +1422,9 @@ textarea {
 }
 
 #eventos-list {
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   align-items: start;
-  gap: 16px;
+  gap: 10px;
 }
 
 .activity-list {
@@ -1451,6 +1451,59 @@ textarea {
 .item-card:hover {
   border-color: var(--teal-border);
   box-shadow: var(--shadow-sm);
+}
+
+.calendar-event-block {
+  display: grid;
+  gap: 5px;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--teal-border);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, rgba(12, 98, 89, 0.08), var(--surface-soft));
+  padding: 9px 10px;
+  transition: var(--transition);
+}
+
+.calendar-event-block:hover {
+  border-color: var(--teal-border);
+  box-shadow: var(--shadow-xs);
+}
+
+.calendar-event-block .item-topline {
+  align-items: center;
+  gap: 8px;
+}
+
+.calendar-event-block .item-title {
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-event-block p,
+.calendar-event-block .item-meta {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.calendar-event-block .tag {
+  padding: 2px 7px;
+  font-size: 10.5px;
+}
+
+.calendar-event-manage-block .job-actions {
+  margin-top: 3px;
+  gap: 6px;
+}
+
+.calendar-event-manage-block .secondary-link,
+.calendar-event-manage-block .danger-button {
+  min-height: 28px;
+  padding: 0 9px;
+  font-size: 12px;
 }
 
 .item-topline {
@@ -3484,6 +3537,7 @@ textarea {
 
 .item-card.event-type-birthday,
 .day-event-card.event-type-birthday,
+.calendar-event-block.event-type-birthday,
 .calendar-preview-panel li.event-type-birthday {
   border-color: rgba(202, 138, 4, 0.36);
   background:
@@ -3495,6 +3549,7 @@ textarea {
 
 .item-card.event-type-birthday .item-title,
 .day-event-card.event-type-birthday .item-title,
+.calendar-event-block.event-type-birthday .item-title,
 .calendar-preview-panel li.event-type-birthday .item-title {
   color: var(--ink);
 }
@@ -3502,6 +3557,8 @@ textarea {
 .item-card.event-type-birthday p,
 .item-card.event-type-birthday .item-meta,
 .day-event-card.event-type-birthday p,
+.calendar-event-block.event-type-birthday p,
+.calendar-event-block.event-type-birthday .item-meta,
 .calendar-preview-panel li.event-type-birthday p {
   color: var(--muted);
 }
@@ -3534,6 +3591,7 @@ textarea {
 
 .item-card.event-type-interview,
 .day-event-card.event-type-interview,
+.calendar-event-block.event-type-interview,
 .calendar-preview-panel li.event-type-interview {
   border-color: rgba(79, 70, 229, 0.25);
   background: rgba(79, 70, 229, 0.06);
