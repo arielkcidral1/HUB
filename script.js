@@ -2505,6 +2505,10 @@ function showModal(title, text, type = "info") {
   document.body.appendChild(overlay);
 }
 
+function paintNextFrame() {
+  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
 function showPasswordActionModal({ title, text, confirmText = "Confirmar", danger = false, onConfirm, validatePassword = verifyCurrentPassword }) {
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
@@ -2576,8 +2580,9 @@ function showConfirmActionModal({ title, text, confirmText = "Confirmar", danger
   const close = () => overlay.remove();
   overlay.querySelector('[data-action="close-modal"]').addEventListener("click", close);
   overlay.querySelector('[data-action="modal-confirm"]').addEventListener("click", async () => {
-    await onConfirm();
     close();
+    await paintNextFrame();
+    await onConfirm();
   });
 
   document.body.appendChild(overlay);
@@ -4693,6 +4698,7 @@ async function deleteChatMessageRecord(id) {
   renderDashboard();
   renderChatChannels();
   renderChat();
+  await paintNextFrame();
 
   if (!postgresClient || String(id).startsWith("pending-")) return true;
 
@@ -9296,6 +9302,7 @@ if (chatForm) {
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
     data.comunicados = [...pendingMessages, ...(data.comunicados || [])];
     renderChat();
+    await paintNextFrame();
     // Limpa o formulário imediatamente
     formElement.reset();
     clearChatSelectedFile();
