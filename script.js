@@ -311,8 +311,8 @@ let hubPollingNotificationsReady = false;
 const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
-const CHAT_LOCAL_ECHO_GRACE_MS = 30000;
-const recentlyDeletedChatMessageIds = new Map();
+const localChatEchoMessages = new Map();
+const locallyDeletedChatMessageIds = new Set();
 window.editingDocId = null;
 
 const documentLabels = {
@@ -3315,41 +3315,48 @@ function removePendingContractorDocument(id) {
   return remaining;
 }
 
-function pruneRecentlyDeletedChatMessages(now = Date.now()) {
-  recentlyDeletedChatMessageIds.forEach((expiresAt, id) => {
-    if (expiresAt <= now) recentlyDeletedChatMessageIds.delete(id);
-  });
-}
-
 function rememberDeletedChatMessage(id) {
   if (!id) return;
-  recentlyDeletedChatMessageIds.set(String(id), Date.now() + CHAT_LOCAL_ECHO_GRACE_MS);
+  locallyDeletedChatMessageIds.add(String(id));
+  localChatEchoMessages.delete(String(id));
 }
 
 function forgetDeletedChatMessage(id) {
   if (!id) return;
-  recentlyDeletedChatMessageIds.delete(String(id));
+  locallyDeletedChatMessageIds.delete(String(id));
 }
 
 function markChatMessageAsLocalEcho(message) {
-  return message ? { ...message, _localEchoUntil: Date.now() + CHAT_LOCAL_ECHO_GRACE_MS } : message;
+  if (!message?.id) return message;
+  const localMessage = { ...message, _localEcho: true };
+  localChatEchoMessages.set(String(localMessage.id), localMessage);
+  return localMessage;
 }
 
-function shouldKeepLocalChatMessage(item, freshIds, now = Date.now()) {
-  if (!item || freshIds.has(String(item.id))) return false;
-  if (item._pending) return true;
-  return Number(item._localEchoUntil || 0) > now;
+function forgetLocalChatEchoMessage(id) {
+  if (!id) return;
+  localChatEchoMessages.delete(String(id));
 }
 
 function mergeLocalChatMessages(freshMessages = [], currentMessages = data.comunicados || []) {
-  const now = Date.now();
-  pruneRecentlyDeletedChatMessages(now);
-
-  const visibleFreshMessages = (freshMessages || []).filter((item) => !recentlyDeletedChatMessageIds.has(String(item.id)));
+  const visibleFreshMessages = (freshMessages || []).filter((item) => !locallyDeletedChatMessageIds.has(String(item.id)));
   const freshIds = new Set(visibleFreshMessages.map((item) => String(item.id)));
-  const localMessages = (currentMessages || []).filter((item) => shouldKeepLocalChatMessage(item, freshIds, now));
+  visibleFreshMessages.forEach((item) => {
+    if (item?.id && !item._pending && !item._localEcho) forgetLocalChatEchoMessage(item.id);
+  });
 
-  return [...localMessages, ...visibleFreshMessages];
+  const currentLocalMessages = (currentMessages || []).filter((item) => {
+    const id = String(item?.id || "");
+    if (!id || freshIds.has(id) || locallyDeletedChatMessageIds.has(id)) return false;
+    return item._pending || item._localEcho;
+  });
+  const registeredLocalMessages = [...localChatEchoMessages.values()].filter((item) => {
+    const id = String(item?.id || "");
+    return id && !freshIds.has(id) && !locallyDeletedChatMessageIds.has(id);
+  });
+  const localById = new Map([...currentLocalMessages, ...registeredLocalMessages].map((item) => [String(item.id), item]));
+
+  return [...localById.values(), ...visibleFreshMessages];
 }
 
 function isMatchingPendingChatMessage(pending, saved) {
@@ -3375,7 +3382,7 @@ function mergeRealtimeRow(collection, row, action = "INSERT") {
   }
 
   const mapped = mapRows(collection, [row])[0];
-  if (collection === "comunicados" && recentlyDeletedChatMessageIds.has(String(mapped.id))) return;
+  if (collection === "comunicados" && locallyDeletedChatMessageIds.has(String(mapped.id))) return;
   const current = data[collection] || [];
 
   if (collection === "comunicados") {
@@ -8659,7 +8666,7 @@ function renderChat(options = {}) {
 
 
   const normalizedFilter = normalizeSettingsText(chatMessageFilterQuery);
-  const messages = data.comunicados.filter((item) => {
+  const messages = mergeLocalChatMessages(data.comunicados || [], data.comunicados || []).filter((item) => {
     const channel = normalizeChatChannel(item.canal);
     if (channel !== activeChatChannel) return false;
     if (!canAccessChatChannel(channel)) return false;
@@ -9374,6 +9381,7 @@ if (chatForm) {
         _pending: true,
       }];
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
+    pendingMessages.forEach((item) => markChatMessageAsLocalEcho(item));
     data.comunicados = [...pendingMessages, ...(data.comunicados || [])];
     renderChat({ skipPostRender: true });
     // Limpa o formulário imediatamente
@@ -9396,6 +9404,7 @@ if (chatForm) {
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
       // Remove mensagens otimistas em caso de falha
+      pendingMessages.forEach((item) => forgetLocalChatEchoMessage(item.id));
       data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
       renderChat({ skipPostRender: true });
       setSyncStatus("Erro no anexo", false);
@@ -9418,6 +9427,7 @@ if (chatForm) {
 
     const savedMessages = (await Promise.all(payloads.map((payload) => addChatMessage(payload))))
       .map((savedMessage) => markChatMessageAsLocalEcho(savedMessage));
+    pendingMessages.forEach((item) => forgetLocalChatEchoMessage(item.id));
     const replacements = new Map(pendingMessages.map((pending, index) => [pending.id, savedMessages[index]]));
     data.comunicados = (data.comunicados || [])
       .map((item) => replacements.get(item.id) || item)
