@@ -193,6 +193,7 @@ const TABLES = {
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
   usuarios: USERS_TABLE,
+  readReceipts: "hub_read_receipts",
 };
 let publicVagaCargoFilter = "";
 let publicVagaCidadeFilter = "";
@@ -267,6 +268,7 @@ const defaultData = {
   candidaturas: [],
   atestados: [],
   usuarios: [],
+  readReceipts: [],
 };
 
 let data = loadLocalData();
@@ -276,10 +278,10 @@ let activeChatChannel = "";
 let refreshTimer = null;
 let refreshInProgress = false;
 let documentRecords = loadDocumentRecords();
-let readRhMessageIds = loadReadRhMessageIds();
-let readNotificationIds = loadReadNotificationIds();
 let currentAuthUser = null;
 let currentUserProfile = null;
+let readRhMessageIds = loadReadRhMessageIds();
+let readNotificationIds = loadReadNotificationIds();
 let appInitializationPromise = null;
 const privateAvatarUrlCache = new Map();
 const privateAvatarUrlRequests = new Map();
@@ -847,6 +849,13 @@ function setAuthenticatedUser(authUser, profile = null) {
   storageService.setLocalItem(`${SESSION_KEY}-email`, persistedAuthUser.email || "");
   storageService.setSessionItem(`${SESSION_KEY}-role`, persistedAuthUser.app_metadata?.cargo || "");
   storageService.setLocalItem(`${SESSION_KEY}-role`, persistedAuthUser.app_metadata?.cargo || "");
+  reloadReadStateForCurrentUser();
+  loadReadReceiptsFromPostgreSQL().then(() => {
+    syncCurrentReadStateToPostgreSQL();
+    try { renderDashboard?.(); } catch (_) {}
+    try { renderChatChannels?.(); } catch (_) {}
+    try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
+  });
   reloadUserSettingsForCurrentUser();
   renderCurrentUser();
   updateUserMenuHeader();
@@ -1252,6 +1261,7 @@ function loadLocalData() {
     candidaturas: parsed.candidaturas || [],
     atestados: (parsed.atestados || []).map(mapAtestadoRow),
     usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
+    readReceipts: parsed.readReceipts || [],
   };
 }
 
@@ -1319,19 +1329,99 @@ function mergeUsersByName(currentUsers = [], incomingUsers = []) {
 }
 
 function loadReadRhMessageIds() {
-  return new Set(storageService.getLocalItem(READ_RH_MESSAGES_KEY, []).map(String));
+  return new Set(storageService.getLocalItem(getAccountScopedStorageKey(READ_RH_MESSAGES_KEY), storageService.getLocalItem(READ_RH_MESSAGES_KEY, [])).map(String));
 }
 
 function saveReadRhMessageIds() {
-  storageService.setLocalItem(READ_RH_MESSAGES_KEY, [...readRhMessageIds]);
+  storageService.setLocalItem(getAccountScopedStorageKey(READ_RH_MESSAGES_KEY), [...readRhMessageIds]);
 }
 
 function loadReadNotificationIds() {
-  return new Set(storageService.getLocalItem(READ_NOTIFICATIONS_KEY, []).map(String));
+  return new Set(storageService.getLocalItem(getAccountScopedStorageKey(READ_NOTIFICATIONS_KEY), storageService.getLocalItem(READ_NOTIFICATIONS_KEY, [])).map(String));
 }
 
 function saveReadNotificationIds() {
-  storageService.setLocalItem(READ_NOTIFICATIONS_KEY, [...readNotificationIds]);
+  storageService.setLocalItem(getAccountScopedStorageKey(READ_NOTIFICATIONS_KEY), [...readNotificationIds]);
+}
+
+function reloadReadStateForCurrentUser() {
+  readNotificationIds = loadReadNotificationIds();
+  readRhMessageIds = loadReadRhMessageIds();
+}
+
+function getNotificationAccountKey() {
+  return String(
+    currentAuthUser?.id ||
+    currentUserProfile?.id ||
+    currentAuthUser?.email ||
+    currentUserProfile?.email ||
+    currentUserProfile?.cpf ||
+    getCurrentUserName() ||
+    "local"
+  ).trim();
+}
+
+function getAccountScopedStorageKey(baseKey) {
+  return `${baseKey}:${getNotificationAccountKey()}`;
+}
+
+function mergeReadReceiptRows(rows = []) {
+  rows.forEach((row = {}) => {
+    const itemType = row.item_type || row.itemType || "";
+    const itemId = row.item_id || row.itemId || "";
+    const notificationId = row.notification_id || row.notificationId || (itemType === "notification" ? itemId : "");
+    const messageId = row.message_id || row.messageId || (itemType === "message" ? itemId : "");
+    if (notificationId) readNotificationIds.add(String(notificationId));
+    if (messageId) readRhMessageIds.add(String(messageId));
+  });
+  saveReadNotificationIds();
+  saveReadRhMessageIds();
+}
+
+async function loadReadReceiptsFromPostgreSQL() {
+  if (!postgresClient || !TABLES.readReceipts) return;
+  const userKey = getNotificationAccountKey();
+  if (!userKey || userKey === "local") return;
+  try {
+    const { data: rows, error } = await postgresClient
+      .from(TABLES.readReceipts)
+      .select("*")
+      .eq("user_id", userKey)
+      .limit(2000);
+    if (error) throw error;
+    mergeReadReceiptRows(rows || []);
+  } catch (error) {
+    if (!isMissingColumn(error, "user_id")) {
+      console.warn("Nao foi possivel carregar notificacoes lidas do PostgreSQL:", error);
+    }
+  }
+}
+
+function syncReadReceiptsToPostgreSQL(notificationIds = [], messageIds = []) {
+  if (!postgresClient || !TABLES.readReceipts) return;
+  const userKey = getNotificationAccountKey();
+  if (!userKey || userKey === "local") return;
+  const now = new Date().toISOString();
+  const rows = [
+    ...notificationIds.map((id) => ({ user_id: userKey, item_type: "notification", item_id: String(id), read_at: now })),
+    ...messageIds.map((id) => ({ user_id: userKey, item_type: "message", item_id: String(id), read_at: now })),
+  ].filter((row) => row.item_id);
+  if (!rows.length) return;
+  postgresClient
+    .from(TABLES.readReceipts)
+    .insert(rows)
+    .then(({ error }) => {
+      if (error && !isMissingColumn(error, "user_id")) {
+        console.warn("Nao foi possivel sincronizar notificacoes lidas:", error);
+      }
+    });
+}
+
+function syncCurrentReadStateToPostgreSQL() {
+  const migrationKey = getAccountScopedStorageKey("hub-read-receipts-migrated-v1");
+  if (storageService.getLocalItem(migrationKey, false)) return;
+  syncReadReceiptsToPostgreSQL([...readNotificationIds], [...readRhMessageIds]);
+  storageService.setLocalItem(migrationKey, true);
 }
 
 function markNotificationsRead(notificationIds = [], messageIds = []) {
@@ -1363,6 +1453,10 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
 
   saveReadNotificationIds();
   saveReadRhMessageIds();
+  syncReadReceiptsToPostgreSQL(
+    normalizedNotificationIds.filter((id) => id !== undefined && id !== null && String(id).trim()).map(String),
+    normalizedMessageIds.filter((id) => id !== undefined && id !== null && String(id).trim()).map(String)
+  );
 
   try { lastUnreadNotificationCount = getUnreadRhMessages().length; } catch (_) {}
   try { renderDashboard?.(); } catch (_) {}
@@ -1386,8 +1480,10 @@ function markRhMessagesRead() {
   const currentChannel = activeChatChannel;
   const unread = getUnreadRhMessages().filter((item) => normalizeChatChannel(item.canal) === currentChannel);
   if (!unread.length) return;
-  unread.forEach((item) => readRhMessageIds.add(String(item.id)));
+  const unreadIds = unread.map((item) => String(item.id)).filter(Boolean);
+  unreadIds.forEach((id) => readRhMessageIds.add(id));
   saveReadRhMessageIds();
+  syncReadReceiptsToPostgreSQL([], unreadIds);
 }
 
 function checkAndMarkChatAsRead() {
@@ -3025,6 +3121,18 @@ function mapAtestadoRow(row = {}) {
 }
 
 function mapRows(collection, rows) {
+  if (collection === "readReceipts") {
+    return rows.map((row) => ({
+      id: row.id || `${row.user_id || row.user_key || "user"}:${row.item_id || row.notification_id || row.message_id || generateUUID()}`,
+      userKey: row.user_id || row.user_key || "",
+      itemType: row.item_type || "",
+      itemId: row.item_id || "",
+      notificationId: row.notification_id || (row.item_type === "notification" ? row.item_id : ""),
+      messageId: row.message_id || (row.item_type === "message" ? row.item_id : ""),
+      readAt: row.read_at || row.created_at || "",
+    }));
+  }
+
   if (collection === "denuncias") {
     return rows.map((row) => ({
       id: row.id,
@@ -3668,7 +3776,7 @@ async function loadFromPostgreSQL(options = {}) {
     }
 
     const requests = [];
-    for (const [collection, table] of Object.entries(TABLES).filter(([collection]) => collection !== "usuarios")) {
+    for (const [collection, table] of Object.entries(TABLES).filter(([collection]) => !["usuarios", "readReceipts"].includes(collection))) {
       try {
         const { data: rows, error } = await selectPostgreSQLRows(table, {
           orderBy: "created_at",
@@ -3695,6 +3803,7 @@ async function loadFromPostgreSQL(options = {}) {
         console.error("Erro ao carregar colecao do PostgreSQL:", result.reason);
       }
     });
+    await loadReadReceiptsFromPostgreSQL();
     ensureRequiredTeamUsers();
     saveLocalData();
     if (setupLive) {
@@ -3752,6 +3861,14 @@ function setupRealtime() {
         if (collection === "comunicados" && !canAccessChatChannel(row.canal)) return;
 
         const mappedRealtimeItem = mapRows(collection, [row])[0] || row;
+        if (collection === "readReceipts") {
+          if (String(mappedRealtimeItem.userKey || "") !== getNotificationAccountKey()) return;
+          mergeReadReceiptRows([mappedRealtimeItem]);
+          try { renderDashboard?.(); } catch (_) {}
+          try { renderChatChannels?.(); } catch (_) {}
+          try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
+          return;
+        }
         notifyRealtimeItem(collection, mappedRealtimeItem, payload.eventType);
         mergeRealtimeRow(collection, row, payload.eventType);
         renderRealtimeUpdate(collection);
@@ -12244,9 +12361,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 window.addEventListener("storage", (event) => {
-  if (![READ_NOTIFICATIONS_KEY, READ_RH_MESSAGES_KEY].includes(event.key)) return;
-  readNotificationIds = loadReadNotificationIds();
-  readRhMessageIds = loadReadRhMessageIds();
+  if (!event.key || ![READ_NOTIFICATIONS_KEY, READ_RH_MESSAGES_KEY].some((key) => event.key === key || event.key.startsWith(`${key}:`))) return;
+  reloadReadStateForCurrentUser();
   try { renderDashboard?.(); } catch (_) {}
   try { renderChatChannels?.(); } catch (_) {}
   try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
