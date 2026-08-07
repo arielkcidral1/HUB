@@ -2556,7 +2556,7 @@ textarea {
 
 .chat-composer {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   align-self: end;
@@ -3008,12 +3008,14 @@ textarea {
 }
 
 .chat-attachment-preview {
+  order: -1;
   flex: 1 0 100%;
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(220px, 1fr) auto;
-  min-height: 360px;
-  overflow: hidden;
+  min-height: 0;
+  max-height: min(360px, 42vh);
+  overflow: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -3168,13 +3170,14 @@ textarea {
 .chat-preview-body {
   display: grid;
   place-items: center;
-  padding: 32px 18px 26px;
+  min-height: 0;
+  padding: 18px;
 }
 
 .chat-preview-image {
   display: block;
   max-width: min(520px, 86%);
-  max-height: 300px;
+  max-height: min(240px, 28vh);
   object-fit: contain;
   border-radius: 2px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
@@ -3224,8 +3227,8 @@ textarea {
   display: grid;
   place-items: center;
   width: min(400px, 86%);
-  min-height: 240px;
-  padding: 34px;
+  min-height: 160px;
+  padding: 22px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface-soft);
@@ -4675,7 +4678,7 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-attachment-preview {
-    order: 1;
+    order: -1;
     flex-basis: 100%;
   }
 
@@ -4741,7 +4744,8 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-attachment-preview {
-    min-height: 300px;
+    min-height: 0;
+    max-height: min(300px, 38vh);
     grid-template-rows: auto minmax(180px, 1fr) auto;
   }
 
