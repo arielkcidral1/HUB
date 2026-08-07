@@ -1149,11 +1149,11 @@ html.auth-entry-pending body {
 .calendar-day.has-birthday,
 .calendar-cell.has-birthday {
   position: relative;
-  border-color: rgba(202, 138, 4, 0.42);
+  border-color: rgba(14, 165, 233, 0.38);
   background:
-    linear-gradient(135deg, rgba(92, 65, 22, 0.38), rgba(69, 35, 47, 0.28)),
-    rgba(120, 83, 25, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(202, 138, 4, 0.18);
+    linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(6, 182, 212, 0.12)),
+    rgba(14, 165, 233, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.18);
   color: var(--ink);
 }
 
@@ -1534,9 +1534,9 @@ textarea {
 }
 
 .event-icon-birthday {
-  border-color: rgba(245, 158, 11, 0.65);
-  background: rgba(245, 158, 11, 0.22);
-  color: #92400e;
+  border-color: rgba(14, 165, 233, 0.56);
+  background: rgba(14, 165, 233, 0.16);
+  color: #0369a1;
 }
 
 .event-icon-company {
@@ -3653,11 +3653,11 @@ textarea {
 
 .item-card.event-type-birthday,
 .day-event-card.event-type-birthday {
-  border-color: rgba(202, 138, 4, 0.36);
+  border-color: rgba(14, 165, 233, 0.34);
   background:
-    linear-gradient(135deg, rgba(92, 65, 22, 0.18), rgba(69, 35, 47, 0.12)),
+    linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(6, 182, 212, 0.08)),
     var(--surface-soft);
-  box-shadow: 0 10px 22px rgba(92, 65, 22, 0.08);
+  box-shadow: 0 10px 22px rgba(14, 165, 233, 0.07);
   color: var(--ink);
 }
 
@@ -3693,9 +3693,9 @@ textarea {
   max-width: 100%;
   min-height: 24px;
   padding: 4px 8px;
-  border: 1px solid rgba(202, 138, 4, 0.32);
+  border: 1px solid rgba(14, 165, 233, 0.32);
   border-radius: 999px;
-  background: rgba(202, 138, 4, 0.1);
+  background: rgba(14, 165, 233, 0.1);
   color: var(--ink);
   font-size: 11px;
   font-weight: 800;
@@ -3709,9 +3709,9 @@ textarea {
 }
 
 .birthday-chip-list button:hover {
-  border-color: rgba(245, 158, 11, 0.58);
-  background: rgba(245, 158, 11, 0.18);
-  color: #92400e;
+  border-color: rgba(14, 165, 233, 0.58);
+  background: rgba(14, 165, 233, 0.18);
+  color: #0369a1;
 }
 
 .item-card.event-type-interview,
@@ -3723,9 +3723,9 @@ textarea {
 }
 
 .tag.event-tag.event-type-birthday {
-  border-color: rgba(202, 138, 4, 0.42);
-  background: rgba(202, 138, 4, 0.18);
-  color: #7c4a03;
+  border-color: rgba(14, 165, 233, 0.42);
+  background: rgba(14, 165, 233, 0.16);
+  color: #0369a1;
 }
 
 .tag.event-tag.event-type-interview {
