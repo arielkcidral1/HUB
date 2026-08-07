@@ -1488,6 +1488,17 @@ textarea {
   box-shadow: var(--shadow-xs);
 }
 
+.calendar-event-block.event-type-birthday {
+  border-color: var(--line);
+  border-left-color: var(--teal-border);
+  background: linear-gradient(135deg, rgba(12, 98, 89, 0.08), var(--surface-soft));
+  box-shadow: none;
+}
+
+.calendar-event-block.event-type-birthday:hover {
+  border-color: var(--teal-border);
+}
+
 .calendar-event-block .item-topline {
   align-items: center;
   gap: 8px;
@@ -3641,9 +3652,7 @@ textarea {
 }
 
 .item-card.event-type-birthday,
-.day-event-card.event-type-birthday,
-.calendar-event-block.event-type-birthday,
-.calendar-preview-panel li.event-type-birthday {
+.day-event-card.event-type-birthday {
   border-color: rgba(202, 138, 4, 0.36);
   background:
     linear-gradient(135deg, rgba(92, 65, 22, 0.18), rgba(69, 35, 47, 0.12)),
@@ -3654,8 +3663,7 @@ textarea {
 
 .item-card.event-type-birthday .item-title,
 .day-event-card.event-type-birthday .item-title,
-.calendar-event-block.event-type-birthday .item-title,
-.calendar-preview-panel li.event-type-birthday .item-title {
+.calendar-event-block.event-type-birthday .item-title {
   color: var(--ink);
 }
 
@@ -3663,8 +3671,7 @@ textarea {
 .item-card.event-type-birthday .item-meta,
 .day-event-card.event-type-birthday p,
 .calendar-event-block.event-type-birthday p,
-.calendar-event-block.event-type-birthday .item-meta,
-.calendar-preview-panel li.event-type-birthday p {
+.calendar-event-block.event-type-birthday .item-meta {
   color: var(--muted);
 }
 
