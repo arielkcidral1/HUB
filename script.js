@@ -8008,9 +8008,11 @@ function renderAll() {
       candidaturasHtml = candidaturas.map(c => `
         <div class="candidate-row">
           <p>
-            ${escapeHtml(c.nome)}<br />
-            <span class="meta-line">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
-            <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
+            <strong>${escapeHtml(c.nome)}</strong>
+            <span class="candidate-meta-line">
+              <span>CPF: ${escapeHtml(formatCpf(c.cpf))}</span>
+              <span>Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
+            </span>
           </p>
           <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver Currículo</button>
         </div>
