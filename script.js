@@ -4655,11 +4655,13 @@ if (collection === "eventos") {
 
 async function addChatMessage(values) {
   if (!postgresClient) {
-    appendLocalInsertedItem("comunicados", values);
-    saveLocalData();
-    renderChatChannels();
-    renderChat();
-    return true;
+    return {
+      id: generateUUID(),
+      createdAt: todayLabel(),
+      sortAt: new Date().toISOString(),
+      createdBy: values.createdBy || getCurrentUserName(),
+      ...values,
+    };
   }
 
   try {
@@ -4671,21 +4673,13 @@ async function addChatMessage(values) {
 
     if (error) throw error;
 
-    data.comunicados = [
-      mapRows("comunicados", [inserted])[0],
-      ...(data.comunicados || []),
-    ];
-    saveLocalDataDebounced();
     setSyncStatus("PostgreSQL EIXO online", true);
-    renderDashboard();
-    renderChatChannels();
-    renderChat();
-    return true;
+    return mapRows("comunicados", [inserted])[0];
   } catch (error) {
     console.error("Erro ao salvar mensagem no PostgreSQL:", error);
     setSyncStatus("Erro no chat", false);
     showModal("Erro ao enviar", "Nao foi possivel enviar a mensagem. Confira a conexao e tente novamente.", "error");
-    return false;
+    return null;
   }
 }
 
@@ -9299,12 +9293,17 @@ if (chatForm) {
         arquivo: null,
       }];
 
-    const results = await Promise.all(payloads.map((payload) => addChatMessage(payload)));
-    data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
+    const savedMessages = await Promise.all(payloads.map((payload) => addChatMessage(payload)));
+    const replacements = new Map(pendingMessages.map((pending, index) => [pending.id, savedMessages[index]]));
+    data.comunicados = (data.comunicados || [])
+      .map((item) => replacements.get(item.id) || item)
+      .filter((item) => item && (!item._pending || !pendingIds.has(item.id)));
+    saveLocalDataDebounced();
+    renderDashboard();
+    renderChatChannels();
     renderChat();
 
-    if (results.some((success) => !success)) {
-      // Restaura o campo se o envio falhar
+    if (savedMessages.some((message) => !message)) {
       renderChat();
     }
   });
