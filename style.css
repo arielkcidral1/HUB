@@ -2024,10 +2024,10 @@ textarea {
 .chat-panel > .panel-header {
   align-items: flex-start;
   margin: 0;
-  padding: 14px 16px;
+  padding: 2px 4px 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: var(--surface-soft);
+  background: transparent;
 }
 
 .chat-panel > .panel-header h2,
@@ -2046,7 +2046,7 @@ textarea {
   min-height: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: rgba(5, 22, 27, 0.03);
+  background: transparent;
   padding: 18px;
 }
 
