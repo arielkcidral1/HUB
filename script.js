@@ -6220,7 +6220,7 @@ function renderDashboard() {
     document.getElementById("metric-malotes").textContent = data.malotes.filter((item) => !isArchivedRecord(item) && isTodayLabel(item.createdAt)).length;
   }
   if (document.getElementById("metric-vagas")) {
-    document.getElementById("metric-vagas").textContent = data.vagas.filter((item) => !isArchivedRecord(item) && item.status !== "Fechada").length;
+    document.getElementById("metric-vagas").textContent = (data.candidaturas || []).filter((item) => isTodayLabel(item.createdAt)).length;
   }
   const upcomingEvents = getUpcomingEvents();
   if (document.getElementById("metric-eventos")) {
@@ -6302,78 +6302,21 @@ function renderDashboard() {
           meta: getDashboardSystemUpdateMeta(item),
         };
       }),
-    ...data.malotes
-      .filter((item) => !isArchivedRecord(item))
+    ...(data.candidaturas || [])
       .map((item) => {
-        const items = parseEpiItems(item.epis);
-        const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` - Tam. ${epi.tamanho}` : ""} - Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
+        const vaga = (data.vagas || []).find((vagaItem) => String(vagaItem.id) === String(item.vaga_id));
         return {
-          kind: "malote",
-          notificationId: getDashboardNotificationId("malote", item),
-          title: `Malote - ${item.destino}`,
-          text: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
-          details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
-          tag: item.status,
+          kind: "vaga",
+          notificationId: getDashboardNotificationId("candidatura", item),
+          title: `Curriculo - ${vaga?.cargo || "Vaga"}`,
+          text: item.nome || "Novo curriculo recebido.",
+          details: `Candidato: ${item.nome || "Nao informado"}\nCPF: ${formatCpf(item.cpf || "") || "Nao informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Nao informado"}\nVaga: ${vaga?.cargo || item.vaga_id || "Nao informada"}\nUnidade: ${vaga?.unidade || "Nao informada"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
+          tag: "Curriculo",
           date: item.createdAt,
-          dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
-          systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
-          meta: getDashboardSystemUpdateMeta(item),
+          dateTime: item.sortAt || item.createdAt,
+          view: "vagas",
         };
-      }),
-    ...data.vagas
-      .filter((item) => !isArchivedRecord(item))
-      .map((item) => ({
-        kind: "vaga",
-        notificationId: getDashboardNotificationId("vaga", item),
-        title: `Vaga - ${item.cargo}`,
-        text: item.descricao || "Vaga atualizada.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
-        tag: item.status,
-        date: item.createdAt,
-        dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
-        systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
-        meta: getDashboardSystemUpdateMeta(item),
-      })),
-    ...documentRecords
-      .filter((item) => !isArchivedRecord(item))
-      .map((item) => ({
-        kind: "documento",
-        notificationId: getDashboardNotificationId("documento", item),
-        title: `Documento - ${documentLabels[item.type] || item.type}`,
-        text: item.summary || "Documento registrado.",
-        details: `${getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${documentLabels[item.type] || item.type}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
-        tag: "Registro",
-        date: item.createdAt,
-        dateTime: item.sortAt || item.updatedSortAt || item.createdAt,
-        systemUpdate: Boolean(getDashboardSystemUpdateMeta(item)),
-        meta: getDashboardSystemUpdateMeta(item),
-      })),
-    ...(data.atestados || [])
-      .map((item) => ({
-        kind: "atestado",
-        notificationId: getDashboardNotificationId("atestado", item),
-        title: `Atestado - ${item.nome || "Colaborador"}`,
-        text: `${item.unidade || "Unidade não informada"} - ${item.arquivoNome || "Atestado anexado"}`,
-        details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${formatCpf(item.cpf || "") || "Não informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
-        tag: "Atestado",
-        date: item.createdAt,
-        dateTime: item.sortAt || item.createdAt,
-      })),
-    ...(data.documentosContratados || [])
-      .map((item) => ({
-        kind: "contratado",
-        notificationId: getDashboardNotificationId("contratado", item),
-        title: `Documentos - ${item.nome || "Contratado"}`,
-        text: `${item.empresa || item.origemHtml || "Empresa nao informada"} - ${formatCpf(item.cpf || "") || "CPF nao informado"}`,
-        details: `Contratado: ${item.nome || "Nao informado"}\nCPF: ${formatCpf(item.cpf || "") || "Nao informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Nao informado"}\nEmpresa: ${item.empresa || item.origemHtml || "Nao informada"}\nDocumentos: ${(item.documentos || []).length || "Nao informado"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
-        tag: "Documentos",
-        date: item.createdAt,
-        dateTime: item.sortAt || item.createdAt,
-        view: "documentos-contratados",
-      }))
-  ];
+      })  ];
 
   const sortedDashboardItems = dashboardItems.map((item, index) => ({ ...item, _sortIndex: index }));
   sortedDashboardItems.sort((a, b) => {
@@ -7501,46 +7444,16 @@ function getRealtimeNotificationText(collection, item = {}) {
     };
   }
 
-  if (collection === "malotes") {
+  if (collection === "candidaturas") {
+    const vaga = (data.vagas || []).find((vagaItem) => String(vagaItem.id) === String(item.vaga_id));
     return {
-      title: "Atualização de malote",
-      message: [item.codigoSolicitacao, item.destino, item.status].filter(Boolean).join(" - ") || "Um malote foi atualizado.",
-      icon: "??",
-      type: "malote",
-      tag: `hub-rh-malote-${item.id || Date.now()}`,
-    };
-  }
-
-  if (collection === "vagas") {
-    return {
-      title: "Atualização de vaga",
-      message: [item.cargo, item.unidade, item.status].filter(Boolean).join(" - ") || "Uma vaga foi atualizada.",
+      title: "Curriculo recebido",
+      message: [item.nome, vaga?.cargo].filter(Boolean).join(" - ") || "Um curriculo foi enviado para uma vaga.",
       icon: "??",
       type: "vaga",
-      tag: `hub-rh-vaga-${item.id || Date.now()}`,
+      tag: `hub-rh-candidatura-${item.id || Date.now()}`,
     };
   }
-
-  if (collection === "atestados") {
-    return {
-      title: "Atestado recebido",
-      message: [item.nome, item.unidade].filter(Boolean).join(" - ") || "Um novo atestado foi enviado.",
-      icon: "??",
-      type: "atestado",
-      tag: `hub-rh-atestado-${item.id || Date.now()}`,
-    };
-  }
-
-  if (collection === "documentosContratados") {
-    return {
-      title: "Documentos recebidos",
-      message: [item.nome, item.empresa].filter(Boolean).join(" - ") || "Novos documentos foram enviados.",
-      icon: "??",
-      type: "contratado",
-      tag: `hub-rh-documento-${item.id || Date.now()}`,
-    };
-  }
-
   return null;
 }
 
@@ -7548,7 +7461,7 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!isAuthenticated()) return false;
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
-  if (collection === "usuarios" || collection === "eventos" || collection === "vtRegistros") return false;
+  if (["usuarios", "eventos", "vtRegistros", "malotes", "vagas", "atestados", "documentosContratados", "quadros"].includes(collection)) return false;
 
   const signature = [collection, action, item.id || "", item.updatedAt || item.updated_at || item.createdAt || item.created_at || ""].join("|");
   if (signature && signature === lastRealtimeNotificationSignature) return false;
@@ -7573,7 +7486,7 @@ function getNotificationPollingKey(collection, item = {}) {
 function getNotificationPollingCandidates() {
   const sourceData = typeof data === "object" && data ? data : {};
   const candidates = [];
-  const allowedCollections = ["comunicados", "denuncias", "chamados", "malotes", "vagas", "documentosContratados"];
+  const allowedCollections = ["comunicados", "denuncias", "chamados", "candidaturas"];
 
   allowedCollections.forEach((collection) => {
     const rows = Array.isArray(sourceData[collection]) ? sourceData[collection] : [];
@@ -11573,153 +11486,22 @@ class NotificationTracker {
         });
       });
 
-    (sourceData.malotes || [])
-      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
+    (sourceData.candidaturas || [])
       .forEach((item) => {
-        const items = typeof parseEpiItems === "function" ? parseEpiItems(item.epis) : [];
-        const itemDetails = items.length
-          ? items.map((epi) => `${epi.nome}${epi.tamanho ? ` - Tam. ${epi.tamanho}` : ""} - Qtd. ${epi.quantidade}`).join("\n")
-          : item.epis || "Não informados";
-        const statusText = String(item.status || "").toLowerCase();
-        const isResolved = statusText.includes("entreg") || statusText.includes("conclu") || statusText.includes("finaliz");
+        const vaga = (sourceData.vagas || []).find((vagaItem) => String(vagaItem.id) === String(item.vaga_id));
         pushNotification({
-          id: `malote-${item.id}`,
-          type: "malote",
-          title: `Malote - ${item.destino || "Destino não informado"}`,
-          description: item.codigoSolicitacao ? `Solicitação ${item.codigoSolicitacao}` : item.epis || "Malote registrado.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Código da Solicitação: ${item.codigoSolicitacao || "Não informado"}\nOrigem: ${item.origem || "Não informada"}\nDestino: ${item.destino || "Não informado"}\nItens do malote:\n${itemDetails}\nObservações: ${item.observacoes || "Nenhuma"}\nStatus: ${item.status || "Não informado"}\nData: ${item.createdAt || "Não informada"}`,
-          time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
-          status: isResolved ? "resolved" : "pending",
-          unread: !isResolved,
-          view: "malotes",
-        });
-      });
-
-    (sourceData.vagas || [])
-      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
-      .forEach((item) => {
-        const isClosed = String(item.status || "").toLowerCase() === "fechada";
-        pushNotification({
-          id: `vaga-${item.id}`,
+          id: `candidatura-${item.id}`,
           type: "vaga",
-          title: `Vaga - ${item.cargo || "Cargo não informado"}`,
-          description: item.descricao || "Vaga atualizada.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Status: ${item.status || "Não informado"}\n\n${item.descricao || "Sem descrição."}\n\nRequisitos: ${item.requisitos || "Não informados"}`,
+          title: `Curriculo - ${vaga?.cargo || "Vaga"}`,
+          description: item.nome || "Novo curriculo recebido.",
+          details: `Candidato: ${item.nome || "Nao informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Nao informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Nao informado"}\nVaga: ${vaga?.cargo || item.vaga_id || "Nao informada"}\nUnidade: ${vaga?.unidade || "Nao informada"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
           time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
-          status: isClosed ? "resolved" : "pending",
-          unread: !isClosed,
+          dateTime: item.sortAt || item.createdAt || "Recentemente",
+          status: "pending",
+          unread: true,
           view: "vagas",
         });
       });
-
-    const docs = typeof documentRecords !== "undefined" && Array.isArray(documentRecords) ? documentRecords : [];
-    docs
-      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
-      .forEach((item) => {
-        const label = typeof documentLabels === "object" && documentLabels ? documentLabels[item.type] || item.type : item.type;
-        pushNotification({
-          id: `documento-${item.id}`,
-          type: "documento",
-          title: `Documento - ${label || "Registro"}`,
-          description: item.summary || "Documento registrado.",
-          details: `${typeof getDashboardSystemUpdateMeta === "function" && getDashboardSystemUpdateMeta(item) ? `${getDashboardSystemUpdateMeta(item)}\n` : ""}Tipo: ${label || "Registro"}\nData: ${item.createdAt || "Não informada"}\n\n${item.summary || "Documento registrado."}`,
-          time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
-          status: "pending",
-          unread: true,
-          view: "documentos",
-        });
-      });
-
-    (sourceData.atestados || [])
-      .forEach((item) => {
-        pushNotification({
-          id: `atestado-${item.id}`,
-          type: "atestado",
-          title: `Atestado - ${item.nome || "Colaborador"}`,
-          description: `${item.unidade || "Unidade não informada"} - ${item.arquivoNome || "Atestado anexado"}`,
-          details: `Colaborador: ${item.nome || "Não informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Não informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Não informado"}\nUnidade: ${item.unidade || "Não informada"}\nArquivo: ${item.arquivoNome || "Atestado"}\nStatus: ${item.status || "Recebido"}\nRecebido em: ${item.createdAt || "Não informado"}`,
-          time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.createdAt || "Recentemente",
-          status: "pending",
-          unread: true,
-          view: "atestados",
-        });
-      });
-
-    (sourceData.documentosContratados || [])
-      .forEach((item) => {
-        pushNotification({
-          id: `contratado-${item.id}`,
-          type: "contratado",
-          title: `Documentos - ${item.nome || "Contratado"}`,
-          description: `${item.empresa || item.origemHtml || "Empresa nao informada"} - ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "CPF nao informado"}`,
-          details: `Contratado: ${item.nome || "Nao informado"}\nCPF: ${typeof formatCpf === "function" ? formatCpf(item.cpf || "") : item.cpf || "Nao informado"}\nTelefone: ${typeof formatPhone === "function" ? formatPhone(item.telefone || "") || item.telefone : item.telefone || "Nao informado"}\nEmpresa: ${item.empresa || item.origemHtml || "Nao informada"}\nDocumentos: ${(item.documentos || []).length || "Nao informado"}\nRecebido em: ${item.createdAt || "Nao informado"}`,
-          time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.createdAt || "Recentemente",
-          status: "pending",
-          unread: true,
-          view: "documentos-contratados",
-        });
-      });
-
-    const upcoming = typeof getUpcomingEvents === "function" ? getUpcomingEvents() : [];
-    upcoming.forEach((item) => {
-      const eventDate = item.data || "";
-      const eventTime = item.horario || "";
-      const formattedDate = typeof formatEventDate === "function" ? formatEventDate(eventDate) : eventDate;
-      const formattedTime = typeof formatEventTime === "function" ? formatEventTime(eventTime) : eventTime;
-      pushNotification({
-        id: `evento-${item.id}`,
-        type: "evento",
-        title: `Evento - ${item.titulo || "Compromisso"}`,
-        description: item.descricao || [formattedDate, formattedTime].filter(Boolean).join(" - "),
-        details: `Título: ${item.titulo || "Compromisso"}\nData: ${formattedDate || "Não informada"}\nHorário: ${formattedTime || "Não informado"}\nResponsável: ${item.responsavel || "Não informado"}\nTipo: ${item.tipo || "Evento"}\n\n${item.descricao || "Sem descrição."}`,
-        time: [formattedDate, formattedTime].filter(Boolean).join(" - ") || "Recentemente",
-        dateTime: item.sortAt || item.updatedSortAt || item.createdAt || `${eventDate || ""}T${eventTime || "00:00"}`,
-        status: "pending",
-        unread: false,
-        view: "calendario",
-      });
-    });
-
-    (sourceData.quadros || [])
-      .filter((item) => !(typeof isArchivedRecord === "function" && isArchivedRecord(item)))
-      .forEach((item) => {
-        const lists = Array.isArray(item.listas) ? item.listas : [];
-        const cardsCount = lists.reduce((total, list) => total + (Array.isArray(list.cards) ? list.cards.length : 0), 0);
-        pushNotification({
-          id: `quadro-${item.id}`,
-          type: "quadro",
-          title: `Quadro - ${item.nome || "Sem nome"}`,
-          description: `${cardsCount} card(s) em acompanhamento`,
-          details: `Quadro: ${item.nome || "Sem nome"}\nListas: ${lists.length}\nCards: ${cardsCount}\nAtualizado por: ${item.updatedBy || item.createdBy || "Nao informado"}\nCriado em: ${item.createdAt || "Nao informado"}`,
-          time: item.createdAt || "Recentemente",
-          dateTime: item.sortAt || item.updatedSortAt || item.createdAt || "Recentemente",
-          status: "pending",
-          unread: true,
-          view: "quadros",
-        });
-      });
-
-    (sourceData.disciplinaryRecords || [])
-      .forEach((item) => {
-        pushNotification({
-          id: `disciplinary-${item.id}`,
-          type: "disciplinar",
-          title: `${getDisciplinaryTypeLabel(item.tipo)} - ${item.colaborador || "Funcionario"}`,
-          description: item.motivo || "Medida disciplinar registrada.",
-          details: `Tipo: ${getDisciplinaryTypeLabel(item.tipo)}\nFuncionario: ${item.colaborador || "Nao informado"}\nUnidade: ${item.unidade || "Nao informada"}\nData: ${formatEventDate(item.dataMedida || "")}\nLocal: ${item.local || "Nao informado"}\nMotivo: ${item.motivo || "Nao informado"}`,
-          time: item.createdAt || item.dataMedida || "Recentemente",
-          dateTime: item.sortAt || item.dataMedida || item.createdAt || "Recentemente",
-          status: "pending",
-          unread: true,
-          view: "advertencias-suspensoes",
-        });
-      });
-
     return notifications.sort((a, b) => (b.dateTime - a.dateTime) || (a.sequence - b.sequence));
   }
 
