@@ -1717,27 +1717,31 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
+  max-width: 100%;
+  min-width: 0;
   grid-template-columns: unset;
 }
 
 #vaga-filter-nome {
-  width: 150px;
+  width: clamp(118px, 18vw, 150px);
 }
 
 #vaga-filter-cpf {
-  width: 105px;
+  width: clamp(92px, 13vw, 105px);
 }
 
 #vaga-filter-cargo {
-  width: 150px;
+  width: clamp(112px, 17vw, 150px);
 }
 
 #vaga-filter-unidade {
-  width: 130px;
+  width: clamp(104px, 15vw, 130px);
 }
 
 .chamados-filter-fields input,
 .chamados-filter-fields select {
+  max-width: 100%;
+  min-width: 0;
   min-height: 34px;
   padding: 7px 10px;
   font-size: 12px;
