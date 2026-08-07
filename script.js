@@ -2313,7 +2313,6 @@ function renderCalendarEventCard(item = {}, tagName = "article", extraClass = ""
           <span class="event-icon ${eventIcon.className}" aria-label="${escapeHtml(eventIcon.label)}">${escapeHtml(eventIcon.icon)}</span>
           ${renderEventTitle(item)}
         </div>
-        <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
       </div>
       <p class="calendar-event-date">${escapeHtml(formatEventDate(item.data))}</p>
       <p class="calendar-event-summary">${escapeHtml(summary)}</p>
@@ -2376,7 +2375,7 @@ function renderCompactAgendaItem(item) {
     <li class="calendar-event-block calendar-event-dashboard-block event-type-birthday compact-birthday-group">
       <div class="item-topline">
         <p class="item-title">${escapeHtml(title)}</p>
-        <span class="tag event-tag event-type-birthday">${escapeHtml(formatEventDate(item.date))}</span>
+        <span class="calendar-event-date">${escapeHtml(formatEventDate(item.date))}</span>
       </div>
       <div class="birthday-chip-list">
         ${birthdays.map((birthday) => `<button type="button" data-action="visualizar-evento" data-id="${escapeHtml(birthday.id)}">${escapeHtml(getBirthdayPerson(birthday))}</button>`).join("")}
