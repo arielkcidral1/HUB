@@ -8,9 +8,11 @@
   }
 
   async function request(path, options = {}) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), options.timeoutMs || 15000);
     let response;
     try {
-      response = await fetch(path, options);
+      response = await fetch(path, { ...options, signal: options.signal || controller.signal });
     } catch (error) {
       return {
         data: null,
@@ -19,6 +21,8 @@
           cause: error,
         },
       };
+    } finally {
+      window.clearTimeout(timeout);
     }
 
     const result = await response.json().catch(() => ({}));
