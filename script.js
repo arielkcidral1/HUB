@@ -281,8 +281,6 @@ let refreshInProgress = false;
 let documentRecords = loadDocumentRecords();
 let currentAuthUser = null;
 let currentUserProfile = null;
-let readRhMessageIds = loadReadRhMessageIds();
-let readNotificationIds = loadReadNotificationIds();
 let appInitializationPromise = null;
 const privateAvatarUrlCache = new Map();
 const privateAvatarUrlRequests = new Map();
@@ -314,6 +312,14 @@ let hubPollingNotificationsReady = false;
 const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
+const localChatEchoMessages = new Map();
+const locallyDeletedChatMessageIds = new Set();
+let chatMutationInFlight = 0;
+let chatMutationVersion = 0;
+let chatRefreshQueuedAfterMutation = false;
+const chatClientId = generateUUID();
+let realtimeBroadcastReady = false;
+const pendingChatBroadcasts = [];
 window.editingDocId = null;
 
 const documentLabels = {
@@ -850,13 +856,6 @@ function setAuthenticatedUser(authUser, profile = null) {
   storageService.setLocalItem(`${SESSION_KEY}-email`, persistedAuthUser.email || "");
   storageService.setSessionItem(`${SESSION_KEY}-role`, persistedAuthUser.app_metadata?.cargo || "");
   storageService.setLocalItem(`${SESSION_KEY}-role`, persistedAuthUser.app_metadata?.cargo || "");
-  reloadReadStateForCurrentUser();
-  loadReadReceiptsFromPostgreSQL().then(() => {
-    syncCurrentReadStateToPostgreSQL();
-    try { renderDashboard?.(); } catch (_) {}
-    try { renderChatChannels?.(); } catch (_) {}
-    try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
-  });
   reloadUserSettingsForCurrentUser();
   renderCurrentUser();
   updateUserMenuHeader();
@@ -1293,6 +1292,7 @@ function saveDocumentRecords() {
 }
 
 function saveLocalData() {
+  applyLocalChatState();
   if (data?.usuarios) {
     data.usuarios = data.usuarios.map(sanitizeUserRecord);
     saveTeamUsersStore(data.usuarios);
@@ -2688,7 +2688,6 @@ function showConfirmActionModal({ title, text, confirmText = "Confirmar", danger
   overlay.querySelector('[data-action="close-modal"]').addEventListener("click", close);
   overlay.querySelector('[data-action="modal-confirm"]').addEventListener("click", async () => {
     close();
-    await paintNextFrame();
     await onConfirm();
   });
 
@@ -3433,43 +3432,179 @@ function removePendingContractorDocument(id) {
   return remaining;
 }
 
-function isMatchingPendingChatMessage(pending = {}, saved = {}) {
-  if (!pending?._pending || !saved) return false;
-  if (normalizeChatChannel(pending.canal) !== normalizeChatChannel(saved.canal)) return false;
-  if (String(pending.autor || "") !== String(saved.autor || "")) return false;
-  if (String(pending.mensagem || "") !== String(saved.mensagem || "")) return false;
-  if (String(pending.arquivo?.name || "") !== String(saved.arquivo?.name || "")) return false;
-
-  const pendingTime = getChatMessageTime(pending.sortAt || pending.createdAt);
-  const savedTime = getChatMessageTime(saved.sortAt || saved.createdAt);
-  if (!pendingTime || !savedTime) return true;
-  return Math.abs(savedTime - pendingTime) < 120000;
+function rememberDeletedChatMessage(id) {
+  if (!id) return;
+  locallyDeletedChatMessageIds.add(String(id));
+  localChatEchoMessages.delete(String(id));
+  data.comunicados = (data.comunicados || []).filter((item) => String(item.id) !== String(id));
 }
 
-function mergePendingChatMessages(remoteRows = []) {
-  const remote = Array.isArray(remoteRows) ? remoteRows : [];
-  const pending = (data.comunicados || []).filter((item) =>
-    item?._pending && !remote.some((row) => isMatchingPendingChatMessage(item, row))
-  );
-  return [...pending, ...remote];
+function forgetDeletedChatMessage(id) {
+  if (!id) return;
+  locallyDeletedChatMessageIds.delete(String(id));
+  applyLocalChatState();
 }
 
-function dedupeChatMessages(messages = []) {
-  const unique = [];
-  (messages || []).forEach((message) => {
-    if (!message) return;
-    const duplicateIndex = unique.findIndex((item) =>
-      String(item.id) === String(message.id) ||
-      isMatchingPendingChatMessage(item, message) ||
-      isMatchingPendingChatMessage(message, item)
-    );
-    if (duplicateIndex >= 0) {
-      unique[duplicateIndex] = { ...unique[duplicateIndex], ...message, _pending: unique[duplicateIndex]._pending && message._pending };
-    } else {
-      unique.push(message);
-    }
+function applyLocalChatState() {
+  data.comunicados = mergeLocalChatMessages(data.comunicados || [], data.comunicados || []);
+  return data.comunicados;
+}
+
+function markChatMessageAsLocalEcho(message) {
+  if (!message?.id) return message;
+  const localMessage = { ...message, _localEcho: true };
+  localChatEchoMessages.set(String(localMessage.id), localMessage);
+  applyLocalChatState();
+  return localMessage;
+}
+
+function forgetLocalChatEchoMessage(id) {
+  if (!id) return;
+  localChatEchoMessages.delete(String(id));
+  applyLocalChatState();
+}
+
+function mergeLocalChatMessages(freshMessages = [], currentMessages = data.comunicados || []) {
+  const visibleFreshMessages = (freshMessages || []).filter((item) => !locallyDeletedChatMessageIds.has(String(item.id)));
+  const freshIds = new Set(visibleFreshMessages.map((item) => String(item.id)));
+  visibleFreshMessages.forEach((item) => {
+    if (item?.id && !item._pending && !item._localEcho) localChatEchoMessages.delete(String(item.id));
   });
-  return unique;
+
+  const currentLocalMessages = (currentMessages || []).filter((item) => {
+    const id = String(item?.id || "");
+    if (!id || freshIds.has(id) || locallyDeletedChatMessageIds.has(id)) return false;
+    return item._pending || item._localEcho;
+  });
+  const registeredLocalMessages = [...localChatEchoMessages.values()].filter((item) => {
+    const id = String(item?.id || "");
+    return id && !freshIds.has(id) && !locallyDeletedChatMessageIds.has(id);
+  });
+  const localById = new Map([...currentLocalMessages, ...registeredLocalMessages].map((item) => [String(item.id), item]));
+
+  return [...localById.values(), ...visibleFreshMessages];
+}
+
+function beginChatMutation() {
+  chatMutationInFlight += 1;
+  chatMutationVersion += 1;
+  return chatMutationVersion;
+}
+
+function shouldDeferChatRefresh(loadMutationVersion) {
+  return chatMutationInFlight > 0 || loadMutationVersion !== chatMutationVersion;
+}
+
+function runQueuedChatRefreshAfterMutation() {
+  if (!chatRefreshQueuedAfterMutation || chatMutationInFlight > 0) return;
+  if (refreshInProgress) {
+    window.setTimeout(runQueuedChatRefreshAfterMutation, 100);
+    return;
+  }
+
+  chatRefreshQueuedAfterMutation = false;
+  refreshFromPostgreSQL();
+}
+
+function queueChatRefreshAfterMutation() {
+  chatRefreshQueuedAfterMutation = true;
+  window.setTimeout(runQueuedChatRefreshAfterMutation, 0);
+}
+
+function endChatMutation() {
+  chatMutationInFlight = Math.max(0, chatMutationInFlight - 1);
+  runQueuedChatRefreshAfterMutation();
+}
+
+function isMatchingPendingChatMessage(pending, saved) {
+  if (!pending?._pending || !saved) return false;
+  if (pending._clientMutationId && saved._clientMutationId && pending._clientMutationId === saved._clientMutationId) return true;
+  if (normalizeChatChannel(pending.canal) !== normalizeChatChannel(saved.canal)) return false;
+  if (pending.autor !== saved.autor) return false;
+  if ((pending.mensagem || "") !== (saved.mensagem || "")) return false;
+  if ((pending.arquivo?.name || "") !== (saved.arquivo?.name || "")) return false;
+  if ((pending.arquivo?.size || 0) !== (saved.arquivo?.size || 0)) return false;
+  return true;
+}
+
+function applyChatMessageUpsert(message, options = {}) {
+  if (!message?.id || !canAccessChatChannel(message.canal)) return false;
+  if (options.forceRestore) forgetDeletedChatMessage(message.id);
+  if (locallyDeletedChatMessageIds.has(String(message.id))) return false;
+
+  const nextMessage = options.localEcho ? markChatMessageAsLocalEcho(message) : message;
+  const current = data.comunicados || [];
+  const clientMutationId = nextMessage._clientMutationId || "";
+  const index = current.findIndex((item) =>
+    String(item.id) === String(nextMessage.id) ||
+    (clientMutationId && item._clientMutationId === clientMutationId) ||
+    isMatchingPendingChatMessage(item, nextMessage)
+  );
+
+  if (index >= 0) {
+    data.comunicados = current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...nextMessage } : item));
+  } else {
+    data.comunicados = [nextMessage, ...current];
+  }
+
+  applyLocalChatState();
+  return true;
+}
+
+function renderInstantChatUpdate() {
+  saveLocalDataDebounced();
+  renderDashboard();
+  renderChatChannels();
+  renderChat({ skipPostRender: true });
+}
+
+function flushPendingChatBroadcasts() {
+  if (!realtimeChannel || !realtimeBroadcastReady) return;
+  while (pendingChatBroadcasts.length) {
+    const { event, payload } = pendingChatBroadcasts.shift();
+    sendChatRealtimeBroadcast(event, payload);
+  }
+}
+
+function sendChatRealtimeBroadcastNow(event, payload = {}) {
+  if (!realtimeChannel || !realtimeBroadcastReady) return false;
+  try {
+    const result = realtimeChannel.send({
+      type: "broadcast",
+      event,
+      payload: {
+        ...payload,
+        senderClientId: chatClientId,
+      },
+    });
+    if (result?.catch) result.catch((error) => console.warn("Broadcast do chat recusado:", error));
+    return true;
+  } catch (error) {
+    console.warn("Nao foi possivel enviar broadcast do chat:", error);
+    return false;
+  }
+}
+
+function sendChatRealtimeBroadcast(event, payload = {}) {
+  if (sendChatRealtimeBroadcastNow(event, payload)) return;
+  pendingChatBroadcasts.push({ event, payload });
+  if (!realtimeChannel && postgresClient) setupRealtime();
+}
+
+function handleChatRealtimeBroadcast(payload = {}) {
+  if (!payload || payload.senderClientId === chatClientId) return;
+
+  if (payload.action === "upsert" && payload.message) {
+    if (applyChatMessageUpsert(payload.message, { localEcho: Boolean(payload.localEcho), forceRestore: Boolean(payload.forceRestore) })) {
+      renderInstantChatUpdate();
+    }
+    return;
+  }
+
+  if (payload.action === "delete" && payload.id) {
+    rememberDeletedChatMessage(payload.id);
+    renderInstantChatUpdate();
+  }
 }
 
 function mergeRealtimeRow(collection, row, action = "INSERT") {
@@ -3478,19 +3613,25 @@ function mergeRealtimeRow(collection, row, action = "INSERT") {
       removeLocalUser(row.id);
       return;
     }
+    if (collection === "comunicados") rememberDeletedChatMessage(row.id);
     const current = data[collection] || [];
     data[collection] = current.filter((item) => String(item.id) !== String(row.id));
     return;
   }
 
   const mapped = mapRows(collection, [row])[0];
+  if (collection === "comunicados" && locallyDeletedChatMessageIds.has(String(mapped.id))) return;
   const current = data[collection] || [];
 
-  const index = current.findIndex((item) =>
-    String(item.id) === String(mapped.id) ||
-    (collection === "usuarios" && normalizeLoginName(item.nome) === normalizeLoginName(mapped.nome)) ||
-    (collection === "comunicados" && isMatchingPendingChatMessage(item, mapped))
-  );
+  if (collection === "comunicados") {
+    const pendingIndex = current.findIndex((item) => isMatchingPendingChatMessage(item, mapped));
+    if (pendingIndex >= 0) {
+      data[collection] = current.map((item, itemIndex) => (itemIndex === pendingIndex ? markChatMessageAsLocalEcho(mapped) : item));
+      return;
+    }
+  }
+
+  const index = current.findIndex((item) => String(item.id) === String(mapped.id) || (collection === "usuarios" && normalizeLoginName(item.nome) === normalizeLoginName(mapped.nome)));
   if (index >= 0) {
     data[collection] = current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...mapped } : item));
   } else {
@@ -3500,6 +3641,7 @@ function mergeRealtimeRow(collection, row, action = "INSERT") {
 }
 
 function renderRealtimeUpdate(collection) {
+  if (collection === "comunicados") applyLocalChatState();
   saveLocalDataDebounced();
 
   if (collection === "comunicados") {
@@ -3795,6 +3937,7 @@ function withoutOptionalApplicationColumns(payload) {
 
 async function loadFromPostgreSQL(options = {}) {
   const { setupLive = true } = options;
+  const chatLoadMutationVersion = chatMutationVersion;
 
   if (!postgresClient) {
     setSyncStatus("Modo local", false);
@@ -3833,7 +3976,7 @@ async function loadFromPostgreSQL(options = {}) {
     }
 
     const requests = [];
-    for (const [collection, table] of Object.entries(TABLES).filter(([collection]) => !["usuarios", "readReceipts"].includes(collection))) {
+    for (const [collection, table] of Object.entries(TABLES).filter(([collection]) => collection !== "usuarios")) {
       try {
         const { data: rows, error } = await selectPostgreSQLRows(table, {
           orderBy: "created_at",
@@ -3855,7 +3998,16 @@ async function loadFromPostgreSQL(options = {}) {
       if (result.status === "fulfilled") {
         const [collection, rows] = result.value;
 
-        data[collection] = collection === "comunicados" ? dedupeChatMessages(mergePendingChatMessages(rows)) : rows;
+        if (collection === "comunicados") {
+          if (shouldDeferChatRefresh(chatLoadMutationVersion)) {
+            queueChatRefreshAfterMutation();
+            return;
+          }
+          data[collection] = mergeLocalChatMessages(rows, data.comunicados);
+          return;
+        }
+
+        data[collection] = rows;
       } else {
         console.error("Erro ao carregar colecao do PostgreSQL:", result.reason);
       }
@@ -3906,7 +4058,13 @@ function setupAutoRefresh() {
 function setupRealtime() {
   if (!postgresClient || realtimeChannel) return;
 
-  realtimeChannel = postgresClient.channel("hub-realtime-updates");
+  realtimeChannel = postgresClient.channel("hub-realtime-updates", {
+    config: { broadcast: { self: false } },
+  });
+
+  realtimeChannel.on("broadcast", { event: "chat" }, ({ payload }) => {
+    handleChatRealtimeBroadcast(payload);
+  });
 
   Object.entries(TABLES).forEach(([collection, table]) => {
     realtimeChannel.on(
@@ -3935,9 +4093,12 @@ function setupRealtime() {
 
   realtimeChannel.subscribe((status) => {
     if (status === "SUBSCRIBED") {
+      realtimeBroadcastReady = true;
       console.info("HUB realtime conectado");
       setSyncStatus("Tempo real online", true);
+      flushPendingChatBroadcasts();
     } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+      realtimeBroadcastReady = false;
       console.warn("HUB realtime desconectado:", status);
       setSyncStatus("Reconectando...", false);
       // Remove canal atual e agenda reconexão
@@ -4168,6 +4329,7 @@ function revokeChatAttachmentPreviewUrls() {
 function renderChatAttachmentPreview(files) {
   const preview = document.getElementById("chat-attachment-preview");
   if (!preview) return;
+  const composer = preview.closest(".chat-composer");
 
   revokeChatAttachmentPreviewUrls();
 
@@ -4175,8 +4337,10 @@ function renderChatAttachmentPreview(files) {
   if (!selectedFiles.length) {
     preview.hidden = true;
     preview.innerHTML = "";
+    composer?.classList.remove("has-attachment-preview");
     return;
   }
+  composer?.classList.add("has-attachment-preview");
 
   chatAttachmentPreviewIndex = Math.min(Math.max(chatAttachmentPreviewIndex, 0), selectedFiles.length - 1);
   const file = selectedFiles[chatAttachmentPreviewIndex];
@@ -4863,18 +5027,28 @@ async function addChatMessage(values) {
 }
 
 async function deleteChatMessageRecord(id) {
+  beginChatMutation();
   const current = data.comunicados || [];
   const removed = current.find((item) => String(item.id) === String(id));
-  if (!removed) return false;
+  if (!removed) {
+    endChatMutation();
+    return false;
+  }
 
+  rememberDeletedChatMessage(id);
+  sendChatRealtimeBroadcast("chat", { action: "delete", id });
   data.comunicados = current.filter((item) => String(item.id) !== String(id));
   saveLocalDataDebounced();
-  renderDashboard();
-  renderChatChannels();
-  renderChat();
-  await paintNextFrame();
+  renderChat({ skipPostRender: true });
+  window.setTimeout(() => {
+    renderDashboard();
+    renderChatChannels();
+  }, 0);
 
-  if (!postgresClient || String(id).startsWith("pending-")) return true;
+  if (!postgresClient || String(id).startsWith("pending-")) {
+    endChatMutation();
+    return true;
+  }
 
   try {
     const { data: deletedRows, error } = await postgresClient
@@ -4890,14 +5064,20 @@ async function deleteChatMessageRecord(id) {
     return true;
   } catch (error) {
     console.error("Erro ao excluir mensagem no PostgreSQL:", error);
+    forgetDeletedChatMessage(id);
+    sendChatRealtimeBroadcast("chat", { action: "upsert", message: removed, localEcho: true, forceRestore: true });
     data.comunicados = [removed, ...(data.comunicados || []).filter((item) => String(item.id) !== String(id))];
     saveLocalDataDebounced();
-    renderDashboard();
-    renderChatChannels();
-    renderChat();
+    renderChat({ skipPostRender: true });
+    window.setTimeout(() => {
+      renderDashboard();
+      renderChatChannels();
+    }, 0);
     setSyncStatus("Erro no chat", false);
     showModal("Erro ao excluir", "Nao foi possivel excluir a mensagem. Confira a conexao e tente novamente.", "error");
     return false;
+  } finally {
+    endChatMutation();
   }
 }
 
@@ -8350,6 +8530,7 @@ function renderDenunciasSection() {
   renderCards("denuncias-lidas", lidas, (item) => cardTemplate(item, false));
 }
 function renderAll() {
+  applyLocalChatState();
   renderCurrentUser();
   applyRoleAccess();
   renderAccountSettings();
@@ -8697,7 +8878,8 @@ function renderDocumentRecords() {
     .join("");
 }
 
-function renderChat() {
+function renderChat(options = {}) {
+  const { skipPostRender = false } = options;
   const target = document.getElementById("chat-feed");
   if (!target) return;
   const currentUser = getCurrentUserName();
@@ -8767,7 +8949,7 @@ function renderChat() {
 
 
   const normalizedFilter = normalizeSettingsText(chatMessageFilterQuery);
-  const messages = data.comunicados.filter((item) => {
+  const messages = mergeLocalChatMessages(data.comunicados || [], data.comunicados || []).filter((item) => {
     const channel = normalizeChatChannel(item.canal);
     if (channel !== activeChatChannel) return false;
     if (!canAccessChatChannel(channel)) return false;
@@ -8819,6 +9001,8 @@ function renderChat() {
   target.innerHTML = chatHtml;
 
   target.scrollTop = target.scrollHeight;
+  if (skipPostRender) return;
+
   hydrateChatMediaPreviews();
 
   checkAndMarkChatAsRead();
@@ -9450,47 +9634,57 @@ if (chatForm) {
       return;
     }
 
+    const messageAuthor = getCurrentUserName();
+    const messageChannel = activeChatChannel;
+    const pendingCreatedAt = new Date().toISOString();
+    const clientMutationId = generateUUID();
+    beginChatMutation();
+
     // -- OTIMISMO: mostra a mensagem imediatamente --------------------------
-    const pendingBaseTime = Math.max(Date.now(), lastChatClientTimestamp + 1);
-    lastChatClientTimestamp = pendingBaseTime + Math.max(files.length, 1);
     const pendingMessages = files.length
       ? files.map((file, index) => {
         const attachmentType = getChatFileMimeType(file);
         const pendingIso = new Date(pendingBaseTime + index).toISOString();
         return {
           id: "pending-" + generateUUID(),
-          autor: getCurrentUserName(),
-          canal: activeChatChannel,
+          autor: messageAuthor,
+          canal: messageChannel,
           mensagem: index === 0 ? message : "",
           arquivo: { name: file.name, size: file.size, type: attachmentType, url: null },
-          createdAt: formatDateTime(pendingIso),
-          sortAt: pendingIso,
-          _clientOrder: index,
+          createdAt: pendingCreatedAt,
+          sortAt: pendingCreatedAt,
           _pending: true,
+          _clientMutationId: `${clientMutationId}-${index}`,
         };
       })
-      : (() => {
-        const pendingIso = new Date(pendingBaseTime).toISOString();
-        return [{
-          id: "pending-" + generateUUID(),
-          autor: getCurrentUserName(),
-          canal: activeChatChannel,
-          mensagem: message,
-          arquivo: null,
-          createdAt: formatDateTime(pendingIso),
-          sortAt: pendingIso,
-          _clientOrder: 0,
-          _pending: true,
-        }];
-      })();
+      : [{
+        id: "pending-" + generateUUID(),
+        autor: messageAuthor,
+        canal: messageChannel,
+        mensagem: message,
+        arquivo: null,
+        createdAt: pendingCreatedAt,
+        sortAt: pendingCreatedAt,
+        _pending: true,
+        _clientMutationId: clientMutationId,
+      }];
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
-    data.comunicados = [...pendingMessages, ...(data.comunicados || [])];
-    renderChat();
-    await paintNextFrame();
+    pendingMessages.forEach((item) => markChatMessageAsLocalEcho(item));
+    data.comunicados = mergeLocalChatMessages([...pendingMessages, ...(data.comunicados || [])], data.comunicados);
+    pendingMessages.forEach((item) => {
+      sendChatRealtimeBroadcast("chat", { action: "upsert", message: item, localEcho: true });
+    });
+    renderChat({ skipPostRender: true });
     // Limpa o formulário imediatamente
     formElement.reset();
     clearChatSelectedFile();
+    window.setTimeout(() => {
+      renderDashboard();
+      renderChatChannels();
+    }, 0);
 
+    window.setTimeout(async () => {
+    try {
     // -- UPLOAD de arquivos em background ----------------------------------
     const uploadedFiles = [];
     try {
@@ -9502,49 +9696,60 @@ if (chatForm) {
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
       // Remove mensagens otimistas em caso de falha
+      pendingMessages.forEach((item) => {
+        sendChatRealtimeBroadcast("chat", { action: "delete", id: item.id });
+      });
+      pendingMessages.forEach((item) => forgetLocalChatEchoMessage(item.id));
       data.comunicados = (data.comunicados || []).filter((m) => !pendingIds.has(m.id));
-      renderChat();
+      renderChat({ skipPostRender: true });
       setSyncStatus("Erro no anexo", false);
       showModal("Erro no Anexo", error?.message || "Nao foi possivel enviar um dos arquivos. Verifique a conexao e tente novamente.", "error");
       return;
     }
     const payloads = uploadedFiles.length
       ? uploadedFiles.map((arquivo, index) => ({
-        autor: getCurrentUserName(),
-        canal: activeChatChannel,
+        autor: messageAuthor,
+        canal: messageChannel,
         mensagem: index === 0 ? message : "",
         arquivo,
-        sortAt: pendingMessages[index]?.sortAt,
+        _clientMutationId: `${clientMutationId}-${index}`,
       }))
       : [{
-        autor: getCurrentUserName(),
-        canal: activeChatChannel,
+        autor: messageAuthor,
+        canal: messageChannel,
         mensagem: message,
         arquivo: null,
-        sortAt: pendingMessages[0]?.sortAt,
+        _clientMutationId: clientMutationId,
       }];
 
-    const savedMessages = await Promise.all(payloads.map((payload) => addChatMessage(payload)));
-    const replacements = new Map(pendingMessages.map((pending, index) => {
-      const saved = savedMessages[index];
-      return [pending.id, saved ? {
-        ...saved,
-        createdAt: saved.createdAt || pending.createdAt,
-        sortAt: saved.sortAt || pending.sortAt,
-        _clientOrder: pending._clientOrder,
-      } : pending];
-    }));
-    data.comunicados = dedupeChatMessages((data.comunicados || [])
+    const savedMessages = (await Promise.all(payloads.map((payload) => addChatMessage(payload))))
+      .map((savedMessage, index) => markChatMessageAsLocalEcho(savedMessage ? {
+        ...savedMessage,
+        _clientMutationId: payloads[index]._clientMutationId,
+      } : savedMessage));
+    pendingMessages.forEach((item) => forgetLocalChatEchoMessage(item.id));
+    savedMessages.filter(Boolean).forEach((item) => {
+      sendChatRealtimeBroadcast("chat", { action: "upsert", message: item, localEcho: true });
+    });
+    pendingMessages.forEach((item, index) => {
+      if (!savedMessages[index]) sendChatRealtimeBroadcast("chat", { action: "delete", id: item.id });
+    });
+    const replacements = new Map(pendingMessages.map((pending, index) => [pending.id, savedMessages[index]]));
+    data.comunicados = (data.comunicados || [])
       .map((item) => replacements.get(item.id) || item)
-      .filter((item) => item && (!item._pending || !pendingIds.has(item.id))));
+      .filter((item) => item && (!item._pending || !pendingIds.has(item.id)));
     saveLocalDataDebounced();
     renderDashboard();
     renderChatChannels();
-    renderChat();
+    renderChat({ skipPostRender: true });
 
     if (savedMessages.some((message) => !message)) {
-      renderChat();
+      renderChat({ skipPostRender: true });
     }
+    } finally {
+      endChatMutation();
+    }
+    }, 0);
   });
 }
 
@@ -10952,8 +11157,8 @@ async function deleteChatMessage(id) {
     text: "Deseja excluir esta mensagem do chat?",
     danger: true,
     confirmText: "Excluir",
-    onConfirm: async () => {
-      await deleteChatMessageRecord(id);
+    onConfirm: () => {
+      deleteChatMessageRecord(id);
     },
   });
 }

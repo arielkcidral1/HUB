@@ -182,7 +182,25 @@
 
   window.HubPostgresClient = {
     createClient() {
-      let session = readSession();
+      const sessionStorageKey = "hub-postgres-session";
+      const readStoredSession = () => {
+        try {
+          return JSON.parse(window.localStorage.getItem(sessionStorageKey) || window.sessionStorage.getItem(sessionStorageKey) || "null");
+        } catch {
+          return null;
+        }
+      };
+      const persistSession = (nextSession) => {
+        if (!nextSession) {
+          window.sessionStorage.removeItem(sessionStorageKey);
+          window.localStorage.removeItem(sessionStorageKey);
+          return;
+        }
+        const serialized = JSON.stringify(nextSession);
+        window.sessionStorage.setItem(sessionStorageKey, serialized);
+        window.localStorage.setItem(sessionStorageKey, serialized);
+      };
+      let session = readStoredSession();
       return {
         from(table) {
           return new Query(table);
@@ -240,7 +258,7 @@
           },
           async signOut() {
             session = null;
-            clearSession();
+            persistSession(null);
             await request("/api/auth", {
               method: "POST",
               headers: jsonHeaders(),

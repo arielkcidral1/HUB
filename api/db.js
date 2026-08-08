@@ -30,9 +30,8 @@ export const pool = DATABASE_URL
       connectionString: DATABASE_URL,
       ssl: { rejectUnauthorized: false },
       max: getPoolMax(),
-      idleTimeoutMillis: 1_000,
+      idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 5_000,
-      maxUses: 100,
       allowExitOnIdle: true,
     }))
   : null;
