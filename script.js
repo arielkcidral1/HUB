@@ -3782,6 +3782,20 @@ async function selectPostgreSQLRows(table, { orderBy = "created_at", ascending =
   return result;
 }
 
+async function loadBootstrapRows() {
+  try {
+    const response = await fetch("/api/bootstrap", { credentials: "same-origin" });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result?.data) {
+      throw new Error(result?.error || "Bootstrap do PostgreSQL indisponivel.");
+    }
+    return result.data;
+  } catch (error) {
+    console.warn("Bootstrap do PostgreSQL falhou; usando carregamento por tabela:", error);
+    return null;
+  }
+}
+
 function parseLegacyJobDetails(projeto) {
   try {
     const parsed = JSON.parse(projeto || "{}");
@@ -3833,10 +3847,13 @@ async function loadFromPostgreSQL(options = {}) {
   }
 
   try {
-    const { data: userRows, error: usersError } = await selectPostgreSQLRows(USERS_TABLE, {
+    const bootstrapRows = await loadBootstrapRows();
+    const usersResult = bootstrapRows ? { data: bootstrapRows.usuarios || [], error: null } : await selectPostgreSQLRows(USERS_TABLE, {
       orderBy: "created_at",
       ascending: false,
     });
+    const userRows = usersResult.data || [];
+    const usersError = usersResult.error;
     let usersLoadFailed = false;
 
     if (usersError) {
@@ -3862,10 +3879,19 @@ async function loadFromPostgreSQL(options = {}) {
       data.usuarios = mergeUsersByName(data.usuarios, mappedUsers);
     }
 
-    const requests = await Promise.allSettled(
-      Object.entries(TABLES)
+    const requests = bootstrapRows
+      ? Object.entries(TABLES)
         .filter(([collection]) => collection !== "usuarios")
-        .map(async ([collection, table]) => {
+        .map(([collection]) => {
+          const rows = collection === "comunicados"
+            ? (bootstrapRows[collection] || []).filter((row) => getAllowedChatChannelIds().includes(normalizeChatChannel(row.canal)))
+            : bootstrapRows[collection] || [];
+          return { status: "fulfilled", value: [collection, mapRows(collection, rows)] };
+        })
+      : await Promise.allSettled(
+        Object.entries(TABLES)
+          .filter(([collection]) => collection !== "usuarios")
+          .map(async ([collection, table]) => {
         const { data: rows, error } = await selectPostgreSQLRows(table, {
           orderBy: "created_at",
           ascending: false,
@@ -3878,7 +3904,7 @@ async function loadFromPostgreSQL(options = {}) {
         if (error) throw error;
         return [collection, mapRows(collection, rows || [])];
       })
-    );
+      );
 
     requests.forEach((result) => {
       if (result.status === "fulfilled") {
