@@ -10836,9 +10836,27 @@ async function initializeAppData() {
 
 function startAppInitialization() {
   if (!appInitializationPromise) {
-    appInitializationPromise = initializeAppData().finally(() => {
-      appInitializationPromise = null;
-    });
+    appInitializationPromise = initializeAppData()
+      .catch((error) => {
+        console.error("Erro ao inicializar painel:", error);
+        if (!isLoginPage() && !isPublicPage() && isAuthenticated()) {
+          const shell = document.getElementById("app-shell");
+          shell?.classList.remove("is-locked");
+          shell?.classList.add("is-ready");
+          window.__hubAuthReady = true;
+          document.documentElement.classList.remove("auth-entry-pending");
+          try {
+            renderAll();
+          } catch (renderError) {
+            console.error("Erro ao renderizar painel apos falha de inicializacao:", renderError);
+          }
+          return true;
+        }
+        throw error;
+      })
+      .finally(() => {
+        appInitializationPromise = null;
+      });
   }
   return appInitializationPromise;
 }
@@ -10942,6 +10960,14 @@ setupLogin().then((canInitialize) => {
 }).catch((error) => {
   console.error("Erro ao validar login:", error);
   if (!isLoginPage() && !isPublicPage()) {
+    if (isAuthenticated()) {
+      const shell = document.getElementById("app-shell");
+      shell?.classList.remove("is-locked");
+      shell?.classList.add("is-ready");
+      window.__hubAuthReady = true;
+      document.documentElement.classList.remove("auth-entry-pending");
+      return;
+    }
     window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`;
     return;
   }
