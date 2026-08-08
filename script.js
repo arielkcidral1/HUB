@@ -3272,18 +3272,7 @@ if (collection === "eventos") {
   }
 
   if (collection === "atestados") {
-    return {
-      nome: values.nome || "",
-      cpf: values.cpf || "",
-      telefone: values.telefone || "",
-      unidade: values.unidade || "",
-      arquivo_nome: values.arquivoNome || "Atestado",
-      arquivo_tamanho: values.arquivoTamanho || 0,
-      arquivo_tipo: values.arquivoTipo || "application/octet-stream",
-      arquivo_url: values.arquivoUrl || "",
-      status: values.status || "Recebido",
-      created_by: values.createdBy || "Publico",
-    };
+    return rows.map(mapAtestadoRow);
   }
 
   if (collection === "documentosContratados") {
