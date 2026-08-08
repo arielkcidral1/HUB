@@ -150,6 +150,12 @@
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !persistAuthenticatedSession(result?.session)) {
+        const storedSession = readJson(POSTGRES_SESSION_KEY);
+        if (persistAuthenticatedSession(storedSession)) {
+          window.__hubAuthenticatedSession = storedSession;
+          renderAuthenticatedIdentity(storedSession.user);
+          return true;
+        }
         redirectToLogin();
         return false;
       }
@@ -157,6 +163,12 @@
       renderAuthenticatedIdentity(result.session.user);
       return true;
     } catch (error) {
+      const storedSession = readJson(POSTGRES_SESSION_KEY);
+      if (persistAuthenticatedSession(storedSession)) {
+        window.__hubAuthenticatedSession = storedSession;
+        renderAuthenticatedIdentity(storedSession.user);
+        return true;
+      }
       redirectToLogin();
       return false;
     } finally {

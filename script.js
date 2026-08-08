@@ -10896,8 +10896,11 @@ function setupPresenceHeartbeat() {
       body: JSON.stringify(buildPayload(online)),
     }).then((response) => {
       if (response.status !== 401) return;
-      clearAuthenticatedUser();
-      window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
+      return restoreAuthenticatedSession().then((restored) => {
+        if (restored) return;
+        clearAuthenticatedUser();
+        window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
+      });
     }).catch(() => {});
   };
 
