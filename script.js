@@ -3951,24 +3951,40 @@ function mapBootstrapCollectionRows(collection, sourceRows = []) {
 
 function applyBootstrapRowsToState(bootstrapRows, options = {}) {
   if (!bootstrapRows) return false;
-  const { forceCore = false } = options;
+  const { forceCore = false, overwriteEmpty = false } = options;
   const forceCollections = new Set(forceCore
-    ? ["vagas", "malotes", "quadros", "documentosContratados", "candidaturas", "comunicados"]
+    ? [
+      "denuncias",
+      "comunicados",
+      "malotes",
+      "chamados",
+      "quadros",
+      "vagas",
+      "eventos",
+      "vtRegistros",
+      "documentosContratados",
+      "candidaturas",
+      "atestados",
+      "readReceipts",
+    ]
     : []);
   let changed = false;
 
   Object.keys(TABLES).forEach((collection) => {
+    if (!Object.prototype.hasOwnProperty.call(bootstrapRows, collection)) return;
     const sourceRows = bootstrapRows[collection] || [];
-    if (!sourceRows.length) return;
+    if (!sourceRows.length && !overwriteEmpty) return;
     if (collection !== "usuarios" && !forceCollections.has(collection) && (data[collection] || []).length) return;
 
     try {
       const mappedRows = mapBootstrapCollectionRows(collection, sourceRows);
-      if (!mappedRows.length) return;
+      if (!mappedRows.length && !overwriteEmpty) return;
       if (collection === "usuarios") {
         data.usuarios = mergeUsersByName(data.usuarios || [], mappedRows);
       } else if (collection === "comunicados") {
-        data.comunicados = mergeLocalChatMessages(mappedRows, forceCollections.has(collection) ? [] : data.comunicados);
+        data.comunicados = mappedRows.length
+          ? mergeLocalChatMessages(mappedRows, forceCollections.has(collection) ? [] : data.comunicados)
+          : [];
       } else {
         data[collection] = mappedRows;
       }
@@ -3986,9 +4002,9 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
 }
 
 async function loadIndexBootstrapData(options = {}) {
-  const { forceCore = true, render = true } = options;
+  const { forceCore = true, overwriteEmpty = false, render = true } = options;
   const bootstrapRows = await loadBootstrapRows();
-  const changed = applyBootstrapRowsToState(bootstrapRows, { forceCore });
+  const changed = applyBootstrapRowsToState(bootstrapRows, { forceCore, overwriteEmpty });
   if (changed && render) renderAll();
   return changed;
 }
@@ -4080,6 +4096,20 @@ async function loadFromPostgreSQL(options = {}) {
 
   try {
     const bootstrapRows = await loadBootstrapRows();
+    if (bootstrapRows) {
+      const loaded = applyBootstrapRowsToState(bootstrapRows, { forceCore: true, overwriteEmpty: true });
+      ensureRequiredTeamUsers();
+      publishHubDataCounts();
+      if (setupLive) {
+        setupRealtime();
+        setupAutoRefresh();
+      }
+      setSyncStatus("PostgreSQL EIXO online", true);
+      renderAll();
+      if (setupLive) rememberCurrentNotificationKeysForPolling();
+      return loaded;
+    }
+
     const usersResult = bootstrapRows ? { data: bootstrapRows.usuarios || [], error: null } : await selectPostgreSQLRows(USERS_TABLE, {
       orderBy: "created_at",
       ascending: false,
