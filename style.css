@@ -2593,9 +2593,9 @@ textarea {
   z-index: 60;
   display: grid;
   grid-template-columns: minmax(24px, 1fr) minmax(320px, 640px) 72px minmax(24px, 1fr);
-  grid-template-rows: minmax(280px, 1fr) 78px;
+  grid-template-rows: minmax(360px, 1fr) 132px;
   align-items: center;
-  gap: 12px 14px;
+  gap: 8px 14px;
   margin: 0;
   padding: 0 28px 18px;
   border: 0;
@@ -2622,8 +2622,8 @@ textarea {
   align-self: stretch;
   justify-self: stretch;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: 58px minmax(190px, 1fr) 70px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 50px minmax(300px, 1fr) 58px;
   width: 100%;
   height: 100%;
   max-height: none;
@@ -2646,42 +2646,22 @@ textarea {
   grid-row: 1;
   align-self: center;
   min-width: 0;
-  padding: 0 260px 0 66px;
+  padding: 0 66px;
   color: #f8fafc;
   font-weight: 700;
   text-align: left;
 }
 
-.chat-preview-toolbar {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: center;
-  justify-self: end;
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  padding-right: 18px;
-  color: #aeb4b7;
-  font-size: 18px;
-}
-
-.chat-preview-toolbar span {
-  display: inline-grid;
-  place-items: center;
-  min-width: 20px;
-  height: 28px;
-}
-
 .chat-composer.has-attachment-preview .chat-preview-body {
-  grid-column: 1 / -1;
+  grid-column: 1;
   grid-row: 2;
   display: grid;
   place-items: center;
   min-height: 0;
-  width: min(100%, 980px);
+  width: min(100%, 1040px);
   height: 100%;
   justify-self: center;
-  padding: 12px 8px 18px;
+  padding: 8px 8px 10px;
   overflow: hidden;
 }
 
@@ -2729,7 +2709,7 @@ textarea {
 }
 
 .chat-composer.has-attachment-preview .chat-preview-strip {
-  grid-column: 1 / -1;
+  grid-column: 1;
   grid-row: 3;
   justify-self: center;
   align-self: center;
@@ -4985,7 +4965,7 @@ form.panel[data-public-chamados="true"].panel {
     inset: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 60px;
-    grid-template-rows: minmax(240px, 1fr) 70px;
+    grid-template-rows: minmax(300px, 1fr) 122px;
     padding: 0 14px 14px;
   }
 
@@ -4998,15 +4978,11 @@ form.panel[data-public-chamados="true"].panel {
     grid-row: 1;
     max-height: none;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 50px minmax(170px, 1fr) 60px;
+    grid-template-rows: 46px minmax(240px, 1fr) 56px;
   }
 
   .chat-composer.has-attachment-preview .chat-preview-title {
     padding: 0 48px;
-  }
-
-  .chat-preview-toolbar {
-    display: none;
   }
 
   .chat-composer.has-attachment-preview .chat-preview-close {
@@ -5016,7 +4992,7 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-composer.has-attachment-preview .chat-preview-body {
     width: 100%;
-    padding: 10px 0 16px;
+    padding: 6px 0 10px;
   }
 
   .chat-composer.has-attachment-preview textarea[name="mensagem"] {

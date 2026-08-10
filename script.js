@@ -4581,13 +4581,6 @@ function renderChatAttachmentPreview(files) {
   preview.innerHTML = `
     <button type="button" class="chat-preview-close" data-action="clear-chat-file" title="Remover anexo" aria-label="Remover anexo">&times;</button>
     <div class="chat-preview-title">${fileName}${selectedFiles.length > 1 ? ` + ${selectedFiles.length - 1} arquivo(s)` : ""}</div>
-    <div class="chat-preview-toolbar" aria-hidden="true">
-      <span>⤢</span>
-      <span>✎</span>
-      <span>Aa</span>
-      <span>□</span>
-      <span>☻</span>
-    </div>
     <div class="chat-preview-body">${body}</div>
     <div class="chat-preview-strip" aria-label="Anexo selecionado">
       ${chips}
