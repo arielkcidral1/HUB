@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=login-submit-v3[\s\S]*script\.js\?v=db-bootstrap-v42' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=login-submit-v3[\s\S]*script\.js\?v=db-bootstrap-v43' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -69,6 +69,8 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'function shouldRepairCoreCollections\(\)[\s\S]*"vagas"[\s\S]*"malotes"[\s\S]*"quadros"[\s\S]*"documentosContratados"[\s\S]*function loadIndexBootstrapData\([\s\S]*loadBootstrapRows\(\)[\s\S]*function repairCoreCollectionsFromBootstrap\(\)[\s\S]*loadIndexBootstrapData\(\{ forceCore: false, render: true \}\)' "frontend repara listas principais vazias usando bootstrap"
   Assert-MatchText $script 'function applyBootstrapRowsToState\(bootstrapRows, options = \{\}\)[\s\S]*forceCore[\s\S]*"vagas"[\s\S]*"malotes"[\s\S]*"quadros"[\s\S]*"documentosContratados"[\s\S]*"candidaturas"[\s\S]*"comunicados"[\s\S]*saveLocalData\(\)[\s\S]*publishHubDataCounts\(\)' "index aplica diretamente as colecoes principais recebidas do bootstrap"
   Assert-MatchText $script 'loadIndexBootstrapData\(\{ forceCore: true, render: true \}\)[\s\S]*setSyncStatus\("PostgreSQL EIXO online", true\)' "inicializacao reforca os dados do DB apos destravar a conta"
+  Assert-MatchText $script 'async function ensureViewBootstrapData\(viewId\)[\s\S]*malotes: \["malotes"\][\s\S]*vagas: \["vagas", "candidaturas"\][\s\S]*loadIndexBootstrapData\(\{ forceCore: true, render: true \}\)' "abas principais vazias forcam bootstrap do DB ao abrir"
+  Assert-MatchText $script 'function activateView\(viewId\)[\s\S]*ensureViewBootstrapData\(viewId\)' "troca de aba dispara garantia de dados do DB"
   Assert-MatchText $script 'async function repairCoreCollectionsFromBootstrap\(\) \{[\s\S]*if \(coreCollectionsRepairInProgress \|\| !shouldRepairCoreCollections\(\)\) return false' "reparo das listas principais nao depende do client PostgreSQL"
   Assert-MatchText $script 'if \(!postgresClient\) \{[\s\S]*const repaired = await repairCoreCollectionsFromBootstrap\(\)[\s\S]*return repaired' "sem client PostgreSQL o index ainda carrega dados via bootstrap"
   Assert-MatchText $script 'function parseJsonArray\(value\)[\s\S]*JSON\.parse\(value\)[\s\S]*if \(collection === "malotes"\)[\s\S]*colaboradores: parseJsonArray\(row\.colaboradores\)' "malotes aceitam colaboradores em JSON textual do PostgreSQL"
@@ -81,7 +83,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v17[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=db-bootstrap-v42[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v17[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=db-bootstrap-v43[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
   Assert-True -Condition (-not ($index -match 'account-loading-guard\.js|Carregando sua conta')) -Message "index.html nao possui a tela de carregamento"
   $loading = Read-ProjectFile "account-loading.html"
