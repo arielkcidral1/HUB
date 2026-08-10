@@ -4515,8 +4515,8 @@ function revokeChatAttachmentPreviewUrls() {
 function renderChatAttachmentPreview(files) {
   const preview = document.getElementById("chat-attachment-preview");
   if (!preview) return;
-  const composer = preview.closest(".chat-composer");
-  const panel = preview.closest(".chat-panel");
+  const composer = document.getElementById("chat-form") || preview.closest(".chat-composer");
+  const panel = composer?.closest(".chat-panel") || preview.closest(".chat-panel");
 
   revokeChatAttachmentPreviewUrls();
 
@@ -4530,6 +4530,7 @@ function renderChatAttachmentPreview(files) {
   }
   composer?.classList.add("has-attachment-preview");
   panel?.classList.add("has-attachment-preview");
+  if (panel && preview.parentElement !== panel) panel.appendChild(preview);
 
   chatAttachmentPreviewIndex = Math.min(Math.max(chatAttachmentPreviewIndex, 0), selectedFiles.length - 1);
   const file = selectedFiles[chatAttachmentPreviewIndex];
