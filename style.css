@@ -6352,6 +6352,26 @@ form.panel[data-public-chamados="true"].panel {
   background: transparent;
 }
 
+.chat-panel .chat-composer.has-attachment-preview {
+  background: #0f1110;
+}
+
+.chat-panel .chat-composer.has-attachment-preview .chat-attachment-preview:not([hidden]) {
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  z-index: 65;
+  background: #0f1110;
+}
+
+.chat-panel .chat-composer.has-attachment-preview .chat-preview-body {
+  display: grid;
+}
+
+.chat-panel .chat-composer.has-attachment-preview .chat-preview-image-frame {
+  display: grid;
+}
+
 :root[data-theme="dark"] .hub-notification-popout,
 :root[data-theme="dark"] .hub-notification-permission-prompt {
   background: linear-gradient(135deg, var(--surface), var(--teal-surface));
