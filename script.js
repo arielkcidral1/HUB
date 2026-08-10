@@ -4019,7 +4019,7 @@ async function ensureViewBootstrapData(viewId) {
   };
   const requiredCollections = requiredByView[viewId];
   if (!requiredCollections) return false;
-  const shouldForceFreshView = ["vagas", "malotes", "quadros", "documentos-contratados", "comunicacao"].includes(viewId);
+  const shouldForceFreshView = ["malotes", "quadros", "documentos-contratados", "comunicacao"].includes(viewId);
   if (!shouldForceFreshView && !requiredCollections.some((collection) => !(data[collection] || []).length)) return false;
 
   try {
@@ -8569,7 +8569,6 @@ function getVagasFilterValues() {
     unidade: normalizeUnitText(unidade) === normalizeUnitText("Unidade") ? "" : unidade,
     nome: String(document.getElementById("vaga-filter-nome")?.value || "").trim().toLowerCase(),
     cpf: String(document.getElementById("vaga-filter-cpf")?.value || "").replace(/\D/g, ""),
-    cargo: String(document.getElementById("vaga-filter-cargo")?.value || "").trim().toLowerCase(),
   };
 }
 
@@ -8588,30 +8587,20 @@ function filterVagasByCurrentFilters(items = []) {
   const filters = getVagasFilterValues();
   return items.filter((item) => {
     if (filters.unidade && getCanonicalUnit(item.unidade) !== filters.unidade) return false;
-    if (filters.cargo && !String(item.cargo || "").toLowerCase().includes(filters.cargo)) return false;
     if ((filters.nome || filters.cpf) && !getVagaCandidaturas(item.id, filters).length) return false;
     return true;
   });
-}
-
-function updateVagaCargoFilterOptions(items = data.vagas || []) {
-  const datalist = document.getElementById("vaga-cargo-options");
-  if (!datalist) return;
-  if (isDatalistInUse("vaga-cargo-options")) return;
-  const cargos = [...new Set(items.map((item) => String(item.cargo || "").trim()).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b, "pt-BR"));
-  datalist.innerHTML = cargos.map((cargo) => `<option value="${escapeHtml(cargo)}"></option>`).join("");
 }
 
 function updateVagasFilterClearButton() {
   const clearButton = document.getElementById("limpar-filtros-vagas");
   if (!clearButton) return;
   const filters = getVagasFilterValues();
-  clearButton.hidden = !Boolean(filters.unidade || filters.nome || filters.cpf || filters.cargo);
+  clearButton.hidden = !Boolean(filters.unidade || filters.nome || filters.cpf);
 }
 
 function clearVagasFilters() {
-  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf", "vaga-filter-cargo"].forEach((id) => {
+  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
@@ -8741,17 +8730,10 @@ function renderAll() {
   renderChamadosSection();
   renderBoards();
 
-  updateVagaCargoFilterOptions(data.vagas || []);
   updateVagasFilterClearButton();
   const vagasFilters = getVagasFilterValues();
-  let visibleVagas = filterVagasByCurrentFilters(data.vagas || []);
-  if (!visibleVagas.length && (data.vagas || []).length && (vagasFilters.unidade || vagasFilters.nome || vagasFilters.cpf || vagasFilters.cargo)) {
-    clearVagasFilters();
-    visibleVagas = data.vagas || [];
-  }
-  const appliedVagasFilters = getVagasFilterValues();
-  renderCards("vagas-list", visibleVagas, (item) => {
-    const candidaturas = getVagaCandidaturas(item.id, appliedVagasFilters);
+  renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
+    const candidaturas = getVagaCandidaturas(item.id, vagasFilters);
     const totalCandidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id || c.vagaId) === String(item.id)).length;
     let candidaturasHtml = `<p class="empty-candidates">Nenhum currículo recebido.</p>`;
     if (totalCandidaturas > 0 && !candidaturas.length) {
@@ -8764,9 +8746,8 @@ function renderAll() {
           <p>
             <strong>${escapeHtml(c.nome)}</strong>
             <span class="candidate-meta-line">
-              <span>CPF: ${escapeHtml(formatCpf(c.cpf))}</span>
-              <span>Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
-            </span>
+              <span class="meta-line">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
+              <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
           </p>
           <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver Currículo</button>
         </div>
@@ -9524,7 +9505,6 @@ document.getElementById("limpar-filtros-chamados")?.addEventListener("click", ()
 
 document.getElementById("vaga-filter-unidade")?.addEventListener("change", renderAll);
 document.getElementById("vaga-filter-nome")?.addEventListener("input", renderAll);
-document.getElementById("vaga-filter-cargo")?.addEventListener("input", renderAll);
 document.getElementById("vaga-filter-cpf")?.addEventListener("input", (event) => {
   event.currentTarget.value = formatCpf(event.currentTarget.value);
   renderAll();
