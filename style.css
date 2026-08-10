@@ -2131,6 +2131,19 @@ textarea {
   align-content: stretch;
 }
 
+.chat-panel.has-attachment-preview::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 148px;
+  z-index: 60;
+  background-color: #0f1110;
+  background-image: var(--chat-preview-image-url);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+}
+
 .chat-panel.has-attachment-preview > .panel-header,
 .chat-panel.has-attachment-preview .chat-feed,
 .chat-panel.has-attachment-preview .chat-message-filter {
@@ -4978,6 +4991,10 @@ form.panel[data-public-chamados="true"].panel {
     height: 132px;
   }
 
+  .chat-panel.has-attachment-preview::before {
+    inset: 0 0 132px;
+  }
+
   .chat-composer.has-attachment-preview .chat-attachment-preview {
     inset: 0 0 132px;
     max-height: none;
@@ -6351,7 +6368,7 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 .chat-panel .chat-composer.has-attachment-preview {
-  background: #0f1110;
+  background: transparent;
 }
 
 .chat-panel .chat-composer.has-attachment-preview .chat-attachment-preview:not([hidden]) {
@@ -6380,7 +6397,7 @@ form.panel[data-public-chamados="true"].panel {
   overflow: hidden;
   border: 0;
   border-radius: 0;
-  background: #0f1110;
+  background: transparent;
   box-shadow: none;
 }
 

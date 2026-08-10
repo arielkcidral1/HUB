@@ -4526,6 +4526,7 @@ function renderChatAttachmentPreview(files) {
     preview.innerHTML = "";
     composer?.classList.remove("has-attachment-preview");
     panel?.classList.remove("has-attachment-preview");
+    panel?.style.removeProperty("--chat-preview-image-url");
     return;
   }
   composer?.classList.add("has-attachment-preview");
@@ -4545,12 +4546,14 @@ function renderChatAttachmentPreview(files) {
   let body = "";
   let activeChip = "";
   if (mimeType.startsWith("image/")) {
+    panel?.style.setProperty("--chat-preview-image-url", `url("${chatAttachmentPreviewUrl}")`);
     body = `
       <div class="chat-preview-image-frame">
         <img class="chat-preview-image" src="${chatAttachmentPreviewUrl}" alt="Previa de ${fileName}">
       </div>`;
     activeChip = `<img class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" alt="" aria-hidden="true">`;
   } else if (mimeType.startsWith("audio/")) {
+    panel?.style.removeProperty("--chat-preview-image-url");
     body = `
       <div class="chat-preview-audio-card">
         <button type="button" class="chat-preview-audio-trash" data-action="clear-chat-file" title="Remover audio" aria-label="Remover audio">??</button>
@@ -4558,6 +4561,7 @@ function renderChatAttachmentPreview(files) {
       </div>`;
     activeChip = `<span class="chat-preview-chip-icon" aria-hidden="true">AUD</span>`;
   } else {
+    panel?.style.removeProperty("--chat-preview-image-url");
     body = `
       <div class="chat-preview-unavailable">
         <div class="chat-preview-file-icon" aria-hidden="true">?</div>
