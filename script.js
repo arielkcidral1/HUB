@@ -278,6 +278,7 @@ let realtimeChannel = null;
 let activeChatChannel = "";
 let refreshTimer = null;
 let refreshInProgress = false;
+let coreCollectionsRepairInProgress = false;
 let documentRecords = loadDocumentRecords();
 let currentAuthUser = null;
 let currentUserProfile = null;
@@ -1562,13 +1563,16 @@ function setFieldValue(field, value) {
 }
 
 function getSelectedMaloteDestino() {
-  return document.getElementById("malote-destino-filter")?.value || "";
+  const value = document.getElementById("malote-destino-filter")?.value || "";
+  return normalizeUnitText(value) === normalizeUnitText("Todos os destinos") ? "" : value;
 }
 
 function getMaloteFilterValues() {
+  const destino = getSelectedMaloteDestino();
+  const status = document.getElementById("malote-status-filter")?.value || "";
   return {
-    destino: String(document.getElementById("malote-destino-filter")?.value || "").trim().toLowerCase(),
-    status: normalizeEventType(document.getElementById("malote-status-filter")?.value || ""),
+    destino: String(destino || "").trim().toLowerCase(),
+    status: ["todos os status", "todos"].includes(normalizeEventType(status)) ? "" : normalizeEventType(status),
     colaborador: String(document.getElementById("malote-filter-colaborador")?.value || "").trim().toLowerCase(),
     codigo: String(document.getElementById("malote-code-search")?.value || "").trim(),
   };
@@ -3912,6 +3916,43 @@ async function loadBootstrapRows() {
   } catch (error) {
     console.warn("Bootstrap do PostgreSQL falhou; usando carregamento por tabela:", error);
     return null;
+  }
+}
+
+function shouldRepairCoreCollections() {
+  return ["vagas", "malotes", "quadros", "documentosContratados"].some((collection) => !(data[collection] || []).length);
+}
+
+async function repairCoreCollectionsFromBootstrap() {
+  if (coreCollectionsRepairInProgress || !postgresClient || !shouldRepairCoreCollections()) return false;
+  coreCollectionsRepairInProgress = true;
+  try {
+    const bootstrapRows = await loadBootstrapRows();
+    if (!bootstrapRows) return false;
+    let repaired = false;
+    ["usuarios", "vagas", "malotes", "quadros", "documentosContratados", "comunicados"].forEach((collection) => {
+      const sourceRows = bootstrapRows[collection] || [];
+      if (!sourceRows.length) return;
+      if (collection !== "usuarios" && (data[collection] || []).length) return;
+      const rows = collection === "comunicados"
+        ? sourceRows.filter((row) => getAllowedChatChannelIds().includes(normalizeChatChannel(row.canal)))
+        : sourceRows;
+      const mappedRows = mapRows(collection, rows);
+      if (!mappedRows.length) return;
+      data[collection] = collection === "usuarios"
+        ? mergeUsersByName(data.usuarios || [], mappedRows)
+        : mappedRows;
+      repaired = true;
+    });
+    if (!repaired) return false;
+    saveLocalData();
+    renderAll();
+    return true;
+  } catch (error) {
+    console.error("Erro ao reparar colecoes principais do PostgreSQL:", error);
+    return false;
+  } finally {
+    coreCollectionsRepairInProgress = false;
   }
 }
 
@@ -8417,8 +8458,9 @@ function filterChamadosByCurrentFilters(items = []) {
 }
 
 function getVagasFilterValues() {
+  const unidade = String(document.getElementById("vaga-filter-unidade")?.value || "").trim();
   return {
-    unidade: String(document.getElementById("vaga-filter-unidade")?.value || "").trim(),
+    unidade: normalizeUnitText(unidade) === normalizeUnitText("Unidade") ? "" : unidade,
     nome: String(document.getElementById("vaga-filter-nome")?.value || "").trim().toLowerCase(),
     cpf: String(document.getElementById("vaga-filter-cpf")?.value || "").replace(/\D/g, ""),
     cargo: String(document.getElementById("vaga-filter-cargo")?.value || "").trim().toLowerCase(),
@@ -8630,6 +8672,12 @@ function renderAll() {
   renderCalendar();
   renderDocumentRecords();
   renderTeamUsers();
+
+  if (shouldRepairCoreCollections()) {
+    window.setTimeout(() => {
+      repairCoreCollectionsFromBootstrap();
+    }, 0);
+  }
 }
 
 const PRESENCE_ONLINE_THRESHOLD_MS = 45000;
