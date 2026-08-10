@@ -2591,20 +2591,40 @@ textarea {
   position: absolute;
   inset: 0;
   z-index: 60;
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(24px, 1fr) minmax(320px, 640px) 72px minmax(24px, 1fr);
+  grid-template-rows: minmax(220px, 1fr) 82px;
+  align-items: center;
+  gap: 12px 14px;
   margin: 0;
-  padding: 0;
+  padding: 16px 28px 18px;
   border: 0;
   background: #111614;
 }
 
-.chat-composer.has-attachment-preview .chat-attachment-preview {
+.chat-composer.has-attachment-preview::after {
+  content: "";
   position: absolute;
-  inset: 0 0 96px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  height: 112px;
+  background: #111614;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.chat-composer.has-attachment-preview .chat-attachment-preview {
+  position: relative;
+  inset: auto;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-self: stretch;
+  justify-self: stretch;
   display: grid;
-  grid-template-rows: 48px minmax(260px, 1fr) 66px;
+  grid-template-rows: 48px minmax(160px, 1fr) 62px;
   width: 100%;
-  height: auto;
+  height: 100%;
   max-height: none;
   overflow: hidden;
   border: 0;
@@ -2657,12 +2677,11 @@ textarea {
 }
 
 .chat-composer.has-attachment-preview textarea[name="mensagem"] {
-  position: absolute;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
+  position: relative;
+  grid-column: 2;
+  grid-row: 2;
   z-index: 2;
-  width: min(640px, calc(100% - 180px));
+  width: 100%;
   min-width: 0;
   min-height: 44px;
   max-height: 110px;
@@ -2673,11 +2692,12 @@ textarea {
 }
 
 .chat-composer.has-attachment-preview .chat-emoji-menu-wrap {
-  position: absolute;
-  left: calc(50% + min(320px, (100% - 180px) / 2) - 48px);
-  bottom: 29px;
+  position: relative;
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
   z-index: 3;
-  margin-right: 0;
+  margin-right: 8px;
 }
 
 .chat-composer.has-attachment-preview .chat-attach-menu-wrap {
@@ -2696,9 +2716,11 @@ textarea {
 }
 
 .chat-composer.has-attachment-preview .send-button {
-  position: absolute;
-  right: 28px;
-  bottom: 18px;
+  position: relative;
+  grid-column: 3;
+  grid-row: 2;
+  justify-self: end;
+  align-self: center;
   z-index: 2;
   width: 56px;
   min-width: 56px;
@@ -4912,14 +4934,21 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-composer.has-attachment-preview {
     inset: 0;
-    display: block;
-    padding: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 60px;
+    grid-template-rows: minmax(180px, 1fr) 74px;
+    padding: 12px 14px 14px;
+  }
+
+  .chat-composer.has-attachment-preview::after {
+    height: 100px;
   }
 
   .chat-composer.has-attachment-preview .chat-attachment-preview {
-    inset: 0 0 88px;
+    grid-column: 1 / -1;
+    grid-row: 1;
     max-height: none;
-    grid-template-rows: 42px minmax(220px, 1fr) 62px;
+    grid-template-rows: 42px minmax(140px, 1fr) 58px;
   }
 
   .chat-composer.has-attachment-preview .chat-preview-title {
@@ -4937,17 +4966,16 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer.has-attachment-preview textarea[name="mensagem"] {
-    left: 14px;
-    right: 82px;
-    bottom: 18px;
-    transform: none;
-    width: auto;
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
   }
 
   .chat-composer.has-attachment-preview .chat-emoji-menu-wrap {
-    left: auto;
-    right: 92px;
-    bottom: 23px;
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: end;
+    margin-right: 8px;
   }
 
   .chat-composer.has-attachment-preview .chat-preview-strip {
@@ -4957,8 +4985,8 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer.has-attachment-preview .send-button {
-    right: 14px;
-    bottom: 14px;
+    grid-column: 2;
+    grid-row: 2;
     width: 52px;
     min-width: 52px;
     height: 52px;
