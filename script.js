@@ -6720,11 +6720,7 @@ function applyRoleAccess() {
 
   const chamadosUrls = new Set(["chamados.html", "https://hub-opal-nine.vercel.app/chamados.html"]);
   const denunciaUrls = new Set(["denuncia.html", "https://hub-opal-nine.vercel.app/denuncia.html"]);
-  const allowedViews = isCashierUser()
-    ? new Set(["comunicacao", "calendario", "conta"])
-    : isManagerUser()
-    ? new Set(["comunicacao", "quadros", "calendario", "documentos", "conta"])
-    : new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
+  const allowedViews = new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : isManagerUser()
@@ -6745,9 +6741,7 @@ function applyRoleAccess() {
   });
 
   const activeView = document.querySelector(".view.active");
-  if (!activeView || !allowedViews.has(activeView.id)) {
-    activateView(isCashierUser() ? "comunicacao" : isManagerUser() ? "documentos" : "dashboard");
-  }
+  if (!activeView || !allowedViews.has(activeView.id)) activateView("dashboard");
 }
 
 function isArchivedRecord(item) {
@@ -9292,16 +9286,6 @@ document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
       window.location.href = button.dataset.externalUrl;
       return;
     }
-    if (isCashierUser() && !["comunicacao", "calendario", "conta"].includes(button.dataset.view)) {
-      activateView("comunicacao");
-      closeMobileMenu();
-      return;
-    }
-    if (isManagerUser() && !["comunicacao", "quadros", "calendario", "documentos", "conta"].includes(button.dataset.view)) {
-      activateView("documentos");
-      closeMobileMenu();
-      return;
-    }
     activateView(button.dataset.view);
     closeMobileMenu();
     checkAndMarkChatAsRead();
@@ -11099,7 +11083,9 @@ function setupPresencePolling() {
         .order("nome", { ascending: true });
       if (error) throw error;
       data.usuarios = mergeUsersByName(data.usuarios || [], mapRows("usuarios", rows || []));
+      saveTeamUsersStore(data.usuarios);
       renderChatChannels();
+      renderChat();
     } catch (_) {
       // Mantem o ultimo estado conhecido se a consulta falhar.
     }
