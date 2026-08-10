@@ -4002,10 +4002,14 @@ async function loadFromPostgreSQL(options = {}) {
       ? Object.entries(TABLES)
         .filter(([collection]) => collection !== "usuarios")
         .map(([collection]) => {
-          const rows = collection === "comunicados"
-            ? (bootstrapRows[collection] || []).filter((row) => getAllowedChatChannelIds().includes(normalizeChatChannel(row.canal)))
-            : bootstrapRows[collection] || [];
-          return { status: "fulfilled", value: [collection, mapRows(collection, rows)] };
+          try {
+            const rows = collection === "comunicados"
+              ? (bootstrapRows[collection] || []).filter((row) => getAllowedChatChannelIds().includes(normalizeChatChannel(row.canal)))
+              : bootstrapRows[collection] || [];
+            return { status: "fulfilled", value: [collection, mapRows(collection, rows)] };
+          } catch (error) {
+            return { status: "rejected", reason: { collection, error } };
+          }
         })
       : await Promise.allSettled(
         Object.entries(TABLES)
