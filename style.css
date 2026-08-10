@@ -2605,14 +2605,14 @@ textarea {
   right: 0;
   bottom: 0;
   z-index: 1;
-  height: 132px;
+  height: 148px;
   background: #0f1110;
   border-top: 1px solid #232625;
 }
 
 .chat-composer.has-attachment-preview .chat-attachment-preview {
   position: absolute;
-  inset: 0 0 132px;
+  inset: 0 0 148px;
   z-index: 2;
   display: flex;
   flex-direction: column;
@@ -2675,12 +2675,12 @@ textarea {
 .chat-composer.has-attachment-preview textarea[name="mensagem"] {
   position: absolute;
   left: 50%;
-  bottom: 34px;
+  bottom: 42px;
   transform: translateX(-50%);
   z-index: 2;
-  width: min(640px, calc(100% - 190px));
+  width: min(760px, calc(100% - 210px));
   min-width: 0;
-  min-height: 44px;
+  min-height: 50px;
   max-height: 110px;
   border-radius: 8px;
   border: 0;
@@ -2690,8 +2690,8 @@ textarea {
 
 .chat-composer.has-attachment-preview .chat-emoji-menu-wrap {
   position: absolute;
-  left: calc(50% + min(320px, (100% - 190px) / 2) - 48px);
-  bottom: 39px;
+  left: calc(50% + min(380px, (100% - 210px) / 2) - 50px);
+  bottom: 47px;
   z-index: 3;
   margin-right: 0;
 }
@@ -2735,12 +2735,12 @@ textarea {
 .chat-composer.has-attachment-preview .send-button {
   position: absolute;
   right: 28px;
-  bottom: 28px;
+  bottom: 34px;
   z-index: 2;
-  width: 56px;
-  min-width: 56px;
-  height: 56px;
-  min-height: 56px;
+  width: 64px;
+  min-width: 64px;
+  height: 64px;
+  min-height: 64px;
   padding: 0;
   border-radius: 999px;
   background: #25d366;
@@ -4956,11 +4956,11 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer.has-attachment-preview::after {
-    height: 116px;
+    height: 132px;
   }
 
   .chat-composer.has-attachment-preview .chat-attachment-preview {
-    inset: 0 0 116px;
+    inset: 0 0 132px;
     max-height: none;
   }
 
@@ -4981,16 +4981,17 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-composer.has-attachment-preview textarea[name="mensagem"] {
     left: 14px;
-    right: 82px;
-    bottom: 28px;
+    right: 90px;
+    bottom: 36px;
     transform: none;
     width: auto;
+    min-height: 50px;
   }
 
   .chat-composer.has-attachment-preview .chat-emoji-menu-wrap {
     left: auto;
-    right: 92px;
-    bottom: 33px;
+    right: 100px;
+    bottom: 41px;
     margin-right: 0;
   }
 
@@ -5001,11 +5002,11 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-composer.has-attachment-preview .send-button {
     right: 14px;
-    bottom: 24px;
-    width: 52px;
-    min-width: 52px;
-    height: 52px;
-    min-height: 52px;
+    bottom: 30px;
+    width: 58px;
+    min-width: 58px;
+    height: 58px;
+    min-height: 58px;
   }
 
   .chat-preview-image {
