@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=login-submit-v3[\s\S]*script\.js\?v=db-bootstrap-v45' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=login-submit-v3[\s\S]*script\.js\?v=db-bootstrap-v46' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -70,7 +70,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'function applyBootstrapRowsToState\(bootstrapRows, options = \{\}\)[\s\S]*overwriteEmpty[\s\S]*"denuncias"[\s\S]*"comunicados"[\s\S]*"malotes"[\s\S]*"quadros"[\s\S]*"vagas"[\s\S]*"documentosContratados"[\s\S]*"candidaturas"[\s\S]*saveLocalData\(\)[\s\S]*publishHubDataCounts\(\)' "index aplica diretamente as colecoes principais recebidas do bootstrap"
   Assert-MatchText $script 'loadIndexBootstrapData\(\{ forceCore: true, render: true \}\)[\s\S]*setSyncStatus\("PostgreSQL EIXO online", true\)' "inicializacao reforca os dados do DB apos destravar a conta"
   Assert-MatchText $script 'if \(bootstrapRows\) \{[\s\S]*applyBootstrapRowsToState\(bootstrapRows, \{ forceCore: true, overwriteEmpty: true \}\)[\s\S]*setSyncStatus\("PostgreSQL EIXO online", true\)[\s\S]*renderAll\(\)' "loadFromPostgreSQL usa bootstrap como fonte autoritativa quando disponivel"
-  Assert-MatchText $script 'async function ensureViewBootstrapData\(viewId\)[\s\S]*malotes: \["malotes"\][\s\S]*vagas: \["vagas", "candidaturas"\][\s\S]*loadIndexBootstrapData\(\{ forceCore: true, render: true \}\)' "abas principais vazias forcam bootstrap do DB ao abrir"
+  Assert-MatchText $script 'async function ensureViewBootstrapData\(viewId\)[\s\S]*malotes: \["malotes"\][\s\S]*vagas: \["vagas", "candidaturas"\][\s\S]*shouldForceFreshView[\s\S]*loadIndexBootstrapData\(\{ forceCore: true, overwriteEmpty: true, render: true \}\)' "abas principais puxam bootstrap atualizado do DB ao abrir"
   Assert-MatchText $script 'function activateView\(viewId\)[\s\S]*ensureViewBootstrapData\(viewId\)' "troca de aba dispara garantia de dados do DB"
   Assert-MatchText $script 'async function repairCoreCollectionsFromBootstrap\(\) \{[\s\S]*if \(coreCollectionsRepairInProgress \|\| !shouldRepairCoreCollections\(\)\) return false' "reparo das listas principais nao depende do client PostgreSQL"
   Assert-MatchText $script 'if \(!postgresClient\) \{[\s\S]*const repaired = await repairCoreCollectionsFromBootstrap\(\)[\s\S]*return repaired' "sem client PostgreSQL o index ainda carrega dados via bootstrap"
@@ -84,7 +84,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v17[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=db-bootstrap-v45[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v17[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=db-bootstrap-v46[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -414,6 +414,7 @@ Assert-MatchText $script 'function showVtReportMenu\(\).*data-action="gerar-rela
   Assert-MatchText $index 'id="vaga-filter-cargo"[^>]*list="vaga-cargo-options"[^>]*placeholder="Cargo"[\s\S]*id="vaga-cargo-options"' "aba vagas possui filtro de cargo"
   Assert-MatchText $script 'function updateVagaCargoFilterOptions[\s\S]*vaga-cargo-options[\s\S]*item\.cargo[\s\S]*filters\.cargo[\s\S]*item\.cargo' "script filtra vagas internas por cargo"
   Assert-MatchText $script 'function getVagaCandidaturas\(vagaId, filters = null\)[\s\S]*String\(c\.vaga_id \|\| c\.vagaId\) === String\(vagaId\)[\s\S]*totalCandidaturas = \(data\.candidaturas \|\| \[\]\)\.filter\(c => String\(c\.vaga_id \|\| c\.vagaId\) === String\(item\.id\)\)\.length' "aba vagas vincula curriculos por vaga_id ou vagaId"
+  Assert-MatchText $script 'function clearVagasFilters\(\)[\s\S]*vaga-filter-unidade[\s\S]*vaga-filter-nome[\s\S]*vaga-filter-cpf[\s\S]*vaga-filter-cargo[\s\S]*if \(!visibleVagas\.length && \(data\.vagas \|\| \[\]\)\.length[\s\S]*clearVagasFilters\(\)[\s\S]*visibleVagas = data\.vagas \|\| \[\]' "aba vagas nao deixa filtros antigos esconderem vagas do DB"
   Assert-MatchText $script 'function getVagasFilterValues\(\)[\s\S]*normalizeUnitText\(unidade\) === normalizeUnitText\("Unidade"\) \? "" : unidade' "filtro de unidade de vagas ignora placeholder"
   Assert-MatchText $script 'function isDatalistInUse\(datalistId\)[\s\S]*input\[list="\$\{datalistId\}"\][\s\S]*function syncPublicVagaFilterInput[\s\S]*document\.activeElement === input\) return[\s\S]*function fillPublicVagaDatalist[\s\S]*if \(isDatalistInUse\(id\)\) return[\s\S]*function updateVagaCargoFilterOptions[\s\S]*if \(isDatalistInUse\("vaga-cargo-options"\)\) return' "datalists de filtros nao fecham por atualizacao automatica"
   Assert-MatchText $style '\.chamados-filter-bar[\s\S]*max-width: 100%[\s\S]*min-width: 0[\s\S]*flex: 1 1 auto[\s\S]*\.chamados-filter-fields\.vaga-filter-fields[\s\S]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)[\s\S]*width: min\(100%, 560px\)[\s\S]*\.chamados-filter-fields\.vaga-filter-fields input,[\s\S]*width: 100%' "filtros de vagas cabem dentro do painel"
