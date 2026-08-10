@@ -2613,9 +2613,9 @@ textarea {
 .chat-composer.has-attachment-preview .chat-attachment-preview {
   position: absolute;
   inset: 0 0 132px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 50px minmax(190px, 1fr) 58px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: auto;
   max-height: none;
@@ -2634,9 +2634,9 @@ textarea {
 
 .chat-composer.has-attachment-preview .chat-preview-title {
   position: relative;
-  grid-column: 1;
-  grid-row: 1;
-  align-self: center;
+  flex: 0 0 50px;
+  display: flex;
+  align-items: center;
   min-width: 0;
   padding: 0 66px;
   color: #f8fafc;
@@ -2645,14 +2645,14 @@ textarea {
 }
 
 .chat-composer.has-attachment-preview .chat-preview-body {
-  grid-column: 1;
-  grid-row: 2;
+  flex: 1 1 auto;
   display: grid;
   place-items: center;
   min-height: 0;
   width: min(100%, 1040px);
-  height: 100%;
+  height: auto;
   justify-self: center;
+  align-self: center;
   padding: 8px 8px 10px;
   overflow: hidden;
 }
@@ -2701,9 +2701,7 @@ textarea {
 }
 
 .chat-composer.has-attachment-preview .chat-preview-strip {
-  grid-column: 1;
-  grid-row: 3;
-  justify-self: center;
+  flex: 0 0 58px;
   align-self: center;
   max-width: min(520px, 100%);
   padding: 0;
@@ -4964,11 +4962,10 @@ form.panel[data-public-chamados="true"].panel {
   .chat-composer.has-attachment-preview .chat-attachment-preview {
     inset: 0 0 116px;
     max-height: none;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 46px minmax(160px, 1fr) 56px;
   }
 
   .chat-composer.has-attachment-preview .chat-preview-title {
+    flex-basis: 46px;
     padding: 0 48px;
   }
 
@@ -4998,8 +4995,7 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer.has-attachment-preview .chat-preview-strip {
-    grid-column: 1;
-    grid-row: 3;
+    flex-basis: 56px;
     padding-inline: 0;
   }
 
