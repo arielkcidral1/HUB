@@ -3923,31 +3923,81 @@ function shouldRepairCoreCollections() {
   return ["vagas", "malotes", "quadros", "documentosContratados"].some((collection) => !(data[collection] || []).length);
 }
 
+function getHubDataCounts() {
+  return {
+    comunicados: (data.comunicados || []).length,
+    malotes: (data.malotes || []).length,
+    quadros: (data.quadros || []).length,
+    vagas: (data.vagas || []).length,
+    documentosContratados: (data.documentosContratados || []).length,
+    candidaturas: (data.candidaturas || []).length,
+    usuarios: (data.usuarios || []).length,
+  };
+}
+
+function publishHubDataCounts() {
+  const counts = getHubDataCounts();
+  window.__hubDataCounts = counts;
+  document.body?.setAttribute("data-hub-counts", JSON.stringify(counts));
+  return counts;
+}
+
+function mapBootstrapCollectionRows(collection, sourceRows = []) {
+  const rows = collection === "comunicados"
+    ? sourceRows.filter((row) => getAllowedChatChannelIds().includes(normalizeChatChannel(row.canal)))
+    : sourceRows;
+  return mapRows(collection, rows || []);
+}
+
+function applyBootstrapRowsToState(bootstrapRows, options = {}) {
+  if (!bootstrapRows) return false;
+  const { forceCore = false } = options;
+  const forceCollections = new Set(forceCore
+    ? ["vagas", "malotes", "quadros", "documentosContratados", "candidaturas", "comunicados"]
+    : []);
+  let changed = false;
+
+  Object.keys(TABLES).forEach((collection) => {
+    const sourceRows = bootstrapRows[collection] || [];
+    if (!sourceRows.length) return;
+    if (collection !== "usuarios" && !forceCollections.has(collection) && (data[collection] || []).length) return;
+
+    try {
+      const mappedRows = mapBootstrapCollectionRows(collection, sourceRows);
+      if (!mappedRows.length) return;
+      if (collection === "usuarios") {
+        data.usuarios = mergeUsersByName(data.usuarios || [], mappedRows);
+      } else if (collection === "comunicados") {
+        data.comunicados = mergeLocalChatMessages(mappedRows, forceCollections.has(collection) ? [] : data.comunicados);
+      } else {
+        data[collection] = mappedRows;
+      }
+      changed = true;
+    } catch (error) {
+      console.error("Erro ao aplicar dados do bootstrap no index:", { collection, error });
+    }
+  });
+
+  if (changed) {
+    saveLocalData();
+    publishHubDataCounts();
+  }
+  return changed;
+}
+
+async function loadIndexBootstrapData(options = {}) {
+  const { forceCore = true, render = true } = options;
+  const bootstrapRows = await loadBootstrapRows();
+  const changed = applyBootstrapRowsToState(bootstrapRows, { forceCore });
+  if (changed && render) renderAll();
+  return changed;
+}
+
 async function repairCoreCollectionsFromBootstrap() {
   if (coreCollectionsRepairInProgress || !shouldRepairCoreCollections()) return false;
   coreCollectionsRepairInProgress = true;
   try {
-    const bootstrapRows = await loadBootstrapRows();
-    if (!bootstrapRows) return false;
-    let repaired = false;
-    ["usuarios", "vagas", "malotes", "quadros", "documentosContratados", "comunicados"].forEach((collection) => {
-      const sourceRows = bootstrapRows[collection] || [];
-      if (!sourceRows.length) return;
-      if (collection !== "usuarios" && (data[collection] || []).length) return;
-      const rows = collection === "comunicados"
-        ? sourceRows.filter((row) => getAllowedChatChannelIds().includes(normalizeChatChannel(row.canal)))
-        : sourceRows;
-      const mappedRows = mapRows(collection, rows);
-      if (!mappedRows.length) return;
-      data[collection] = collection === "usuarios"
-        ? mergeUsersByName(data.usuarios || [], mappedRows)
-        : mappedRows;
-      repaired = true;
-    });
-    if (!repaired) return false;
-    saveLocalData();
-    renderAll();
-    return true;
+    return await loadIndexBootstrapData({ forceCore: false, render: true });
   } catch (error) {
     console.error("Erro ao reparar colecoes principais do PostgreSQL:", error);
     return false;
@@ -4092,6 +4142,7 @@ async function loadFromPostgreSQL(options = {}) {
     await loadReadReceiptsFromPostgreSQL();
     ensureRequiredTeamUsers();
     saveLocalData();
+    publishHubDataCounts();
     if (setupLive) {
       setupRealtime();
       setupAutoRefresh();
@@ -8673,6 +8724,7 @@ function renderAll() {
   renderCalendar();
   renderDocumentRecords();
   renderTeamUsers();
+  publishHubDataCounts();
 
   if (shouldRepairCoreCollections()) {
     window.setTimeout(() => {
@@ -11018,6 +11070,13 @@ async function initializeAppData() {
       console.error("Erro ao renderizar painel apos destravar loading:", error);
     }
   }
+  window.setTimeout(() => {
+    loadIndexBootstrapData({ forceCore: true, render: true })
+      .then((loaded) => {
+        if (loaded) setSyncStatus("PostgreSQL EIXO online", true);
+      })
+      .catch((error) => console.error("Erro ao reforcar dados do index pelo bootstrap:", error));
+  }, 0);
   setupPresenceHeartbeat();
   // The static HTML must never be exposed as an authenticated dashboard.
   // Release it only after the profile and the initial database read finish.
