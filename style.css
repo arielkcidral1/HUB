@@ -2127,9 +2127,23 @@ textarea {
   overflow: hidden;
 }
 
+.chat-panel.has-attachment-preview {
+  align-content: stretch;
+}
+
+.chat-panel.has-attachment-preview .chat-feed,
+.chat-panel.has-attachment-preview .chat-message-filter {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .chat-panel.chat-panel-empty {
   grid-template-rows: auto auto auto;
   align-content: start;
+}
+
+.chat-panel.chat-panel-empty.has-attachment-preview {
+  align-content: stretch;
 }
 
 .chat-panel.chat-panel-empty .chat-message-filter {
@@ -2574,15 +2588,15 @@ textarea {
 
 .chat-composer.has-attachment-preview {
   position: absolute;
-  inset: 0;
+  inset: 75px 0 0;
   z-index: 60;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 640px) 72px;
-  grid-template-rows: 56px minmax(0, 1fr) 54px 70px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 640px) 72px;
+  grid-template-rows: minmax(260px, 1fr) 54px 70px;
   align-items: center;
-  gap: 10px 14px;
+  gap: 12px 14px;
   margin: 0;
-  padding: 0 28px 16px;
+  padding: 12px 28px 16px;
   border: 0;
   background: #111614;
 }
@@ -2591,11 +2605,11 @@ textarea {
   position: relative;
   inset: auto;
   grid-column: 1 / -1;
-  grid-row: 1 / 3;
+  grid-row: 1;
   align-self: stretch;
   justify-self: stretch;
   display: grid;
-  grid-template-rows: 56px minmax(0, 1fr);
+  grid-template-rows: 44px minmax(0, 1fr);
   width: 100%;
   height: 100%;
   max-height: none;
@@ -2607,18 +2621,17 @@ textarea {
 }
 
 .chat-composer.has-attachment-preview .chat-preview-close {
-  top: 13px;
-  left: 12px;
+  top: 6px;
+  left: 16px;
   color: #e5e7eb;
 }
 
 .chat-composer.has-attachment-preview .chat-preview-title {
   position: relative;
   grid-row: 1;
-  left: 64px;
-  right: 64px;
   align-self: center;
-  padding: 0;
+  min-width: 0;
+  padding: 0 72px;
   color: #f8fafc;
   font-weight: 700;
   text-align: left;
@@ -2628,15 +2641,18 @@ textarea {
   display: grid;
   place-items: center;
   min-height: 0;
-  padding: 18px 8px 22px;
+  width: min(100%, 1060px);
+  height: 100%;
+  justify-self: center;
+  padding: 10px 8px 18px;
   overflow: hidden;
 }
 
 .chat-composer.has-attachment-preview .chat-preview-image {
   width: auto;
   height: auto;
-  max-width: min(100%, 980px);
-  max-height: 100%;
+  max-width: min(100%, 960px);
+  max-height: min(100%, 48vh);
   object-fit: contain;
   border-radius: 0;
   box-shadow: none;
@@ -2649,7 +2665,7 @@ textarea {
 
 .chat-composer.has-attachment-preview textarea[name="mensagem"] {
   grid-column: 2;
-  grid-row: 3;
+  grid-row: 2;
   width: 100%;
   min-width: 0;
   min-height: 44px;
@@ -2662,7 +2678,7 @@ textarea {
 
 .chat-composer.has-attachment-preview .chat-emoji-menu-wrap {
   grid-column: 2;
-  grid-row: 3;
+  grid-row: 2;
   justify-self: end;
   z-index: 2;
   margin-right: 8px;
@@ -2674,7 +2690,7 @@ textarea {
 
 .chat-composer.has-attachment-preview .chat-preview-strip {
   grid-column: 2;
-  grid-row: 4;
+  grid-row: 3;
   justify-self: center;
   align-self: center;
   max-width: min(520px, 100%);
@@ -2685,7 +2701,7 @@ textarea {
 
 .chat-composer.has-attachment-preview .send-button {
   grid-column: 3;
-  grid-row: 4;
+  grid-row: 3;
   justify-self: end;
   align-self: center;
   width: 56px;
@@ -4899,50 +4915,51 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer.has-attachment-preview {
+    inset: 69px 0 0;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 60px;
-    grid-template-rows: 52px minmax(0, 1fr) 50px 62px;
-    padding: 0 14px 12px;
+    grid-template-rows: minmax(220px, 1fr) 50px 62px;
+    padding: 10px 14px 12px;
   }
 
   .chat-composer.has-attachment-preview .chat-attachment-preview {
     max-height: none;
-    grid-row: 1 / 3;
-    grid-template-rows: 52px minmax(0, 1fr);
+    grid-row: 1;
+    grid-template-rows: 42px minmax(0, 1fr);
   }
 
   .chat-composer.has-attachment-preview .chat-preview-title {
-    left: 44px;
-    right: 44px;
+    padding-inline: 48px;
   }
 
   .chat-composer.has-attachment-preview .chat-preview-close {
-    top: 11px;
+    top: 5px;
     left: 8px;
   }
 
   .chat-composer.has-attachment-preview .chat-preview-body {
-    padding: 12px 0 16px;
+    width: 100%;
+    padding: 8px 0 14px;
   }
 
   .chat-composer.has-attachment-preview textarea[name="mensagem"] {
     grid-column: 1 / 3;
-    grid-row: 3;
+    grid-row: 2;
   }
 
   .chat-composer.has-attachment-preview .chat-emoji-menu-wrap {
     grid-column: 1 / 3;
-    grid-row: 3;
+    grid-row: 2;
   }
 
   .chat-composer.has-attachment-preview .chat-preview-strip {
     grid-column: 1 / 3;
-    grid-row: 4;
+    grid-row: 3;
     padding-inline: 0;
   }
 
   .chat-composer.has-attachment-preview .send-button {
     grid-column: 3;
-    grid-row: 4;
+    grid-row: 3;
     width: 52px;
     min-width: 52px;
     height: 52px;
@@ -4956,7 +4973,7 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-composer.has-attachment-preview .chat-preview-image {
     max-width: 100%;
-    max-height: 100%;
+    max-height: min(100%, 42vh);
   }
 
   .chat-preview-unavailable {
