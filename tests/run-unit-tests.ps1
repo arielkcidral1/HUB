@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=login-submit-v3[\s\S]*script\.js\?v=db-bootstrap-v39' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=login-submit-v3[\s\S]*script\.js\?v=db-bootstrap-v40' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -66,6 +66,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $recordsApi 'function normalizeDbValue[\s\S]*JSON\.stringify\(value\)[\s\S]*function placeholderFor[\s\S]*::jsonb' "API grava arrays e objetos como jsonb"
   Assert-MatchText (Read-ProjectFile "api/bootstrap.js") 'Promise\.all\(Object\.entries\(BOOTSTRAP_TABLES\)\.map[\s\S]*data\[collection\] = \[\][\s\S]*errors\[collection\]' "bootstrap carrega colecoes com falha isolada por tabela"
   Assert-MatchText $script 'const requests = bootstrapRows[\s\S]*try \{[\s\S]*mapRows\(collection, rows\)[\s\S]*catch \(error\)[\s\S]*status: "rejected", reason: \{ collection, error \}' "frontend isola falha de mapeamento por colecao do bootstrap"
+  Assert-MatchText $script 'function shouldRepairCoreCollections\(\)[\s\S]*"vagas"[\s\S]*"malotes"[\s\S]*"quadros"[\s\S]*"documentosContratados"[\s\S]*function repairCoreCollectionsFromBootstrap\(\)[\s\S]*loadBootstrapRows\(\)[\s\S]*renderAll\(\)' "frontend repara listas principais vazias usando bootstrap"
   Assert-MatchText $script 'function parseJsonArray\(value\)[\s\S]*JSON\.parse\(value\)[\s\S]*if \(collection === "malotes"\)[\s\S]*colaboradores: parseJsonArray\(row\.colaboradores\)' "malotes aceitam colaboradores em JSON textual do PostgreSQL"
   Assert-MatchText $script 'function parseBoardLists\(value\)[\s\S]*return parseJsonArray\(value\)[\s\S]*listas: parseBoardLists\(row\.listas\)' "quadros aceitam listas em JSON textual do PostgreSQL"
   Assert-MatchText $script 'function parseJsonObject\(value\)[\s\S]*JSON\.parse\(value\)[\s\S]*configuracoes: parseJsonObject\(row\.configuracoes\)' "usuarios aceitam configuracoes em JSON textual do PostgreSQL"
@@ -76,7 +77,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v17[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=db-bootstrap-v39[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v17[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=db-bootstrap-v40[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
   Assert-True -Condition (-not ($index -match 'account-loading-guard\.js|Carregando sua conta')) -Message "index.html nao possui a tela de carregamento"
   $loading = Read-ProjectFile "account-loading.html"
@@ -370,6 +371,7 @@ Assert-MatchText $script 'function showVtReportMenu\(\).*data-action="gerar-rela
   Assert-MatchText $index 'id="malote-filter-colaborador"[^>]*placeholder="Colaborador"' "malotes possuem filtro por colaborador"
   Assert-MatchText $index 'id="malote-status-filter"[\s\S]*value="Entrega"[\s\S]*Entregues[\s\S]*value="Separacao"[\s\S]*Em separa' "malotes possuem filtro por status de entrega ou separacao"
   Assert-MatchText $script 'malote-status-filter[\s\S]*normalizeEventType\(item\.status\) !== selectedStatus[\s\S]*addEventListener\("change"[\s\S]*renderAll' "script filtra malotes por status"
+  Assert-MatchText $script 'function getSelectedMaloteDestino\(\)[\s\S]*Todos os destinos[\s\S]*function getMaloteFilterValues\(\)[\s\S]*todos os status[\s\S]*normalizeEventType\(status\)' "filtros de malotes ignoram placeholders"
   Assert-MatchText $script 'function getMaloteCodeSearch\(\)' "script le busca por codigo de malote"
   Assert-MatchText $script 'function formatRequestCode\(value\).*slice\(0, 5\).*`\$\{digits\.slice\(0, 4\)\}-\$\{digits\.slice\(4\)\}`' "codigo da solicitacao limita 5 digitos e formata xxxx-x"
   Assert-MatchText $script 'malote-code-search"[\s\S]*field\.value = formatRequestCode\(field\.value\)' "busca de malotes formata codigo como xxxx-x"
@@ -402,6 +404,7 @@ Assert-MatchText $script 'function showVtReportMenu\(\).*data-action="gerar-rela
   Assert-MatchText $index 'name="unidade"[^>]*data-unit-select[^>]*required' "cadastro de vaga possui unidade destinada obrigatoria"
   Assert-MatchText $index 'id="vaga-filter-cargo"[^>]*list="vaga-cargo-options"[^>]*placeholder="Cargo"[\s\S]*id="vaga-cargo-options"' "aba vagas possui filtro de cargo"
   Assert-MatchText $script 'function updateVagaCargoFilterOptions[\s\S]*vaga-cargo-options[\s\S]*item\.cargo[\s\S]*filters\.cargo[\s\S]*item\.cargo' "script filtra vagas internas por cargo"
+  Assert-MatchText $script 'function getVagasFilterValues\(\)[\s\S]*normalizeUnitText\(unidade\) === normalizeUnitText\("Unidade"\) \? "" : unidade' "filtro de unidade de vagas ignora placeholder"
   Assert-MatchText $script 'function isDatalistInUse\(datalistId\)[\s\S]*input\[list="\$\{datalistId\}"\][\s\S]*function syncPublicVagaFilterInput[\s\S]*document\.activeElement === input\) return[\s\S]*function fillPublicVagaDatalist[\s\S]*if \(isDatalistInUse\(id\)\) return[\s\S]*function updateVagaCargoFilterOptions[\s\S]*if \(isDatalistInUse\("vaga-cargo-options"\)\) return' "datalists de filtros nao fecham por atualizacao automatica"
   Assert-MatchText $style '\.chamados-filter-bar[\s\S]*max-width: 100%[\s\S]*min-width: 0[\s\S]*flex: 1 1 auto[\s\S]*\.chamados-filter-fields\.vaga-filter-fields[\s\S]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)[\s\S]*width: min\(100%, 560px\)[\s\S]*\.chamados-filter-fields\.vaga-filter-fields input,[\s\S]*width: 100%' "filtros de vagas cabem dentro do painel"
   Assert-MatchText $vagas 'id="public-vaga-cargo-filter"[^>]*list="public-vaga-cargo-options"[\s\S]*id="public-vaga-cidade-filter"[^>]*list="public-vaga-cidade-options"[\s\S]*id="clear-public-vaga-filters"[^>]*hidden' "html publico de vagas possui filtros por cargo e cidade"
