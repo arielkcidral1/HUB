@@ -5579,6 +5579,33 @@ async function loadPublicData() {
   }
 }
 
+async function loadIndexVagasData(options = {}) {
+  const { render = true } = options;
+  if (!document.getElementById("vagas-list")) return false;
+
+  try {
+    const order = encodeURIComponent(JSON.stringify([{ column: "created_at", ascending: false }]));
+    const [vagasResponse, candidaturasResponse] = await Promise.all([
+      fetch(`/api/records?table=${encodeURIComponent(TABLES.vagas)}&select=*&order=${order}`, { credentials: "same-origin" }),
+      fetch(`/api/records?table=${encodeURIComponent(TABLES.candidaturas)}&select=*&order=${order}`, { credentials: "same-origin" }),
+    ]);
+    const vagasResult = await vagasResponse.json().catch(() => ({}));
+    const candidaturasResult = await candidaturasResponse.json().catch(() => ({}));
+    if (!vagasResponse.ok) throw new Error(vagasResult.error || "Nao foi possivel carregar vagas no index.");
+    if (!candidaturasResponse.ok) throw new Error(candidaturasResult.error || "Nao foi possivel carregar curriculos no index.");
+
+    data.vagas = mapRows("vagas", vagasResult.data || []);
+    data.candidaturas = mapRows("candidaturas", candidaturasResult.data || []);
+    saveLocalData();
+    publishHubDataCounts();
+    if (render) renderAll();
+    return true;
+  } catch (error) {
+    console.error("Erro ao carregar vagas e curriculos no index:", error);
+    return false;
+  }
+}
+
 async function updateCurrentAccount(currentPassword, newName, newPassword, newFotoUrl) {
   const user = getCurrentUserRecord();
   if (!user) {
@@ -6111,6 +6138,9 @@ function activateView(viewId) {
   document.querySelectorAll(".user-chip").forEach((chip) => chip.classList.toggle("active", viewId === "conta"));
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
   ensureViewBootstrapData(viewId);
+  if (viewId === "vagas") {
+    loadIndexVagasData({ render: true });
+  }
   if (viewId === "documentos-contratados") {
     refreshFromPostgreSQL();
   }
@@ -11121,6 +11151,7 @@ async function initializeAppData() {
         if (loaded) setSyncStatus("PostgreSQL EIXO online", true);
       })
       .catch((error) => console.error("Erro ao reforcar dados do index pelo bootstrap:", error));
+    loadIndexVagasData({ render: true });
   }, 0);
   setupPresenceHeartbeat();
   // The static HTML must never be exposed as an authenticated dashboard.
