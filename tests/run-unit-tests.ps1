@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*login-submit\.js\?v=login-submit-v2[\s\S]*script\.js\?v=auth-persist-v32' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=login-submit-v3[\s\S]*script\.js\?v=db-bootstrap-v37' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -71,7 +71,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v15[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=auth-cookie-v1[\s\S]*script\.js\?v=auth-persist-v32[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v17[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=db-bootstrap-v37[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
   Assert-True -Condition (-not ($index -match 'account-loading-guard\.js|Carregando sua conta')) -Message "index.html nao possui a tela de carregamento"
   $loading = Read-ProjectFile "account-loading.html"
@@ -115,9 +115,10 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'function parseChatPollMessage\(value\)[\s\S]*text\.startsWith\(CHAT_POLL_PREFIX\)[\s\S]*JSON\.parse' "chat interpreta mensagens de enquete"
   Assert-MatchText $script 'function serializeChatPoll\(poll\)[\s\S]*CHAT_POLL_PREFIX[\s\S]*JSON\.stringify' "chat serializa enquetes para persistencia"
   Assert-MatchText $script 'function renderChatPoll\(item, poll\)[\s\S]*data-action="vote-chat-poll"[\s\S]*chat-poll-bar' "chat renderiza enquete com opcoes votaveis"
-  Assert-MatchText $script 'function renderChat\(\)[\s\S]*const pollMenuOption = document\.querySelector\(.\[data-attach-type="poll"\].\)[\s\S]*isGeneralChatChannel\(activeChannel\.id\)[\s\S]*pollMenuOption\) pollMenuOption\.hidden = !canCreatePoll' "opcao de enquete aparece somente em grupos"
-  Assert-MatchText $script 'async function addChatMessage\(values\)[\s\S]*from\(TABLES\.comunicados\)[\s\S]*return mapRows\("comunicados", \[inserted\]\)\[0\][\s\S]*data\.comunicados = \[\.\.\.pendingMessages[\s\S]*renderChat\(\)[\s\S]*await paintNextFrame\(\)[\s\S]*const savedMessages = await Promise\.all\(payloads\.map\(\(payload\) => addChatMessage\(payload\)\)\)[\s\S]*replacements\.get\(item\.id\) \|\| item' "envio de chat substitui pendente sem sumir"
-  Assert-MatchText $script 'function showConfirmActionModal[\s\S]*close\(\)[\s\S]*await paintNextFrame\(\)[\s\S]*await onConfirm\(\)[\s\S]*async function deleteChatMessageRecord\(id\)[\s\S]*data\.comunicados = current\.filter\(\(item\) => String\(item\.id\) !== String\(id\)\)[\s\S]*renderChat\(\)[\s\S]*await paintNextFrame\(\)[\s\S]*from\(TABLES\.comunicados\)[\s\S]*delete\(\)' "exclusao de chat remove localmente sem renderizacao global"
+  Assert-MatchText $script 'function renderChat\([^)]*\)[\s\S]*const pollMenuOption = document\.querySelector\(.\[data-attach-type="poll"\].\)[\s\S]*isGeneralChatChannel\(activeChannel\.id\)[\s\S]*pollMenuOption\) pollMenuOption\.hidden = !canCreatePoll' "opcao de enquete aparece somente em grupos"
+  Assert-MatchText $script 'async function addChatMessage\(values\)[\s\S]*from\(TABLES\.comunicados\)[\s\S]*return mapRows\("comunicados", \[inserted\]\)\[0\][\s\S]*data\.comunicados = mergeLocalChatMessages\(\[\.\.\.pendingMessages[\s\S]*renderChat\(\{ skipPostRender: true \}\)[\s\S]*const savedMessages = \(await Promise\.all\(payloads\.map\(\(payload\) => addChatMessage\(payload\)\)\)\)[\s\S]*const replacements = new Map\(pendingMessages\.map[\s\S]*replacements\.get\(item\.id\) \|\| item' "envio de chat substitui pendente sem sumir"
+  Assert-MatchText $script 'function paintNextFrame\(\)[\s\S]*typeof requestAnimationFrame !== "function"[\s\S]*Promise\.resolve' "pintura imediata possui fallback sem requestAnimationFrame"
+  Assert-MatchText $script 'function showConfirmActionModal[\s\S]*close\(\)[\s\S]*await paintNextFrame\(\)[\s\S]*await onConfirm\(\)[\s\S]*async function deleteChatMessageRecord\(id\)[\s\S]*data\.comunicados = current\.filter\(\(item\) => String\(item\.id\) !== String\(id\)\)[\s\S]*renderChat\(\{ skipPostRender: true \}\)[\s\S]*from\(TABLES\.comunicados\)[\s\S]*delete\(\)' "exclusao de chat remove localmente sem renderizacao global"
   Assert-MatchText $script 'function createChatPollOptionField\(index, required = false\)[\s\S]*const canRemove = index > 2[\s\S]*name="opcao"[\s\S]*required \?[\s\S]*data-action="remove-chat-poll-option"' "enquete cria campos dinamicos e botao excluir apenas em opcoes extras"
   Assert-MatchText $script 'function refreshChatPollOptionFields\(formElement\)[\s\S]*input\.required = optionNumber <= 2[\s\S]*removeButton\.hidden = optionNumber <= 2' "enquete mantem duas primeiras opcoes obrigatorias e sem exclusao"
   Assert-MatchText $script 'function addChatPollOptionField\(formElement\)[\s\S]*currentTotal >= 8[\s\S]*insertAdjacentHTML\("beforeend", createChatPollOptionField\(currentTotal \+ 1\)\)' "enquete possui botao para adicionar opcoes"

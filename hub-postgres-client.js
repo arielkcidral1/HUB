@@ -33,6 +33,31 @@
     return { data: result.data ?? result, error: null };
   }
 
+  const SESSION_STORAGE_KEY = "hub-postgres-session";
+
+  function readSession() {
+    const raw = window.localStorage.getItem(SESSION_STORAGE_KEY) ||
+      window.sessionStorage.getItem(SESSION_STORAGE_KEY) ||
+      "null";
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  function persistSession(nextSession) {
+    if (!nextSession) return clearSession();
+    const raw = JSON.stringify(nextSession);
+    window.localStorage.setItem(SESSION_STORAGE_KEY, raw);
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, raw);
+  }
+
+  function clearSession() {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  }
+
   class Query {
     constructor(table) {
       this.table = table;
@@ -259,7 +284,11 @@
                 return { data: result.data, error: result.error };
               },
               async createSignedUrl(path) {
-                return { data: { signedUrl: path }, error: null };
+                const value = String(path || "");
+                const signedUrl = /^(data:|https?:)/i.test(value)
+                  ? value
+                  : `/api/files?path=${encodeURIComponent(value)}`;
+                return { data: { signedUrl }, error: null };
               },
             };
           },
