@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=login-submit-v3[\s\S]*script\.js\?v=db-bootstrap-v37' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=login-submit-v3[\s\S]*script\.js\?v=db-bootstrap-v38' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -65,6 +65,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $recordsApi 'JSON_COLUMNS[\s\S]*"hub_documentos_contratados"[\s\S]*"documentos"[\s\S]*"hub_malotes"[\s\S]*"colaboradores"[\s\S]*"hub_quadros"[\s\S]*"listas"[\s\S]*"hub_users"[\s\S]*"configuracoes"' "API serializa colunas JSON conhecidas"
   Assert-MatchText $recordsApi 'function normalizeDbValue[\s\S]*JSON\.stringify\(value\)[\s\S]*function placeholderFor[\s\S]*::jsonb' "API grava arrays e objetos como jsonb"
   Assert-MatchText (Read-ProjectFile "api/bootstrap.js") 'Promise\.all\(Object\.entries\(BOOTSTRAP_TABLES\)\.map[\s\S]*data\[collection\] = \[\][\s\S]*errors\[collection\]' "bootstrap carrega colecoes com falha isolada por tabela"
+  Assert-MatchText $script 'const requests = bootstrapRows[\s\S]*try \{[\s\S]*mapRows\(collection, rows\)[\s\S]*catch \(error\)[\s\S]*status: "rejected", reason: \{ collection, error \}' "frontend isola falha de mapeamento por colecao do bootstrap"
   Assert-MatchText $script 'function parseJsonArray\(value\)[\s\S]*JSON\.parse\(value\)[\s\S]*if \(collection === "malotes"\)[\s\S]*colaboradores: parseJsonArray\(row\.colaboradores\)' "malotes aceitam colaboradores em JSON textual do PostgreSQL"
   Assert-MatchText $script 'function parseBoardLists\(value\)[\s\S]*return parseJsonArray\(value\)[\s\S]*listas: parseBoardLists\(row\.listas\)' "quadros aceitam listas em JSON textual do PostgreSQL"
   Assert-MatchText $script 'function parseJsonObject\(value\)[\s\S]*JSON\.parse\(value\)[\s\S]*configuracoes: parseJsonObject\(row\.configuracoes\)' "usuarios aceitam configuracoes em JSON textual do PostgreSQL"
@@ -75,7 +76,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v17[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=db-bootstrap-v37[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v17[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=db-bootstrap-v38[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
   Assert-True -Condition (-not ($index -match 'account-loading-guard\.js|Carregando sua conta')) -Message "index.html nao possui a tela de carregamento"
   $loading = Read-ProjectFile "account-loading.html"
