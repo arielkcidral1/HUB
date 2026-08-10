@@ -8572,7 +8572,7 @@ function getVagasFilterValues() {
 }
 
 function getVagaCandidaturas(vagaId, filters = null) {
-  const all = (data.candidaturas || []).filter((c) => String(c.vaga_id) === String(vagaId));
+  const all = (data.candidaturas || []).filter((c) => String(c.vaga_id || c.vagaId) === String(vagaId));
   const activeFilters = filters || getVagasFilterValues();
   if (!activeFilters.nome && !activeFilters.cpf) return all;
   return all.filter((c) => {
@@ -8736,7 +8736,7 @@ function renderAll() {
   const vagasFilters = getVagasFilterValues();
   renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
     const candidaturas = getVagaCandidaturas(item.id, vagasFilters);
-    const totalCandidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id) === String(item.id)).length;
+    const totalCandidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id || c.vagaId) === String(item.id)).length;
     let candidaturasHtml = `<p class="empty-candidates">Nenhum currículo recebido.</p>`;
     if (totalCandidaturas > 0 && !candidaturas.length) {
       candidaturasHtml = `<p class="empty-candidates">Nenhum candidato encontrado para o filtro aplicado.</p>`;
