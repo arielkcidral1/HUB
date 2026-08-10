@@ -4539,7 +4539,10 @@ function renderChatAttachmentPreview(files) {
   let body = "";
   let activeChip = "";
   if (mimeType.startsWith("image/")) {
-    body = `<img class="chat-preview-image" src="${chatAttachmentPreviewUrl}" alt="Previa de ${fileName}">`;
+    body = `
+      <div class="chat-preview-image-frame" style="background-image: url('${chatAttachmentPreviewUrl}')">
+        <img class="chat-preview-image" src="${chatAttachmentPreviewUrl}" alt="Previa de ${fileName}">
+      </div>`;
     activeChip = `<img class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" alt="" aria-hidden="true">`;
   } else if (mimeType.startsWith("audio/")) {
     body = `
