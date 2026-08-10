@@ -3993,6 +3993,27 @@ async function loadIndexBootstrapData(options = {}) {
   return changed;
 }
 
+async function ensureViewBootstrapData(viewId) {
+  const requiredByView = {
+    comunicacao: ["comunicados", "usuarios"],
+    malotes: ["malotes"],
+    quadros: ["quadros"],
+    vagas: ["vagas", "candidaturas"],
+    "documentos-contratados": ["documentosContratados"],
+  };
+  const requiredCollections = requiredByView[viewId];
+  if (!requiredCollections?.some((collection) => !(data[collection] || []).length)) return false;
+
+  try {
+    const loaded = await loadIndexBootstrapData({ forceCore: true, render: true });
+    if (loaded) setSyncStatus("PostgreSQL EIXO online", true);
+    return loaded;
+  } catch (error) {
+    console.error("Erro ao carregar dados da aba pelo bootstrap:", { viewId, error });
+    return false;
+  }
+}
+
 async function repairCoreCollectionsFromBootstrap() {
   if (coreCollectionsRepairInProgress || !shouldRepairCoreCollections()) return false;
   coreCollectionsRepairInProgress = true;
@@ -6057,6 +6078,7 @@ function activateView(viewId) {
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
   document.querySelectorAll(".user-chip").forEach((chip) => chip.classList.toggle("active", viewId === "conta"));
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
+  ensureViewBootstrapData(viewId);
   if (viewId === "documentos-contratados") {
     refreshFromPostgreSQL();
   }
