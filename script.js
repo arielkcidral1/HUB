@@ -5598,7 +5598,10 @@ async function loadIndexVagasData(options = {}) {
     data.candidaturas = mapRows("candidaturas", candidaturasResult.data || []);
     saveLocalData();
     publishHubDataCounts();
-    if (render) renderAll();
+    if (render) {
+      safeRenderSection("vagas", renderVagasSection);
+      safeRenderSection("dashboard", renderDashboard);
+    }
     return true;
   } catch (error) {
     console.error("Erro ao carregar vagas e curriculos no index:", error);
@@ -8635,6 +8638,71 @@ function clearVagasFilters() {
     if (field) field.value = "";
   });
   updateVagasFilterClearButton();
+  renderAll();
+}
+
+function recordRenderError(section, error) {
+  const detail = {
+    section,
+    message: error?.message || String(error),
+    stack: error?.stack || "",
+    at: new Date().toISOString(),
+  };
+  window.__hubRenderErrors = Array.isArray(window.__hubRenderErrors) ? window.__hubRenderErrors : [];
+  window.__hubRenderErrors.push(detail);
+  console.error(`Erro ao renderizar ${section}:`, error);
+  document.body?.setAttribute("data-hub-render-error", section);
+}
+
+function safeRenderSection(section, renderFn) {
+  try {
+    return renderFn();
+  } catch (error) {
+    recordRenderError(section, error);
+    return null;
+  }
+}
+
+function renderVagasSection() {
+  updateVagasFilterClearButton();
+  const vagasFilters = getVagasFilterValues();
+  renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
+    const candidaturas = getVagaCandidaturas(item.id, vagasFilters);
+    const totalCandidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id || c.vagaId) === String(item.id)).length;
+    let candidaturasHtml = `<p class="empty-candidates">Nenhum curriculo recebido.</p>`;
+    if (totalCandidaturas > 0 && !candidaturas.length) {
+      candidaturasHtml = `<p class="empty-candidates">Nenhum candidato encontrado para o filtro aplicado.</p>`;
+    }
+
+    if (candidaturas.length > 0) {
+      candidaturasHtml = candidaturas.map(c => `
+        <div class="candidate-row">
+          <p>
+            <strong>${escapeHtml(c.nome)}</strong>
+            <span class="candidate-meta-line">
+              <span class="meta-line">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
+              <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
+          </p>
+          <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver Curriculo</button>
+        </div>
+      `).join("");
+    }
+
+    return `
+      <article class="item-card public-job-card">
+        <div class="item-topline"><p class="item-title">${escapeHtml(item.cargo)}</p><span class="tag">${escapeHtml(item.status)}</span></div>
+        <p><strong>Unidade destinada:</strong> ${escapeHtml(getCanonicalUnit(item.unidade) || "Nao informada.")}</p>
+        <p>${escapeHtml(item.descricao || "Descricao nao informada.")}</p>
+        <p><strong>Requisitos:</strong> ${escapeHtml(item.requisitos || "Nao informado.")}</p>
+        <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</p>
+        <div class="job-actions">
+          <button class="secondary-link" type="button" data-action="editar-vaga" data-id="${escapeHtml(item.id)}">Editar</button>
+          <button class="danger-button" type="button" data-action="excluir-vaga" data-id="${escapeHtml(item.id)}">Deletar</button>
+        </div>
+        <div class="candidate-list"><p class="candidate-list-title">Curriculos Recebidos (${candidaturas.length}${candidaturas.length !== totalCandidaturas ? ` de ${totalCandidaturas}` : ""})</p>${candidaturasHtml}</div>
+      </article>
+    `;
+  });
 }
 
 function updateChamadosFilterClearButton() {
@@ -8734,32 +8802,36 @@ function renderDenunciasSection() {
   renderCards("denuncias-lidas", lidas, (item) => cardTemplate(item, false));
 }
 function renderAll() {
-  applyLocalChatState();
-  renderCurrentUser();
-  applyRoleAccess();
-  renderAccountSettings();
-  renderDashboard();
-  renderPublicVagas();
+  safeRenderSection("local-chat-state", applyLocalChatState);
+  safeRenderSection("current-user", renderCurrentUser);
+  safeRenderSection("role-access", applyRoleAccess);
+  safeRenderSection("account-settings", renderAccountSettings);
+  safeRenderSection("dashboard", renderDashboard);
+  safeRenderSection("public-vagas", renderPublicVagas);
 
-  renderDenunciasSection();
+  safeRenderSection("denuncias", renderDenunciasSection);
 
-  renderChatChannels();
-  renderChat();
+  safeRenderSection("chat-channels", renderChatChannels);
+  safeRenderSection("chat", renderChat);
 
-  renderMaloteReport();
-  renderCards("malotes-list", getFilteredMalotes(), (item) => `
-    <article class="item-card">
-      ${renderMaloteCardContent(item)}
-    </article>
-  `);
+  safeRenderSection("malote-report", renderMaloteReport);
+  safeRenderSection("malotes", () => {
+    renderCards("malotes-list", getFilteredMalotes(), (item) => `
+      <article class="item-card">
+        ${renderMaloteCardContent(item)}
+      </article>
+    `);
+  });
 
-  renderVtRegistros();
-  renderDisciplinaryRecords();
-  renderDocumentosContratados();
+  safeRenderSection("vt-registros", renderVtRegistros);
+  safeRenderSection("advertencias-suspensoes", renderDisciplinaryRecords);
+  safeRenderSection("documentos-contratados", renderDocumentosContratados);
 
-  renderChamadosSection();
-  renderBoards();
+  safeRenderSection("chamados", renderChamadosSection);
+  safeRenderSection("quadros", renderBoards);
 
+  safeRenderSection("vagas", renderVagasSection);
+  if (false) {
   updateVagasFilterClearButton();
   const vagasFilters = getVagasFilterValues();
   renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
@@ -8800,10 +8872,12 @@ function renderAll() {
     `;
   });
 
-  renderCalendar();
-  renderDocumentRecords();
-  renderTeamUsers();
-  publishHubDataCounts();
+  }
+
+  safeRenderSection("calendario", renderCalendar);
+  safeRenderSection("documentos-rh", renderDocumentRecords);
+  safeRenderSection("equipe", renderTeamUsers);
+  safeRenderSection("data-counts", publishHubDataCounts);
 
   if (shouldRepairCoreCollections()) {
     window.setTimeout(() => {
