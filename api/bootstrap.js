@@ -35,12 +35,18 @@ export default async function handler(req, res) {
     assertDatabaseUrl();
     client = await pool.connect();
     const data = {};
+    const errors = {};
 
-    for (const [collection, table] of Object.entries(BOOTSTRAP_TABLES)) {
-      data[collection] = await selectRows(client, table);
-    }
+    await Promise.all(Object.entries(BOOTSTRAP_TABLES).map(async ([collection, table]) => {
+      try {
+        data[collection] = await selectRows(client, table);
+      } catch (error) {
+        data[collection] = [];
+        errors[collection] = error.message || "Erro ao carregar tabela.";
+      }
+    }));
 
-    return json(res, 200, { data });
+    return json(res, 200, { data, errors });
   } catch (error) {
     return json(res, error.statusCode || 500, { error: error.message || "Erro ao carregar dados iniciais." });
   } finally {

@@ -3064,7 +3064,7 @@ function serializeChatPoll(poll) {
   })}`;
 }
 
-function parseBoardLists(value) {
+function parseJsonArray(value) {
   if (Array.isArray(value)) return value;
   if (!value) return [];
   if (typeof value === "string") {
@@ -3076,6 +3076,21 @@ function parseBoardLists(value) {
     }
   }
   return [];
+}
+
+function parseJsonObject(value) {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  if (!value || typeof value !== "string") return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function parseBoardLists(value) {
+  return parseJsonArray(value);
 }
 
 function renderChatPoll(item, poll) {
@@ -3187,7 +3202,7 @@ if (collection === "malotes") {
     destino: row.destino,
     origem: row.origem || "",
     epis: row.epis,
-    colaboradores: Array.isArray(row.colaboradores) ? row.colaboradores : [],
+    colaboradores: parseJsonArray(row.colaboradores),
     codigoSolicitacao: row.codigo_solicitacao || "",
     observacoes: row.observacoes || "",
     status: row.status,
@@ -3217,7 +3232,7 @@ if (collection === "malotes") {
     return rows.map((row) => ({
       id: row.id,
       nome: row.nome || "Quadro",
-      listas: Array.isArray(row.listas) ? row.listas : parseBoardLists(row.listas),
+      listas: parseBoardLists(row.listas),
       ownerName: row.owner_name || "",
       ownerId: row.owner_id || row.user_id || "",
       ownerEmail: row.owner_email || "",
@@ -3289,7 +3304,7 @@ if (collection === "eventos") {
       cpf: row.cpf || "",
       cargo: row.cargo || "",
       foto_perfil: row.foto_perfil || "",
-      configuracoes: row.configuracoes && typeof row.configuracoes === "object" ? row.configuracoes : {},
+      configuracoes: parseJsonObject(row.configuracoes),
       isOnline: Boolean(row.is_online),
       lastSeen: row.last_seen || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
