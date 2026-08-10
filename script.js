@@ -2613,6 +2613,7 @@ function showModal(title, text, type = "info") {
 }
 
 function paintNextFrame() {
+  if (typeof requestAnimationFrame !== "function") return Promise.resolve();
   return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 }
 
@@ -2688,6 +2689,7 @@ function showConfirmActionModal({ title, text, confirmText = "Confirmar", danger
   overlay.querySelector('[data-action="close-modal"]').addEventListener("click", close);
   overlay.querySelector('[data-action="modal-confirm"]').addEventListener("click", async () => {
     close();
+    await paintNextFrame();
     await onConfirm();
   });
 
@@ -11097,14 +11099,6 @@ setupLogin().then((canInitialize) => {
 }).catch((error) => {
   console.error("Erro ao validar login:", error);
   if (!isLoginPage() && !isPublicPage()) {
-    if (isAuthenticated()) {
-      const shell = document.getElementById("app-shell");
-      shell?.classList.remove("is-locked");
-      shell?.classList.add("is-ready");
-      window.__hubAuthReady = true;
-      document.documentElement.classList.remove("auth-entry-pending");
-      return;
-    }
     window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`;
     return;
   }
