@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=login-submit-v3[\s\S]*script\.js\?v=db-bootstrap-v38' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=login-submit-v3[\s\S]*script\.js\?v=db-bootstrap-v39' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -76,7 +76,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v17[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=db-bootstrap-v38[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-v17[\s\S]*style\.css\?v=auth-persist-v22[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=db-bootstrap-v39[\s\S]*auth-display-guard\.js\?v=auth-display-v4' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
   Assert-True -Condition (-not ($index -match 'account-loading-guard\.js|Carregando sua conta')) -Message "index.html nao possui a tela de carregamento"
   $loading = Read-ProjectFile "account-loading.html"
@@ -123,6 +123,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'function renderChat\([^)]*\)[\s\S]*const pollMenuOption = document\.querySelector\(.\[data-attach-type="poll"\].\)[\s\S]*isGeneralChatChannel\(activeChannel\.id\)[\s\S]*pollMenuOption\) pollMenuOption\.hidden = !canCreatePoll' "opcao de enquete aparece somente em grupos"
   Assert-MatchText $script 'async function addChatMessage\(values\)[\s\S]*from\(TABLES\.comunicados\)[\s\S]*return mapRows\("comunicados", \[inserted\]\)\[0\][\s\S]*data\.comunicados = mergeLocalChatMessages\(\[\.\.\.pendingMessages[\s\S]*renderChat\(\{ skipPostRender: true \}\)[\s\S]*const savedMessages = \(await Promise\.all\(payloads\.map\(\(payload\) => addChatMessage\(payload\)\)\)\)[\s\S]*const replacements = new Map\(pendingMessages\.map[\s\S]*replacements\.get\(item\.id\) \|\| item' "envio de chat substitui pendente sem sumir"
   Assert-MatchText $script 'function paintNextFrame\(\)[\s\S]*typeof requestAnimationFrame !== "function"[\s\S]*Promise\.resolve' "pintura imediata possui fallback sem requestAnimationFrame"
+  Assert-MatchText $script 'setupPresencePolling\(\)[\s\S]*data\.usuarios = mergeUsersByName[\s\S]*saveTeamUsersStore\(data\.usuarios\)[\s\S]*renderChatChannels\(\)[\s\S]*renderChat\(\)' "chat individual atualiza quando usuarios chegam do banco"
   Assert-MatchText $script 'function showConfirmActionModal[\s\S]*close\(\)[\s\S]*await paintNextFrame\(\)[\s\S]*await onConfirm\(\)[\s\S]*async function deleteChatMessageRecord\(id\)[\s\S]*data\.comunicados = current\.filter\(\(item\) => String\(item\.id\) !== String\(id\)\)[\s\S]*renderChat\(\{ skipPostRender: true \}\)[\s\S]*from\(TABLES\.comunicados\)[\s\S]*delete\(\)' "exclusao de chat remove localmente sem renderizacao global"
   Assert-MatchText $script 'function createChatPollOptionField\(index, required = false\)[\s\S]*const canRemove = index > 2[\s\S]*name="opcao"[\s\S]*required \?[\s\S]*data-action="remove-chat-poll-option"' "enquete cria campos dinamicos e botao excluir apenas em opcoes extras"
   Assert-MatchText $script 'function refreshChatPollOptionFields\(formElement\)[\s\S]*input\.required = optionNumber <= 2[\s\S]*removeButton\.hidden = optionNumber <= 2' "enquete mantem duas primeiras opcoes obrigatorias e sem exclusao"
@@ -179,6 +180,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'function setupEquipeFormScrollGrid\(\)[\s\S]*equipe-workspace-expanded[\s\S]*equipe-two-col[\s\S]*offsetAfterForm: 140[\s\S]*expandOnce: true' "transicao da aba Equipe expande de forma estavel"
   Assert-True -Condition (-not ($index -match 'data-view="gerenciamento-vt"[^>]*>Gerenciamento VT</button>')) -Message "menu nao possui mais aba Gerenciamento VT"
   Assert-MatchText $index 'data-view="documentos-contratados"[^>]*>Documentos de Contratados</button>' "menu possui aba Documentos de Contratados"
+  Assert-MatchText $script 'const allowedViews = new Set\(\["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados"' "usuarios autenticados veem abas principais do HUB"
   Assert-MatchText $index 'id="primary-sidebar"[^>]*aria-label="Navegacao principal"[\s\S]*id="mobile-menu-toggle"[^>]*aria-controls="primary-sidebar"[^>]*aria-expanded="false"' "mobile possui botao para abrir menu principal"
   Assert-MatchText $style '@media \(max-width: 900px\)[\s\S]*\.sidebar[\s\S]*position: fixed[\s\S]*transform: translateX\(-104%\)[\s\S]*\.app-shell\.mobile-menu-open \.sidebar[\s\S]*translateX\(0\)' "sidebar vira menu lateral no mobile"
   Assert-MatchText $style '\.mobile-menu-toggle[\s\S]*display: none[\s\S]*\.mobile-menu-backdrop[\s\S]*position: fixed' "menu mobile possui botao e backdrop"
