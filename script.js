@@ -4018,10 +4018,12 @@ async function ensureViewBootstrapData(viewId) {
     "documentos-contratados": ["documentosContratados"],
   };
   const requiredCollections = requiredByView[viewId];
-  if (!requiredCollections?.some((collection) => !(data[collection] || []).length)) return false;
+  if (!requiredCollections) return false;
+  const shouldForceFreshView = ["vagas", "malotes", "quadros", "documentos-contratados", "comunicacao"].includes(viewId);
+  if (!shouldForceFreshView && !requiredCollections.some((collection) => !(data[collection] || []).length)) return false;
 
   try {
-    const loaded = await loadIndexBootstrapData({ forceCore: true, render: true });
+    const loaded = await loadIndexBootstrapData({ forceCore: true, overwriteEmpty: true, render: true });
     if (loaded) setSyncStatus("PostgreSQL EIXO online", true);
     return loaded;
   } catch (error) {
@@ -8608,6 +8610,14 @@ function updateVagasFilterClearButton() {
   clearButton.hidden = !Boolean(filters.unidade || filters.nome || filters.cpf || filters.cargo);
 }
 
+function clearVagasFilters() {
+  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf", "vaga-filter-cargo"].forEach((id) => {
+    const field = document.getElementById(id);
+    if (field) field.value = "";
+  });
+  updateVagasFilterClearButton();
+}
+
 function updateChamadosFilterClearButton() {
   const clearButton = document.getElementById("limpar-filtros-chamados");
   if (!clearButton) return;
@@ -8734,8 +8744,14 @@ function renderAll() {
   updateVagaCargoFilterOptions(data.vagas || []);
   updateVagasFilterClearButton();
   const vagasFilters = getVagasFilterValues();
-  renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
-    const candidaturas = getVagaCandidaturas(item.id, vagasFilters);
+  let visibleVagas = filterVagasByCurrentFilters(data.vagas || []);
+  if (!visibleVagas.length && (data.vagas || []).length && (vagasFilters.unidade || vagasFilters.nome || vagasFilters.cpf || vagasFilters.cargo)) {
+    clearVagasFilters();
+    visibleVagas = data.vagas || [];
+  }
+  const appliedVagasFilters = getVagasFilterValues();
+  renderCards("vagas-list", visibleVagas, (item) => {
+    const candidaturas = getVagaCandidaturas(item.id, appliedVagasFilters);
     const totalCandidaturas = (data.candidaturas || []).filter(c => String(c.vaga_id || c.vagaId) === String(item.id)).length;
     let candidaturasHtml = `<p class="empty-candidates">Nenhum currículo recebido.</p>`;
     if (totalCandidaturas > 0 && !candidaturas.length) {
@@ -9514,10 +9530,7 @@ document.getElementById("vaga-filter-cpf")?.addEventListener("input", (event) =>
   renderAll();
 });
 document.getElementById("limpar-filtros-vagas")?.addEventListener("click", () => {
-  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf", "vaga-filter-cargo"].forEach((id) => {
-    const field = document.getElementById(id);
-    if (field) field.value = "";
-  });
+  clearVagasFilters();
   renderAll();
 });
 
