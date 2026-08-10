@@ -3924,7 +3924,7 @@ function shouldRepairCoreCollections() {
 }
 
 async function repairCoreCollectionsFromBootstrap() {
-  if (coreCollectionsRepairInProgress || !postgresClient || !shouldRepairCoreCollections()) return false;
+  if (coreCollectionsRepairInProgress || !shouldRepairCoreCollections()) return false;
   coreCollectionsRepairInProgress = true;
   try {
     const bootstrapRows = await loadBootstrapRows();
@@ -4001,9 +4001,10 @@ async function loadFromPostgreSQL(options = {}) {
   const chatLoadMutationVersion = chatMutationVersion;
 
   if (!postgresClient) {
-    setSyncStatus("Modo local", false);
+    const repaired = await repairCoreCollectionsFromBootstrap();
+    setSyncStatus(repaired ? "PostgreSQL EIXO online" : "Modo local", repaired);
     renderAll();
-    return false;
+    return repaired;
   }
 
   try {
