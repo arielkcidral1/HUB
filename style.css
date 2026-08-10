@@ -2593,7 +2593,7 @@ textarea {
   z-index: 60;
   display: grid;
   grid-template-columns: minmax(24px, 1fr) minmax(320px, 640px) 72px minmax(24px, 1fr);
-  grid-template-rows: minmax(360px, 1fr) 132px;
+  grid-template-rows: minmax(260px, 1fr) 132px;
   align-items: center;
   gap: 8px 14px;
   margin: 0;
@@ -2623,7 +2623,7 @@ textarea {
   justify-self: stretch;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 50px minmax(300px, 1fr) 58px;
+  grid-template-rows: 50px minmax(190px, 1fr) 58px;
   width: 100%;
   height: 100%;
   max-height: none;
@@ -2669,7 +2669,7 @@ textarea {
   width: auto;
   height: auto;
   max-width: 100%;
-  max-height: 100%;
+  max-height: min(100%, calc(100vh - 260px));
   object-fit: contain;
   border-radius: 0;
   box-shadow: none;
@@ -4965,7 +4965,7 @@ form.panel[data-public-chamados="true"].panel {
     inset: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 60px;
-    grid-template-rows: minmax(300px, 1fr) 122px;
+    grid-template-rows: minmax(220px, 1fr) 122px;
     padding: 0 14px 14px;
   }
 
@@ -4978,7 +4978,7 @@ form.panel[data-public-chamados="true"].panel {
     grid-row: 1;
     max-height: none;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 46px minmax(240px, 1fr) 56px;
+    grid-template-rows: 46px minmax(160px, 1fr) 56px;
   }
 
   .chat-composer.has-attachment-preview .chat-preview-title {
@@ -5030,7 +5030,7 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-composer.has-attachment-preview .chat-preview-image {
     max-width: 100%;
-    max-height: 100%;
+    max-height: min(100%, calc(100vh - 240px));
   }
 
   .chat-preview-unavailable {
