@@ -2665,6 +2665,7 @@ textarea {
 }
 
 .chat-composer.has-attachment-preview .chat-preview-image {
+  display: block;
   width: auto;
   height: auto;
   max-width: 100%;
@@ -2680,9 +2681,6 @@ textarea {
   width: min(100%, 1040px);
   height: 100%;
   min-height: 180px;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
 }
 
 .chat-composer.has-attachment-preview .chat-preview-unavailable {

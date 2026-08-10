@@ -69,6 +69,11 @@ const CHAT_FILE_MIME_ALIASES = new Map([
   ["audio/mp4", "audio/mp4"],
 ]);
 const CHAT_FILE_EXTENSION_MIME_TYPES = new Map([
+  ["jpg", "image/jpeg"],
+  ["jpeg", "image/jpeg"],
+  ["png", "image/png"],
+  ["webp", "image/webp"],
+  ["gif", "image/gif"],
   ["mp3", "audio/mpeg"],
   ["wav", "audio/wav"],
   ["ogg", "audio/ogg"],
@@ -4540,7 +4545,7 @@ function renderChatAttachmentPreview(files) {
   let activeChip = "";
   if (mimeType.startsWith("image/")) {
     body = `
-      <div class="chat-preview-image-frame" style="background-image: url('${chatAttachmentPreviewUrl}')">
+      <div class="chat-preview-image-frame">
         <img class="chat-preview-image" src="${chatAttachmentPreviewUrl}" alt="Previa de ${fileName}">
       </div>`;
     activeChip = `<img class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" alt="" aria-hidden="true">`;
