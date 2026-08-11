@@ -8599,18 +8599,20 @@ function startAuthenticatedNotificationsOnAnyPage() {
 }
 
 function notifyUnreadRhMessages(count) {
-  if (count <= lastUnreadNotificationCount) {
+  const unreadIds = getUnreadRhMessages().map((item) => item.id).filter(Boolean).map(String);
+  const newUnreadIds = unreadIds.filter((id) => !shownNotificationKeys.has(`mensagem-rh-${id}`));
+  if (!newUnreadIds.length) {
     lastUnreadNotificationCount = count;
     return;
   }
 
-  const newMessageCount = count - lastUnreadNotificationCount;
-  const messageText = `${newMessageCount} nova(s) mensagem(ns) não lida(s).`;
+  const newMessageCount = newUnreadIds.length;
+  const messageText = `${newMessageCount} nova(s) mensagem(ns) nao lida(s).`;
 
-  const unreadIds = getUnreadRhMessages().map((item) => item.id).filter(Boolean);
+  newUnreadIds.forEach((id) => wasNotificationAlreadyShown(`mensagem-rh-${id}`));
   playUserNotificationSound();
   if (currentUserSettings.desktopNotifications && isBrowserNotificationSupported() && Notification.permission === "granted") {
-    const notification = new Notification("Comunicação RH", {
+    const notification = new Notification("Comunicacao RH", {
       body: messageText,
       icon: "assets/logo.svg",
       badge: "assets/logo.svg",
@@ -8618,20 +8620,20 @@ function notifyUnreadRhMessages(count) {
       requireInteraction: true,
     });
     notification.onclick = () => {
-      try { markNotificationsRead([`mensagem-rh-${unreadIds[0] || Date.now()}`], unreadIds); } catch (_) {}
+      try { markNotificationsRead([`mensagem-rh-${newUnreadIds[0] || Date.now()}`], newUnreadIds); } catch (_) {}
       window.focus?.();
       openNotificationTrackerFromPopout();
       notification.close?.();
     };
   }
 
-  showHubCrossPageNotification("Comunicação RH", messageText, {
+  showHubCrossPageNotification("Comunicacao RH", messageText, {
     type: "mensagem",
     icon: "??",
     tag: "hub-rh-comunicacao",
     requireInteraction: true,
-    notificationId: `mensagem-rh-${unreadIds[0] || Date.now()}`,
-    messageIds: unreadIds,
+    notificationId: `mensagem-rh-${newUnreadIds[0] || Date.now()}`,
+    messageIds: newUnreadIds,
     skipSound: true,
     skipDesktop: true,
   });
@@ -13294,7 +13296,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 window.addEventListener("storage", (event) => {
-  if (!event.key || ![READ_NOTIFICATIONS_KEY, READ_RH_MESSAGES_KEY].some((key) => event.key === key || event.key.startsWith(`${key}:`))) return;
+  if (!event.key || ![READ_NOTIFICATIONS_KEY, READ_RH_MESSAGES_KEY, SHOWN_NOTIFICATIONS_KEY].some((key) => event.key === key || event.key.startsWith(`${key}:`))) return;
   reloadReadStateForCurrentUser();
   try { renderDashboard?.(); } catch (_) {}
   try { renderChatChannels?.(); } catch (_) {}
