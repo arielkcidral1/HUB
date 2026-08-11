@@ -2176,6 +2176,7 @@ textarea {
 }
 
 .chat-message-filter {
+  grid-row: 2;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2244,6 +2245,7 @@ textarea {
 }
 
 .chat-panel > .panel-header {
+  grid-row: 1;
   align-items: flex-start;
   margin: 0;
   padding: 16px 20px 14px;
@@ -2258,6 +2260,7 @@ textarea {
 }
 
 .chat-feed {
+  grid-row: 3;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -2269,8 +2272,12 @@ textarea {
   border-bottom-right-radius: 0;
   border-bottom-left-radius: 0;
   background: transparent;
-  padding: 18px 18px 30px;
-  scroll-padding-bottom: 30px;
+  padding: 18px;
+  scroll-padding-bottom: 96px;
+}
+
+.chat-feed .chat-message:last-child {
+  margin-bottom: 88px;
 }
 
 .chat-panel.chat-panel-empty .chat-feed {
@@ -2600,6 +2607,7 @@ textarea {
 }
 
 .chat-composer {
+  grid-row: 4;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -4988,8 +4996,12 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-feed {
-    padding: 12px 12px 24px;
-    scroll-padding-bottom: 24px;
+    padding: 12px;
+    scroll-padding-bottom: 76px;
+  }
+
+  .chat-feed .chat-message:last-child {
+    margin-bottom: 68px;
   }
 
   .chat-attachment-preview {
