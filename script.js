@@ -1478,36 +1478,49 @@ function syncCurrentReadStateToPostgreSQL() {
 function markNotificationsRead(notificationIds = [], messageIds = []) {
   const normalizedNotificationIds = Array.isArray(notificationIds) ? notificationIds : [notificationIds];
   const normalizedMessageIds = Array.isArray(messageIds) ? messageIds : [messageIds];
+  const cleanNotificationIds = normalizedNotificationIds
+    .filter((id) => id !== undefined && id !== null && String(id).trim())
+    .map(String);
+  const cleanMessageIds = normalizedMessageIds
+    .filter((id) => id !== undefined && id !== null && String(id).trim())
+    .map(String);
   let changed = false;
 
-  normalizedNotificationIds
-    .filter((id) => id !== undefined && id !== null && String(id).trim())
-    .map(String)
-    .forEach((id) => {
+  cleanNotificationIds.forEach((id) => {
       if (!readNotificationIds.has(id)) {
         readNotificationIds.add(id);
         changed = true;
       }
     });
 
-  normalizedMessageIds
-    .filter((id) => id !== undefined && id !== null && String(id).trim())
-    .map(String)
-    .forEach((id) => {
+  cleanMessageIds.forEach((id) => {
       if (!readRhMessageIds.has(id)) {
         readRhMessageIds.add(id);
         changed = true;
       }
     });
 
-  if (!changed) return false;
+  let shownChanged = false;
+  cleanNotificationIds.forEach((id) => {
+    if (shownNotificationKeys.has(id)) return;
+    shownNotificationKeys.add(id);
+    shownChanged = true;
+  });
+  cleanMessageIds.forEach((id) => {
+    const shownKey = `mensagem-rh-${id}`;
+    if (shownNotificationKeys.has(shownKey)) return;
+    shownNotificationKeys.add(shownKey);
+    shownChanged = true;
+  });
+
+  removeReadNotificationPopouts(cleanNotificationIds, cleanMessageIds);
+
+  if (!changed && !shownChanged) return false;
 
   saveReadNotificationIds();
   saveReadRhMessageIds();
-  syncReadReceiptsToPostgreSQL(
-    normalizedNotificationIds.filter((id) => id !== undefined && id !== null && String(id).trim()).map(String),
-    normalizedMessageIds.filter((id) => id !== undefined && id !== null && String(id).trim()).map(String)
-  );
+  if (shownChanged) saveShownNotificationKeys();
+  syncReadReceiptsToPostgreSQL(cleanNotificationIds, cleanMessageIds);
 
   try { lastUnreadNotificationCount = getUnreadRhMessages().length; } catch (_) {}
   try { renderDashboard?.(); } catch (_) {}
@@ -1532,9 +1545,7 @@ function markRhMessagesRead() {
   const unread = getUnreadRhMessages().filter((item) => normalizeChatChannel(item.canal) === currentChannel);
   if (!unread.length) return;
   const unreadIds = unread.map((item) => String(item.id)).filter(Boolean);
-  unreadIds.forEach((id) => readRhMessageIds.add(id));
-  saveReadRhMessageIds();
-  syncReadReceiptsToPostgreSQL([], unreadIds);
+  markNotificationsRead(["mensagens-rh"], unreadIds);
 }
 
 function checkAndMarkChatAsRead() {
@@ -8222,6 +8233,20 @@ function removeUserNotificationPopout(popout) {
   window.setTimeout(() => popout.remove(), 180);
 }
 
+function removeReadNotificationPopouts(notificationIds = [], messageIds = []) {
+  const notificationSet = new Set((Array.isArray(notificationIds) ? notificationIds : [notificationIds]).filter(Boolean).map(String));
+  const messageSet = new Set((Array.isArray(messageIds) ? messageIds : [messageIds]).filter(Boolean).map(String));
+  if (!notificationSet.size && !messageSet.size) return;
+
+  document.querySelectorAll(".hub-notification-popout").forEach((popout) => {
+    const popoutNotificationIds = String(popout.dataset.notificationIds || "").split(",").filter(Boolean);
+    const popoutMessageIds = String(popout.dataset.messageIds || "").split(",").filter(Boolean);
+    const matchesNotification = popoutNotificationIds.some((id) => notificationSet.has(id));
+    const matchesMessage = popoutMessageIds.some((id) => messageSet.has(id));
+    if (matchesNotification || matchesMessage) removeUserNotificationPopout(popout);
+  });
+}
+
 function showUserNotificationPopout(title, message, options = {}) {
   try {
     const container = ensureUserNotificationPopoutContainer();
@@ -8230,6 +8255,8 @@ function showUserNotificationPopout(title, message, options = {}) {
     popout.tabIndex = 0;
     popout.setAttribute("role", "button");
     popout.setAttribute("aria-label", `${title}. ${message}`);
+    popout.dataset.notificationIds = (options.notificationIds || []).filter(Boolean).map(String).join(",");
+    popout.dataset.messageIds = (options.messageIds || []).filter(Boolean).map(String).join(",");
 
     const icon = document.createElement("div");
     icon.className = "hub-notification-popout-icon";
@@ -8438,6 +8465,8 @@ function showHubCrossPageNotification(title, message, options = {}) {
   showUserNotificationPopout(title, message, {
     type: options.type,
     icon: options.icon,
+    notificationIds: options.notificationId ? [options.notificationId] : [],
+    messageIds: options.messageIds || [],
     duration: options.duration || 15000,
     hint: options.hint || "Clique para marcar como lida e abrir o acompanhamento",
     onClick: openAndMark,
