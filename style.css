@@ -2743,8 +2743,9 @@ textarea {
 .chat-composer.has-attachment-preview .chat-preview-strip {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: 82px;
   transform: translateX(-50%);
+  z-index: 4;
   max-width: min(520px, 100%);
   height: 58px;
   padding: 0;
@@ -2778,7 +2779,7 @@ textarea {
 .chat-composer.has-attachment-preview .send-button {
   position: absolute;
   right: 28px;
-  bottom: 16px;
+  bottom: 9px;
   z-index: 2;
   width: 64px;
   min-width: 64px;
@@ -5088,13 +5089,14 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-composer.has-attachment-preview .chat-preview-strip {
+    bottom: 72px;
     height: 56px;
     padding-inline: 0;
   }
 
   .chat-composer.has-attachment-preview .send-button {
     right: 14px;
-    bottom: 12px;
+    bottom: 10px;
     width: 58px;
     min-width: 58px;
     height: 58px;
@@ -6505,15 +6507,7 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-strip {
-  position: absolute;
-  left: 50%;
-  bottom: -76px;
-  transform: translateX(-50%);
-  height: 64px;
-  max-width: min(520px, 100%);
-  z-index: 64;
-  border: 0;
-  background: transparent;
+  display: none;
 }
 
 .chat-panel.has-attachment-preview .chat-composer.has-attachment-preview {

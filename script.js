@@ -4526,6 +4526,14 @@ function renderChatAttachmentPreview(files) {
   if (!preview) return;
   const composer = document.getElementById("chat-form") || preview.closest(".chat-composer");
   const panel = composer?.closest(".chat-panel") || preview.closest(".chat-panel");
+  let composerStrip = document.getElementById("chat-composer-preview-strip");
+  if (!composerStrip && composer) {
+    composerStrip = document.createElement("div");
+    composerStrip.id = "chat-composer-preview-strip";
+    composerStrip.className = "chat-preview-strip chat-composer-preview-strip";
+    composerStrip.setAttribute("aria-label", "Anexo selecionado");
+    composer.appendChild(composerStrip);
+  }
 
   revokeChatAttachmentPreviewUrls();
 
@@ -4533,6 +4541,10 @@ function renderChatAttachmentPreview(files) {
   if (!selectedFiles.length) {
     preview.hidden = true;
     preview.innerHTML = "";
+    if (composerStrip) {
+      composerStrip.hidden = true;
+      composerStrip.innerHTML = "";
+    }
     composer?.classList.remove("has-attachment-preview");
     panel?.classList.remove("has-attachment-preview");
     clearChatPreviewImageSizing(panel);
@@ -4604,12 +4616,15 @@ function renderChatAttachmentPreview(files) {
     <button type="button" class="chat-preview-close" data-action="clear-chat-file" title="Remover anexo" aria-label="Remover anexo">&times;</button>
     <div class="chat-preview-title">${fileName}${selectedFiles.length > 1 ? ` + ${selectedFiles.length - 1} arquivo(s)` : ""}</div>
     <div class="chat-preview-body">${body}</div>
-    <div class="chat-preview-strip" aria-label="Anexo selecionado">
-      ${chips}
-      <label class="chat-preview-add" for="chat-file" title="Trocar anexo" aria-label="Trocar anexo">+</label>
-    </div>
   `;
   preview.hidden = false;
+  if (composerStrip) {
+    composerStrip.innerHTML = `
+      ${chips}
+      <label class="chat-preview-add" for="chat-file" title="Trocar anexo" aria-label="Trocar anexo">+</label>
+    `;
+    composerStrip.hidden = false;
+  }
 }
 
 function resetAudioRecordButton() {
