@@ -9023,7 +9023,6 @@ function renderFeedbacksSection() {
         <span class="tag">${escapeHtml(item.status || "Novo")}</span>
       </div>
       <p><strong>Identificacao:</strong> ${escapeHtml(item.autorNome || "Nao informado")}</p>
-      ${item.autorEmail ? `<p><strong>Contato:</strong> ${escapeHtml(item.autorEmail)}</p>` : ""}
       <p>${escapeHtml(item.mensagem || "")}</p>
       <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")}</p>
     </article>
@@ -10115,8 +10114,6 @@ if (publicFeedbackForm) {
 
     const form = new FormData(formElement);
     const nome = String(form.get("nome") || "").trim();
-    const email = String(form.get("email") || "").trim();
-    const tipo = String(form.get("tipo") || "Sugestao").trim();
     const mensagem = String(form.get("mensagem") || "").trim();
 
     if (nome.length < 2) {
@@ -10129,9 +10126,8 @@ if (publicFeedbackForm) {
     }
 
     const success = await addItem("feedbacks", {
-      tipo,
+      tipo: "Mensagem",
       autorNome: nome,
-      autorEmail: email,
       mensagem,
       _turnstileToken: getPublicChallengeToken(formElement),
     });
