@@ -4573,6 +4573,13 @@ function renderChatAttachmentPreview(files) {
         <img class="chat-preview-image" src="${chatAttachmentPreviewUrl}" alt="Previa de ${fileName}">
       </div>`;
     activeChip = `<img class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" alt="" aria-hidden="true">`;
+  } else if (mimeType.startsWith("video/")) {
+    clearChatPreviewImageSizing(panel);
+    body = `
+      <div class="chat-preview-image-frame">
+        <video class="chat-preview-video" src="${chatAttachmentPreviewUrl}" controls preload="metadata" aria-label="Previa de ${fileName}"></video>
+      </div>`;
+    activeChip = `<video class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" muted preload="metadata" aria-hidden="true"></video>`;
   } else if (mimeType.startsWith("audio/")) {
     clearChatPreviewImageSizing(panel);
     body = `
@@ -4597,10 +4604,12 @@ function renderChatAttachmentPreview(files) {
     const itemExtension = escapeHtml(getChatFileExtension(item).slice(0, 3));
     let chipContent = `<span class="chat-preview-chip-icon" aria-hidden="true">${itemType.startsWith("audio/") ? "AUD" : itemExtension}</span>`;
     if (index === chatAttachmentPreviewIndex) chipContent = activeChip;
-    else if (itemType.startsWith("image/")) {
+    else if (itemType.startsWith("image/") || itemType.startsWith("video/")) {
       const itemUrl = URL.createObjectURL(item);
       chatAttachmentPreviewUrls.push(itemUrl);
-      chipContent = `<img class="chat-preview-chip-image" src="${itemUrl}" alt="" aria-hidden="true">`;
+      chipContent = itemType.startsWith("video/")
+        ? `<video class="chat-preview-chip-image" src="${itemUrl}" muted preload="metadata" aria-hidden="true"></video>`
+        : `<img class="chat-preview-chip-image" src="${itemUrl}" alt="" aria-hidden="true">`;
     }
 
     return `

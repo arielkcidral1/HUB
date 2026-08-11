@@ -3426,7 +3426,8 @@ textarea {
   display: none;
 }
 
-.chat-preview-image {
+.chat-preview-image,
+.chat-preview-video {
   display: block;
   max-width: min(520px, 86%);
   max-height: min(240px, 28vh);
@@ -5120,12 +5121,14 @@ form.panel[data-public-chamados="true"].panel {
     min-height: 58px;
   }
 
-  .chat-preview-image {
+  .chat-preview-image,
+  .chat-preview-video {
     max-width: 94%;
     max-height: 44px;
   }
 
-  .chat-composer.has-attachment-preview .chat-preview-image {
+  .chat-composer.has-attachment-preview .chat-preview-image,
+  .chat-composer.has-attachment-preview .chat-preview-video {
     max-width: 100%;
     max-height: min(100%, calc(100vh - 240px));
   }
@@ -5863,6 +5866,7 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 .user-setting-blur-previews .chat-preview-image,
+.user-setting-blur-previews .chat-preview-video,
 .user-setting-blur-previews .chat-preview-unavailable,
 .user-setting-blur-previews .chat-attachment-preview img {
   filter: blur(10px);
@@ -5870,9 +5874,11 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 .user-setting-blur-previews .chat-preview-image:hover,
+.user-setting-blur-previews .chat-preview-video:hover,
 .user-setting-blur-previews .chat-preview-unavailable:hover,
 .user-setting-blur-previews .chat-attachment-preview:hover img,
 .user-setting-blur-previews .chat-preview-image:focus,
+.user-setting-blur-previews .chat-preview-video:focus,
 .user-setting-blur-previews .chat-preview-unavailable:focus {
   filter: blur(0);
 }
@@ -6518,7 +6524,8 @@ form.panel[data-public-chamados="true"].panel {
   display: none;
 }
 
-.chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-image {
+.chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-image,
+.chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-video {
   display: block;
   width: auto;
   height: auto;
