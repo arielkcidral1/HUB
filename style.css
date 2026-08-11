@@ -2142,7 +2142,7 @@ textarea {
   content: "";
   position: absolute;
   top: var(--chat-preview-top-gap);
-  bottom: var(--chat-preview-composer-space);
+  bottom: calc(var(--chat-preview-composer-space) + 28px);
   left: 50%;
   width: var(--chat-preview-frame-width);
   transform: translateX(-50%);
@@ -2715,7 +2715,7 @@ textarea {
 .chat-composer.has-attachment-preview textarea[name="mensagem"] {
   position: absolute;
   left: 50%;
-  bottom: 24px;
+  bottom: 16px;
   transform: translateX(-50%);
   z-index: 2;
   width: min(760px, calc(100% - 210px));
@@ -2731,7 +2731,7 @@ textarea {
 .chat-composer.has-attachment-preview .chat-emoji-menu-wrap {
   position: absolute;
   left: calc(50% + min(380px, (100% - 210px) / 2) - 50px);
-  bottom: 29px;
+  bottom: 21px;
   z-index: 3;
   margin-right: 0;
 }
@@ -5012,7 +5012,7 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-panel.has-attachment-preview::before {
     top: var(--chat-preview-top-gap, 18px);
-    bottom: var(--chat-preview-composer-space, 152px);
+    bottom: calc(var(--chat-preview-composer-space, 152px) + 22px);
     left: 50%;
     width: calc(100% - (var(--chat-preview-side-gap, 14px) * 2));
     transform: translateX(-50%);
@@ -6444,11 +6444,11 @@ form.panel[data-public-chamados="true"].panel {
 .chat-panel.has-attachment-preview > .chat-attachment-preview:not([hidden]) {
   position: absolute;
   inset: 0 0 var(--chat-preview-composer-space, 178px);
-  z-index: 61;
+  z-index: 63;
   display: block;
   visibility: visible;
   opacity: 1;
-  overflow: hidden;
+  overflow: visible;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -6511,6 +6511,7 @@ form.panel[data-public-chamados="true"].panel {
   transform: translateX(-50%);
   height: 64px;
   max-width: min(520px, 100%);
+  z-index: 64;
   border: 0;
   background: transparent;
 }
