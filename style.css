@@ -2264,9 +2264,12 @@ textarea {
   overflow-y: auto;
   min-height: 0;
   border: 1px solid var(--line);
+  border-bottom: 0;
   border-radius: var(--radius-md);
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
   background: transparent;
-  padding: 18px;
+  padding: 18px 18px 20px;
 }
 
 .chat-panel.chat-panel-empty .chat-feed {
@@ -2602,13 +2605,13 @@ textarea {
   gap: 8px;
   align-self: end;
   margin-top: 0;
-  padding: 10px 8px 8px;
-  border: 0;
+  padding: 12px 8px 10px;
+  border: 1px solid var(--line);
   border-top: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--teal-surface) 88%, var(--surface) 12%), var(--surface-raised));
   position: relative;
-  z-index: 5;
+  z-index: 1;
 }
 
 .chat-composer.has-attachment-preview {
@@ -6420,7 +6423,7 @@ form.panel[data-public-chamados="true"].panel {
 
 :root[data-theme="dark"] .chat-composer,
 .chat-panel .chat-composer {
-  background: transparent;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--teal-surface) 88%, var(--surface) 12%), var(--surface-raised));
 }
 
 .chat-panel .chat-composer.has-attachment-preview {
