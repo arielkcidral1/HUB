@@ -6520,6 +6520,7 @@ form.panel[data-public-chamados="true"].panel {
   left: 0;
   right: 0;
   bottom: 24px;
+  z-index: 2;
   display: grid;
   place-items: center;
   width: var(--chat-preview-frame-width, min(1120px, calc(100% - 96px)));
@@ -6624,19 +6625,25 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-file-only {
+  position: absolute;
+  inset: clamp(12px, 2vh, 24px) clamp(16px, 2vw, 28px) 8px;
   display: grid;
   place-items: center;
-  width: min(960px, calc(100% - 32px));
-  height: min(560px, max(320px, 58vh));
-  min-height: 320px;
+  width: auto;
+  height: auto;
+  min-height: 0;
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--teal-border) 55%, transparent);
   border-radius: 0;
   background: #0f1110;
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.24);
+  opacity: 1;
+  visibility: visible;
 }
 
 .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-file-icon {
+  position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
   width: clamp(92px, 18vw, 220px);
