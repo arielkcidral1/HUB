@@ -4577,7 +4577,8 @@ function renderChatAttachmentPreview(files) {
     clearChatPreviewImageSizing(panel);
     body = `
       <div class="chat-preview-image-frame chat-preview-video-frame">
-        <video class="chat-preview-video" src="${chatAttachmentPreviewUrl}" controls preload="auto" playsinline aria-label="Previa de ${fileName}" style="display:block;width:100%;height:100%;min-height:320px;max-width:none;max-height:none;object-fit:contain;background:#0f1110;"></video>
+        <canvas class="chat-preview-video-canvas" aria-hidden="true"></canvas>
+        <video class="chat-preview-video" src="${chatAttachmentPreviewUrl}" controls preload="auto" playsinline aria-label="Previa de ${fileName}" style="display:block;width:100%;height:100%;min-height:320px;max-width:none;max-height:none;object-fit:contain;background:transparent;"></video>
       </div>`;
     activeChip = `<video class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" muted preload="metadata" playsinline aria-hidden="true"></video>`;
   } else if (mimeType.startsWith("audio/")) {
@@ -4639,24 +4640,44 @@ function renderChatAttachmentPreview(files) {
 
 function hydrateChatAttachmentPreviewVideo(preview) {
   const video = preview?.querySelector?.(".chat-preview-video");
+  const canvas = preview?.querySelector?.(".chat-preview-video-canvas");
   if (!video || video.dataset.previewHydrated === "true") return;
   video.dataset.previewHydrated = "true";
+  let animationFrameId = 0;
 
-  const setPosterFromFrame = () => {
+  const drawVideoFrame = () => {
     if (!video.videoWidth || !video.videoHeight) return;
     try {
-      const canvas = document.createElement("canvas");
+      if (!canvas) return;
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
-      video.poster = canvas.toDataURL("image/jpeg", 0.82);
     } catch (error) {
-      console.warn("Nao foi possivel gerar poster do video:", error);
+      console.warn("Nao foi possivel desenhar previa do video:", error);
     }
   };
+  const drawWhilePlaying = () => {
+    drawVideoFrame();
+    if (!video.paused && !video.ended) animationFrameId = window.requestAnimationFrame(drawWhilePlaying);
+  };
 
-  video.addEventListener("loadeddata", setPosterFromFrame, { once: true });
-  video.addEventListener("seeked", setPosterFromFrame, { once: true });
+  video.addEventListener("loadeddata", drawVideoFrame, { once: true });
+  video.addEventListener("seeked", drawVideoFrame);
+  video.addEventListener("timeupdate", drawVideoFrame);
+  video.addEventListener("play", () => {
+    if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+    drawWhilePlaying();
+  });
+  video.addEventListener("pause", () => {
+    if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+    animationFrameId = 0;
+    drawVideoFrame();
+  });
+  video.addEventListener("ended", () => {
+    if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+    animationFrameId = 0;
+    drawVideoFrame();
+  });
   video.addEventListener("loadedmetadata", () => {
     const targetTime = Math.min(0.1, Math.max(0, Number(video.duration || 0) / 2));
     if (Number.isFinite(targetTime) && targetTime > 0) {
