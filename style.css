@@ -1437,6 +1437,10 @@ textarea {
   min-width: 0;
 }
 
+.equipe-users-workspace .panel {
+  width: 100%;
+}
+
 #eventos-list {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   align-items: start;

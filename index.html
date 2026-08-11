@@ -1293,31 +1293,7 @@
         </section>
 
         <section class="view" id="equipe">
-          <div class="workspace">
-            <form class="panel form-panel" id="usuario-form">
-              <div class="panel-header">
-                <h2>Adicionar usuario</h2>
-              </div>
-              <label>Nome
-                <input name="nome" placeholder="Nome do usuario" required />
-              </label>
-              <label>E-mail
-                <input name="email" type="email" placeholder="email@empresa.com" required />
-              </label>
-              <label>CPF
-                <input name="cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" required />
-              </label>
-              <label>Cargo
-                <select name="cargo" required>
-                  <option value="" disabled selected>Selecione um cargo</option>
-                  <option>RH</option>
-                  <option>Gerente</option>
-                  <option>Caixa/Crediarista</option>
-                </select>
-              </label>
-              <button class="primary-button" type="submit">Salvar usuario</button>
-            </form>
-
+          <div class="single-workspace equipe-users-workspace">
             <div class="panel">
               <div class="panel-header split-header">
                 <div>
@@ -1325,7 +1301,7 @@
                   <p class="item-meta">Usuarios com acesso ao HUB</p>
                 </div>
               </div>
-              <div class="card-list" id="usuarios-list"></div>
+              <div class="card-list equipe-two-col" id="usuarios-list"></div>
             </div>
           </div>
         </section>
