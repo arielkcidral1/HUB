@@ -4514,24 +4514,11 @@ function revokeChatAttachmentPreviewUrls() {
 
 function clearChatPreviewImageSizing(panel) {
   panel?.style.removeProperty("--chat-preview-image-url");
-  panel?.style.removeProperty("--chat-preview-frame-width");
 }
 
 function updateChatPreviewImageSizing(panel, imageUrl) {
   if (!panel || !imageUrl) return;
   panel.style.setProperty("--chat-preview-image-url", `url("${imageUrl}")`);
-  const image = new Image();
-  image.onload = () => {
-    const width = Number(image.naturalWidth) || 0;
-    const height = Number(image.naturalHeight) || 0;
-    if (!width || !height) return;
-    const aspect = width / height;
-    const frameWidth = aspect >= 1
-      ? Math.min(1120, Math.max(720, width))
-      : Math.min(760, Math.max(340, Math.round(620 * aspect)));
-    panel.style.setProperty("--chat-preview-frame-width", `${frameWidth}px`);
-  };
-  image.src = imageUrl;
 }
 
 function renderChatAttachmentPreview(files) {

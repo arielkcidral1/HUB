@@ -2132,6 +2132,7 @@ textarea {
   --chat-preview-top-gap: clamp(18px, 3vh, 36px);
   --chat-preview-composer-space: 178px;
   --chat-preview-strip-space: 74px;
+  --chat-preview-frame-width: min(1120px, calc(100% - (var(--chat-preview-side-gap) * 2)));
   align-content: stretch;
   height: min(88vh, 900px);
   min-height: 660px;
@@ -2143,7 +2144,7 @@ textarea {
   top: var(--chat-preview-top-gap);
   bottom: var(--chat-preview-composer-space);
   left: 50%;
-  width: min(calc(100% - (var(--chat-preview-side-gap) * 2)), var(--chat-preview-frame-width, 1120px));
+  width: var(--chat-preview-frame-width);
   transform: translateX(-50%);
   z-index: 60;
   background-color: #0f1110;
@@ -5002,6 +5003,7 @@ form.panel[data-public-chamados="true"].panel {
     --chat-preview-top-gap: 18px;
     --chat-preview-composer-space: 152px;
     --chat-preview-strip-space: 66px;
+    --chat-preview-frame-width: calc(100% - (var(--chat-preview-side-gap) * 2));
   }
 
   .chat-composer.has-attachment-preview::after {
@@ -6481,7 +6483,7 @@ form.panel[data-public-chamados="true"].panel {
   bottom: var(--chat-preview-strip-space, 74px);
   display: grid;
   place-items: center;
-  width: min(calc(100% - (var(--chat-preview-side-gap, 48px) * 2)), var(--chat-preview-frame-width, 1120px));
+  width: var(--chat-preview-frame-width, min(1120px, calc(100% - 96px)));
   margin-inline: auto;
   padding: clamp(12px, 2vh, 24px) clamp(16px, 2vw, 28px) 8px;
   overflow: hidden;
