@@ -9327,12 +9327,18 @@ function renderChat(options = {}) {
 
   target.innerHTML = chatHtml;
 
-  target.scrollTop = target.scrollHeight;
+  scrollChatFeedToBottom();
   if (skipPostRender) return;
 
   hydrateChatMediaPreviews();
 
   checkAndMarkChatAsRead();
+}
+
+function scrollChatFeedToBottom() {
+  const target = document.getElementById("chat-feed");
+  if (!target) return;
+  target.scrollTop = target.scrollHeight;
 }
 
 function renderChatAttachment(attachment) {
@@ -9558,16 +9564,22 @@ function hydrateChatMediaPreviews() {
 
     const cacheKey = `${bucket}:${path}`;
     if (chatMediaSignedUrlCache.has(cacheKey)) {
+      media.addEventListener("load", scrollChatFeedToBottom, { once: true });
+      media.addEventListener("loadedmetadata", scrollChatFeedToBottom, { once: true });
       media.src = chatMediaSignedUrlCache.get(cacheKey);
       media.dataset.previewLoaded = "true";
+      requestChatFeedBottomScroll();
       return;
     }
 
     createPrivateStorageUrl(bucket, path)
       .then((signedUrl) => {
         chatMediaSignedUrlCache.set(cacheKey, signedUrl);
+        media.addEventListener("load", scrollChatFeedToBottom, { once: true });
+        media.addEventListener("loadedmetadata", scrollChatFeedToBottom, { once: true });
         media.src = signedUrl;
         media.dataset.previewLoaded = "true";
+        requestChatFeedBottomScroll();
       })
       .catch((error) => {
         console.warn("Nao foi possivel carregar previa do anexo:", error);
@@ -9575,6 +9587,14 @@ function hydrateChatMediaPreviews() {
         delete media.dataset.previewLoaded;
       });
   });
+}
+
+function requestChatFeedBottomScroll() {
+  if (typeof window.requestAnimationFrame === "function") {
+    window.requestAnimationFrame(scrollChatFeedToBottom);
+    return;
+  }
+  window.setTimeout(scrollChatFeedToBottom, 0);
 }
 
 document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {

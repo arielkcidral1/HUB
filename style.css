@@ -2269,7 +2269,8 @@ textarea {
   border-bottom-right-radius: 0;
   border-bottom-left-radius: 0;
   background: transparent;
-  padding: 18px 18px 20px;
+  padding: 18px 18px 30px;
+  scroll-padding-bottom: 30px;
 }
 
 .chat-panel.chat-panel-empty .chat-feed {
@@ -4987,7 +4988,8 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-feed {
-    padding: 12px;
+    padding: 12px 12px 24px;
+    scroll-padding-bottom: 24px;
   }
 
   .chat-attachment-preview {
