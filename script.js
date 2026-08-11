@@ -1364,27 +1364,27 @@ function mergeUsersByName(currentUsers = [], incomingUsers = []) {
 }
 
 function loadReadRhMessageIds() {
-  return new Set(storageService.getLocalItem(getAccountScopedStorageKey(READ_RH_MESSAGES_KEY), storageService.getLocalItem(READ_RH_MESSAGES_KEY, [])).map(String));
+  return loadAccountScopedIdSet(READ_RH_MESSAGES_KEY);
 }
 
 function saveReadRhMessageIds() {
-  storageService.setLocalItem(getAccountScopedStorageKey(READ_RH_MESSAGES_KEY), [...readRhMessageIds]);
+  saveAccountScopedIdSet(READ_RH_MESSAGES_KEY, readRhMessageIds);
 }
 
 function loadReadNotificationIds() {
-  return new Set(storageService.getLocalItem(getAccountScopedStorageKey(READ_NOTIFICATIONS_KEY), storageService.getLocalItem(READ_NOTIFICATIONS_KEY, [])).map(String));
+  return loadAccountScopedIdSet(READ_NOTIFICATIONS_KEY);
 }
 
 function saveReadNotificationIds() {
-  storageService.setLocalItem(getAccountScopedStorageKey(READ_NOTIFICATIONS_KEY), [...readNotificationIds]);
+  saveAccountScopedIdSet(READ_NOTIFICATIONS_KEY, readNotificationIds);
 }
 
 function loadShownNotificationKeys() {
-  return new Set(storageService.getLocalItem(getAccountScopedStorageKey(SHOWN_NOTIFICATIONS_KEY), storageService.getLocalItem(SHOWN_NOTIFICATIONS_KEY, [])).map(String));
+  return loadAccountScopedIdSet(SHOWN_NOTIFICATIONS_KEY);
 }
 
 function saveShownNotificationKeys() {
-  storageService.setLocalItem(getAccountScopedStorageKey(SHOWN_NOTIFICATIONS_KEY), [...shownNotificationKeys].slice(-600));
+  saveAccountScopedIdSet(SHOWN_NOTIFICATIONS_KEY, shownNotificationKeys, 600);
 }
 
 function reloadReadStateForCurrentUser() {
@@ -1414,6 +1414,29 @@ function getNotificationAccountAliases() {
 
 function getAccountScopedStorageKey(baseKey) {
   return `${baseKey}:${getNotificationAccountKey()}`;
+}
+
+function getAccountScopedStorageKeys(baseKey) {
+  const aliases = getNotificationAccountAliases();
+  return [baseKey, ...aliases.map((alias) => `${baseKey}:${alias}`), getAccountScopedStorageKey(baseKey)]
+    .filter(Boolean)
+    .filter((key, index, list) => list.indexOf(key) === index);
+}
+
+function loadAccountScopedIdSet(baseKey) {
+  const merged = new Set();
+  getAccountScopedStorageKeys(baseKey).forEach((key) => {
+    storageService.getLocalItem(key, []).forEach((id) => {
+      if (id !== undefined && id !== null && String(id).trim()) merged.add(String(id));
+    });
+  });
+  return merged;
+}
+
+function saveAccountScopedIdSet(baseKey, ids, limit = 0) {
+  const values = [...ids].filter((id) => id !== undefined && id !== null && String(id).trim()).map(String);
+  const safeValues = limit > 0 ? values.slice(-limit) : values;
+  getAccountScopedStorageKeys(baseKey).forEach((key) => storageService.setLocalItem(key, safeValues));
 }
 
 function mergeReadReceiptRows(rows = []) {
@@ -1450,7 +1473,7 @@ async function loadReadReceiptsFromPostgreSQL() {
 
 function syncReadReceiptsToPostgreSQL(notificationIds = [], messageIds = []) {
   if (!postgresClient || !TABLES.readReceipts) return;
-  const userKeys = getNotificationAccountAliases().slice(0, 3);
+  const userKeys = getNotificationAccountAliases();
   if (!userKeys.length) return;
   const now = new Date().toISOString();
   const rows = userKeys.flatMap((userKey) => [
@@ -1484,6 +1507,18 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
   const cleanMessageIds = normalizedMessageIds
     .filter((id) => id !== undefined && id !== null && String(id).trim())
     .map(String);
+  cleanNotificationIds.forEach((id) => {
+    const messageMatch = id.match(/^mensagem-rh-(.+)$/);
+    if (messageMatch?.[1] && !cleanMessageIds.includes(messageMatch[1])) {
+      cleanMessageIds.push(messageMatch[1]);
+    }
+  });
+  if (cleanNotificationIds.includes("mensagens-rh") && !cleanMessageIds.length) {
+    getAccessibleRhMessages().forEach((item) => {
+      const id = item?.id !== undefined && item?.id !== null ? String(item.id) : "";
+      if (id && !cleanMessageIds.includes(id)) cleanMessageIds.push(id);
+    });
+  }
   let changed = false;
 
   cleanNotificationIds.forEach((id) => {
