@@ -12,6 +12,7 @@ const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
+const SHOWN_NOTIFICATIONS_KEY = "hub-rh-shown-notification-ids";
 // IMPORTANTE: os IDs lidos não entram no cache sensível.
 // Assim, ao fechar/abrir o site ou perder a sessão, as notificações já visualizadas
 // não voltam como não lidas.
@@ -69,6 +70,11 @@ const CHAT_FILE_MIME_ALIASES = new Map([
   ["audio/mp4", "audio/mp4"],
 ]);
 const CHAT_FILE_EXTENSION_MIME_TYPES = new Map([
+  ["jpg", "image/jpeg"],
+  ["jpeg", "image/jpeg"],
+  ["png", "image/png"],
+  ["webp", "image/webp"],
+  ["gif", "image/gif"],
   ["mp3", "audio/mpeg"],
   ["wav", "audio/wav"],
   ["ogg", "audio/ogg"],
@@ -182,6 +188,7 @@ const DEFAULT_HUB_POSTGRES = {
 };
 const TABLES = {
   denuncias: "hub_denuncias",
+  feedbacks: "hub_feedbacks",
   comunicados: "hub_chat_messages",
   malotes: "hub_malotes",
   chamados: "hub_chamados",
@@ -257,6 +264,7 @@ function generateUUID() {
 
 const defaultData = {
   denuncias: [],
+  feedbacks: [],
   comunicados: [],
   malotes: [],
   chamados: [],
@@ -310,6 +318,7 @@ let hubNotificationServiceWorkerRegistration = null;
 let lastRealtimeNotificationSignature = "";
 let hubPollingNotificationKeys = new Set();
 let hubPollingNotificationsReady = false;
+let shownNotificationKeys = loadShownNotificationKeys();
 const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
@@ -321,6 +330,8 @@ let chatRefreshQueuedAfterMutation = false;
 const chatClientId = generateUUID();
 let realtimeBroadcastReady = false;
 const pendingChatBroadcasts = [];
+let readNotificationIds = loadReadNotificationIds();
+let readRhMessageIds = loadReadRhMessageIds();
 window.editingDocId = null;
 
 const documentLabels = {
@@ -476,6 +487,24 @@ function normalizeLoginName(value) {
 function getLoginDisplayName(value) {
   const normalized = normalizeLoginName(value);
   return findLocalTeamUser(value)?.nome || String(value || "").trim();
+}
+
+function isFredericoUser() {
+  const user = getCurrentUserRecord?.() || {};
+  const candidates = [
+    getCurrentUserName?.(),
+    user.nome,
+    user.email,
+    user.email ? String(user.email).split("@")[0] : "",
+    currentAuthUser?.email,
+    currentAuthUser?.email ? String(currentAuthUser.email).split("@")[0] : "",
+    currentAuthUser?.user_metadata?.nome,
+    currentAuthUser?.user_metadata?.name,
+  ];
+  return candidates.some((candidate) => {
+    const normalized = normalizeLoginName(candidate).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return normalized === "frederico" || normalized.startsWith("frederico");
+  });
 }
 
 function loadTeamUsersStore() {
@@ -1132,6 +1161,7 @@ async function verifyCurrentPassword(password) {
 function isPublicPage() {
   return Boolean(
     document.querySelector("[data-public-denuncia]") ||
+    document.querySelector("[data-public-feedbacks]") ||
     document.querySelector("[data-public-vagas]") ||
     document.querySelector("[data-public-contratados]") ||
     document.querySelector("[data-public-atestados]")
@@ -1141,6 +1171,7 @@ function isPublicPage() {
 function isPublicSubmissionFormPage() {
   return Boolean(
     document.querySelector("[data-public-denuncia]") ||
+    document.querySelector("[data-public-feedbacks]") ||
     document.querySelector("[data-public-vagas]") ||
     document.querySelector("[data-public-chamados]") ||
     document.querySelector("[data-public-contratados]") ||
@@ -1248,6 +1279,7 @@ function loadLocalData() {
   }));
   return {
     denuncias: parsed.denuncias || [],
+    feedbacks: parsed.feedbacks || [],
     comunicados: parsed.comunicados || [],
     malotes: parsed.malotes || [],
     chamados: parsed.chamados || [],
@@ -1346,9 +1378,18 @@ function saveReadNotificationIds() {
   storageService.setLocalItem(getAccountScopedStorageKey(READ_NOTIFICATIONS_KEY), [...readNotificationIds]);
 }
 
+function loadShownNotificationKeys() {
+  return new Set(storageService.getLocalItem(getAccountScopedStorageKey(SHOWN_NOTIFICATIONS_KEY), storageService.getLocalItem(SHOWN_NOTIFICATIONS_KEY, [])).map(String));
+}
+
+function saveShownNotificationKeys() {
+  storageService.setLocalItem(getAccountScopedStorageKey(SHOWN_NOTIFICATIONS_KEY), [...shownNotificationKeys].slice(-600));
+}
+
 function reloadReadStateForCurrentUser() {
   readNotificationIds = loadReadNotificationIds();
   readRhMessageIds = loadReadRhMessageIds();
+  shownNotificationKeys = loadShownNotificationKeys();
 }
 
 function getNotificationAccountKey() {
@@ -3177,6 +3218,20 @@ function mapRows(collection, rows) {
     }));
   }
 
+  if (collection === "feedbacks") {
+    return rows.map((row) => ({
+      id: row.id || generateUUID(),
+      tipo: row.tipo || "Feedback",
+      mensagem: row.mensagem || "",
+      autorNome: row.autor_nome || row.autorNome || row.created_by || "Nao informado",
+      autorEmail: row.autor_email || row.autorEmail || "",
+      status: row.status || "Novo",
+      createdBy: row.created_by || row.autor_nome || "Sistema",
+      createdAt: row.created_at ? formatDateTime(row.created_at) : row.createdAt || todayLabel(),
+      sortAt: row.created_at || row.sortAt || "",
+    }));
+  }
+
   if (collection === "comunicados") {
     return rows.map((row) => {
       const parsed = parseChatMessage(row);
@@ -3474,6 +3529,41 @@ function forgetLocalChatEchoMessage(id) {
   applyLocalChatState();
 }
 
+function getChatMessageDedupKey(item = {}) {
+  const attachment = item.arquivo || {};
+  const createdTime = new Date(item.sortAt || item.createdAt || 0).getTime();
+  const timeBucket = Number.isFinite(createdTime) && createdTime > 0 ? Math.floor(createdTime / 15000) : "";
+  return [
+    normalizeChatChannel(item.canal || ""),
+    normalizeLoginName(item.autor || ""),
+    String(item.mensagem || "").trim(),
+    attachment.name || "",
+    attachment.size || 0,
+    timeBucket,
+  ].join("|");
+}
+
+function dedupeChatMessages(messages = []) {
+  const byId = new Set();
+  const byLogicalKey = new Set();
+  const result = [];
+
+  (messages || [])
+    .filter(Boolean)
+    .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a))
+    .forEach((item) => {
+      const id = String(item.id || "");
+      if (id && byId.has(id)) return;
+      const logicalKey = getChatMessageDedupKey(item);
+      if (logicalKey && byLogicalKey.has(logicalKey)) return;
+      if (id) byId.add(id);
+      if (logicalKey) byLogicalKey.add(logicalKey);
+      result.push(item);
+    });
+
+  return result;
+}
+
 function mergeLocalChatMessages(freshMessages = [], currentMessages = data.comunicados || []) {
   const visibleFreshMessages = (freshMessages || []).filter((item) => !locallyDeletedChatMessageIds.has(String(item.id)));
   const freshIds = new Set(visibleFreshMessages.map((item) => String(item.id)));
@@ -3492,7 +3582,7 @@ function mergeLocalChatMessages(freshMessages = [], currentMessages = data.comun
   });
   const localById = new Map([...currentLocalMessages, ...registeredLocalMessages].map((item) => [String(item.id), item]));
 
-  return [...localById.values(), ...visibleFreshMessages];
+  return dedupeChatMessages([...localById.values(), ...visibleFreshMessages]);
 }
 
 function beginChatMutation() {
@@ -3690,6 +3780,11 @@ function renderRealtimeUpdate(collection) {
   if (collection === "denuncias") {
     renderDashboard();
     renderDenunciasSection();
+    return;
+  }
+
+  if (collection === "feedbacks") {
+    renderFeedbacksSection();
     return;
   }
 
@@ -3955,6 +4050,7 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
   const forceCollections = new Set(forceCore
     ? [
       "denuncias",
+      "feedbacks",
       "comunicados",
       "malotes",
       "chamados",
@@ -4296,12 +4392,12 @@ function setupRealtime() {
   });
 }
 
-async function uploadChatFile(file) {
+async function uploadChatFile(file, channelId = activeChatChannel) {
   if (!file || !file.name) return null;
 
   const bucket = getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files";
-  const safeName = file.name.replace(/[^a-z0-9_.-]/gi, "-");
-  const channel = normalizeChatChannel(activeChatChannel || GENERAL_CHANNEL);
+  const safeName = safePublicFileName(file.name || "arquivo");
+  const channel = safePublicFileName(normalizeChatChannel(channelId || GENERAL_CHANNEL)).replace(/\./g, "-") || GENERAL_CHANNEL;
   const path = `chat/${channel}/${Date.now()}-${generateUUID()}-${safeName}`;
 
   if (postgresClient?.storage?.from) {
@@ -4507,10 +4603,28 @@ function revokeChatAttachmentPreviewUrls() {
   }
 }
 
+function clearChatPreviewImageSizing(panel) {
+  panel?.style.removeProperty("--chat-preview-image-url");
+}
+
+function updateChatPreviewImageSizing(panel, imageUrl) {
+  if (!panel || !imageUrl) return;
+  panel.style.setProperty("--chat-preview-image-url", `url("${imageUrl}")`);
+}
+
 function renderChatAttachmentPreview(files) {
   const preview = document.getElementById("chat-attachment-preview");
   if (!preview) return;
-  const composer = preview.closest(".chat-composer");
+  const composer = document.getElementById("chat-form") || preview.closest(".chat-composer");
+  const panel = composer?.closest(".chat-panel") || preview.closest(".chat-panel");
+  let composerStrip = document.getElementById("chat-composer-preview-strip");
+  if (!composerStrip && composer) {
+    composerStrip = document.createElement("div");
+    composerStrip.id = "chat-composer-preview-strip";
+    composerStrip.className = "chat-preview-strip chat-composer-preview-strip";
+    composerStrip.setAttribute("aria-label", "Anexo selecionado");
+    composer.appendChild(composerStrip);
+  }
 
   revokeChatAttachmentPreviewUrls();
 
@@ -4518,10 +4632,18 @@ function renderChatAttachmentPreview(files) {
   if (!selectedFiles.length) {
     preview.hidden = true;
     preview.innerHTML = "";
+    if (composerStrip) {
+      composerStrip.hidden = true;
+      composerStrip.innerHTML = "";
+    }
     composer?.classList.remove("has-attachment-preview");
+    panel?.classList.remove("has-attachment-preview");
+    clearChatPreviewImageSizing(panel);
     return;
   }
   composer?.classList.add("has-attachment-preview");
+  panel?.classList.add("has-attachment-preview");
+  if (panel && preview.parentElement !== panel) panel.appendChild(preview);
 
   chatAttachmentPreviewIndex = Math.min(Math.max(chatAttachmentPreviewIndex, 0), selectedFiles.length - 1);
   const file = selectedFiles[chatAttachmentPreviewIndex];
@@ -4536,9 +4658,23 @@ function renderChatAttachmentPreview(files) {
   let body = "";
   let activeChip = "";
   if (mimeType.startsWith("image/")) {
-    body = `<img class="chat-preview-image" src="${chatAttachmentPreviewUrl}" alt="Previa de ${fileName}">`;
+    updateChatPreviewImageSizing(panel, chatAttachmentPreviewUrl);
+    body = `
+      <div class="chat-preview-image-frame">
+        <img class="chat-preview-image" src="${chatAttachmentPreviewUrl}" alt="Previa de ${fileName}">
+      </div>`;
     activeChip = `<img class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" alt="" aria-hidden="true">`;
+  } else if (mimeType.startsWith("video/")) {
+    clearChatPreviewImageSizing(panel);
+    body = `
+      <div class="chat-preview-image-frame chat-preview-video-frame">
+        <canvas class="chat-preview-video-canvas" aria-hidden="true"></canvas>
+        <video class="chat-preview-video" src="${chatAttachmentPreviewUrl}" preload="auto" playsinline aria-label="Previa de ${fileName}"></video>
+        <button type="button" class="chat-preview-video-toggle" data-action="toggle-chat-preview-video" aria-label="Reproduzir video">▶</button>
+      </div>`;
+    activeChip = `<video class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" muted preload="metadata" playsinline aria-hidden="true"></video>`;
   } else if (mimeType.startsWith("audio/")) {
+    clearChatPreviewImageSizing(panel);
     body = `
       <div class="chat-preview-audio-card">
         <button type="button" class="chat-preview-audio-trash" data-action="clear-chat-file" title="Remover audio" aria-label="Remover audio">??</button>
@@ -4546,6 +4682,7 @@ function renderChatAttachmentPreview(files) {
       </div>`;
     activeChip = `<span class="chat-preview-chip-icon" aria-hidden="true">AUD</span>`;
   } else {
+    clearChatPreviewImageSizing(panel);
     body = `
       <div class="chat-preview-unavailable">
         <div class="chat-preview-file-icon" aria-hidden="true">?</div>
@@ -4560,10 +4697,12 @@ function renderChatAttachmentPreview(files) {
     const itemExtension = escapeHtml(getChatFileExtension(item).slice(0, 3));
     let chipContent = `<span class="chat-preview-chip-icon" aria-hidden="true">${itemType.startsWith("audio/") ? "AUD" : itemExtension}</span>`;
     if (index === chatAttachmentPreviewIndex) chipContent = activeChip;
-    else if (itemType.startsWith("image/")) {
+    else if (itemType.startsWith("image/") || itemType.startsWith("video/")) {
       const itemUrl = URL.createObjectURL(item);
       chatAttachmentPreviewUrls.push(itemUrl);
-      chipContent = `<img class="chat-preview-chip-image" src="${itemUrl}" alt="" aria-hidden="true">`;
+      chipContent = itemType.startsWith("video/")
+        ? `<video class="chat-preview-chip-image" src="${itemUrl}" muted preload="metadata" playsinline aria-hidden="true"></video>`
+        : `<img class="chat-preview-chip-image" src="${itemUrl}" alt="" aria-hidden="true">`;
     }
 
     return `
@@ -4579,12 +4718,104 @@ function renderChatAttachmentPreview(files) {
     <button type="button" class="chat-preview-close" data-action="clear-chat-file" title="Remover anexo" aria-label="Remover anexo">&times;</button>
     <div class="chat-preview-title">${fileName}${selectedFiles.length > 1 ? ` + ${selectedFiles.length - 1} arquivo(s)` : ""}</div>
     <div class="chat-preview-body">${body}</div>
-    <div class="chat-preview-strip" aria-label="Anexo selecionado">
-      ${chips}
-      <label class="chat-preview-add" for="chat-file" title="Trocar anexo" aria-label="Trocar anexo">+</label>
-    </div>
   `;
   preview.hidden = false;
+  hydrateChatAttachmentPreviewVideo(preview);
+  if (composerStrip) {
+    composerStrip.innerHTML = `
+      ${chips}
+      <label class="chat-preview-add" for="chat-file" title="Trocar anexo" aria-label="Trocar anexo">+</label>
+    `;
+    composerStrip.hidden = false;
+  }
+}
+
+function hydrateChatAttachmentPreviewVideo(preview) {
+  const video = preview?.querySelector?.(".chat-preview-video");
+  const canvas = preview?.querySelector?.(".chat-preview-video-canvas");
+  const toggle = preview?.querySelector?.(".chat-preview-video-toggle");
+  if (!video || video.dataset.previewHydrated === "true") return;
+  video.dataset.previewHydrated = "true";
+  let animationFrameId = 0;
+
+  const drawVideoFrame = () => {
+    if (!video.videoWidth || !video.videoHeight) return;
+    try {
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const scale = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.round(rect.width * scale));
+      canvas.height = Math.max(1, Math.round(rect.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) return;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "#0f1110";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      const canvasRatio = canvas.width / canvas.height;
+      const videoRatio = video.videoWidth / video.videoHeight;
+      let drawWidth = canvas.width;
+      let drawHeight = canvas.height;
+      if (videoRatio > canvasRatio) drawHeight = canvas.width / videoRatio;
+      else drawWidth = canvas.height * videoRatio;
+      const drawX = (canvas.width - drawWidth) / 2;
+      const drawY = (canvas.height - drawHeight) / 2;
+      context.drawImage(video, drawX, drawY, drawWidth, drawHeight);
+    } catch (error) {
+      console.warn("Nao foi possivel desenhar previa do video:", error);
+    }
+  };
+  const syncToggle = () => {
+    if (!toggle) return;
+    toggle.textContent = video.paused ? "▶" : "⏸";
+    toggle.setAttribute("aria-label", video.paused ? "Reproduzir video" : "Pausar video");
+  };
+  const drawWhilePlaying = () => {
+    drawVideoFrame();
+    if (!video.paused && !video.ended) animationFrameId = window.requestAnimationFrame(drawWhilePlaying);
+  };
+
+  video.addEventListener("loadeddata", drawVideoFrame, { once: true });
+  video.addEventListener("seeked", drawVideoFrame);
+  video.addEventListener("timeupdate", drawVideoFrame);
+  video.addEventListener("play", () => {
+    if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+    syncToggle();
+    drawWhilePlaying();
+  });
+  video.addEventListener("pause", () => {
+    if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+    animationFrameId = 0;
+    syncToggle();
+    drawVideoFrame();
+  });
+  video.addEventListener("ended", () => {
+    if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+    animationFrameId = 0;
+    syncToggle();
+    drawVideoFrame();
+  });
+  video.addEventListener("loadedmetadata", () => {
+    const targetTime = Math.min(0.1, Math.max(0, Number(video.duration || 0) / 2));
+    if (Number.isFinite(targetTime) && targetTime > 0) {
+      try { video.currentTime = targetTime; } catch (_) {}
+    }
+  }, { once: true });
+
+  try { video.load(); } catch (_) {}
+  syncToggle();
+}
+
+function toggleChatAttachmentPreviewVideo() {
+  const preview = document.getElementById("chat-attachment-preview");
+  const video = preview?.querySelector?.(".chat-preview-video");
+  if (!video) return;
+  if (video.paused || video.ended) {
+    video.play().catch((error) => {
+      console.warn("Nao foi possivel reproduzir o video:", error);
+    });
+    return;
+  }
+  video.pause();
 }
 
 function resetAudioRecordButton() {
@@ -4979,7 +5210,7 @@ async function submitPublicContractorDocuments({ empresa, origemHtml, nome, tele
 }
 
 function isPublicInsertOnlyCollection(collection) {
-  return isPublicSubmissionFormPage() && ["denuncias", "chamados", "candidaturas", "documentosContratados"].includes(collection);
+  return isPublicSubmissionFormPage() && ["denuncias", "feedbacks", "chamados", "candidaturas", "documentosContratados"].includes(collection);
 }
 
 function toPublicSubmissionPayload(collection, values) {
@@ -4989,6 +5220,17 @@ function toPublicSubmissionPayload(collection, values) {
       categoria: "Denuncia anonima",
       descricao: String(values.descricao || "").trim(),
       status: "Aberta",
+    };
+  }
+
+  if (collection === "feedbacks") {
+    return {
+      tipo: String(values.tipo || "Sugestao").trim(),
+      mensagem: String(values.mensagem || "").trim(),
+      autor_nome: String(values.autorNome || values.nome || "").trim(),
+      autor_email: String(values.autorEmail || values.email || "").trim() || null,
+      status: "Novo",
+      created_by: String(values.autorNome || values.nome || "Formulario publico").trim(),
     };
   }
 
@@ -6137,6 +6379,10 @@ function renderCards(targetId, items, template) {
 }
 
 function activateView(viewId) {
+  const previousViewId = document.querySelector(".view.active")?.id || "";
+  if (previousViewId === "comunicacao" && viewId !== "comunicacao" && chatSelectedFiles.length) {
+    clearChatSelectedFile();
+  }
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
   document.querySelectorAll(".user-chip").forEach((chip) => chip.classList.toggle("active", viewId === "conta"));
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
@@ -6901,6 +7147,7 @@ function applyRoleAccess() {
   const chamadosUrls = new Set(["chamados.html", "https://hub-opal-nine.vercel.app/chamados.html"]);
   const denunciaUrls = new Set(["denuncia.html", "https://hub-opal-nine.vercel.app/denuncia.html"]);
   const allowedViews = new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
+  if (isFredericoUser()) allowedViews.add("feedbacks");
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : isManagerUser()
@@ -7746,6 +7993,7 @@ async function registerHubNotificationServiceWorker() {
 }
 
 async function requestDesktopNotificationPermission({ showSuccess = true } = {}) {
+  localStorage.setItem(getNotificationPermissionDismissedKey(), "true");
   if (!isBrowserNotificationSupported()) {
     showModal("Notificações indisponíveis", "Este navegador não suporta notificações do sistema.", "error");
     currentUserSettings.desktopNotifications = false;
@@ -7817,7 +8065,7 @@ function removeDesktopNotificationPermissionPrompt() {
 function showDesktopNotificationPermissionPrompt(isBlocked = false) {
   if (!isAuthenticated() || !isBrowserNotificationSupported()) return;
   if (Notification.permission === "granted") {
-    localStorage.removeItem(getNotificationPermissionDismissedKey());
+    localStorage.setItem(getNotificationPermissionDismissedKey(), "true");
     removeDesktopNotificationPermissionPrompt();
     return;
   }
@@ -7888,7 +8136,7 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
 function armDesktopNotificationPermissionRequest() {
   if (!isAuthenticated() || !isBrowserNotificationSupported()) return;
   if (Notification.permission === "granted") {
-    localStorage.removeItem(getNotificationPermissionDismissedKey());
+    localStorage.setItem(getNotificationPermissionDismissedKey(), "true");
     removeDesktopNotificationPermissionPrompt();
     registerHubNotificationServiceWorker();
     return;
@@ -8274,6 +8522,14 @@ function getNotificationPollingKey(collection, item = {}) {
   return `${collection}|${identity}|${version}`;
 }
 
+function wasNotificationAlreadyShown(key) {
+  if (!key) return false;
+  if (shownNotificationKeys.has(key)) return true;
+  shownNotificationKeys.add(key);
+  saveShownNotificationKeys();
+  return false;
+}
+
 function getNotificationPollingCandidates() {
   const sourceData = typeof data === "object" && data ? data : {};
   const candidates = [];
@@ -8315,6 +8571,8 @@ function notifyNewItemsFromPolling() {
 }
 
 function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
+  const pollingKey = getNotificationPollingKey(collection, item);
+  if (wasNotificationAlreadyShown(pollingKey || `${collection}|${action}|${item.id || ""}`)) return;
   if (!shouldNotifyRealtimeItem(collection, item, action)) return;
   const notification = getRealtimeNotificationText(collection, item);
   if (!notification) return;
@@ -8329,7 +8587,6 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
     messageIds: collection === "comunicados" && item.id ? [item.id] : [],
   });
 
-  const pollingKey = getNotificationPollingKey(collection, item);
   if (pollingKey) hubPollingNotificationKeys.add(pollingKey);
 }
 
@@ -8801,6 +9058,35 @@ function renderDenunciasSection() {
   }
   renderCards("denuncias-lidas", lidas, (item) => cardTemplate(item, false));
 }
+
+function renderFeedbacksSection() {
+  const target = document.getElementById("feedbacks-list");
+  if (!target) return;
+
+  if (!isFredericoUser()) {
+    target.innerHTML = '<p class="empty-state">Acesso restrito.</p>';
+    return;
+  }
+
+  const items = [...(data.feedbacks || [])].sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
+  if (!items.length) {
+    target.innerHTML = '<p class="empty-state">Nenhum feedback enviado ainda.</p>';
+    return;
+  }
+
+  target.innerHTML = items.map((item) => `
+    <article class="item-card">
+      <div class="item-topline">
+        <p class="item-title">${escapeHtml(item.tipo || "Feedback")}</p>
+        <span class="tag">${escapeHtml(item.status || "Novo")}</span>
+      </div>
+      <p><strong>Identificacao:</strong> ${escapeHtml(item.autorNome || "Nao informado")}</p>
+      <p>${escapeHtml(item.mensagem || "")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")}</p>
+    </article>
+  `).join("");
+}
+
 function renderAll() {
   safeRenderSection("local-chat-state", applyLocalChatState);
   safeRenderSection("current-user", renderCurrentUser);
@@ -8810,6 +9096,7 @@ function renderAll() {
   safeRenderSection("public-vagas", renderPublicVagas);
 
   safeRenderSection("denuncias", renderDenunciasSection);
+  safeRenderSection("feedbacks", renderFeedbacksSection);
 
   safeRenderSection("chat-channels", renderChatChannels);
   safeRenderSection("chat", renderChat);
@@ -9283,12 +9570,18 @@ function renderChat(options = {}) {
 
   target.innerHTML = chatHtml;
 
-  target.scrollTop = target.scrollHeight;
+  scrollChatFeedToBottom();
   if (skipPostRender) return;
 
   hydrateChatMediaPreviews();
 
   checkAndMarkChatAsRead();
+}
+
+function scrollChatFeedToBottom() {
+  const target = document.getElementById("chat-feed");
+  if (!target) return;
+  target.scrollTop = target.scrollHeight;
 }
 
 function renderChatAttachment(attachment) {
@@ -9514,16 +9807,22 @@ function hydrateChatMediaPreviews() {
 
     const cacheKey = `${bucket}:${path}`;
     if (chatMediaSignedUrlCache.has(cacheKey)) {
+      media.addEventListener("load", scrollChatFeedToBottom, { once: true });
+      media.addEventListener("loadedmetadata", scrollChatFeedToBottom, { once: true });
       media.src = chatMediaSignedUrlCache.get(cacheKey);
       media.dataset.previewLoaded = "true";
+      requestChatFeedBottomScroll();
       return;
     }
 
     createPrivateStorageUrl(bucket, path)
       .then((signedUrl) => {
         chatMediaSignedUrlCache.set(cacheKey, signedUrl);
+        media.addEventListener("load", scrollChatFeedToBottom, { once: true });
+        media.addEventListener("loadedmetadata", scrollChatFeedToBottom, { once: true });
         media.src = signedUrl;
         media.dataset.previewLoaded = "true";
+        requestChatFeedBottomScroll();
       })
       .catch((error) => {
         console.warn("Nao foi possivel carregar previa do anexo:", error);
@@ -9533,9 +9832,18 @@ function hydrateChatMediaPreviews() {
   });
 }
 
+function requestChatFeedBottomScroll() {
+  if (typeof window.requestAnimationFrame === "function") {
+    window.requestAnimationFrame(scrollChatFeedToBottom);
+    return;
+  }
+  window.setTimeout(scrollChatFeedToBottom, 0);
+}
+
 document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
   button.addEventListener("click", () => {
     if (button.dataset.externalUrl) {
+      if (document.querySelector(".view.active")?.id === "comunicacao" && chatSelectedFiles.length) clearChatSelectedFile();
       closeMobileMenu();
       window.location.href = button.dataset.externalUrl;
       return;
@@ -9560,7 +9868,9 @@ document.getElementById("chat-channel-list")?.addEventListener("click", (event) 
   const button = event.target.closest("[data-chat-channel]");
   if (!button) return;
 
-  activeChatChannel = button.dataset.chatChannel || GENERAL_CHANNEL;
+  const nextChatChannel = button.dataset.chatChannel || GENERAL_CHANNEL;
+  if (nextChatChannel !== activeChatChannel && chatSelectedFiles.length) clearChatSelectedFile();
+  activeChatChannel = nextChatChannel;
   clearChatMessageFilter();
   renderChatChannels();
   renderChat();
@@ -9849,6 +10159,46 @@ if (chatFile) {
   });
 }
 
+const publicFeedbackForm = document.getElementById("feedbacks-form");
+if (publicFeedbackForm) {
+  publicFeedbackForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const publicFormError = validatePublicSubmissionForm(formElement);
+    if (publicFormError) {
+      showModal("Envio bloqueado", publicFormError, "error");
+      return;
+    }
+
+    const form = new FormData(formElement);
+    const nome = String(form.get("nome") || "").trim();
+    const mensagem = String(form.get("mensagem") || "").trim();
+
+    if (nome.length < 2) {
+      showModal("Identificacao obrigatoria", "Informe seu nome para enviar a mensagem.", "error");
+      return;
+    }
+    if (mensagem.length < 1 || mensagem.length > 4000) {
+      showModal("Mensagem invalida", "Descreva sua sugestao ou reclamacao com ate 4000 caracteres.", "error");
+      return;
+    }
+
+    const success = await addItem("feedbacks", {
+      tipo: "Mensagem",
+      autorNome: nome,
+      mensagem,
+      _turnstileToken: getPublicChallengeToken(formElement),
+    });
+
+    if (success) {
+      formElement.reset();
+      const feedback = document.getElementById("feedbacks-feedback");
+      if (feedback) feedback.textContent = "Mensagem enviada com sucesso. Obrigado por falar com nossa diretoria.";
+      showModal("Mensagem enviada", "Sua mensagem foi enviada para a diretoria.", "info");
+    }
+  });
+}
+
 document.getElementById("record-audio-button")?.addEventListener("click", () => {
   toggleChatAudioRecording();
 });
@@ -9906,6 +10256,7 @@ if (chatForm) {
     const messageAuthor = getCurrentUserName();
     const messageChannel = activeChatChannel;
     const pendingCreatedAt = new Date().toISOString();
+    const pendingBaseTime = Date.now();
     const clientMutationId = generateUUID();
     beginChatMutation();
 
@@ -9940,9 +10291,6 @@ if (chatForm) {
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
     pendingMessages.forEach((item) => markChatMessageAsLocalEcho(item));
     data.comunicados = mergeLocalChatMessages([...pendingMessages, ...(data.comunicados || [])], data.comunicados);
-    pendingMessages.forEach((item) => {
-      sendChatRealtimeBroadcast("chat", { action: "upsert", message: item, localEcho: true });
-    });
     renderChat({ skipPostRender: true });
     // Limpa o formulário imediatamente
     formElement.reset();
@@ -9959,7 +10307,7 @@ if (chatForm) {
     try {
       for (const file of files) {
         const attachmentType = getChatFileMimeType(file);
-        const fileUrl = await uploadChatFile(file);
+        const fileUrl = await uploadChatFile(file, messageChannel);
         uploadedFiles.push({ name: file.name, size: file.size, type: attachmentType, url: fileUrl });
       }
     } catch (error) {
@@ -10004,9 +10352,9 @@ if (chatForm) {
       if (!savedMessages[index]) sendChatRealtimeBroadcast("chat", { action: "delete", id: item.id });
     });
     const replacements = new Map(pendingMessages.map((pending, index) => [pending.id, savedMessages[index]]));
-    data.comunicados = (data.comunicados || [])
+    data.comunicados = dedupeChatMessages((data.comunicados || [])
       .map((item) => replacements.get(item.id) || item)
-      .filter((item) => item && (!item._pending || !pendingIds.has(item.id)));
+      .filter((item) => item && (!item._pending || !pendingIds.has(item.id))));
     saveLocalDataDebounced();
     renderDashboard();
     renderChatChannels();
@@ -12257,6 +12605,9 @@ document.addEventListener('click', (event) => {
       break;
     case 'preview-chat-file':
       previewChatSelectedFile(target.dataset.index);
+      break;
+    case 'toggle-chat-preview-video':
+      toggleChatAttachmentPreviewVideo();
       break;
     case 'toggle-chat-attach-menu':
       event.preventDefault();
