@@ -6624,6 +6624,8 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-file-icon {
+  display: grid;
+  place-items: center;
   width: 76px;
   height: 86px;
   margin-bottom: 18px;
@@ -6633,6 +6635,11 @@ form.panel[data-public-chamados="true"].panel {
   font-size: 24px;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-file-icon .chat-preview-chip-icon {
+  font-size: 24px;
+  letter-spacing: 0.5px;
 }
 
 .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-unavailable strong {
