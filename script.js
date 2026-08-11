@@ -4755,7 +4755,16 @@ function renderChatAttachmentPreview(files) {
     const fileIcon = `<span class="chat-preview-chip-icon" aria-hidden="true">${escapeHtml(extension.slice(0, 3))}</span>`;
     body = `
       <div class="chat-preview-unavailable chat-preview-file-only" title="${meta}" aria-label="${meta}">
-        <div class="chat-preview-file-icon" aria-hidden="true">${fileIcon}</div>
+        <div class="chat-preview-file-card">
+          <div class="chat-preview-file-icon" aria-hidden="true">${fileIcon}</div>
+          <div class="chat-preview-file-lines" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="chat-preview-file-caption">
+          <strong>${fileName}</strong>
+          <span>${meta}</span>
+        </div>
       </div>`;
     activeChip = fileIcon;
   }
