@@ -5153,7 +5153,7 @@ form.panel[data-public-chamados="true"].panel {
   .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-video-frame,
   .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-video-frame .chat-preview-video {
     width: min(100%, 420px);
-    height: clamp(220px, 42vh, 360px);
+    height: min(360px, max(220px, 42vh));
     min-height: 220px;
     max-height: none;
   }
@@ -6536,8 +6536,10 @@ form.panel[data-public-chamados="true"].panel {
   display: grid;
   place-items: center;
   position: relative;
+  align-self: center;
+  justify-self: center;
   width: min(960px, calc(100% - 32px));
-  height: clamp(320px, calc(100vh - 360px), 560px);
+  height: min(560px, max(320px, 58vh));
   min-height: 320px;
   overflow: hidden;
   background: #0f1110;
