@@ -6538,7 +6538,6 @@ form.panel[data-public-chamados="true"].panel {
   height: clamp(320px, calc(100vh - 360px), 560px);
   min-height: 320px;
   overflow: hidden;
-  aspect-ratio: 16 / 9;
   background: #0f1110;
   border: 1px solid color-mix(in srgb, var(--teal-border) 55%, transparent);
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.24);
