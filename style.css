@@ -6526,7 +6526,7 @@ form.panel[data-public-chamados="true"].panel {
   width: var(--chat-preview-frame-width, min(1120px, calc(100% - 96px)));
   margin-inline: auto;
   padding: clamp(12px, 2vh, 24px) clamp(16px, 2vw, 28px) 8px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-image-frame {
@@ -6625,14 +6625,15 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-file-only {
-  position: absolute;
-  inset: clamp(12px, 2vh, 24px) clamp(16px, 2vw, 28px) 8px;
-  display: grid;
-  place-items: center;
-  width: auto;
-  height: auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(960px, calc(100% - 32px));
+  height: min(560px, max(320px, 58vh));
   min-height: 0;
   padding: 0;
+  overflow: visible;
   border: 1px solid color-mix(in srgb, var(--teal-border) 55%, transparent);
   border-radius: 0;
   background: #0f1110;
@@ -6649,7 +6650,9 @@ form.panel[data-public-chamados="true"].panel {
   width: clamp(92px, 18vw, 220px);
   aspect-ratio: 1;
   height: auto;
+  flex: 0 0 auto;
   margin-bottom: 0;
+  overflow: visible;
   border: clamp(3px, 0.55vw, 6px) solid #22c55e;
   border-radius: 12px;
   background: var(--surface);
