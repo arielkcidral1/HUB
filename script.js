@@ -4627,6 +4627,7 @@ function renderChatAttachmentPreview(files) {
     <div class="chat-preview-body">${body}</div>
   `;
   preview.hidden = false;
+  hydrateChatAttachmentPreviewVideo(preview);
   if (composerStrip) {
     composerStrip.innerHTML = `
       ${chips}
@@ -4634,6 +4635,36 @@ function renderChatAttachmentPreview(files) {
     `;
     composerStrip.hidden = false;
   }
+}
+
+function hydrateChatAttachmentPreviewVideo(preview) {
+  const video = preview?.querySelector?.(".chat-preview-video");
+  if (!video || video.dataset.previewHydrated === "true") return;
+  video.dataset.previewHydrated = "true";
+
+  const setPosterFromFrame = () => {
+    if (!video.videoWidth || !video.videoHeight) return;
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+      video.poster = canvas.toDataURL("image/jpeg", 0.82);
+    } catch (error) {
+      console.warn("Nao foi possivel gerar poster do video:", error);
+    }
+  };
+
+  video.addEventListener("loadeddata", setPosterFromFrame, { once: true });
+  video.addEventListener("seeked", setPosterFromFrame, { once: true });
+  video.addEventListener("loadedmetadata", () => {
+    const targetTime = Math.min(0.1, Math.max(0, Number(video.duration || 0) / 2));
+    if (Number.isFinite(targetTime) && targetTime > 0) {
+      try { video.currentTime = targetTime; } catch (_) {}
+    }
+  }, { once: true });
+
+  try { video.load(); } catch (_) {}
 }
 
 function resetAudioRecordButton() {

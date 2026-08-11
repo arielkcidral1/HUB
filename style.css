@@ -6571,6 +6571,7 @@ form.panel[data-public-chamados="true"].panel {
   background: #0f1110;
   object-fit: contain;
   pointer-events: auto;
+  z-index: 1;
 }
 
 .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-unavailable {
