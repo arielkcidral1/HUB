@@ -4577,9 +4577,9 @@ function renderChatAttachmentPreview(files) {
     clearChatPreviewImageSizing(panel);
     body = `
       <div class="chat-preview-image-frame chat-preview-video-frame">
-        <video class="chat-preview-video" src="${chatAttachmentPreviewUrl}" controls preload="metadata" aria-label="Previa de ${fileName}"></video>
+        <video class="chat-preview-video" src="${chatAttachmentPreviewUrl}" controls preload="auto" playsinline aria-label="Previa de ${fileName}"></video>
       </div>`;
-    activeChip = `<video class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" muted preload="metadata" aria-hidden="true"></video>`;
+    activeChip = `<video class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" muted preload="metadata" playsinline aria-hidden="true"></video>`;
   } else if (mimeType.startsWith("audio/")) {
     clearChatPreviewImageSizing(panel);
     body = `
@@ -4608,7 +4608,7 @@ function renderChatAttachmentPreview(files) {
       const itemUrl = URL.createObjectURL(item);
       chatAttachmentPreviewUrls.push(itemUrl);
       chipContent = itemType.startsWith("video/")
-        ? `<video class="chat-preview-chip-image" src="${itemUrl}" muted preload="metadata" aria-hidden="true"></video>`
+        ? `<video class="chat-preview-chip-image" src="${itemUrl}" muted preload="metadata" playsinline aria-hidden="true"></video>`
         : `<img class="chat-preview-chip-image" src="${itemUrl}" alt="" aria-hidden="true">`;
     }
 
