@@ -3118,7 +3118,7 @@ textarea {
   bottom: calc(100% + 10px);
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(6, 34px);
+  grid-template-columns: repeat(8, 34px);
   gap: 6px;
   padding: 12px;
   width: max-content;
