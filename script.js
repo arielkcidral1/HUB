@@ -319,6 +319,7 @@ let lastRealtimeNotificationSignature = "";
 let hubPollingNotificationKeys = new Set();
 let hubPollingNotificationsReady = false;
 let shownNotificationKeys = loadShownNotificationKeys();
+let initialNotificationSnapshotReady = false;
 const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
@@ -4203,6 +4204,7 @@ async function loadFromPostgreSQL(options = {}) {
         setupAutoRefresh();
       }
       setSyncStatus("PostgreSQL EIXO online", true);
+      if (setupLive) markCurrentNotificationsAsShown();
       renderAll();
       if (setupLive) rememberCurrentNotificationKeysForPolling();
       return loaded;
@@ -4298,6 +4300,7 @@ async function loadFromPostgreSQL(options = {}) {
     }
     const hasFailures = usersLoadFailed || requests.some((result) => result.status === "rejected");
     setSyncStatus(hasFailures ? "PostgreSQL parcial" : "PostgreSQL EIXO online", !hasFailures);
+    if (setupLive) markCurrentNotificationsAsShown();
     renderAll();
     if (setupLive) rememberCurrentNotificationKeysForPolling();
     return !hasFailures;
@@ -8530,6 +8533,23 @@ function wasNotificationAlreadyShown(key) {
   return false;
 }
 
+function markCurrentNotificationsAsShown() {
+  const keys = getNotificationPollingCandidates().map((entry) => entry.key).filter(Boolean);
+  const unreadMessageKeys = getUnreadRhMessages()
+    .map((item) => item.id)
+    .filter(Boolean)
+    .map((id) => `mensagem-rh-${id}`);
+  let changed = false;
+  [...keys, ...unreadMessageKeys].forEach((key) => {
+    if (shownNotificationKeys.has(key)) return;
+    shownNotificationKeys.add(key);
+    changed = true;
+  });
+  if (changed) saveShownNotificationKeys();
+  lastUnreadNotificationCount = getUnreadRhMessages().length;
+  initialNotificationSnapshotReady = true;
+}
+
 function getNotificationPollingCandidates() {
   const sourceData = typeof data === "object" && data ? data : {};
   const candidates = [];
@@ -8599,6 +8619,12 @@ function startAuthenticatedNotificationsOnAnyPage() {
 }
 
 function notifyUnreadRhMessages(count) {
+  if (!initialNotificationSnapshotReady) {
+    markCurrentNotificationsAsShown();
+    lastUnreadNotificationCount = count;
+    return;
+  }
+
   const unreadIds = getUnreadRhMessages().map((item) => item.id).filter(Boolean).map(String);
   const newUnreadIds = unreadIds.filter((id) => !shownNotificationKeys.has(`mensagem-rh-${id}`));
   if (!newUnreadIds.length) {
