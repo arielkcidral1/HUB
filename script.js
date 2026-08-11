@@ -12,6 +12,7 @@ const TEAM_USERS_KEY = "hub-team-users";
 const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
+const SHOWN_NOTIFICATIONS_KEY = "hub-rh-shown-notification-ids";
 // IMPORTANTE: os IDs lidos não entram no cache sensível.
 // Assim, ao fechar/abrir o site ou perder a sessão, as notificações já visualizadas
 // não voltam como não lidas.
@@ -317,6 +318,7 @@ let hubNotificationServiceWorkerRegistration = null;
 let lastRealtimeNotificationSignature = "";
 let hubPollingNotificationKeys = new Set();
 let hubPollingNotificationsReady = false;
+let shownNotificationKeys = loadShownNotificationKeys();
 const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
@@ -328,6 +330,8 @@ let chatRefreshQueuedAfterMutation = false;
 const chatClientId = generateUUID();
 let realtimeBroadcastReady = false;
 const pendingChatBroadcasts = [];
+let readNotificationIds = loadReadNotificationIds();
+let readRhMessageIds = loadReadRhMessageIds();
 window.editingDocId = null;
 
 const documentLabels = {
@@ -1374,9 +1378,18 @@ function saveReadNotificationIds() {
   storageService.setLocalItem(getAccountScopedStorageKey(READ_NOTIFICATIONS_KEY), [...readNotificationIds]);
 }
 
+function loadShownNotificationKeys() {
+  return new Set(storageService.getLocalItem(getAccountScopedStorageKey(SHOWN_NOTIFICATIONS_KEY), storageService.getLocalItem(SHOWN_NOTIFICATIONS_KEY, [])).map(String));
+}
+
+function saveShownNotificationKeys() {
+  storageService.setLocalItem(getAccountScopedStorageKey(SHOWN_NOTIFICATIONS_KEY), [...shownNotificationKeys].slice(-600));
+}
+
 function reloadReadStateForCurrentUser() {
   readNotificationIds = loadReadNotificationIds();
   readRhMessageIds = loadReadRhMessageIds();
+  shownNotificationKeys = loadShownNotificationKeys();
 }
 
 function getNotificationAccountKey() {
@@ -3516,6 +3529,41 @@ function forgetLocalChatEchoMessage(id) {
   applyLocalChatState();
 }
 
+function getChatMessageDedupKey(item = {}) {
+  const attachment = item.arquivo || {};
+  const createdTime = new Date(item.sortAt || item.createdAt || 0).getTime();
+  const timeBucket = Number.isFinite(createdTime) && createdTime > 0 ? Math.floor(createdTime / 15000) : "";
+  return [
+    normalizeChatChannel(item.canal || ""),
+    normalizeLoginName(item.autor || ""),
+    String(item.mensagem || "").trim(),
+    attachment.name || "",
+    attachment.size || 0,
+    timeBucket,
+  ].join("|");
+}
+
+function dedupeChatMessages(messages = []) {
+  const byId = new Set();
+  const byLogicalKey = new Set();
+  const result = [];
+
+  (messages || [])
+    .filter(Boolean)
+    .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a))
+    .forEach((item) => {
+      const id = String(item.id || "");
+      if (id && byId.has(id)) return;
+      const logicalKey = getChatMessageDedupKey(item);
+      if (logicalKey && byLogicalKey.has(logicalKey)) return;
+      if (id) byId.add(id);
+      if (logicalKey) byLogicalKey.add(logicalKey);
+      result.push(item);
+    });
+
+  return result;
+}
+
 function mergeLocalChatMessages(freshMessages = [], currentMessages = data.comunicados || []) {
   const visibleFreshMessages = (freshMessages || []).filter((item) => !locallyDeletedChatMessageIds.has(String(item.id)));
   const freshIds = new Set(visibleFreshMessages.map((item) => String(item.id)));
@@ -3534,7 +3582,7 @@ function mergeLocalChatMessages(freshMessages = [], currentMessages = data.comun
   });
   const localById = new Map([...currentLocalMessages, ...registeredLocalMessages].map((item) => [String(item.id), item]));
 
-  return [...localById.values(), ...visibleFreshMessages];
+  return dedupeChatMessages([...localById.values(), ...visibleFreshMessages]);
 }
 
 function beginChatMutation() {
@@ -7945,6 +7993,7 @@ async function registerHubNotificationServiceWorker() {
 }
 
 async function requestDesktopNotificationPermission({ showSuccess = true } = {}) {
+  localStorage.setItem(getNotificationPermissionDismissedKey(), "true");
   if (!isBrowserNotificationSupported()) {
     showModal("Notificações indisponíveis", "Este navegador não suporta notificações do sistema.", "error");
     currentUserSettings.desktopNotifications = false;
@@ -8016,7 +8065,7 @@ function removeDesktopNotificationPermissionPrompt() {
 function showDesktopNotificationPermissionPrompt(isBlocked = false) {
   if (!isAuthenticated() || !isBrowserNotificationSupported()) return;
   if (Notification.permission === "granted") {
-    localStorage.removeItem(getNotificationPermissionDismissedKey());
+    localStorage.setItem(getNotificationPermissionDismissedKey(), "true");
     removeDesktopNotificationPermissionPrompt();
     return;
   }
@@ -8087,7 +8136,7 @@ function showDesktopNotificationPermissionPrompt(isBlocked = false) {
 function armDesktopNotificationPermissionRequest() {
   if (!isAuthenticated() || !isBrowserNotificationSupported()) return;
   if (Notification.permission === "granted") {
-    localStorage.removeItem(getNotificationPermissionDismissedKey());
+    localStorage.setItem(getNotificationPermissionDismissedKey(), "true");
     removeDesktopNotificationPermissionPrompt();
     registerHubNotificationServiceWorker();
     return;
@@ -8473,6 +8522,14 @@ function getNotificationPollingKey(collection, item = {}) {
   return `${collection}|${identity}|${version}`;
 }
 
+function wasNotificationAlreadyShown(key) {
+  if (!key) return false;
+  if (shownNotificationKeys.has(key)) return true;
+  shownNotificationKeys.add(key);
+  saveShownNotificationKeys();
+  return false;
+}
+
 function getNotificationPollingCandidates() {
   const sourceData = typeof data === "object" && data ? data : {};
   const candidates = [];
@@ -8514,6 +8571,8 @@ function notifyNewItemsFromPolling() {
 }
 
 function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
+  const pollingKey = getNotificationPollingKey(collection, item);
+  if (wasNotificationAlreadyShown(pollingKey || `${collection}|${action}|${item.id || ""}`)) return;
   if (!shouldNotifyRealtimeItem(collection, item, action)) return;
   const notification = getRealtimeNotificationText(collection, item);
   if (!notification) return;
@@ -8528,7 +8587,6 @@ function notifyRealtimeItem(collection, item = {}, action = "INSERT") {
     messageIds: collection === "comunicados" && item.id ? [item.id] : [],
   });
 
-  const pollingKey = getNotificationPollingKey(collection, item);
   if (pollingKey) hubPollingNotificationKeys.add(pollingKey);
 }
 
@@ -10233,9 +10291,6 @@ if (chatForm) {
     const pendingIds = new Set(pendingMessages.map((item) => item.id));
     pendingMessages.forEach((item) => markChatMessageAsLocalEcho(item));
     data.comunicados = mergeLocalChatMessages([...pendingMessages, ...(data.comunicados || [])], data.comunicados);
-    pendingMessages.forEach((item) => {
-      sendChatRealtimeBroadcast("chat", { action: "upsert", message: item, localEcho: true });
-    });
     renderChat({ skipPostRender: true });
     // Limpa o formulário imediatamente
     formElement.reset();
@@ -10297,9 +10352,9 @@ if (chatForm) {
       if (!savedMessages[index]) sendChatRealtimeBroadcast("chat", { action: "delete", id: item.id });
     });
     const replacements = new Map(pendingMessages.map((pending, index) => [pending.id, savedMessages[index]]));
-    data.comunicados = (data.comunicados || [])
+    data.comunicados = dedupeChatMessages((data.comunicados || [])
       .map((item) => replacements.get(item.id) || item)
-      .filter((item) => item && (!item._pending || !pendingIds.has(item.id)));
+      .filter((item) => item && (!item._pending || !pendingIds.has(item.id))));
     saveLocalDataDebounced();
     renderDashboard();
     renderChatChannels();
