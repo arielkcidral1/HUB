@@ -26,6 +26,7 @@
         <nav class="nav-list">
           <button class="nav-item active" data-view="dashboard" type="button">Painel</button>
           <button class="nav-item" data-view="denuncias" type="button">Denuncias recebidas</button>
+          <button class="nav-item" data-view="feedbacks" type="button">Feedbacks</button>
           <button class="nav-item" data-view="comunicacao" type="button">Comunicacao RH</button>
           <button class="nav-item" data-view="malotes" type="button">Malotes de EPI</button>
           <button class="nav-item" data-view="chamados" type="button">Chamados</button>
@@ -273,6 +274,29 @@
                 <h2>Lidas</h2>
               </div>
               <div class="card-list denuncia-list" id="denuncias-lidas"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="feedbacks">
+          <div class="panel panel-spaced">
+            <div class="panel-header split-header flush-bottom">
+              <div>
+                <h2>Fale com nossa diretoria</h2>
+                <p class="item-meta">Sugestões e reclamações identificadas enviadas pela equipe.</p>
+              </div>
+              <div class="job-actions flush-top">
+                <a class="secondary-link" href="feedbacks.html" target="_blank" rel="noreferrer">Abrir formulário público</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="workspace">
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Novos feedbacks</h2>
+              </div>
+              <div class="card-list denuncia-list" id="feedbacks-list"></div>
             </div>
           </div>
         </section>

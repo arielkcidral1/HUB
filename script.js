@@ -187,6 +187,7 @@ const DEFAULT_HUB_POSTGRES = {
 };
 const TABLES = {
   denuncias: "hub_denuncias",
+  feedbacks: "hub_feedbacks",
   comunicados: "hub_chat_messages",
   malotes: "hub_malotes",
   chamados: "hub_chamados",
@@ -262,6 +263,7 @@ function generateUUID() {
 
 const defaultData = {
   denuncias: [],
+  feedbacks: [],
   comunicados: [],
   malotes: [],
   chamados: [],
@@ -481,6 +483,24 @@ function normalizeLoginName(value) {
 function getLoginDisplayName(value) {
   const normalized = normalizeLoginName(value);
   return findLocalTeamUser(value)?.nome || String(value || "").trim();
+}
+
+function isFredericoUser() {
+  const user = getCurrentUserRecord?.() || {};
+  const candidates = [
+    getCurrentUserName?.(),
+    user.nome,
+    user.email,
+    user.email ? String(user.email).split("@")[0] : "",
+    currentAuthUser?.email,
+    currentAuthUser?.email ? String(currentAuthUser.email).split("@")[0] : "",
+    currentAuthUser?.user_metadata?.nome,
+    currentAuthUser?.user_metadata?.name,
+  ];
+  return candidates.some((candidate) => {
+    const normalized = normalizeLoginName(candidate).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return normalized === "frederico" || normalized.startsWith("frederico");
+  });
 }
 
 function loadTeamUsersStore() {
@@ -1137,6 +1157,7 @@ async function verifyCurrentPassword(password) {
 function isPublicPage() {
   return Boolean(
     document.querySelector("[data-public-denuncia]") ||
+    document.querySelector("[data-public-feedbacks]") ||
     document.querySelector("[data-public-vagas]") ||
     document.querySelector("[data-public-contratados]") ||
     document.querySelector("[data-public-atestados]")
@@ -1146,6 +1167,7 @@ function isPublicPage() {
 function isPublicSubmissionFormPage() {
   return Boolean(
     document.querySelector("[data-public-denuncia]") ||
+    document.querySelector("[data-public-feedbacks]") ||
     document.querySelector("[data-public-vagas]") ||
     document.querySelector("[data-public-chamados]") ||
     document.querySelector("[data-public-contratados]") ||
@@ -1253,6 +1275,7 @@ function loadLocalData() {
   }));
   return {
     denuncias: parsed.denuncias || [],
+    feedbacks: parsed.feedbacks || [],
     comunicados: parsed.comunicados || [],
     malotes: parsed.malotes || [],
     chamados: parsed.chamados || [],
@@ -3182,6 +3205,20 @@ function mapRows(collection, rows) {
     }));
   }
 
+  if (collection === "feedbacks") {
+    return rows.map((row) => ({
+      id: row.id || generateUUID(),
+      tipo: row.tipo || "Feedback",
+      mensagem: row.mensagem || "",
+      autorNome: row.autor_nome || row.autorNome || row.created_by || "Nao informado",
+      autorEmail: row.autor_email || row.autorEmail || "",
+      status: row.status || "Novo",
+      createdBy: row.created_by || row.autor_nome || "Sistema",
+      createdAt: row.created_at ? formatDateTime(row.created_at) : row.createdAt || todayLabel(),
+      sortAt: row.created_at || row.sortAt || "",
+    }));
+  }
+
   if (collection === "comunicados") {
     return rows.map((row) => {
       const parsed = parseChatMessage(row);
@@ -3698,6 +3735,11 @@ function renderRealtimeUpdate(collection) {
     return;
   }
 
+  if (collection === "feedbacks") {
+    renderFeedbacksSection();
+    return;
+  }
+
   renderAll();
 }
 
@@ -3960,6 +4002,7 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
   const forceCollections = new Set(forceCore
     ? [
       "denuncias",
+      "feedbacks",
       "comunicados",
       "malotes",
       "chamados",
@@ -5119,7 +5162,7 @@ async function submitPublicContractorDocuments({ empresa, origemHtml, nome, tele
 }
 
 function isPublicInsertOnlyCollection(collection) {
-  return isPublicSubmissionFormPage() && ["denuncias", "chamados", "candidaturas", "documentosContratados"].includes(collection);
+  return isPublicSubmissionFormPage() && ["denuncias", "feedbacks", "chamados", "candidaturas", "documentosContratados"].includes(collection);
 }
 
 function toPublicSubmissionPayload(collection, values) {
@@ -5129,6 +5172,17 @@ function toPublicSubmissionPayload(collection, values) {
       categoria: "Denuncia anonima",
       descricao: String(values.descricao || "").trim(),
       status: "Aberta",
+    };
+  }
+
+  if (collection === "feedbacks") {
+    return {
+      tipo: String(values.tipo || "Sugestao").trim(),
+      mensagem: String(values.mensagem || "").trim(),
+      autor_nome: String(values.autorNome || values.nome || "").trim(),
+      autor_email: String(values.autorEmail || values.email || "").trim() || null,
+      status: "Novo",
+      created_by: String(values.autorNome || values.nome || "Formulario publico").trim(),
     };
   }
 
@@ -7045,6 +7099,7 @@ function applyRoleAccess() {
   const chamadosUrls = new Set(["chamados.html", "https://hub-opal-nine.vercel.app/chamados.html"]);
   const denunciaUrls = new Set(["denuncia.html", "https://hub-opal-nine.vercel.app/denuncia.html"]);
   const allowedViews = new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
+  if (isFredericoUser()) allowedViews.add("feedbacks");
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : isManagerUser()
@@ -8945,6 +9000,36 @@ function renderDenunciasSection() {
   }
   renderCards("denuncias-lidas", lidas, (item) => cardTemplate(item, false));
 }
+
+function renderFeedbacksSection() {
+  const target = document.getElementById("feedbacks-list");
+  if (!target) return;
+
+  if (!isFredericoUser()) {
+    target.innerHTML = '<p class="empty-state">Acesso restrito.</p>';
+    return;
+  }
+
+  const items = [...(data.feedbacks || [])].sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
+  if (!items.length) {
+    target.innerHTML = '<p class="empty-state">Nenhum feedback enviado ainda.</p>';
+    return;
+  }
+
+  target.innerHTML = items.map((item) => `
+    <article class="item-card">
+      <div class="item-topline">
+        <p class="item-title">${escapeHtml(item.tipo || "Feedback")}</p>
+        <span class="tag">${escapeHtml(item.status || "Novo")}</span>
+      </div>
+      <p><strong>Identificacao:</strong> ${escapeHtml(item.autorNome || "Nao informado")}</p>
+      ${item.autorEmail ? `<p><strong>Contato:</strong> ${escapeHtml(item.autorEmail)}</p>` : ""}
+      <p>${escapeHtml(item.mensagem || "")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")}</p>
+    </article>
+  `).join("");
+}
+
 function renderAll() {
   safeRenderSection("local-chat-state", applyLocalChatState);
   safeRenderSection("current-user", renderCurrentUser);
@@ -8954,6 +9039,7 @@ function renderAll() {
   safeRenderSection("public-vagas", renderPublicVagas);
 
   safeRenderSection("denuncias", renderDenunciasSection);
+  safeRenderSection("feedbacks", renderFeedbacksSection);
 
   safeRenderSection("chat-channels", renderChatChannels);
   safeRenderSection("chat", renderChat);
@@ -10012,6 +10098,49 @@ if (chatFile) {
       addChatSelectedFiles(files);
     } else {
       clearChatSelectedFile();
+    }
+  });
+}
+
+const publicFeedbackForm = document.getElementById("feedbacks-form");
+if (publicFeedbackForm) {
+  publicFeedbackForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const publicFormError = validatePublicSubmissionForm(formElement);
+    if (publicFormError) {
+      showModal("Envio bloqueado", publicFormError, "error");
+      return;
+    }
+
+    const form = new FormData(formElement);
+    const nome = String(form.get("nome") || "").trim();
+    const email = String(form.get("email") || "").trim();
+    const tipo = String(form.get("tipo") || "Sugestao").trim();
+    const mensagem = String(form.get("mensagem") || "").trim();
+
+    if (nome.length < 2) {
+      showModal("Identificacao obrigatoria", "Informe seu nome para enviar a mensagem.", "error");
+      return;
+    }
+    if (mensagem.length < 1 || mensagem.length > 4000) {
+      showModal("Mensagem invalida", "Descreva sua sugestao ou reclamacao com ate 4000 caracteres.", "error");
+      return;
+    }
+
+    const success = await addItem("feedbacks", {
+      tipo,
+      autorNome: nome,
+      autorEmail: email,
+      mensagem,
+      _turnstileToken: getPublicChallengeToken(formElement),
+    });
+
+    if (success) {
+      formElement.reset();
+      const feedback = document.getElementById("feedbacks-feedback");
+      if (feedback) feedback.textContent = "Mensagem enviada com sucesso. Obrigado por falar com nossa diretoria.";
+      showModal("Mensagem enviada", "Sua mensagem foi enviada para a diretoria.", "info");
     }
   });
 }
