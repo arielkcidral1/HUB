@@ -4305,8 +4305,8 @@ async function uploadChatFile(file, channelId = activeChatChannel) {
   if (!file || !file.name) return null;
 
   const bucket = getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files";
-  const safeName = file.name.replace(/[^a-z0-9_.-]/gi, "-");
-  const channel = normalizeChatChannel(channelId || GENERAL_CHANNEL);
+  const safeName = safePublicFileName(file.name || "arquivo");
+  const channel = safePublicFileName(normalizeChatChannel(channelId || GENERAL_CHANNEL)).replace(/\./g, "-") || GENERAL_CHANNEL;
   const path = `chat/${channel}/${Date.now()}-${generateUUID()}-${safeName}`;
 
   if (postgresClient?.storage?.from) {
