@@ -6177,6 +6177,10 @@ function renderCards(targetId, items, template) {
 }
 
 function activateView(viewId) {
+  const previousViewId = document.querySelector(".view.active")?.id || "";
+  if (previousViewId === "comunicacao" && viewId !== "comunicacao" && chatSelectedFiles.length) {
+    clearChatSelectedFile();
+  }
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
   document.querySelectorAll(".user-chip").forEach((chip) => chip.classList.toggle("active", viewId === "conta"));
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
@@ -9576,6 +9580,7 @@ function hydrateChatMediaPreviews() {
 document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
   button.addEventListener("click", () => {
     if (button.dataset.externalUrl) {
+      if (document.querySelector(".view.active")?.id === "comunicacao" && chatSelectedFiles.length) clearChatSelectedFile();
       closeMobileMenu();
       window.location.href = button.dataset.externalUrl;
       return;
@@ -9600,7 +9605,9 @@ document.getElementById("chat-channel-list")?.addEventListener("click", (event) 
   const button = event.target.closest("[data-chat-channel]");
   if (!button) return;
 
-  activeChatChannel = button.dataset.chatChannel || GENERAL_CHANNEL;
+  const nextChatChannel = button.dataset.chatChannel || GENERAL_CHANNEL;
+  if (nextChatChannel !== activeChatChannel && chatSelectedFiles.length) clearChatSelectedFile();
+  activeChatChannel = nextChatChannel;
   clearChatMessageFilter();
   renderChatChannels();
   renderChat();
