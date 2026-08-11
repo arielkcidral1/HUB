@@ -4301,12 +4301,12 @@ function setupRealtime() {
   });
 }
 
-async function uploadChatFile(file) {
+async function uploadChatFile(file, channelId = activeChatChannel) {
   if (!file || !file.name) return null;
 
   const bucket = getHubPostgreSQLConfig().chatFilesBucket || "hub-chat-files";
   const safeName = file.name.replace(/[^a-z0-9_.-]/gi, "-");
-  const channel = normalizeChatChannel(activeChatChannel || GENERAL_CHANNEL);
+  const channel = normalizeChatChannel(channelId || GENERAL_CHANNEL);
   const path = `chat/${channel}/${Date.now()}-${generateUUID()}-${safeName}`;
 
   if (postgresClient?.storage?.from) {
@@ -9953,6 +9953,7 @@ if (chatForm) {
     const messageAuthor = getCurrentUserName();
     const messageChannel = activeChatChannel;
     const pendingCreatedAt = new Date().toISOString();
+    const pendingBaseTime = Date.now();
     const clientMutationId = generateUUID();
     beginChatMutation();
 
@@ -10006,7 +10007,7 @@ if (chatForm) {
     try {
       for (const file of files) {
         const attachmentType = getChatFileMimeType(file);
-        const fileUrl = await uploadChatFile(file);
+        const fileUrl = await uploadChatFile(file, messageChannel);
         uploadedFiles.push({ name: file.name, size: file.size, type: attachmentType, url: fileUrl });
       }
     } catch (error) {
