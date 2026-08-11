@@ -4754,10 +4754,8 @@ function renderChatAttachmentPreview(files) {
     clearChatPreviewImageSizing(panel);
     const fileIcon = `<span class="chat-preview-chip-icon" aria-hidden="true">${escapeHtml(extension.slice(0, 3))}</span>`;
     body = `
-      <div class="chat-preview-unavailable">
+      <div class="chat-preview-unavailable chat-preview-file-only" title="${meta}" aria-label="${meta}">
         <div class="chat-preview-file-icon" aria-hidden="true">${fileIcon}</div>
-        <strong>Prévia indisponível</strong>
-        <span>${meta}</span>
       </div>`;
     activeChip = fileIcon;
   }

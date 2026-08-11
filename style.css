@@ -6623,15 +6623,26 @@ form.panel[data-public-chamados="true"].panel {
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.24);
 }
 
+.chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-file-only {
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-file-icon {
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 86px;
-  margin-bottom: 18px;
-  border: 1px solid var(--line);
+  width: 48px;
+  height: 48px;
+  margin-bottom: 0;
+  border: 2px solid #22c55e;
+  border-radius: 6px;
   background: var(--surface);
-  color: var(--teal);
+  color: #f8fafc;
   font-size: 24px;
   font-weight: 800;
   text-transform: uppercase;
