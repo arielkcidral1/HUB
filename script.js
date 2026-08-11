@@ -760,6 +760,9 @@ const AuthHelper = {
   isManager() {
     return normalizeLoginName(this.getRole()) === "gerente";
   },
+  isRh() {
+    return normalizeLoginName(this.getRole()) === "rh";
+  },
   isCashier() {
     const role = normalizeLoginName(this.getRole()).replace(/\s+/g, "");
     return role === "caixa/crediarista" || role === "caixa/credista";
@@ -774,12 +777,21 @@ function getCurrentUserRole() {
   return AuthHelper.getRole();
 }
 
+function getCurrentUserNormalizedRole() {
+  const user = getCurrentUserRecord?.() || {};
+  return normalizeLoginName(AuthHelper.getRole() || user.cargo || currentUserProfile?.cargo || "");
+}
+
 /**
  * Controle de UI baseado no usuario autenticado carregado do PostgreSQL.
  * A verificacao de permissao real continua sendo feita no backend por RLS.
  */
 function isManagerUser() {
-  return AuthHelper.isManager();
+  return getCurrentUserNormalizedRole() === "gerente";
+}
+
+function isRhUser() {
+  return getCurrentUserNormalizedRole() === "rh";
 }
 
 /**
@@ -7341,7 +7353,9 @@ function renderDashboard() {
     document.getElementById("metric-eventos").textContent = upcomingEvents.length;
   }
   if (document.getElementById("metric-documentos")) {
-    document.getElementById("metric-documentos").textContent = documentRecords.filter((item) => !isArchivedRecord(item)).length;
+    document.getElementById("metric-documentos").textContent = documentRecords
+      .filter((item) => canCurrentUserAccessDocumentRecord(item) && !isArchivedRecord(item))
+      .length;
   }
 
   // Mensagens do RH aparecem como um único bloco no acompanhamento.
@@ -9509,9 +9523,33 @@ function getDocumentRecordCpf(item = {}) {
   return String(item.formData?.cpf || "").replace(/\D/g, "");
 }
 
+function getCurrentDocumentAccessNames() {
+  const user = getCurrentUserRecord?.() || {};
+  return [
+    getCurrentUserName?.(),
+    currentUserProfile?.nome,
+    currentAuthUser?.user_metadata?.nome,
+    currentAuthUser?.user_metadata?.name,
+    currentAuthUser?.email,
+    user.nome,
+    user.email,
+  ]
+    .map((value) => normalizeLoginName(value))
+    .filter(Boolean);
+}
+
+function canCurrentUserAccessDocumentRecord(item = {}) {
+  if (isRhUser()) return true;
+  if (!isManagerUser()) return true;
+  const author = normalizeLoginName(item.createdBy || item.ownerName || item.autor || "");
+  return Boolean(author && getCurrentDocumentAccessNames().includes(author));
+}
+
 function filterDocumentRecords(items = []) {
   const filters = getDocumentFilterValues();
   return items.filter((item) => {
+    if (!canCurrentUserAccessDocumentRecord(item)) return false;
+
     if (filters.nome) {
       const collaboratorName = String(item.formData?.colaborador || item.summary || "").toLowerCase();
       if (!collaboratorName.includes(filters.nome)) return false;
@@ -9557,6 +9595,12 @@ function renderDocumentRecords() {
       </article>
     `)
     .join("");
+}
+
+function getAccessibleDocumentRecord(id) {
+  const doc = documentRecords.find((item) => String(item.id) === String(id));
+  if (!doc || !canCurrentUserAccessDocumentRecord(doc)) return null;
+  return doc;
 }
 
 function renderChat(options = {}) {
@@ -12007,8 +12051,11 @@ function openEventContextMenu(event, id) {
 }
 
 function editarDocumento(id) {
-  const doc = documentRecords.find(d => d.id === id);
-  if (!doc) return;
+  const doc = getAccessibleDocumentRecord(id);
+  if (!doc) {
+    showModal("Acesso restrito", "Voce so pode acessar documentos gerados pelo seu usuario.", "error");
+    return;
+  }
 
   window.editingDocId = id;
 
@@ -12037,8 +12084,11 @@ function editarDocumento(id) {
 };
 
 function excluirDocumento(id) {
-  const doc = documentRecords.find(d => d.id === id);
-  if (!doc) return;
+  const doc = getAccessibleDocumentRecord(id);
+  if (!doc) {
+    showModal("Acesso restrito", "Voce so pode excluir documentos gerados pelo seu usuario.", "error");
+    return;
+  }
   showPasswordActionModal({
     title: "Excluir registro",
     text: `Confirme a senha de autorizacao para excluir o registro "${documentLabels[doc.type] || doc.type}" de ${doc.summary || "colaborador nao informado"}.`,
@@ -12659,8 +12709,11 @@ function downloadStyledRhDocument(doc, title) {
 }
 
 function baixarDocumentoRH(id) {
-  const doc = documentRecords.find((item) => String(item.id) === String(id));
-  if (!doc) return;
+  const doc = getAccessibleDocumentRecord(id);
+  if (!doc) {
+    showModal("Acesso restrito", "Voce so pode gerar documentos criados pelo seu usuario.", "error");
+    return;
+  }
   const title = documentLabels[doc.type] || doc.type;
   downloadStyledRhDocument(doc, title);
 };
