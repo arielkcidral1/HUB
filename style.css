@@ -2128,18 +2128,22 @@ textarea {
 }
 
 .chat-panel.has-attachment-preview {
+  --chat-preview-side-gap: clamp(28px, 6vw, 96px);
+  --chat-preview-top-gap: clamp(18px, 3vh, 36px);
+  --chat-preview-composer-space: 178px;
+  --chat-preview-strip-space: 74px;
   align-content: stretch;
-  height: min(86vh, 860px);
+  height: min(88vh, 900px);
   min-height: 660px;
 }
 
 .chat-panel.has-attachment-preview::before {
   content: "";
   position: absolute;
-  top: 28px;
-  bottom: 170px;
+  top: var(--chat-preview-top-gap);
+  bottom: var(--chat-preview-composer-space);
   left: 50%;
-  width: min(calc(100% - 96px), 1080px);
+  width: min(calc(100% - (var(--chat-preview-side-gap) * 2)), 1120px);
   transform: translateX(-50%);
   z-index: 60;
   background-color: #0f1110;
@@ -2624,7 +2628,7 @@ textarea {
   right: 0;
   bottom: 0;
   z-index: 1;
-  height: 170px;
+  height: var(--chat-preview-composer-space, 178px);
   background: #0f1110;
   border-top: 1px solid #232625;
 }
@@ -2710,7 +2714,7 @@ textarea {
 .chat-composer.has-attachment-preview textarea[name="mensagem"] {
   position: absolute;
   left: 50%;
-  bottom: 58px;
+  bottom: 64px;
   transform: translateX(-50%);
   z-index: 2;
   width: min(760px, calc(100% - 210px));
@@ -2726,7 +2730,7 @@ textarea {
 .chat-composer.has-attachment-preview .chat-emoji-menu-wrap {
   position: absolute;
   left: calc(50% + min(380px, (100% - 210px) / 2) - 50px);
-  bottom: 63px;
+  bottom: 69px;
   z-index: 3;
   margin-right: 0;
 }
@@ -2773,7 +2777,7 @@ textarea {
 .chat-composer.has-attachment-preview .send-button {
   position: absolute;
   right: 28px;
-  bottom: 50px;
+  bottom: 56px;
   z-index: 2;
   width: 64px;
   min-width: 64px;
@@ -4993,20 +4997,27 @@ form.panel[data-public-chamados="true"].panel {
     padding: 0;
   }
 
+  .chat-panel.has-attachment-preview {
+    --chat-preview-side-gap: 14px;
+    --chat-preview-top-gap: 18px;
+    --chat-preview-composer-space: 152px;
+    --chat-preview-strip-space: 66px;
+  }
+
   .chat-composer.has-attachment-preview::after {
-    height: 146px;
+    height: var(--chat-preview-composer-space, 152px);
   }
 
   .chat-panel.has-attachment-preview::before {
-    top: 18px;
-    bottom: 146px;
+    top: var(--chat-preview-top-gap, 18px);
+    bottom: var(--chat-preview-composer-space, 152px);
     left: 50%;
-    width: calc(100% - 28px);
+    width: calc(100% - (var(--chat-preview-side-gap, 14px) * 2));
     transform: translateX(-50%);
   }
 
   .chat-panel.has-attachment-preview > .chat-attachment-preview:not([hidden]) {
-    inset: 0 0 146px;
+    inset: 0 0 var(--chat-preview-composer-space, 152px);
   }
 
   .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-title {
@@ -5021,8 +5032,8 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-body {
     top: 50px;
-    bottom: 78px;
-    width: calc(100% - 28px);
+    bottom: var(--chat-preview-strip-space, 66px);
+    width: calc(100% - (var(--chat-preview-side-gap, 14px) * 2));
     padding: 12px 0;
   }
 
@@ -5032,11 +5043,12 @@ form.panel[data-public-chamados="true"].panel {
   }
 
   .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-strip {
-    height: 56px;
+    bottom: 4px;
+    height: 60px;
   }
 
   .chat-composer.has-attachment-preview .chat-attachment-preview {
-    inset: 0 0 146px;
+    inset: 0 0 var(--chat-preview-composer-space, 152px);
     max-height: none;
   }
 
@@ -5060,7 +5072,7 @@ form.panel[data-public-chamados="true"].panel {
   .chat-composer.has-attachment-preview textarea[name="mensagem"] {
     left: 14px;
     right: 90px;
-    bottom: 44px;
+    bottom: 46px;
     transform: none;
     width: auto;
     min-height: 50px;
@@ -5069,7 +5081,7 @@ form.panel[data-public-chamados="true"].panel {
   .chat-composer.has-attachment-preview .chat-emoji-menu-wrap {
     left: auto;
     right: 100px;
-    bottom: 49px;
+    bottom: 51px;
     margin-right: 0;
   }
 
@@ -5080,7 +5092,7 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-composer.has-attachment-preview .send-button {
     right: 14px;
-    bottom: 38px;
+    bottom: 40px;
     width: 58px;
     min-width: 58px;
     height: 58px;
@@ -6429,7 +6441,7 @@ form.panel[data-public-chamados="true"].panel {
 
 .chat-panel.has-attachment-preview > .chat-attachment-preview:not([hidden]) {
   position: absolute;
-  inset: 0 0 170px;
+  inset: 0 0 var(--chat-preview-composer-space, 178px);
   z-index: 61;
   display: block;
   visibility: visible;
@@ -6466,12 +6478,12 @@ form.panel[data-public-chamados="true"].panel {
   top: 56px;
   left: 0;
   right: 0;
-  bottom: 88px;
+  bottom: var(--chat-preview-strip-space, 74px);
   display: grid;
   place-items: center;
-  width: min(calc(100% - 96px), 1080px);
+  width: min(calc(100% - (var(--chat-preview-side-gap, 48px) * 2)), 1120px);
   margin-inline: auto;
-  padding: 18px 24px 12px;
+  padding: clamp(12px, 2vh, 24px) clamp(16px, 2vw, 28px) 8px;
   overflow: hidden;
 }
 
@@ -6493,9 +6505,9 @@ form.panel[data-public-chamados="true"].panel {
 .chat-panel.has-attachment-preview > .chat-attachment-preview .chat-preview-strip {
   position: absolute;
   left: 50%;
-  bottom: 12px;
+  bottom: 6px;
   transform: translateX(-50%);
-  height: 58px;
+  height: 64px;
   max-width: min(520px, 100%);
   border: 0;
   background: transparent;
