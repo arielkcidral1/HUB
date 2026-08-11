@@ -2129,7 +2129,7 @@ textarea {
 
 .chat-panel.has-attachment-preview {
   --chat-preview-side-gap: clamp(28px, 6vw, 96px);
-  --chat-preview-top-gap: clamp(18px, 3vh, 36px);
+  --chat-preview-top-gap: clamp(44px, 7vh, 80px);
   --chat-preview-composer-space: 178px;
   --chat-preview-strip-space: 74px;
   --chat-preview-frame-width: min(1120px, calc(100% - (var(--chat-preview-side-gap) * 2)));
@@ -2715,7 +2715,7 @@ textarea {
 .chat-composer.has-attachment-preview textarea[name="mensagem"] {
   position: absolute;
   left: 50%;
-  bottom: 64px;
+  bottom: 46px;
   transform: translateX(-50%);
   z-index: 2;
   width: min(760px, calc(100% - 210px));
@@ -2731,7 +2731,7 @@ textarea {
 .chat-composer.has-attachment-preview .chat-emoji-menu-wrap {
   position: absolute;
   left: calc(50% + min(380px, (100% - 210px) / 2) - 50px);
-  bottom: 69px;
+  bottom: 51px;
   z-index: 3;
   margin-right: 0;
 }
@@ -2778,7 +2778,7 @@ textarea {
 .chat-composer.has-attachment-preview .send-button {
   position: absolute;
   right: 28px;
-  bottom: 56px;
+  bottom: 38px;
   z-index: 2;
   width: 64px;
   min-width: 64px;
@@ -5000,7 +5000,7 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-panel.has-attachment-preview {
     --chat-preview-side-gap: 14px;
-    --chat-preview-top-gap: 18px;
+    --chat-preview-top-gap: 34px;
     --chat-preview-composer-space: 152px;
     --chat-preview-strip-space: 66px;
     --chat-preview-frame-width: calc(100% - (var(--chat-preview-side-gap) * 2));
@@ -5074,7 +5074,7 @@ form.panel[data-public-chamados="true"].panel {
   .chat-composer.has-attachment-preview textarea[name="mensagem"] {
     left: 14px;
     right: 90px;
-    bottom: 46px;
+    bottom: 32px;
     transform: none;
     width: auto;
     min-height: 50px;
@@ -5083,7 +5083,7 @@ form.panel[data-public-chamados="true"].panel {
   .chat-composer.has-attachment-preview .chat-emoji-menu-wrap {
     left: auto;
     right: 100px;
-    bottom: 51px;
+    bottom: 37px;
     margin-right: 0;
   }
 
@@ -5094,7 +5094,7 @@ form.panel[data-public-chamados="true"].panel {
 
   .chat-composer.has-attachment-preview .send-button {
     right: 14px;
-    bottom: 40px;
+    bottom: 26px;
     width: 58px;
     min-width: 58px;
     height: 58px;
