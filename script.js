@@ -4576,7 +4576,7 @@ function renderChatAttachmentPreview(files) {
   } else if (mimeType.startsWith("video/")) {
     clearChatPreviewImageSizing(panel);
     body = `
-      <div class="chat-preview-image-frame">
+      <div class="chat-preview-image-frame chat-preview-video-frame">
         <video class="chat-preview-video" src="${chatAttachmentPreviewUrl}" controls preload="metadata" aria-label="Previa de ${fileName}"></video>
       </div>`;
     activeChip = `<video class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" muted preload="metadata" aria-hidden="true"></video>`;
