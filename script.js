@@ -4578,7 +4578,8 @@ function renderChatAttachmentPreview(files) {
     body = `
       <div class="chat-preview-image-frame chat-preview-video-frame">
         <canvas class="chat-preview-video-canvas" aria-hidden="true"></canvas>
-        <video class="chat-preview-video" src="${chatAttachmentPreviewUrl}" controls preload="auto" playsinline aria-label="Previa de ${fileName}" style="display:block;width:100%;height:100%;min-height:320px;max-width:none;max-height:none;object-fit:contain;background:transparent;"></video>
+        <video class="chat-preview-video" src="${chatAttachmentPreviewUrl}" preload="auto" playsinline aria-label="Previa de ${fileName}"></video>
+        <button type="button" class="chat-preview-video-toggle" data-action="toggle-chat-preview-video" aria-label="Reproduzir video">▶</button>
       </div>`;
     activeChip = `<video class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" muted preload="metadata" playsinline aria-hidden="true"></video>`;
   } else if (mimeType.startsWith("audio/")) {
@@ -4641,6 +4642,7 @@ function renderChatAttachmentPreview(files) {
 function hydrateChatAttachmentPreviewVideo(preview) {
   const video = preview?.querySelector?.(".chat-preview-video");
   const canvas = preview?.querySelector?.(".chat-preview-video-canvas");
+  const toggle = preview?.querySelector?.(".chat-preview-video-toggle");
   if (!video || video.dataset.previewHydrated === "true") return;
   video.dataset.previewHydrated = "true";
   let animationFrameId = 0;
@@ -4649,12 +4651,32 @@ function hydrateChatAttachmentPreviewVideo(preview) {
     if (!video.videoWidth || !video.videoHeight) return;
     try {
       if (!canvas) return;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const rect = canvas.getBoundingClientRect();
+      const scale = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.round(rect.width * scale));
+      canvas.height = Math.max(1, Math.round(rect.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) return;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "#0f1110";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      const canvasRatio = canvas.width / canvas.height;
+      const videoRatio = video.videoWidth / video.videoHeight;
+      let drawWidth = canvas.width;
+      let drawHeight = canvas.height;
+      if (videoRatio > canvasRatio) drawHeight = canvas.width / videoRatio;
+      else drawWidth = canvas.height * videoRatio;
+      const drawX = (canvas.width - drawWidth) / 2;
+      const drawY = (canvas.height - drawHeight) / 2;
+      context.drawImage(video, drawX, drawY, drawWidth, drawHeight);
     } catch (error) {
       console.warn("Nao foi possivel desenhar previa do video:", error);
     }
+  };
+  const syncToggle = () => {
+    if (!toggle) return;
+    toggle.textContent = video.paused ? "▶" : "⏸";
+    toggle.setAttribute("aria-label", video.paused ? "Reproduzir video" : "Pausar video");
   };
   const drawWhilePlaying = () => {
     drawVideoFrame();
@@ -4666,16 +4688,19 @@ function hydrateChatAttachmentPreviewVideo(preview) {
   video.addEventListener("timeupdate", drawVideoFrame);
   video.addEventListener("play", () => {
     if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+    syncToggle();
     drawWhilePlaying();
   });
   video.addEventListener("pause", () => {
     if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
     animationFrameId = 0;
+    syncToggle();
     drawVideoFrame();
   });
   video.addEventListener("ended", () => {
     if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
     animationFrameId = 0;
+    syncToggle();
     drawVideoFrame();
   });
   video.addEventListener("loadedmetadata", () => {
@@ -4686,6 +4711,20 @@ function hydrateChatAttachmentPreviewVideo(preview) {
   }, { once: true });
 
   try { video.load(); } catch (_) {}
+  syncToggle();
+}
+
+function toggleChatAttachmentPreviewVideo() {
+  const preview = document.getElementById("chat-attachment-preview");
+  const video = preview?.querySelector?.(".chat-preview-video");
+  if (!video) return;
+  if (video.paused || video.ended) {
+    video.play().catch((error) => {
+      console.warn("Nao foi possivel reproduzir o video:", error);
+    });
+    return;
+  }
+  video.pause();
 }
 
 function resetAudioRecordButton() {
@@ -12386,6 +12425,9 @@ document.addEventListener('click', (event) => {
       break;
     case 'preview-chat-file':
       previewChatSelectedFile(target.dataset.index);
+      break;
+    case 'toggle-chat-preview-video':
+      toggleChatAttachmentPreviewVideo();
       break;
     case 'toggle-chat-attach-menu':
       event.preventDefault();
