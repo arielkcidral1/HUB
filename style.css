@@ -2130,7 +2130,7 @@ textarea {
 .chat-panel.has-attachment-preview {
   --chat-preview-side-gap: clamp(28px, 6vw, 96px);
   --chat-preview-top-gap: clamp(44px, 7vh, 80px);
-  --chat-preview-composer-space: 132px;
+  --chat-preview-composer-space: 150px;
   --chat-preview-strip-space: 74px;
   --chat-preview-frame-width: min(1120px, calc(100% - (var(--chat-preview-side-gap) * 2)));
   align-content: stretch;
@@ -5001,7 +5001,7 @@ form.panel[data-public-chamados="true"].panel {
   .chat-panel.has-attachment-preview {
     --chat-preview-side-gap: 14px;
     --chat-preview-top-gap: 34px;
-    --chat-preview-composer-space: 118px;
+    --chat-preview-composer-space: 132px;
     --chat-preview-strip-space: 66px;
     --chat-preview-frame-width: calc(100% - (var(--chat-preview-side-gap) * 2));
   }
