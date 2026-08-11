@@ -4512,6 +4512,28 @@ function revokeChatAttachmentPreviewUrls() {
   }
 }
 
+function clearChatPreviewImageSizing(panel) {
+  panel?.style.removeProperty("--chat-preview-image-url");
+  panel?.style.removeProperty("--chat-preview-frame-width");
+}
+
+function updateChatPreviewImageSizing(panel, imageUrl) {
+  if (!panel || !imageUrl) return;
+  panel.style.setProperty("--chat-preview-image-url", `url("${imageUrl}")`);
+  const image = new Image();
+  image.onload = () => {
+    const width = Number(image.naturalWidth) || 0;
+    const height = Number(image.naturalHeight) || 0;
+    if (!width || !height) return;
+    const aspect = width / height;
+    const frameWidth = aspect >= 1
+      ? Math.min(1120, Math.max(720, width))
+      : Math.min(760, Math.max(340, Math.round(620 * aspect)));
+    panel.style.setProperty("--chat-preview-frame-width", `${frameWidth}px`);
+  };
+  image.src = imageUrl;
+}
+
 function renderChatAttachmentPreview(files) {
   const preview = document.getElementById("chat-attachment-preview");
   if (!preview) return;
@@ -4526,7 +4548,7 @@ function renderChatAttachmentPreview(files) {
     preview.innerHTML = "";
     composer?.classList.remove("has-attachment-preview");
     panel?.classList.remove("has-attachment-preview");
-    panel?.style.removeProperty("--chat-preview-image-url");
+    clearChatPreviewImageSizing(panel);
     return;
   }
   composer?.classList.add("has-attachment-preview");
@@ -4546,14 +4568,14 @@ function renderChatAttachmentPreview(files) {
   let body = "";
   let activeChip = "";
   if (mimeType.startsWith("image/")) {
-    panel?.style.setProperty("--chat-preview-image-url", `url("${chatAttachmentPreviewUrl}")`);
+    updateChatPreviewImageSizing(panel, chatAttachmentPreviewUrl);
     body = `
       <div class="chat-preview-image-frame">
         <img class="chat-preview-image" src="${chatAttachmentPreviewUrl}" alt="Previa de ${fileName}">
       </div>`;
     activeChip = `<img class="chat-preview-chip-image" src="${chatAttachmentPreviewUrl}" alt="" aria-hidden="true">`;
   } else if (mimeType.startsWith("audio/")) {
-    panel?.style.removeProperty("--chat-preview-image-url");
+    clearChatPreviewImageSizing(panel);
     body = `
       <div class="chat-preview-audio-card">
         <button type="button" class="chat-preview-audio-trash" data-action="clear-chat-file" title="Remover audio" aria-label="Remover audio">??</button>
@@ -4561,7 +4583,7 @@ function renderChatAttachmentPreview(files) {
       </div>`;
     activeChip = `<span class="chat-preview-chip-icon" aria-hidden="true">AUD</span>`;
   } else {
-    panel?.style.removeProperty("--chat-preview-image-url");
+    clearChatPreviewImageSizing(panel);
     body = `
       <div class="chat-preview-unavailable">
         <div class="chat-preview-file-icon" aria-hidden="true">?</div>

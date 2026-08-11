@@ -2143,7 +2143,7 @@ textarea {
   top: var(--chat-preview-top-gap);
   bottom: var(--chat-preview-composer-space);
   left: 50%;
-  width: min(calc(100% - (var(--chat-preview-side-gap) * 2)), 1120px);
+  width: min(calc(100% - (var(--chat-preview-side-gap) * 2)), var(--chat-preview-frame-width, 1120px));
   transform: translateX(-50%);
   z-index: 60;
   background-color: #0f1110;
@@ -6481,7 +6481,7 @@ form.panel[data-public-chamados="true"].panel {
   bottom: var(--chat-preview-strip-space, 74px);
   display: grid;
   place-items: center;
-  width: min(calc(100% - (var(--chat-preview-side-gap, 48px) * 2)), 1120px);
+  width: min(calc(100% - (var(--chat-preview-side-gap, 48px) * 2)), var(--chat-preview-frame-width, 1120px));
   margin-inline: auto;
   padding: clamp(12px, 2vh, 24px) clamp(16px, 2vw, 28px) 8px;
   overflow: hidden;
