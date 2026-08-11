@@ -30,6 +30,7 @@ const CASHIER_GENERAL_CHANNEL = "geral-caixa";
 const CHAT_POLL_PREFIX = "__HUB_POLL__:";
 const CHAT_EDIT_PREFIX = "__HUB_EDIT__:";
 const CHAT_EDIT_WINDOW_MS = 15 * 60 * 1000;
+const CHAT_DELETE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const RESUME_BUCKET = "hub-curriculos";
 const RESUME_PUBLIC_PREFIX = "candidaturas";
 const CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos";
@@ -11862,6 +11863,12 @@ function canEditChatMessage(message) {
   return sentAt > 0 && Date.now() - sentAt <= CHAT_EDIT_WINDOW_MS;
 }
 
+function canDeleteChatMessage(message) {
+  if (!message || message.autor !== getCurrentUserName()) return false;
+  const sentAt = getChatMessageTime(message.sortAt || message.createdAt);
+  return sentAt > 0 && Date.now() - sentAt <= CHAT_DELETE_WINDOW_MS;
+}
+
 async function editChatMessage(id) {
   const message = getChatMessageById(id);
   if (!message) return;
@@ -11892,6 +11899,10 @@ async function editChatMessage(id) {
 async function deleteChatMessage(id) {
   const message = getChatMessageById(id);
   if (!message || message.autor !== getCurrentUserName()) return;
+  if (!canDeleteChatMessage(message)) {
+    showModal("Exclusao indisponivel", "A mensagem so pode ser excluida em ate 24 horas apos o envio.", "error");
+    return;
+  }
   showConfirmActionModal({
     title: "Excluir mensagem",
     text: "Deseja excluir esta mensagem do chat?",
@@ -11908,6 +11919,8 @@ function openChatMessageContextMenu(event, id) {
   const message = getChatMessageById(id);
   if (!message || message.autor !== getCurrentUserName()) return;
   const canEdit = canEditChatMessage(message);
+  const canDelete = canDeleteChatMessage(message);
+  if (!canEdit && !canDelete) return;
   const menu = document.createElement("div");
   menu.id = "chat-message-context-menu";
   menu.className = "board-context-menu chat-message-context-menu";
@@ -11915,7 +11928,7 @@ function openChatMessageContextMenu(event, id) {
   menu.style.top = `${event.clientY}px`;
   menu.innerHTML = `
     ${canEdit ? '<button type="button" data-chat-message-action="edit">Editar mensagem</button>' : ""}
-    <button type="button" class="danger" data-chat-message-action="delete">Excluir mensagem</button>
+    ${canDelete ? '<button type="button" class="danger" data-chat-message-action="delete">Excluir mensagem</button>' : ""}
   `;
   menu.addEventListener("click", async (clickEvent) => {
     const actionButton = clickEvent.target.closest("[data-chat-message-action]");
