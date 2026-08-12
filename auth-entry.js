@@ -6,13 +6,8 @@
   const POSTGRES_SESSION_KEY = "hub-postgres-session";
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
   const AUTH_REQUEST_TIMEOUT_MS = 3000;
-  const AUTH_ENTRY_UNLOCK_TIMEOUT_MS = 7000;
 
   document.documentElement.classList.add("auth-entry-pending");
-  window.setTimeout(() => {
-    if (!hasStoredIdentity()) return;
-    document.documentElement.classList.remove("auth-entry-pending");
-  }, AUTH_ENTRY_UNLOCK_TIMEOUT_MS);
 
   function isRealUser(user) {
     const email = String(user?.email || "").trim();
@@ -149,11 +144,9 @@
         if (persistAuthenticatedSession(storedSession)) {
           window.__hubAuthenticatedSession = storedSession;
           renderAuthenticatedIdentity(storedSession.user);
-          unlockEntry();
           return true;
         }
         if (hasStoredIdentity()) {
-          unlockEntry();
           return true;
         }
         redirectToLogin();
@@ -161,18 +154,15 @@
       }
       window.__hubAuthenticatedSession = result.session;
       renderAuthenticatedIdentity(result.session.user);
-      unlockEntry();
       return true;
     } catch (error) {
       const storedSession = readJson(POSTGRES_SESSION_KEY);
       if (persistAuthenticatedSession(storedSession)) {
         window.__hubAuthenticatedSession = storedSession;
         renderAuthenticatedIdentity(storedSession.user);
-        unlockEntry();
         return true;
       }
       if (hasStoredIdentity()) {
-        unlockEntry();
         return true;
       }
       redirectToLogin();

@@ -18,7 +18,7 @@
       return;
     }
     if (Date.now() - startedAt >= 10000) {
-      document.documentElement.classList.remove("auth-entry-pending");
+      redirectToLogin();
       return;
     }
     window.setTimeout(() => waitForAuthenticatedRender(startedAt), 100);
