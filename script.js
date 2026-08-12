@@ -912,12 +912,8 @@ function setAuthenticatedUser(authUser, profile = null) {
   storageService.setSessionItem(SESSION_KEY, "active");
   storageService.setLocalItem(SESSION_KEY, "active");
   storageService.setLocalItem(PERSISTED_AUTH_USER_KEY, persistedAuthUser);
-  storageService.setLocalItem(LAST_ACCOUNT_KEY, JSON.stringify({
-    id: persistedAuthUser.id || "",
-    email: persistedAuthUser.email || "",
-    nome: persistedAuthUser.user_metadata?.nome || displayName,
-    cargo: persistedAuthUser.app_metadata?.cargo || "",
-  }));
+  storageService.removeLocalItem(LAST_ACCOUNT_KEY);
+  storageService.removeSessionItem(LAST_ACCOUNT_KEY);
   storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
   storageService.setLocalItem(`${SESSION_KEY}-user`, getLoginDisplayName(displayName));
   storageService.setSessionItem(`${SESSION_KEY}-email`, persistedAuthUser.email || "");
@@ -1364,9 +1360,16 @@ function loadDocumentRecords() {
 
 function disableSensitiveFieldAutofill() {
   document.querySelectorAll('input[type="password"], input[type="email"], input[name="cpf"], input[name="identificador"]').forEach((input) => {
-    input.autocomplete = "off";
+    const isPassword = input.type === "password";
+    input.autocomplete = isPassword ? "new-password" : "off";
     input.dataset.lpignore = "true";
     input.dataset["1pIgnore"] = "true";
+    input.dataset.formType = "other";
+    input.setAttribute("data-bwignore", "true");
+    input.setAttribute("data-dashlane-rid", "ignore");
+    input.setAttribute("spellcheck", "false");
+    input.setAttribute("autocapitalize", "off");
+    input.setAttribute("autocorrect", "off");
   });
 }
 
@@ -2778,6 +2781,7 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
   if (existing) existing.remove();
 
   const overlay = document.createElement("div");
+  const passwordInputName = `authorization_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   overlay.id = "custom-modal";
   overlay.className = "modal-overlay";
   overlay.innerHTML = `
@@ -2786,7 +2790,7 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
       <div class="modal-body">
         <p>${escapeHtml(text)}</p>
         <label class="modal-password-label">Senha de autorizacao
-          <input id="modal-action-password" type="password" autocomplete="current-password" placeholder="Digite a senha" />
+          <input id="modal-action-password" name="${passwordInputName}" type="password" value="" autocomplete="one-time-code" inputmode="text" spellcheck="false" autocapitalize="off" autocorrect="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" data-dashlane-rid="ignore" placeholder="Digite a senha" />
         </label>
         <p class="form-feedback error" id="modal-action-error" hidden>Senha incorreta.</p>
       </div>
@@ -2799,8 +2803,9 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
 
   const close = () => overlay.remove();
   overlay.querySelector('[data-action="close-modal"]').addEventListener("click", close);
+  const passwordInput = overlay.querySelector("#modal-action-password");
   overlay.querySelector('[data-action="modal-confirm"]').addEventListener("click", async () => {
-    const password = overlay.querySelector("#modal-action-password").value;
+    const password = passwordInput.value;
     const error = overlay.querySelector("#modal-action-error");
     const isPasswordValid = await validatePassword(password);
     if (!isPasswordValid) {
@@ -2812,7 +2817,7 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
     close();
   });
 
-  overlay.querySelector("#modal-action-password").addEventListener("keydown", (event) => {
+  passwordInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
       overlay.querySelector('[data-action="modal-confirm"]').click();
@@ -2820,7 +2825,11 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
   });
 
   document.body.appendChild(overlay);
-  overlay.querySelector("#modal-action-password").focus();
+  passwordInput.value = "";
+  window.setTimeout(() => {
+    passwordInput.value = "";
+    passwordInput.focus();
+  }, 0);
 }
 
 function showConfirmActionModal({ title, text, confirmText = "Confirmar", danger = false, onConfirm }) {

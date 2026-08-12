@@ -5,7 +5,7 @@
   const LAST_ACCOUNT_KEY = "hub-rh-last-account";
 
   function clearStaleClientSession() {
-    [SESSION_KEY, `${SESSION_KEY}-user`, `${SESSION_KEY}-email`, `${SESSION_KEY}-role`, POSTGRES_SESSION_KEY, PERSISTED_USER_KEY]
+    [SESSION_KEY, `${SESSION_KEY}-user`, `${SESSION_KEY}-email`, `${SESSION_KEY}-role`, POSTGRES_SESSION_KEY, PERSISTED_USER_KEY, LAST_ACCOUNT_KEY]
       .forEach((key) => {
         window.localStorage.removeItem(key);
         window.sessionStorage.removeItem(key);
@@ -30,12 +30,8 @@
       setJson(storage, `${SESSION_KEY}-role`, role);
     });
     setJson(window.localStorage, PERSISTED_USER_KEY, user);
-    setJson(window.localStorage, LAST_ACCOUNT_KEY, {
-      id: user.id || "",
-      email: user.email || "",
-      nome: name,
-      cargo: role,
-    });
+    window.localStorage.removeItem(LAST_ACCOUNT_KEY);
+    window.sessionStorage.removeItem(LAST_ACCOUNT_KEY);
     return true;
   }
 

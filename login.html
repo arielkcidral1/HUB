@@ -21,12 +21,12 @@
             <span>Acesso do RH</span>
           </div>
         </div>
-        <form id="login-form" method="post" action="login.html" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
+        <form id="login-form" method="post" action="login.html" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
           <label>E-mail ou CPF
-            <input name="identificador" type="text" autocomplete="off" inputmode="text" data-lpignore="true" data-1p-ignore="true" required />
+            <input name="identificador" type="text" autocomplete="off" inputmode="text" spellcheck="false" autocapitalize="off" autocorrect="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" required />
           </label>
           <label>Senha
-            <input name="senha" type="password" autocomplete="off" data-lpignore="true" data-1p-ignore="true" required />
+            <input name="senha" type="password" autocomplete="new-password" spellcheck="false" autocapitalize="off" autocorrect="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" data-dashlane-rid="ignore" required />
           </label>
           <p class="login-error" id="login-error" role="alert"></p>
           <button class="primary-button" type="submit">Entrar</button>
@@ -34,8 +34,8 @@
       </div>
     </section>
     <script src="hub-postgres-client.js?v=db-load-v2"></script>
-    <script src="login-submit.js?v=login-submit-v3"></script>
-    <script src="script.js?v=chat-date-br-v67"></script>
+    <script src="login-submit.js?v=no-password-autofill-v4"></script>
+    <script src="script.js?v=no-password-autofill-v68"></script>
   </body>
 </html>
 
