@@ -375,34 +375,6 @@ html.auth-entry-pending body::after {
   font-weight: 600;
 }
 
-.login-footer {
-  padding: 0 32px 28px;
-  display: flex;
-  justify-content: center;
-}
-
-.login-denuncia-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 38px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: var(--transition);
-}
-
-.login-denuncia-button:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.35);
-  color: #ffffff;
-}
-
 .sidebar {
   position: sticky;
   top: 0;
