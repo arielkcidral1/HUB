@@ -742,6 +742,10 @@ function isRhUser() {
   return getCurrentUserNormalizedRole() === "rh";
 }
 
+function isCeoUser() {
+  return getCurrentUserNormalizedRole() === "ceo";
+}
+
 /**
  * Controle de UI baseado no usuario autenticado carregado do PostgreSQL.
  * A verificacao de permissao real continua sendo feita no backend por RLS.
@@ -2534,8 +2538,34 @@ function getEventDisplayTitle(item = {}) {
   return item.titulo || "Evento";
 }
 
+// Cada gerente enxerga apenas os eventos que ele mesmo criou; RH e CEO
+// enxergam a agenda inteira. Aniversarios (gerados a partir da planilha)
+// nao sao de um gerente especifico e continuam visiveis para todos.
+function getCurrentEventAccessNames() {
+  const user = getCurrentUserRecord?.() || {};
+  return [
+    getCurrentUserName?.(),
+    currentUserProfile?.nome,
+    currentAuthUser?.user_metadata?.nome,
+    currentAuthUser?.user_metadata?.name,
+    currentAuthUser?.email,
+    user.nome,
+    user.email,
+  ]
+    .map((value) => normalizeLoginName(value))
+    .filter(Boolean);
+}
+
+function canCurrentUserAccessEventRecord(item = {}) {
+  if (isRhUser() || isCeoUser()) return true;
+  if (!isManagerUser()) return true;
+  const author = normalizeLoginName(item.createdBy || "");
+  return Boolean(author && getCurrentEventAccessNames().includes(author));
+}
+
 function getAllEvents() {
-  return [...(data.eventos || []), ...getCompanyBirthdayEvents()]
+  const eventos = (data.eventos || []).filter((item) => canCurrentUserAccessEventRecord(item));
+  return [...eventos, ...getCompanyBirthdayEvents()]
     .filter((item) => !isCompanyBirthdayEvent(item) && !String(item.id || "").startsWith("company-birthday-"));
 }
 
@@ -12410,7 +12440,7 @@ function editarEvento(id) {
 };
 
 async function excluirEvento(id) {
-  const evento = (data.eventos || []).find((item) => String(item.id) === String(id));
+  const evento = findCalendarEventById(id);
   if (!evento) return;
 
   showConfirmActionModal({
