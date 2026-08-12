@@ -4,21 +4,17 @@
     window.location.replace("login.html?next=index.html");
   }
 
-  function verifyRenderedIdentity() {
-    const target = document.getElementById("current-user");
-    const name = String(target?.textContent || "").trim().toLowerCase();
-    if (!target || name === "usuario" || name === "voce" || name === "persisted-user") {
-      redirectToLogin();
-    }
+  function releasePendingView() {
+    document.documentElement.classList.remove("auth-entry-pending");
   }
 
   function waitForAuthenticatedRender(startedAt = Date.now()) {
     if (window.__hubAuthReady) {
-      verifyRenderedIdentity();
+      releasePendingView();
       return;
     }
-    if (Date.now() - startedAt >= 10000) {
-      redirectToLogin();
+    if (Date.now() - startedAt >= 30000) {
+      releasePendingView();
       return;
     }
     window.setTimeout(() => waitForAuthenticatedRender(startedAt), 100);

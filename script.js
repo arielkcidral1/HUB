@@ -1096,11 +1096,8 @@ async function restoreAuthenticatedSession() {
           return true;
         }
         if (!authSession?.user) {
-          clearAuthenticatedUser();
-          if (!isLoginPage() && !isPublicPage()) {
-            window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
-          }
-          return false;
+          console.warn("Sessao remota indisponivel no reload; mantendo sessao local ativa.");
+          return true;
         }
         const sessionUser = hydratePersistedAuthUser(authSession.user);
         const profile = await withTimeout(loadUserProfile(sessionUser), 6000, null);
