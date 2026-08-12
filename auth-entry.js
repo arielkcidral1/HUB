@@ -86,7 +86,20 @@
     window.location.replace("login.html?next=index.html");
   }
 
-  async function reauthenticateOnReload() {
+  function isReloadNavigation() {
+    try {
+      const navigation = performance.getEntriesByType?.("navigation")?.[0];
+      if (navigation?.type) return navigation.type === "reload";
+      return performance.navigation?.type === 1;
+    } catch {
+      return false;
+    }
+  }
+
+  async function reauthenticateForEntry() {
+    if (!isReloadNavigation()) {
+      return reauthenticateInDatabase();
+    }
     if (hasStoredIdentity()) {
       window.setTimeout(() => {
         reauthenticateInDatabase()
@@ -179,7 +192,7 @@
     }
   }
 
-  // Reload must behave like opening the same link in a new tab:
-  // restore the local session immediately and refresh server auth in background.
-  window.__hubAuthEntryPromise = reauthenticateOnReload();
+  // Only reload uses local-first restoration; opening a new tab keeps the normal
+  // server session validation path.
+  window.__hubAuthEntryPromise = reauthenticateForEntry();
 })();
