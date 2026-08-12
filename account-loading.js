@@ -7,6 +7,7 @@
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
   const VERIFIED_KEY = "hub-auth-loading-verified";
   const MINIMUM_LOADING_MS = 1000;
+  const RESTORE_TIMEOUT_MS = 2000;
   const loadingStartedAt = Date.now();
 
   function readJson(key) {
@@ -69,22 +70,48 @@
     return true;
   }
 
+  function buildStoredFallbackSession() {
+    const storedSession = readJson(POSTGRES_SESSION_KEY);
+    if (isRealUser(storedSession?.user)) return storedSession;
+    const storedUser = readJson(PERSISTED_USER_KEY);
+    if (isRealUser(storedUser)) return { user: storedUser, access_token: "", refresh_token: "" };
+    const name = String(readJson(USER_KEY) || "").trim();
+    const email = String(readJson(EMAIL_KEY) || "").trim();
+    const role = String(readJson(ROLE_KEY) || "").trim();
+    if (!name && !email) return null;
+    return {
+      user: {
+        id: email || name,
+        email,
+        user_metadata: { nome: name, cargo: role },
+        app_metadata: { cargo: role },
+      },
+      access_token: "",
+      refresh_token: "",
+    };
+  }
+
   async function restore() {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), RESTORE_TIMEOUT_MS);
     try {
       const response = await fetch("/api/auth", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "session" }),
+        signal: controller.signal,
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result?.session?.user) {
-        redirectToLogin();
+        if (!persistSession(buildStoredFallbackSession())) redirectToLogin();
         return;
       }
       persistSession(result.session);
     } catch {
-      redirectToLogin();
+      if (!persistSession(buildStoredFallbackSession())) redirectToLogin();
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
