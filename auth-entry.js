@@ -87,17 +87,10 @@
   }
 
   async function reauthenticateOnReload() {
-    if (hasStoredIdentity()) {
-      window.setTimeout(() => {
-        reauthenticateInDatabase()
-          .then((authenticated) => {
-            if (authenticated) window.__hubReloadReauthenticated = true;
-          })
-          .catch(() => {});
-      }, 0);
-      return true;
-    }
-    return reauthenticateInDatabase();
+    // O reload deve repetir a entrada normal sem limpar a sessao ou os dados.
+    const authenticated = await reauthenticateInDatabase();
+    if (authenticated) window.__hubReloadReauthenticated = true;
+    return authenticated;
   }
 
   function persistAuthenticatedSession(session) {
@@ -179,7 +172,6 @@
     }
   }
 
-  // Reload must behave like opening the same link in a new tab:
-  // restore the local session immediately and refresh server auth in background.
+  // Do not initialize a private page until the persistent auth cookie is valid.
   window.__hubAuthEntryPromise = reauthenticateOnReload();
 })();
