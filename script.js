@@ -1092,11 +1092,8 @@ async function restoreAuthenticatedSession() {
         const timeoutMarker = { timedOut: true };
         const authSession = await withTimeout(getAuthSession(), 6000, timeoutMarker);
         if (authSession === timeoutMarker) {
-          clearAuthenticatedUser();
-          if (!isLoginPage() && !isPublicPage()) {
-            window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
-          }
-          return false;
+          console.warn("Sessao remota demorou no reload; mantendo sessao local enquanto atualiza em segundo plano.");
+          return true;
         }
         if (!authSession?.user) {
           clearAuthenticatedUser();

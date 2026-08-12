@@ -5,7 +5,6 @@
   const ROLE_KEY = `${SESSION_KEY}-role`;
   const POSTGRES_SESSION_KEY = "hub-postgres-session";
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
-  const LAST_ACCOUNT_KEY = "hub-rh-last-account";
   const AUTH_REQUEST_TIMEOUT_MS = 3000;
   const AUTH_ENTRY_UNLOCK_TIMEOUT_MS = 7000;
 
@@ -51,7 +50,7 @@
   }
 
   function getStoredUser() {
-    return readJson(PERSISTED_USER_KEY) || readJson(POSTGRES_SESSION_KEY)?.user || readJson(LAST_ACCOUNT_KEY) || null;
+    return readJson(PERSISTED_USER_KEY) || readJson(POSTGRES_SESSION_KEY)?.user || null;
   }
 
   async function hasRecentActivity() {
@@ -83,15 +82,12 @@
     }
   }
 
-  function clearStoredSession() {
-    [SESSION_KEY, USER_KEY, EMAIL_KEY, ROLE_KEY, POSTGRES_SESSION_KEY, PERSISTED_USER_KEY].forEach((key) => {
-      window.localStorage.removeItem(key);
-      window.sessionStorage.removeItem(key);
-    });
+  function unlockEntry() {
+    document.documentElement.classList.remove("auth-entry-pending");
   }
 
   function redirectToLogin() {
-    clearStoredSession();
+    unlockEntry();
     window.location.replace("login.html?next=index.html");
   }
 
@@ -111,12 +107,6 @@
     window.localStorage.setItem(POSTGRES_SESSION_KEY, raw);
     window.sessionStorage.setItem(POSTGRES_SESSION_KEY, raw);
     window.localStorage.setItem(PERSISTED_USER_KEY, JSON.stringify(user));
-    window.localStorage.setItem(LAST_ACCOUNT_KEY, JSON.stringify({
-      id: user.id || "",
-      email: user.email || "",
-      nome: user.user_metadata?.nome || user.user_metadata?.name || name,
-      cargo: user.app_metadata?.cargo || user.user_metadata?.cargo || role,
-    }));
     window.localStorage.setItem(SESSION_KEY, JSON.stringify("active"));
     window.sessionStorage.setItem(SESSION_KEY, JSON.stringify("active"));
     window.localStorage.setItem(USER_KEY, JSON.stringify(name));
@@ -159,6 +149,11 @@
         if (persistAuthenticatedSession(storedSession)) {
           window.__hubAuthenticatedSession = storedSession;
           renderAuthenticatedIdentity(storedSession.user);
+          unlockEntry();
+          return true;
+        }
+        if (hasStoredIdentity()) {
+          unlockEntry();
           return true;
         }
         redirectToLogin();
@@ -166,12 +161,18 @@
       }
       window.__hubAuthenticatedSession = result.session;
       renderAuthenticatedIdentity(result.session.user);
+      unlockEntry();
       return true;
     } catch (error) {
       const storedSession = readJson(POSTGRES_SESSION_KEY);
       if (persistAuthenticatedSession(storedSession)) {
         window.__hubAuthenticatedSession = storedSession;
         renderAuthenticatedIdentity(storedSession.user);
+        unlockEntry();
+        return true;
+      }
+      if (hasStoredIdentity()) {
+        unlockEntry();
         return true;
       }
       redirectToLogin();

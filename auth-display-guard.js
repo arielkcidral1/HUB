@@ -1,22 +1,6 @@
 (function () {
-  const SESSION_KEYS = [
-    "hub-rh-session",
-    "hub-rh-session-user",
-    "hub-rh-session-email",
-    "hub-rh-session-role",
-    "hub-postgres-session",
-    "hub-rh-persisted-auth-user",
-  ];
-
-  function clearSession() {
-    SESSION_KEYS.forEach((key) => {
-      window.localStorage.removeItem(key);
-      window.sessionStorage.removeItem(key);
-    });
-  }
-
   function redirectToLogin() {
-    clearSession();
+    document.documentElement.classList.remove("auth-entry-pending");
     window.location.replace("login.html?next=index.html");
   }
 
@@ -34,7 +18,7 @@
       return;
     }
     if (Date.now() - startedAt >= 10000) {
-      redirectToLogin();
+      document.documentElement.classList.remove("auth-entry-pending");
       return;
     }
     window.setTimeout(() => waitForAuthenticatedRender(startedAt), 100);
@@ -42,7 +26,10 @@
 
   Promise.resolve(window.__hubAuthEntryPromise)
     .then((authenticated) => {
-      if (!authenticated) return;
+      if (!authenticated) {
+        redirectToLogin();
+        return;
+      }
       waitForAuthenticatedRender();
     })
     .catch(() => redirectToLogin());
