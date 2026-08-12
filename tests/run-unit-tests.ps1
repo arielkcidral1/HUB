@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v75' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v2[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v77' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -84,7 +84,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v21[\s\S]*style\.css\?v=visible-auth-loading-v23[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v76[\s\S]*auth-display-guard\.js\?v=preserve-session-v7' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v22[\s\S]*style\.css\?v=visible-auth-loading-v23[\s\S]*hub-postgres-client\.js\?v=db-load-v2[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v77[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -92,10 +92,11 @@ function Test-ClientSecurityFunctions {
   $loading = Read-ProjectFile "account-loading.html"
   $loadingScript = Read-ProjectFile "account-loading.js"
   Assert-MatchText $loading '<main class="account-loading-screen"[\s\S]*Restaurando sua conta' "tela de carregamento possui HTML proprio"
-  Assert-MatchText $loading 'account-loading\.js\?v=auth-loading-v3' "tela de carregamento quebra cache do navegador"
-  Assert-MatchText $loadingScript 'MINIMUM_LOADING_MS = 1000[\s\S]*function finishLoading\([\s\S]*setTimeout\(callback, remaining\)[\s\S]*function redirectToLogin\(\)[\s\S]*POSTGRES_SESSION_KEY[\s\S]*PERSISTED_USER_KEY[\s\S]*removeItem\(key\)[\s\S]*fetch\("/api/auth"[\s\S]*action: "session"[\s\S]*redirectToLogin\(\)' "tela de carregamento aguarda 1 segundo e envia sessao invalida para login"
+  Assert-MatchText $loading 'account-loading\.js\?v=auth-loading-v4' "tela de carregamento quebra cache do navegador"
+  Assert-MatchText $loadingScript 'RESTORE_TIMEOUT_MS = 2000[\s\S]*function buildStoredFallbackSession\(\)[\s\S]*PERSISTED_USER_KEY[\s\S]*fetch\("/api/auth"[\s\S]*action: "session"[\s\S]*if \(!persistSession\(buildStoredFallbackSession\(\)\)\) redirectToLogin\(\)' "tela de carregamento restaura sessao local em ate 2 segundos ou envia para login"
   Assert-MatchText $loadingScript 'window\.localStorage\.setItem\(VERIFIED_KEY, "1"\)[\s\S]*finishLoading\(\(\) => window\.location\.replace\("index\.html"\)\)' "index so e liberado depois da autenticacao confirmada"
-  Assert-MatchText (Read-ProjectFile "auth-entry.js") 'AUTH_REQUEST_TIMEOUT_MS = 3000[\s\S]*fetch\("/api/auth"[\s\S]*credentials: "same-origin"[\s\S]*action: "session"[\s\S]*signal: controller.signal[\s\S]*if \(!response\.ok \|\| !persistAuthenticatedSession\(result\?\.session\)\)[\s\S]*redirectToLogin\(\)[\s\S]*window\.__hubAuthEntryPromise' "F5 exige autenticacao persistente antes de carregar o painel"
+  Assert-MatchText (Read-ProjectFile "auth-entry.js") 'AUTH_REQUEST_TIMEOUT_MS = 2000[\s\S]*function buildStoredFallbackSession\(\)[\s\S]*fetch\("/api/auth"[\s\S]*credentials: "same-origin"[\s\S]*action: "session"[\s\S]*signal: controller.signal[\s\S]*if \(!response\.ok \|\| !persistAuthenticatedSession\(result\?\.session\)\)[\s\S]*const storedSession = buildStoredFallbackSession\(\)[\s\S]*window\.__hubAuthEntryPromise' "F5 restaura sessao persistente em ate 2 segundos antes de carregar o painel"
+  Assert-MatchText (Read-ProjectFile "auth-display-guard.js") 'MAX_AUTH_PENDING_MS = 2500[\s\S]*function hasStoredIdentity\(\)[\s\S]*if \(hasStoredIdentity\(\)\) releasePendingView\(\);[\s\S]*else redirectToLogin\(\);' "guard visual nao prende usuario na tela de carregamento"
   Assert-MatchText (Read-ProjectFile "auth-entry.js") 'async function hasRecentActivity\(\)[\s\S]*is_online[\s\S]*last_seen[\s\S]*age <= 3000' "atividade recente continua disponivel para restauracao"
   Assert-MatchText $script 'sendHeartbeat\(true\);[\s\S]*setInterval\(\(\) => sendHeartbeat\(true\), 2000\)' "atividade do usuario e atualizada a cada 2 segundos"
   Assert-True -Condition (-not $script.Contains('sendOfflineBeacon')) -Message "F5 nao marca o usuario offline antes de restaurar a sessao"

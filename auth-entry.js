@@ -5,7 +5,7 @@
   const ROLE_KEY = `${SESSION_KEY}-role`;
   const POSTGRES_SESSION_KEY = "hub-postgres-session";
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
-  const AUTH_REQUEST_TIMEOUT_MS = 3000;
+  const AUTH_REQUEST_TIMEOUT_MS = 2000;
 
   document.documentElement.classList.add("auth-entry-pending");
 
@@ -46,6 +46,27 @@
 
   function getStoredUser() {
     return readJson(PERSISTED_USER_KEY) || readJson(POSTGRES_SESSION_KEY)?.user || null;
+  }
+
+  function buildStoredFallbackSession() {
+    const storedSession = readJson(POSTGRES_SESSION_KEY);
+    if (isRealUser(storedSession?.user)) return storedSession;
+    const storedUser = getStoredUser();
+    if (isRealUser(storedUser)) return { user: storedUser, access_token: "", refresh_token: "" };
+    const storedName = String(readJson(USER_KEY) || "").trim();
+    const storedEmail = String(readJson(EMAIL_KEY) || "").trim();
+    const storedRole = String(readJson(ROLE_KEY) || "").trim();
+    if (!storedEmail && !storedName) return null;
+    return {
+      user: {
+        id: storedEmail || storedName,
+        email: storedEmail,
+        user_metadata: { nome: storedName, cargo: storedRole },
+        app_metadata: { cargo: storedRole },
+      },
+      access_token: "",
+      refresh_token: "",
+    };
   }
 
   async function hasRecentActivity() {
@@ -140,7 +161,7 @@
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !persistAuthenticatedSession(result?.session)) {
-        const storedSession = readJson(POSTGRES_SESSION_KEY);
+        const storedSession = buildStoredFallbackSession();
         if (persistAuthenticatedSession(storedSession)) {
           window.__hubAuthenticatedSession = storedSession;
           renderAuthenticatedIdentity(storedSession.user);
@@ -156,7 +177,7 @@
       renderAuthenticatedIdentity(result.session.user);
       return true;
     } catch (error) {
-      const storedSession = readJson(POSTGRES_SESSION_KEY);
+      const storedSession = buildStoredFallbackSession();
       if (persistAuthenticatedSession(storedSession)) {
         window.__hubAuthenticatedSession = storedSession;
         renderAuthenticatedIdentity(storedSession.user);
