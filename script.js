@@ -551,7 +551,12 @@ function clearLegacyTeamCredentials() {
 
 function sanitizeUserRecord(user = {}) {
   const { senha, ...safeUser } = user;
-  return safeUser;
+  const unidade = safeUser.unidade || safeUser.cargoUnidade || getDefaultUserUnit(safeUser.nome);
+  return { ...safeUser, unidade };
+}
+
+function getDefaultUserUnit(nome = "") {
+  return normalizeLoginName(nome).includes("eleandro") ? "GCS JLLE" : "Matriz";
 }
 
 function syncTeamCredentials(users) {
@@ -984,14 +989,36 @@ async function loadUserProfile(authUser) {
   if (!profileFilters) return null;
 
   try {
-    let query = postgresClient.from(USERS_TABLE).select("id, nome, email, cpf, cargo, foto_perfil, configuracoes, created_by, created_at");
+    let query = postgresClient.from(USERS_TABLE).select("id, nome, email, cpf, cargo, unidade, foto_perfil, configuracoes, created_by, created_at");
     if (profileFilters) query = query.or(profileFilters);
     const { data: profiles, error } = await query.limit(1);
+
+    if (error && isMissingColumn(error, "unidade")) {
+      let fallbackQuery = postgresClient
+        .from(USERS_TABLE)
+        .select("id, nome, email, cpf, cargo, foto_perfil, configuracoes, created_by, created_at");
+      if (profileFilters) fallbackQuery = fallbackQuery.or(profileFilters);
+      let fallback = await fallbackQuery.limit(1);
+      if (fallback.error && isMissingColumn(fallback.error, "configuracoes")) {
+        let basicFallbackQuery = postgresClient
+          .from(USERS_TABLE)
+          .select("id, nome, email, cpf, cargo, foto_perfil, created_by, created_at");
+        if (profileFilters) basicFallbackQuery = basicFallbackQuery.or(profileFilters);
+        fallback = await basicFallbackQuery.limit(1);
+      }
+      if (fallback.error) throw fallback.error;
+      const profile = mapRows("usuarios", fallback.data || [])[0] || null;
+      if (profile) {
+        const profileWithEmail = { ...profile, email: profile.email || authUser.email || "", unidade: getDefaultUserUnit(profile.nome) };
+        upsertLocalUser({ ...profileWithEmail, syncStatus: "active" });
+        return profileWithEmail;
+      }
+    }
 
     if (error && isMissingColumn(error, "configuracoes")) {
       let fallbackQuery = postgresClient
         .from(USERS_TABLE)
-        .select("id, nome, email, cpf, cargo, foto_perfil, created_by, created_at");
+        .select("id, nome, email, cpf, cargo, unidade, foto_perfil, created_by, created_at");
       if (profileFilters) fallbackQuery = fallbackQuery.or(profileFilters);
       const fallback = await fallbackQuery.limit(1);
       if (fallback.error) throw fallback.error;
@@ -1006,7 +1033,7 @@ async function loadUserProfile(authUser) {
     if (error && isMissingColumn(error, "email")) {
       const fallback = await postgresClient
         .from(USERS_TABLE)
-        .select("id, nome, cargo, foto_perfil, created_by, created_at")
+        .select("id, nome, cargo, unidade, foto_perfil, created_by, created_at")
         .ilike("nome", displayName)
         .limit(1);
       if (fallback.error) throw fallback.error;
@@ -1388,6 +1415,7 @@ function mergeUsersByName(currentUsers = [], incomingUsers = []) {
       ...(existing || {}),
       ...sanitizeUserRecord(user),
       id: user.id || existing?.id || generateUUID(),
+      unidade: user.unidade || user.cargoUnidade || existing?.unidade || getDefaultUserUnit(user.nome),
       createdAt: user.createdAt || existing?.createdAt || todayLabel(),
     });
   });
@@ -3441,6 +3469,7 @@ if (collection === "eventos") {
       email: row.email || "",
       cpf: row.cpf || "",
       cargo: row.cargo || "",
+      unidade: row.unidade || getDefaultUserUnit(row.nome),
       foto_perfil: row.foto_perfil || "",
       configuracoes: parseJsonObject(row.configuracoes),
       isOnline: Boolean(row.is_online),
@@ -3920,6 +3949,7 @@ function toDbPayload(collection, values) {
       email: values.email || null,
       cpf: normalizeCpf(values.cpf) || null,
       cargo: values.cargo || "",
+      unidade: values.unidade || getDefaultUserUnit(values.nome),
       created_by: values.createdBy || getCurrentUserName(),
     };
   }
@@ -5786,6 +5816,7 @@ function upsertLocalUser(values) {
     email: values.email || data.usuarios[existingIndex]?.email || "",
     cargo: values.cargo || data.usuarios[existingIndex]?.cargo || "",
     foto_perfil: values.foto_perfil || data.usuarios[existingIndex]?.foto_perfil || "",
+    unidade: values.unidade || data.usuarios[existingIndex]?.unidade || getDefaultUserUnit(values.nome),
     createdBy: values.createdBy || getCurrentUserName(),
     syncStatus: values.syncStatus || data.usuarios[existingIndex]?.syncStatus || "active",
     createdAt: existingIndex >= 0 ? data.usuarios[existingIndex].createdAt : todayLabel(),
@@ -5809,6 +5840,7 @@ async function saveTeamUser(values) {
   const email = String(values.email || "").trim();
   const cpf = normalizeCpf(values.cpf);
   const cargo = String(values.cargo || "").trim();
+  const unidade = String(values.unidade || getDefaultUserUnit(nome)).trim();
   if (!nome || !email) return false;
   if (!isValidCpf(cpf)) {
     showModal("CPF invalido", "Informe um CPF valido para liberar o login por CPF.", "error");
@@ -5820,7 +5852,7 @@ async function saveTeamUser(values) {
   }
 
   if (!postgresClient) {
-    upsertLocalUser({ nome, email, cargo, syncStatus: "active" });
+    upsertLocalUser({ nome, email, cargo, unidade, syncStatus: "active" });
     return true;
   }
 
@@ -5847,10 +5879,17 @@ async function saveTeamUser(values) {
     }
 
     let query = existing
-      ? postgresClient.from(USERS_TABLE).update({ nome, email, cpf, cargo, created_by: getCurrentUserName() }).eq("id", existing.id)
-      : postgresClient.from(USERS_TABLE).insert({ nome, email, cpf, cargo, created_by: getCurrentUserName() });
+      ? postgresClient.from(USERS_TABLE).update({ nome, email, cpf, cargo, unidade, created_by: getCurrentUserName() }).eq("id", existing.id)
+      : postgresClient.from(USERS_TABLE).insert({ nome, email, cpf, cargo, unidade, created_by: getCurrentUserName() });
 
     let result = await query.select("*");
+
+    if (result.error && isMissingColumn(result.error, "unidade")) {
+      query = existing
+        ? postgresClient.from(USERS_TABLE).update({ nome, email, cpf, cargo, created_by: getCurrentUserName() }).eq("id", existing.id)
+        : postgresClient.from(USERS_TABLE).insert({ nome, email, cpf, cargo, created_by: getCurrentUserName() });
+      result = await query.select("*");
+    }
 
     if (result.error && isMissingCreatedByColumn(result.error)) {
       query = existing
@@ -5870,13 +5909,13 @@ async function saveTeamUser(values) {
     const savedRows = result.data;
 
     const saved = mapRows("usuarios", savedRows || [])[0] || { nome, email, cargo, createdAt: todayLabel() };
-    upsertLocalUser({ ...saved, email: saved.email || email, cpf: saved.cpf || cpf, cargo: saved.cargo || cargo, syncStatus: "active" });
+    upsertLocalUser({ ...saved, email: saved.email || email, cpf: saved.cpf || cpf, cargo: saved.cargo || cargo, unidade: saved.unidade || unidade, syncStatus: "active" });
     setSyncStatus("PostgreSQL EIXO online", true);
     showModal("Perfil salvo", "Crie ou atualize o usuário correspondente no PostgreSQL Auth para liberar o login.", "info");
     return true;
   } catch (error) {
     console.error("Erro ao salvar usuario no PostgreSQL:", error);
-    upsertLocalUser({ nome, email, cargo, syncStatus: "local" });
+    upsertLocalUser({ nome, email, cargo, unidade, syncStatus: "local" });
     setSyncStatus("Usuario salvo local", false);
     showModal("Aviso de Banco de Dados", "O perfil foi salvo localmente. Crie o usuario no PostgreSQL Auth e confira a tabela hub_users.", "error");
     return true;
@@ -7836,6 +7875,7 @@ function renderTeamUsers() {
       </div>
       <p class="item-meta section-top">E-mail: ${escapeHtml(item.email || "Cadastre no PostgreSQL Auth")}</p>
       <p class="item-meta">Cargo: ${escapeHtml(item.cargo || "Sem cargo definido")}</p>
+      <p class="item-meta">Unidade: ${escapeHtml(item.unidade || getDefaultUserUnit(item.nome))}</p>
       <p class="item-meta compact-top">Cadastro: ${escapeHtml(item.createdAt || "Hoje")}</p>
     </article>
   `);
