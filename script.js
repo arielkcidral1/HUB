@@ -2538,9 +2538,10 @@ function getEventDisplayTitle(item = {}) {
   return item.titulo || "Evento";
 }
 
-// Cada gerente enxerga apenas os eventos que ele mesmo criou; RH e CEO
-// enxergam a agenda inteira. Aniversarios (gerados a partir da planilha)
-// nao sao de um gerente especifico e continuam visiveis para todos.
+// Cada gerente enxerga apenas os eventos que ele mesmo criou. Aniversarios
+// (gerados a partir da planilha) tambem sao eventos e nao pertencem a
+// nenhum gerente, entao ficam fora da agenda dele. RH e CEO enxergam a
+// agenda inteira, de todos os gerentes e os aniversarios.
 function getCurrentEventAccessNames() {
   const user = getCurrentUserRecord?.() || {};
   return [
@@ -2564,9 +2565,9 @@ function canCurrentUserAccessEventRecord(item = {}) {
 }
 
 function getAllEvents() {
-  const eventos = (data.eventos || []).filter((item) => canCurrentUserAccessEventRecord(item));
-  return [...eventos, ...getCompanyBirthdayEvents()]
-    .filter((item) => !isCompanyBirthdayEvent(item) && !String(item.id || "").startsWith("company-birthday-"));
+  return [...(data.eventos || []), ...getCompanyBirthdayEvents()]
+    .filter((item) => !isCompanyBirthdayEvent(item) && !String(item.id || "").startsWith("company-birthday-"))
+    .filter((item) => canCurrentUserAccessEventRecord(item));
 }
 
 function findCalendarEventById(id) {
