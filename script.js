@@ -1825,14 +1825,16 @@ function getChatMessageDate(value) {
   if (!value) return "";
   if (value === "Hoje") return todayLabel();
 
+  const match = String(value).match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (match) {
+    const [, day, month, year] = match;
+    return formatDate(new Date(Number(year), Number(month) - 1, Number(day)).toISOString());
+  }
+
   const parsed = new Date(value);
   if (!Number.isNaN(parsed.getTime())) return formatDate(parsed.toISOString());
 
-  const match = String(value).match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-  if (!match) return "";
-
-  const [, day, month, year] = match;
-  return formatDate(new Date(Number(year), Number(month) - 1, Number(day)).toISOString());
+  return "";
 }
 
 function getChatMessageTimeLabel(value) {
@@ -1845,14 +1847,16 @@ function getChatMessageTimeLabel(value) {
 function getChatMessageTime(value) {
   if (!value || value === "Hoje") return 0;
 
+  const match = String(value).match(/^(\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2})/);
+  if (match) {
+    const [, day, month, year, hour, minute] = match;
+    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)).getTime();
+  }
+
   const parsed = new Date(value);
   if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
 
-  const match = String(value).match(/^(\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2})/);
-  if (!match) return 0;
-
-  const [, day, month, year, hour, minute] = match;
-  return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)).getTime();
+  return 0;
 }
 
 function compareChatMessagesOldestFirst(a, b) {
