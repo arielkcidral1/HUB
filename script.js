@@ -2831,6 +2831,65 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
   }, 0);
 }
 
+function showEditChatMessageModal(initialText = "") {
+  return new Promise((resolve) => {
+    const existing = document.getElementById("custom-modal");
+    if (existing) existing.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "custom-modal";
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal-card chat-edit-modal-card">
+        <div class="modal-header info">Editar mensagem</div>
+        <div class="modal-body">
+          <label class="chat-edit-modal-label" for="chat-edit-message-input">Mensagem</label>
+          <textarea id="chat-edit-message-input" class="chat-edit-modal-textarea" maxlength="4000" rows="5">${escapeHtml(initialText)}</textarea>
+          <p class="form-feedback error" id="chat-edit-message-error" hidden>A mensagem editada nao pode ficar vazia.</p>
+        </div>
+        <div class="modal-footer modal-footer-split">
+          <button class="secondary-link" type="button" data-action="cancel-edit-chat-message">Cancelar</button>
+          <button class="primary-button" type="button" data-action="save-edit-chat-message">Salvar</button>
+        </div>
+      </div>
+    `;
+
+    const close = (value) => {
+      overlay.remove();
+      resolve(value);
+    };
+    const textarea = overlay.querySelector("#chat-edit-message-input");
+    const error = overlay.querySelector("#chat-edit-message-error");
+    overlay.querySelector('[data-action="cancel-edit-chat-message"]').addEventListener("click", () => close(null));
+    overlay.querySelector('[data-action="save-edit-chat-message"]').addEventListener("click", () => {
+      const nextText = String(textarea.value || "").trim();
+      if (!nextText) {
+        error.hidden = false;
+        textarea.focus();
+        return;
+      }
+      close(nextText);
+    });
+    textarea.addEventListener("input", () => {
+      error.hidden = true;
+    });
+    textarea.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close(null);
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        overlay.querySelector('[data-action="save-edit-chat-message"]').click();
+      }
+    });
+
+    document.body.appendChild(overlay);
+    textarea.focus();
+    textarea.select();
+  });
+}
+
 function showConfirmActionModal({ title, text, confirmText = "Confirmar", danger = false, onConfirm }) {
   const existing = document.getElementById("custom-modal");
   if (existing) existing.remove();
@@ -11990,7 +12049,7 @@ async function editChatMessage(id) {
     showModal("Edicao indisponivel", "A mensagem so pode ser editada em ate 15 minutos apos o envio.", "error");
     return;
   }
-  const nextText = window.prompt("Editar mensagem", getChatMessageText(message.mensagem));
+  const nextText = await showEditChatMessageModal(getChatMessageText(message.mensagem));
   if (nextText == null) return;
   const trimmed = String(nextText || "").trim();
   if (!trimmed) {

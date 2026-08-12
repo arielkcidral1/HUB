@@ -3902,6 +3902,26 @@ textarea {
   padding: 0 16px;
 }
 
+.chat-edit-modal-card {
+  width: min(100%, 520px);
+}
+
+.chat-edit-modal-label {
+  display: block;
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chat-edit-modal-textarea {
+  width: 100%;
+  min-height: 150px;
+  max-height: 42vh;
+  resize: vertical;
+  border-radius: 12px;
+}
+
 .day-events-modal {
   width: min(100%, 760px);
 }
