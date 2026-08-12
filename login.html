@@ -26,7 +26,7 @@
             <input name="identificador" type="text" autocomplete="off" inputmode="text" spellcheck="false" autocapitalize="off" autocorrect="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" required />
           </label>
           <label>Senha
-            <input name="senha" type="password" autocomplete="new-password" spellcheck="false" autocapitalize="off" autocorrect="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" data-dashlane-rid="ignore" required />
+            <input class="masked-password-input" name="senha" type="text" autocomplete="off" inputmode="text" spellcheck="false" autocapitalize="off" autocorrect="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" data-dashlane-rid="ignore" required />
           </label>
           <p class="login-error" id="login-error" role="alert"></p>
           <button class="primary-button" type="submit">Entrar</button>
@@ -34,8 +34,8 @@
       </div>
     </section>
     <script src="hub-postgres-client.js?v=db-load-v2"></script>
-    <script src="login-submit.js?v=no-password-autofill-v4"></script>
-    <script src="script.js?v=no-password-autofill-v68"></script>
+    <script src="login-submit.js?v=no-password-save-v5"></script>
+    <script src="script.js?v=no-password-save-v69"></script>
   </body>
 </html>
 

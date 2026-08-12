@@ -1359,9 +1359,8 @@ function loadDocumentRecords() {
 }
 
 function disableSensitiveFieldAutofill() {
-  document.querySelectorAll('input[type="password"], input[type="email"], input[name="cpf"], input[name="identificador"]').forEach((input) => {
-    const isPassword = input.type === "password";
-    input.autocomplete = isPassword ? "new-password" : "off";
+  document.querySelectorAll('input[type="password"], input[type="email"], input[name="cpf"], input[name="identificador"], input[name="senha"]').forEach((input) => {
+    input.autocomplete = "off";
     input.dataset.lpignore = "true";
     input.dataset["1pIgnore"] = "true";
     input.dataset.formType = "other";
@@ -2790,7 +2789,7 @@ function showPasswordActionModal({ title, text, confirmText = "Confirmar", dange
       <div class="modal-body">
         <p>${escapeHtml(text)}</p>
         <label class="modal-password-label">Senha de autorizacao
-          <input id="modal-action-password" name="${passwordInputName}" type="password" value="" autocomplete="one-time-code" inputmode="text" spellcheck="false" autocapitalize="off" autocorrect="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" data-dashlane-rid="ignore" placeholder="Digite a senha" />
+          <input id="modal-action-password" class="masked-password-input" name="${passwordInputName}" type="text" value="" autocomplete="off" inputmode="text" spellcheck="false" autocapitalize="off" autocorrect="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" data-dashlane-rid="ignore" placeholder="Digite a senha" />
         </label>
         <p class="form-feedback error" id="modal-action-error" hidden>Senha incorreta.</p>
       </div>
