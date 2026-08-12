@@ -1698,8 +1698,13 @@ textarea {
 }
 
 .chamados-records-header {
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
+}
+
+.chamados-records-header h2 {
+  flex: 0 0 auto;
+  margin-right: auto;
 }
 
 .chamados-filter-bar {
@@ -1709,7 +1714,7 @@ textarea {
   margin-left: auto;
   max-width: 100%;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 
 .chamados-filter-fields {
@@ -1721,9 +1726,9 @@ textarea {
 
 .chamados-filter-fields.vaga-filter-fields {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  justify-content: stretch;
-  width: min(100%, 560px);
+  grid-template-columns: 150px 105px 130px;
+  justify-content: end;
+  width: auto;
   max-width: 100%;
   min-width: 0;
 }
