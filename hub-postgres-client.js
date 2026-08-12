@@ -12,7 +12,7 @@
     const timeout = window.setTimeout(() => controller.abort(), options.timeoutMs || 15000);
     let response;
     try {
-      response = await fetch(path, { credentials: "same-origin", ...options, signal: options.signal || controller.signal });
+      response = await fetch(path, { ...options, signal: options.signal || controller.signal });
     } catch (error) {
       return {
         data: null,
