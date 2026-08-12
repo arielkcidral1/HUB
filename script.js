@@ -11833,15 +11833,13 @@ async function initializeAppData() {
   registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
   const postgresLoad = loadFromPostgreSQL({ setupLive: true });
-  const hasCachedDashboard = hasMeaningfulDashboardData();
-  const bootTimeoutMs = hasCachedDashboard ? POSTGRES_BOOT_TIMEOUT_MS : POSTGRES_BOOT_TIMEOUT_MS * 4;
-  const postgresLoaded = await withTimeout(postgresLoad, bootTimeoutMs, false);
+  const postgresLoaded = await withTimeout(postgresLoad, POSTGRES_BOOT_TIMEOUT_MS, false);
   if (postgresLoaded === false) {
     setSyncStatus("PostgreSQL carregando em segundo plano", false);
   }
   shell?.classList.remove("is-locked");
   shell?.classList.add("is-ready");
-  if (postgresLoaded === false && hasMeaningfulDashboardData()) {
+  if (postgresLoaded === false) {
     try {
       renderAll();
     } catch (error) {

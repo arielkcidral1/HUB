@@ -7,6 +7,7 @@
   const PERSISTED_USER_KEY = "hub-rh-persisted-auth-user";
   const VERIFIED_KEY = "hub-auth-loading-verified";
   const MINIMUM_LOADING_MS = 1000;
+  const RESTORE_TIMEOUT_MS = 8000;
   const loadingStartedAt = Date.now();
 
   function readJson(key) {
@@ -70,12 +71,15 @@
   }
 
   async function restore() {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), RESTORE_TIMEOUT_MS);
     try {
       const response = await fetch("/api/auth", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "session" }),
+        signal: controller.signal,
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result?.session?.user) {
@@ -85,6 +89,8 @@
       persistSession(result.session);
     } catch {
       redirectToLogin();
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
