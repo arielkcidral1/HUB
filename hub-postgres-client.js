@@ -68,6 +68,7 @@
       this.action = "select";
       this.payload = null;
       this.singleResult = false;
+      this.onConflictIgnore = false;
     }
 
     select(columns = "*") {
@@ -78,6 +79,11 @@
     insert(payload) {
       this.action = "insert";
       this.payload = payload;
+      return this;
+    }
+
+    ignoreConflicts() {
+      this.onConflictIgnore = true;
       return this;
     }
 
@@ -150,7 +156,8 @@
       if (this.action === "select") {
         result = await request(`/api/records?${params}`);
       } else if (this.action === "insert") {
-        result = await request(`/api/records?table=${encodeURIComponent(this.table)}`, {
+        const conflictParam = this.onConflictIgnore ? "&on_conflict=ignore" : "";
+        result = await request(`/api/records?table=${encodeURIComponent(this.table)}${conflictParam}`, {
           method: "POST",
           headers: jsonHeaders(),
           body: JSON.stringify({ rows: Array.isArray(this.payload) ? this.payload : [this.payload] }),

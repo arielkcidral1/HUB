@@ -111,15 +111,19 @@ export default async function handler(req, res) {
 
     if (req.method === "POST") {
       const rows = Array.isArray(body.rows) ? body.rows : [body.row || body];
+      // Recibos de leitura sao reenviados a cada sessao; sem isso a primeira
+      // linha repetida viola a chave primaria e derruba o lote inteiro.
+      const ignoreConflict = url.searchParams.get("on_conflict") === "ignore";
+      const conflictClause = ignoreConflict ? " on conflict do nothing" : "";
       const inserted = [];
       for (const row of rows) {
         const entries = Object.entries(row || {}).filter(([, value]) => value !== undefined);
         const columns = entries.map(([key]) => quoteIdent(key));
         const values = entries.map(([key, value]) => normalizeDbValue(table, key, value));
         const placeholders = entries.map(([key], index) => placeholderFor(table, key, index + 1));
-        const sql = `insert into public.${quoteIdent(table)} (${columns.join(", ")}) values (${placeholders.join(", ")}) returning *`;
+        const sql = `insert into public.${quoteIdent(table)} (${columns.join(", ")}) values (${placeholders.join(", ")})${conflictClause} returning *`;
         const result = await pool.query(sql, values);
-        inserted.push(result.rows[0]);
+        if (result.rows[0]) inserted.push(result.rows[0]);
       }
       return json(res, 200, { data: inserted });
     }

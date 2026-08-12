@@ -13,6 +13,7 @@ const TEAM_CREDENTIALS_KEY = "hub-team-credentials";
 const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
 const SHOWN_NOTIFICATIONS_KEY = "hub-rh-shown-notification-ids";
+const DISMISSED_NOTIFICATIONS_KEY = "hub-rh-dismissed-notification-ids";
 // IMPORTANTE: os IDs lidos não entram no cache sensível.
 // Assim, ao fechar/abrir o site ou perder a sessão, as notificações já visualizadas
 // não voltam como não lidas.
@@ -362,6 +363,7 @@ let realtimeBroadcastReady = false;
 const pendingChatBroadcasts = [];
 let readNotificationIds = loadReadNotificationIds();
 let readRhMessageIds = loadReadRhMessageIds();
+let dismissedNotificationIds = loadDismissedNotificationIds();
 window.editingDocId = null;
 
 const documentLabels = {
@@ -1471,10 +1473,23 @@ function saveShownNotificationKeys() {
   saveAccountScopedIdSet(SHOWN_NOTIFICATIONS_KEY, shownNotificationKeys, 600);
 }
 
+function loadDismissedNotificationIds() {
+  return loadAccountScopedIdSet(DISMISSED_NOTIFICATIONS_KEY);
+}
+
+function saveDismissedNotificationIds() {
+  saveAccountScopedIdSet(DISMISSED_NOTIFICATIONS_KEY, dismissedNotificationIds);
+}
+
+function isNotificationDismissed(dismissKey) {
+  return Boolean(dismissKey) && dismissedNotificationIds.has(String(dismissKey));
+}
+
 function reloadReadStateForCurrentUser() {
   readNotificationIds = loadReadNotificationIds();
   readRhMessageIds = loadReadRhMessageIds();
   shownNotificationKeys = loadShownNotificationKeys();
+  dismissedNotificationIds = loadDismissedNotificationIds();
 }
 
 function getNotificationAccountKey() {
@@ -1529,16 +1544,24 @@ function mergeReadReceiptRows(rows = []) {
     const itemId = row.item_id || row.itemId || "";
     const notificationId = row.notification_id || row.notificationId || (itemType === "notification" ? itemId : "");
     const messageId = row.message_id || row.messageId || (itemType === "message" ? itemId : "");
+    if (itemType === "dismissed") {
+      if (itemId) dismissedNotificationIds.add(String(itemId));
+      return;
+    }
     if (notificationId) readNotificationIds.add(String(notificationId));
     if (messageId) readRhMessageIds.add(String(messageId));
   });
   saveReadNotificationIds();
   saveReadRhMessageIds();
+  saveDismissedNotificationIds();
 }
 
 async function loadReadReceiptsFromPostgreSQL() {
   if (!postgresClient || !TABLES.readReceipts) return;
-  const userKeys = getNotificationAccountAliases();
+  // Na leitura aceitamos tambem os aliases antigos, para nao perder recibos
+  // gravados antes de a escrita passar a usar somente o UUID da conta.
+  const userKeys = [...getReadReceiptUserIds(), ...getNotificationAccountAliases()]
+    .filter((value, index, list) => list.indexOf(value) === index);
   if (!userKeys.length) return;
   try {
     const { data: rows, error } = await postgresClient
@@ -1555,19 +1578,31 @@ async function loadReadReceiptsFromPostgreSQL() {
   }
 }
 
-function syncReadReceiptsToPostgreSQL(notificationIds = [], messageIds = []) {
+// hub_read_receipts.user_id tem FK para hub_users(id): aliases como e-mail, CPF
+// ou nome sao recusados pelo banco e derrubam o lote inteiro. So gravamos o UUID.
+function getReadReceiptUserIds() {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return [currentUserProfile?.id, currentAuthUser?.id]
+    .map((value) => String(value || "").trim())
+    .filter((value) => uuidPattern.test(value))
+    .filter((value, index, list) => list.indexOf(value) === index);
+}
+
+function syncReadReceiptsToPostgreSQL(notificationIds = [], messageIds = [], dismissedIds = []) {
   if (!postgresClient || !TABLES.readReceipts) return;
-  const userKeys = getNotificationAccountAliases();
+  const userKeys = getReadReceiptUserIds();
   if (!userKeys.length) return;
   const now = new Date().toISOString();
   const rows = userKeys.flatMap((userKey) => [
     ...notificationIds.map((id) => ({ user_id: userKey, item_type: "notification", item_id: String(id), read_at: now })),
     ...messageIds.map((id) => ({ user_id: userKey, item_type: "message", item_id: String(id), read_at: now })),
+    ...dismissedIds.map((id) => ({ user_id: userKey, item_type: "dismissed", item_id: String(id), read_at: now })),
   ]).filter((row) => row.item_id);
   if (!rows.length) return;
   postgresClient
     .from(TABLES.readReceipts)
     .insert(rows)
+    .ignoreConflicts()
     .then(({ error }) => {
       if (error && !isMissingColumn(error, "user_id")) {
         console.warn("Nao foi possivel sincronizar notificacoes lidas:", error);
@@ -1645,6 +1680,30 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
   try { renderDashboard?.(); } catch (_) {}
   try { renderChatChannels?.(); } catch (_) {}
 
+  return true;
+}
+
+// Apagar uma notificacao vale para a conta inteira, em qualquer maquina: alem do
+// cache local, gravamos um recibo "dismissed" no PostgreSQL, lido na entrada.
+function dismissNotifications(dismissKeys = []) {
+  const cleanKeys = (Array.isArray(dismissKeys) ? dismissKeys : [dismissKeys])
+    .filter((key) => key !== undefined && key !== null && String(key).trim())
+    .map(String)
+    .filter((key, index, list) => list.indexOf(key) === index);
+  if (!cleanKeys.length) return false;
+
+  let changed = false;
+  cleanKeys.forEach((key) => {
+    if (dismissedNotificationIds.has(key)) return;
+    dismissedNotificationIds.add(key);
+    changed = true;
+  });
+  if (!changed) return false;
+
+  saveDismissedNotificationIds();
+  syncReadReceiptsToPostgreSQL([], [], cleanKeys);
+
+  try { renderDashboard?.(); } catch (_) {}
   return true;
 }
 
@@ -4415,6 +4474,10 @@ async function loadFromPostgreSQL(options = {}) {
     if (bootstrapRows) {
       const loaded = applyBootstrapRowsToState(bootstrapRows, { forceCore: true, overwriteEmpty: true });
       ensureRequiredTeamUsers();
+      // O bootstrap nao traz hub_read_receipts (e por conta, nao global), entao o
+      // estado de lidas/apagadas precisa ser buscado aqui tambem. Sem isso ele
+      // ficava so no localStorage e nao acompanhava a conta entre maquinas.
+      await loadReadReceiptsFromPostgreSQL();
       publishHubDataCounts();
       if (setupLive) {
         setupRealtime();
@@ -7594,7 +7657,10 @@ function renderDashboard() {
         };
       })  ];
 
-  const sortedDashboardItems = dashboardItems.map((item, index) => ({ ...item, _sortIndex: index }));
+  // Notificacoes apagadas pela conta somem do acompanhamento em qualquer maquina.
+  const sortedDashboardItems = dashboardItems
+    .filter((item) => !isNotificationDismissed(item.notificationId))
+    .map((item, index) => ({ ...item, _sortIndex: index }));
   sortedDashboardItems.sort((a, b) => {
     const aRead = isDashboardActivityReadForOrdering(a);
     const bRead = isDashboardActivityReadForOrdering(b);
@@ -13052,12 +13118,17 @@ class NotificationTracker {
       const time = item.time || item.date || item.createdAt || "Recentemente";
       const rawDateTime = item.sortAt || item.updatedSortAt || item.updatedAt || item.createdSortAt || item.createdAt || item.dateTime || item.date || time;
       const id = String(item.id || `${type}-${notifications.length}-${Date.now()}`);
+      // A chave de exclusao pode diferir do id: o card agregado de mensagens usa
+      // a ultima mensagem, para que uma mensagem nova volte a aparecer.
+      const dismissKey = String(item.dismissKey || id);
+      if (isNotificationDismissed(dismissKey)) return;
       const hasBeenRead = readNotificationIds.has(id);
       const unread = Boolean(item.unread || originalStatus === "unread" || originalStatus === "urgent") && !hasBeenRead;
       const status = hasBeenRead && originalStatus === "unread" ? "pending" : originalStatus;
 
       notifications.push({
         id,
+        dismissKey,
         type,
         title: item.title || "Notificação",
         description: item.description || item.text || "",
@@ -13117,6 +13188,7 @@ class NotificationTracker {
 
       pushNotification({
         id: "mensagens-rh",
+        dismissKey: `mensagens-rh:${latestMessage.id || messageIds[0] || "vazio"}`,
         type: "mensagem",
         title: "Mensagens do RH",
         description: hasUnread
@@ -13500,12 +13572,14 @@ class NotificationTracker {
   }
 
   clearAll() {
-    if (!confirm("Tem certeza que deseja limpar a visualização das notificações?")) return;
+    if (!confirm("Apagar estas notificações da sua conta? Elas somem em todos os aparelhos onde você usa o HUB.")) return;
+    const dismissKeys = this.notifications.map((notif) => notif.dismissKey || notif.id).filter(Boolean);
+    dismissNotifications(dismissKeys);
     this.notifications = [];
     this.filteredNotifications = [];
     this.renderNotifications();
     this.updateStats();
-    this.showNotification("Visualização de notificações limpa.");
+    this.showNotification("Notificações apagadas da sua conta em todos os aparelhos.");
   }
 
   showNotification(message) {
