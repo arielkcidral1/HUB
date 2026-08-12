@@ -724,7 +724,10 @@ function getCurrentUserRole() {
 
 function getCurrentUserNormalizedRole() {
   const user = getCurrentUserRecord?.() || {};
-  return normalizeLoginName(AuthHelper.getRole() || user.cargo || currentUserProfile?.cargo || "");
+  // O cargo do cookie de sessao e congelado no login e vale 30 dias. Uma
+  // mudanca de cargo no banco so valeria no proximo login se confiassemos
+  // nele, entao a linha de hub_users tem prioridade quando ja foi carregada.
+  return normalizeLoginName(user.cargo || AuthHelper.getRole() || currentUserProfile?.cargo || "");
 }
 
 /**
@@ -745,6 +748,37 @@ function isRhUser() {
  */
 function isCashierUser() {
   return AuthHelper.isCashier();
+}
+
+// Gerente enxerga apenas Painel, Comunicacao RH, Quadros, Calendario e
+// Documentos RH. Chamados fica de fora da aba interna: o gerente so tem o
+// formulario publico de solicitacao (chamados.html).
+const MANAGER_ALLOWED_VIEWS = Object.freeze([
+  "dashboard",
+  "comunicacao",
+  "quadros",
+  "calendario",
+  "documentos",
+  "conta",
+]);
+
+const ALL_ALLOWED_VIEWS = Object.freeze([
+  "dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros",
+  "vagas", "calendario", "documentos", "advertencias-suspensoes",
+  "documentos-contratados", "gerenciamento-vt", "equipe", "conta",
+]);
+
+// Fonte unica de verdade do escopo de telas. O painel se apoia nela para nao
+// exibir numero, pendencia ou aviso de uma aba que o usuario nao acessa.
+function getAllowedViewsForCurrentUser() {
+  if (isManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
+  const allowed = new Set(ALL_ALLOWED_VIEWS);
+  if (isFredericoUser()) allowed.add("feedbacks");
+  return allowed;
+}
+
+function canAccessView(view) {
+  return getAllowedViewsForCurrentUser().has(String(view || ""));
 }
 
 function refreshCurrentUserRoleFromData() {
@@ -6599,6 +6633,12 @@ function renderCards(targetId, items, template) {
 }
 
 function activateView(viewId) {
+  // Barra qualquer caminho alternativo para uma aba fora do escopo: atalho de
+  // teclado, cartao do painel, link interno ou chamada direta pelo console.
+  if (isAuthenticated() && !isPublicPage() && !canAccessView(viewId)) {
+    if (viewId !== "dashboard" && canAccessView("dashboard")) activateView("dashboard");
+    return;
+  }
   const previousViewId = document.querySelector(".view.active")?.id || "";
   if (previousViewId === "comunicacao" && viewId !== "comunicacao" && chatSelectedFiles.length) {
     clearChatSelectedFile();
@@ -7366,12 +7406,11 @@ function applyRoleAccess() {
 
   const chamadosUrls = new Set(["chamados.html", "https://hub-opal-nine.vercel.app/chamados.html"]);
   const denunciaUrls = new Set(["denuncia.html", "https://hub-opal-nine.vercel.app/denuncia.html"]);
-  const allowedViews = new Set(["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados", "gerenciamento-vt", "equipe", "conta"]);
-  if (isFredericoUser()) allowedViews.add("feedbacks");
+  const allowedViews = getAllowedViewsForCurrentUser();
   const allowedExternalUrls = isCashierUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : isManagerUser()
-    ? new Set([...chamadosUrls, ...denunciaUrls])
+    ? new Set(chamadosUrls)
     : new Set();
 
   document.querySelectorAll(".nav-item").forEach((button) => {
@@ -7389,6 +7428,39 @@ function applyRoleAccess() {
 
   const activeView = document.querySelector(".view.active");
   if (!activeView || !allowedViews.has(activeView.id)) activateView("dashboard");
+}
+
+// Traduz a colecao de dados para a aba correspondente.
+function getViewForCollection(collection) {
+  const views = {
+    comunicados: "comunicacao",
+    denuncias: "denuncias",
+    chamados: "chamados",
+    candidaturas: "vagas",
+    vagas: "vagas",
+    malotes: "malotes",
+    eventos: "calendario",
+    quadros: "quadros",
+    documentos: "documentos",
+    documentosContratados: "documentos-contratados",
+    atestados: "documentos",
+    vtRegistros: "gerenciamento-vt",
+    disciplinaryRecords: "advertencias-suspensoes",
+    usuarios: "equipe",
+  };
+  return views[String(collection || "")] || "dashboard";
+}
+
+// Traduz o tipo de item do acompanhamento para a aba correspondente.
+function getDashboardItemView(item = {}) {
+  if (item.view) return item.view;
+  const kind = String(item.kind || "");
+  if (kind === "notificacao" || kind === "mensagem") return "comunicacao";
+  if (kind === "denuncia") return "denuncias";
+  if (kind === "chamado") return "chamados";
+  if (kind === "vaga") return "vagas";
+  if (kind === "malote") return "malotes";
+  return "dashboard";
 }
 
 function isArchivedRecord(item) {
@@ -7473,9 +7545,20 @@ function isDashboardActivityReadForOrdering(item = {}) {
   return isDashboardNotificationRead(item);
 }
 
+// Esconde do painel os cartoes que levam a abas fora do escopo do usuario.
+function applyDashboardScopeToMetricCards() {
+  const allowedViews = getAllowedViewsForCurrentUser();
+  document.querySelectorAll(".metric-card-link[data-view]").forEach((card) => {
+    const allowed = allowedViews.has(card.dataset.view);
+    card.hidden = !allowed;
+    card.style.display = allowed ? "" : "none";
+  });
+}
+
 function renderDashboard() {
   if (!document.getElementById("metric-denuncias")) return;
 
+  applyDashboardScopeToMetricCards();
   document.getElementById("metric-denuncias").textContent = data.denuncias.filter((item) => item.status === "Aberta" || item.status === "Urgente").length;
   const unreadRhMessages = getUnreadRhMessages();
   notifyUnreadRhMessages(unreadRhMessages.length);
@@ -7587,7 +7670,10 @@ function renderDashboard() {
       })  ];
 
   // Notificacoes apagadas pela conta somem do acompanhamento em qualquer maquina.
+  // O acompanhamento tambem nao pode revelar pendencia de aba sem acesso: um
+  // gerente nao ve denuncia, chamado nem curriculo aqui.
   const sortedDashboardItems = dashboardItems
+    .filter((item) => canAccessView(getDashboardItemView(item)))
     .filter((item) => !isNotificationDismissed(item.notificationId))
     .map((item, index) => ({ ...item, _sortIndex: index }));
   sortedDashboardItems.sort((a, b) => {
@@ -8745,6 +8831,9 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
   if (["usuarios", "eventos", "vtRegistros", "malotes", "vagas", "atestados", "documentosContratados", "quadros"].includes(collection)) return false;
+  // Sem aviso de aba fora do escopo: um gerente nao pode receber o conteudo de
+  // uma denuncia por popup ou notificacao do sistema.
+  if (!canAccessView(getViewForCollection(collection))) return false;
 
   const signature = [collection, action, item.id || "", item.updatedAt || item.updated_at || item.createdAt || item.created_at || ""].join("|");
   if (signature && signature === lastRealtimeNotificationSignature) return false;
@@ -13051,6 +13140,9 @@ class NotificationTracker {
       // a ultima mensagem, para que uma mensagem nova volte a aparecer.
       const dismissKey = String(item.dismissKey || id);
       if (isNotificationDismissed(dismissKey)) return;
+      // O acompanhamento completo respeita o mesmo escopo de abas do painel.
+      const targetView = item.view || this.getViewForType(type);
+      if (typeof canAccessView === "function" && !canAccessView(targetView)) return;
       const hasBeenRead = readNotificationIds.has(id);
       const unread = Boolean(item.unread || originalStatus === "unread" || originalStatus === "urgent") && !hasBeenRead;
       const status = hasBeenRead && originalStatus === "unread" ? "pending" : originalStatus;

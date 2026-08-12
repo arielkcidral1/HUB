@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v82' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v83' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -84,7 +84,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v22[\s\S]*style\.css\?v=visible-auth-loading-v23[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v82[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v22[\s\S]*style\.css\?v=visible-auth-loading-v23[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v83[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -194,7 +194,14 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'function setupEquipeFormScrollGrid\(\)[\s\S]*equipe-workspace-expanded[\s\S]*equipe-two-col[\s\S]*offsetAfterForm: 140[\s\S]*expandOnce: true' "transicao da aba Equipe expande de forma estavel"
   Assert-True -Condition (-not ($index -match 'data-view="gerenciamento-vt"[^>]*>Gerenciamento VT</button>')) -Message "menu nao possui mais aba Gerenciamento VT"
   Assert-MatchText $index 'data-view="documentos-contratados"[^>]*>Documentos de Contratados</button>' "menu possui aba Documentos de Contratados"
-  Assert-MatchText $script 'const allowedViews = new Set\(\["dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros", "vagas", "calendario", "documentos", "advertencias-suspensoes", "documentos-contratados"' "usuarios autenticados veem abas principais do HUB"
+  Assert-MatchText $script 'const ALL_ALLOWED_VIEWS = Object\.freeze\(\[[\s\S]*"dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros",[\s\S]*"vagas", "calendario", "documentos", "advertencias-suspensoes",[\s\S]*"documentos-contratados", "gerenciamento-vt", "equipe", "conta",' "usuarios autenticados veem abas principais do HUB"
+  Assert-MatchText $script 'const MANAGER_ALLOWED_VIEWS = Object\.freeze\(\[[\s\S]*"dashboard",[\s\S]*"comunicacao",[\s\S]*"quadros",[\s\S]*"calendario",[\s\S]*"documentos",[\s\S]*"conta",[\s\S]*\]\)' "gerente so acessa painel comunicacao quadros calendario e documentos"
+  Assert-True -Condition (-not ($script -match 'MANAGER_ALLOWED_VIEWS = Object\.freeze\(\[[^\]]*"chamados"')) -Message "gerente nao acessa a aba interna de chamados"
+  Assert-MatchText $script 'function applyRoleAccess\(\)[\s\S]*const allowedViews = getAllowedViewsForCurrentUser\(\)[\s\S]*: isManagerUser\(\)\s*\?\s*new Set\(chamadosUrls\)' "gerente so recebe o formulario publico de solicitacao de EPI"
+  Assert-MatchText $script 'function applyDashboardScopeToMetricCards\(\)[\s\S]*\.metric-card-link\[data-view\][\s\S]*allowedViews\.has\(card\.dataset\.view\)' "painel esconde cartoes de abas sem acesso"
+  Assert-MatchText $script 'const sortedDashboardItems = dashboardItems[\s\S]*\.filter\(\(item\) => canAccessView\(getDashboardItemView\(item\)\)\)' "acompanhamento do painel respeita o escopo de abas"
+  Assert-MatchText $script 'function shouldNotifyRealtimeItem\([\s\S]*if \(!canAccessView\(getViewForCollection\(collection\)\)\) return false;' "notificacao nao vaza conteudo de aba sem acesso"
+  Assert-MatchText $script 'function activateView\(viewId\)[\s\S]*!canAccessView\(viewId\)[\s\S]*activateView\("dashboard"\)' "troca de aba bloqueia destino fora do escopo"
   Assert-MatchText $index 'id="primary-sidebar"[^>]*aria-label="Navegacao principal"[\s\S]*id="mobile-menu-toggle"[^>]*aria-controls="primary-sidebar"[^>]*aria-expanded="false"' "mobile possui botao para abrir menu principal"
   Assert-MatchText $style '@media \(max-width: 900px\)[\s\S]*\.sidebar[\s\S]*position: fixed[\s\S]*transform: translateX\(-104%\)[\s\S]*\.app-shell\.mobile-menu-open \.sidebar[\s\S]*translateX\(0\)' "sidebar vira menu lateral no mobile"
   Assert-MatchText $style '\.mobile-menu-toggle[\s\S]*display: none[\s\S]*\.mobile-menu-backdrop[\s\S]*position: fixed' "menu mobile possui botao e backdrop"
