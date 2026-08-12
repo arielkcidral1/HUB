@@ -300,7 +300,16 @@ const defaultData = {
   readReceipts: [],
 };
 
-let data = loadLocalData();
+// O cache local nunca pode derrubar o carregamento do painel: se estiver
+// corrompido, seguimos com o estado padrao e deixamos o PostgreSQL repovoar.
+let data = (() => {
+  try {
+    return loadLocalData();
+  } catch (error) {
+    console.error("Cache local invalido; iniciando com dados padrao:", error);
+    return defaultData;
+  }
+})();
 let postgresClient = null;
 let realtimeChannel = null;
 let activeChatChannel = "";
@@ -1816,24 +1825,36 @@ function renderMaloteReport() {
   `;
 }
 
+// Valores ja formatados (ex.: "12/08/2026 15:56") voltam do cache local e nao
+// sao aceitos por new Date(); nesse caso devolvemos o texto original em vez de
+// deixar o Intl lancar RangeError e derrubar o carregamento do painel.
+function toValidDate(value) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 function formatDate(value) {
   if (!value) return "Hoje";
+  const parsed = toValidDate(value);
+  if (!parsed) return String(value);
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  }).format(new Date(value));
+  }).format(parsed);
 }
 
 function formatDateTime(value) {
   if (!value) return "Hoje";
+  const parsed = toValidDate(value);
+  if (!parsed) return String(value);
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(value));
+  }).format(parsed);
 }
 
 function getChatMessageDate(value) {
@@ -2340,10 +2361,12 @@ function getLocalDateKey(date = new Date()) {
 
 function formatEventDate(value) {
   if (!value) return "Sem data";
+  const parsed = toValidDate(`${value}T00:00:00`);
+  if (!parsed) return String(value);
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "short",
-  }).format(new Date(`${value}T00:00:00`));
+  }).format(parsed);
 }
 
 function formatEventTime(value) {
@@ -2355,7 +2378,9 @@ function formatEventTime(value) {
 
 function formatWeekday(value) {
   if (!value) return "";
-  return new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(new Date(`${value}T00:00:00`));
+  const parsed = toValidDate(`${value}T00:00:00`);
+  if (!parsed) return "";
+  return new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(parsed);
 }
 
 function dateKeyFromParts(year, month, day) {
