@@ -1315,7 +1315,7 @@ function setSyncStatus(text, isOnline = false) {
 }
 
 function loadLocalData() {
-  const parsed = storageService.getSessionItem(STORAGE_KEY);
+  const parsed = storageService.getSessionItem(STORAGE_KEY, storageService.getLocalItem(STORAGE_KEY));
   if (!parsed) return defaultData;
 
   parsed.comunicados = (parsed.comunicados || []).map((item) => ({
@@ -1388,11 +1388,30 @@ function saveLocalData() {
     syncTeamCredentials(data.usuarios);
   }
   storageService.setSessionItem(STORAGE_KEY, data);
+  storageService.setLocalItem(STORAGE_KEY, data);
 }
 let _saveLocalDataTimer = null;
 function saveLocalDataDebounced() {
   if (_saveLocalDataTimer) clearTimeout(_saveLocalDataTimer);
   _saveLocalDataTimer = setTimeout(() => { saveLocalData(); }, 300);
+}
+
+function hasMeaningfulDashboardData(state = data) {
+  if (!state) return false;
+  return [
+    "denuncias",
+    "feedbacks",
+    "comunicados",
+    "malotes",
+    "chamados",
+    "quadros",
+    "vagas",
+    "eventos",
+    "documentosContratados",
+    "candidaturas",
+    "atestados",
+    "usuarios",
+  ].some((collection) => Array.isArray(state[collection]) && state[collection].length > 0);
 }
 
 
@@ -11814,13 +11833,15 @@ async function initializeAppData() {
   registerHubNotificationServiceWorker();
   armDesktopNotificationPermissionRequest();
   const postgresLoad = loadFromPostgreSQL({ setupLive: true });
-  const postgresLoaded = await withTimeout(postgresLoad, POSTGRES_BOOT_TIMEOUT_MS, false);
+  const hasCachedDashboard = hasMeaningfulDashboardData();
+  const bootTimeoutMs = hasCachedDashboard ? POSTGRES_BOOT_TIMEOUT_MS : POSTGRES_BOOT_TIMEOUT_MS * 4;
+  const postgresLoaded = await withTimeout(postgresLoad, bootTimeoutMs, false);
   if (postgresLoaded === false) {
     setSyncStatus("PostgreSQL carregando em segundo plano", false);
   }
   shell?.classList.remove("is-locked");
   shell?.classList.add("is-ready");
-  if (postgresLoaded === false) {
+  if (postgresLoaded === false && hasMeaningfulDashboardData()) {
     try {
       renderAll();
     } catch (error) {
