@@ -1315,7 +1315,9 @@ function setSyncStatus(text, isOnline = false) {
 }
 
 function loadLocalData() {
-  const parsed = storageService.getSessionItem(STORAGE_KEY, storageService.getLocalItem(STORAGE_KEY));
+  const sessionData = storageService.getSessionItem(STORAGE_KEY);
+  const localData = storageService.getLocalItem(STORAGE_KEY);
+  const parsed = hasMeaningfulDashboardData(sessionData) ? sessionData : localData;
   if (!parsed) return defaultData;
 
   parsed.comunicados = (parsed.comunicados || []).map((item) => ({
@@ -1388,7 +1390,7 @@ function saveLocalData() {
     syncTeamCredentials(data.usuarios);
   }
   storageService.setSessionItem(STORAGE_KEY, data);
-  storageService.setLocalItem(STORAGE_KEY, data);
+  if (hasMeaningfulDashboardData(data)) storageService.setLocalItem(STORAGE_KEY, data);
 }
 let _saveLocalDataTimer = null;
 function saveLocalDataDebounced() {
@@ -4239,7 +4241,7 @@ function mapBootstrapCollectionRows(collection, sourceRows = []) {
 
 function applyBootstrapRowsToState(bootstrapRows, options = {}) {
   if (!bootstrapRows) return false;
-  const { forceCore = false, overwriteEmpty = false } = options;
+  const { forceCore = false, overwriteEmpty = false, allowClearEmpty = false } = options;
   const forceCollections = new Set(forceCore
     ? [
       "denuncias",
@@ -4268,6 +4270,7 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
     try {
       const mappedRows = mapBootstrapCollectionRows(collection, sourceRows);
       if (!mappedRows.length && !overwriteEmpty) return;
+      if (!mappedRows.length && !allowClearEmpty && (data[collection] || []).length) return;
       if (collection === "usuarios") {
         data.usuarios = mergeUsersByName(data.usuarios || [], mappedRows);
       } else if (collection === "comunicados") {
