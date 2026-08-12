@@ -1124,10 +1124,6 @@ async function restoreAuthenticatedSession() {
     console.warn("Sessao auth remota indisponivel, usando sessao local persistida:", error);
   }
   if (!session?.user) {
-    if (hasPersistedAuthIdentity()) {
-      console.warn("Sessao remota indisponivel; mantendo sessao local persistida.");
-      return true;
-    }
     clearAuthenticatedUser();
     return false;
   }
