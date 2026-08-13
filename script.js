@@ -7963,6 +7963,26 @@ async function lerDenuncia(id) {
   }
 }
 
+async function lerFeedback(id) {
+  const feedback = (data.feedbacks || []).find((item) => String(item.id) === String(id));
+  if (!feedback) return;
+
+  // Mostra o feedback em formato de modal customizado
+  showModal(
+    "Visualização do Feedback",
+    `Tipo: ${feedback.tipo || "Feedback"}\nIdentificação: ${feedback.autorNome || "Não informado"}\nRecebido em: ${feedback.createdAt || "Hoje"}\n\nMensagem:\n"${feedback.mensagem || ""}"`,
+    "info"
+  );
+
+  // Se o feedback ainda constar como Não lido ("Novo"), movemos para "Lido"
+  if ((feedback.status || "Novo") === "Novo") {
+    const success = await updateItem("feedbacks", id, { status: "Lido" });
+    if (!success) {
+      showModal("Aviso de Permissão", "O feedback não pode ser atualizado. Você precisa rodar o script SQL de UPDATE no painel do PostgreSQL para consertar as permissões.", "error");
+    }
+  }
+}
+
 async function atualizarStatusDenuncia(id, status) {
   const denuncia = data.denuncias.find((item) => String(item.id) === String(id));
   if (!denuncia) return false;
@@ -9495,32 +9515,30 @@ function renderDenunciasSection() {
 }
 
 function renderFeedbacksSection() {
-  const target = document.getElementById("feedbacks-list");
-  if (!target) return;
+  const naoLidosTarget = document.getElementById("feedbacks-nao-lidos");
+  if (!naoLidosTarget) return;
 
   if (!isFredericoUser()) {
-    target.innerHTML = '<p class="empty-state">Acesso restrito.</p>';
+    naoLidosTarget.innerHTML = '<p class="empty-state">Acesso restrito.</p>';
+    const lidosTarget = document.getElementById("feedbacks-lidos");
+    if (lidosTarget) lidosTarget.innerHTML = "";
     return;
   }
 
-  const abertos = [...(data.feedbacks || [])].filter((item) => !isArchivedRecord(item));
-  const arquivados = [...(data.feedbacks || [])].filter((item) => isArchivedRecord(item));
-  const items = (showArchivedFeedbacks ? arquivados : abertos)
-    .sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
+  const feedbacks = [...(data.feedbacks || [])].sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
+  const naoLidos = feedbacks.filter((item) => (item.status || "Novo") === "Novo");
+  const lidos = feedbacks.filter((item) => item.status === "Lido");
+  const arquivados = feedbacks.filter((item) => isArchivedRecord(item));
 
   const primaryTitle = document.getElementById("feedbacks-primary-title");
-  if (primaryTitle) primaryTitle.textContent = showArchivedFeedbacks ? "Arquivados" : "Novos feedbacks";
+  if (primaryTitle) primaryTitle.textContent = showArchivedFeedbacks ? "Arquivados" : "Não Lidos";
   const toggleButton = document.getElementById("toggle-archived-feedbacks");
   if (toggleButton) toggleButton.textContent = showArchivedFeedbacks ? "Ocultar arquivados" : "Mostrar arquivados";
 
-  if (!items.length) {
-    target.innerHTML = `<p class="empty-state">${showArchivedFeedbacks ? "Sem feedbacks arquivados" : "Nenhum feedback enviado ainda."}</p>`;
-    return;
-  }
-
-  target.innerHTML = items.map((item) => `
-    <article class="item-card"
+  const cardTemplate = (item, archived = false) => `
+    <article class="item-card clickable"
              data-record-context="feedback"
+             data-action="ler-feedback"
              data-id="${escapeHtml(item.id)}">
       <div class="item-topline">
         <p class="item-title">${escapeHtml(item.tipo || "Feedback")}</p>
@@ -9529,9 +9547,20 @@ function renderFeedbacksSection() {
       <p><strong>Identificacao:</strong> ${escapeHtml(item.autorNome || "Nao informado")}</p>
       <p>${escapeHtml(item.mensagem || "")}</p>
       <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")}</p>
-      ${showArchivedFeedbacks ? `<div class="job-actions section-top"><button class="secondary-link" type="button" data-action="reabrir-feedback" data-id="${escapeHtml(item.id)}">Reabrir</button></div>` : ""}
+      ${archived ? `<div class="job-actions section-top"><button class="secondary-link" type="button" data-action="reabrir-feedback" data-id="${escapeHtml(item.id)}">Reabrir</button></div>` : ""}
     </article>
-  `).join("");
+  `;
+
+  if (showArchivedFeedbacks) {
+    if (!arquivados.length) {
+      naoLidosTarget.innerHTML = '<p class="empty-state">Sem feedbacks arquivados</p>';
+    } else {
+      renderCards("feedbacks-nao-lidos", arquivados, (item) => cardTemplate(item, true));
+    }
+  } else {
+    renderCards("feedbacks-nao-lidos", naoLidos, (item) => cardTemplate(item, false));
+  }
+  renderCards("feedbacks-lidos", lidos, (item) => cardTemplate(item, false));
 }
 
 function renderAll() {
@@ -13094,6 +13123,9 @@ document.addEventListener('click', (event) => {
   switch (action) {
     case 'ler-denuncia':
       lerDenuncia(id);
+      break;
+    case 'ler-feedback':
+      lerFeedback(id);
       break;
     case 'reabrir-denuncia':
       reabrirDenuncia(id);
