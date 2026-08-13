@@ -779,6 +779,9 @@ function getAllowedViewsForCurrentUser() {
   if (isManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
   const allowed = new Set(ALL_ALLOWED_VIEWS);
   if (isFredericoUser()) allowed.add("feedbacks");
+  // Denuncias Recebidas fica restrita a Ariel e Frederico.
+  const canSeeDenuncias = isFredericoUser() || (typeof window.isArielUser === "function" && window.isArielUser());
+  if (!canSeeDenuncias) allowed.delete("denuncias");
   return allowed;
 }
 
@@ -7611,8 +7614,12 @@ function isDashboardActivityReadForOrdering(item = {}) {
 // Esconde do painel os cartoes que levam a abas fora do escopo do usuario.
 function applyDashboardScopeToMetricCards() {
   const allowedViews = getAllowedViewsForCurrentUser();
+  const isManager = isManagerUser();
   document.querySelectorAll(".metric-card-link[data-view]").forEach((card) => {
-    const allowed = allowedViews.has(card.dataset.view);
+    // Gerente acessa a aba Documentos RH, mas o cartao "Documentos enviados
+    // hoje" nao aparece no painel dele.
+    let allowed = allowedViews.has(card.dataset.view);
+    if (isManager && card.querySelector("#metric-documentos")) allowed = false;
     card.hidden = !allowed;
     card.style.display = allowed ? "" : "none";
   });
