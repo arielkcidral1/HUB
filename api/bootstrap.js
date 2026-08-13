@@ -10,6 +10,7 @@ const BOOTSTRAP_TABLES = {
   vagas: "hub_vagas",
   eventos: "hub_eventos",
   vtRegistros: "hub_vt_registros",
+  disciplinaryRecords: "hub_advertencias_suspensoes",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",

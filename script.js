@@ -146,6 +146,7 @@ const TABLES = {
   vagas: "hub_vagas",
   eventos: "hub_eventos",
   vtRegistros: "hub_vt_registros",
+  disciplinaryRecords: "hub_advertencias_suspensoes",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
@@ -3616,6 +3617,21 @@ if (collection === "eventos") {
     }));
   }
 
+  if (collection === "disciplinaryRecords") {
+    return rows.map((row) => ({
+      id: row.id,
+      tipo: row.tipo || "advertencia",
+      colaborador: row.colaborador || "",
+      dataMedida: row.data_medida || "",
+      unidade: row.unidade || "",
+      local: row.local || "",
+      motivo: row.motivo || "",
+      createdBy: row.created_by || getSystemFallbackAuthor(),
+      createdAt: formatDate(row.created_at),
+      sortAt: row.created_at || "",
+    }));
+  }
+
   if (collection === "atestados") {
     return rows.map(mapAtestadoRow);
   }
@@ -4058,6 +4074,11 @@ function renderRealtimeUpdate(collection) {
     return;
   }
 
+  if (collection === "disciplinaryRecords") {
+    renderDisciplinaryRecords();
+    return;
+  }
+
   renderAll();
 }
 
@@ -4189,6 +4210,18 @@ if (collection === "eventos") {
       valor_passagem: values.valorPassagem,
       saldo_atual: values.saldoAtual,
       valor_necessario: values.valorNecessario,
+      created_by: values.createdBy || getCurrentUserName(),
+    };
+  }
+
+  if (collection === "disciplinaryRecords") {
+    return {
+      tipo: values.tipo || "advertencia",
+      colaborador: values.colaborador,
+      data_medida: values.dataMedida || "",
+      unidade: values.unidade || "",
+      local: values.local || "",
+      motivo: values.motivo || "",
       created_by: values.createdBy || getCurrentUserName(),
     };
   }
@@ -4329,6 +4362,7 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
       "vagas",
       "eventos",
       "vtRegistros",
+      "disciplinaryRecords",
       "documentosContratados",
       "candidaturas",
       "atestados",
@@ -8859,7 +8893,7 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!isAuthenticated()) return false;
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
-  if (["usuarios", "eventos", "vtRegistros", "malotes", "vagas", "atestados", "documentosContratados", "quadros"].includes(collection)) return false;
+  if (["usuarios", "eventos", "vtRegistros", "disciplinaryRecords", "malotes", "vagas", "atestados", "documentosContratados", "quadros"].includes(collection)) return false;
   // Sem aviso de aba fora do escopo: um gerente nao pode receber o conteudo de
   // uma denuncia por popup ou notificacao do sistema.
   if (!canAccessView(getViewForCollection(collection))) return false;
@@ -11145,28 +11179,24 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
     if (localField && city) localField.value = city;
   });
 
-  formElement.addEventListener("submit", (event) => {
+  formElement.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(formElement);
-    const record = {
-      id: generateUUID(),
-      tipo: formElement.dataset.disciplinaryForm || "advertencia",
+    const tipo = formElement.dataset.disciplinaryForm || "advertencia";
+    const values = {
+      tipo,
       colaborador: String(form.get("colaborador") || "").trim(),
       dataMedida: String(form.get("data_medida") || ""),
       unidade: String(form.get("unidade") || ""),
       local: String(form.get("local") || "").trim(),
       motivo: String(form.get("motivo") || "").trim(),
-      createdAt: todayLabel(),
-      sortAt: new Date().toISOString(),
-      createdBy: getCurrentUserName(),
     };
-    data.disciplinaryRecords = data.disciplinaryRecords || [];
-    data.disciplinaryRecords.unshift(record);
-    saveLocalData();
-    formElement.reset();
-    if (typeof populateUnitSelects === "function") populateUnitSelects();
-    renderAll();
-    showModal("Registro salvo", `${getDisciplinaryTypeLabel(record.tipo)} salva com sucesso.`, "info");
+    const success = await addItem("disciplinaryRecords", { ...values, createdBy: getCurrentUserName() });
+    if (success) {
+      formElement.reset();
+      if (typeof populateUnitSelects === "function") populateUnitSelects();
+      showModal("Registro salvo", `${getDisciplinaryTypeLabel(tipo)} salva com sucesso.`, "info");
+    }
   });
 });
 
@@ -12484,11 +12514,11 @@ function excluirDisciplinaryRecord(id) {
     text: `Tem certeza que deseja deletar a medida de "${registro.colaborador || "funcionario nao informado"}"?`,
     confirmText: "Deletar",
     danger: true,
-    onConfirm: () => {
-      data.disciplinaryRecords = (data.disciplinaryRecords || []).filter((item) => String(item.id) !== String(id));
-      saveLocalData();
-      renderAll();
-      showModal("Registro deletado", "A medida disciplinar foi removida.", "info");
+    onConfirm: async () => {
+      const deleted = await deleteItem("disciplinaryRecords", id);
+      if (deleted) {
+        showModal("Registro deletado", "A medida disciplinar foi removida.", "info");
+      }
     },
   });
 }

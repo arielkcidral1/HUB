@@ -37,6 +37,7 @@ export const pool = DATABASE_URL
   : null;
 
 export const TABLES = new Set([
+  "hub_advertencias_suspensoes",
   "hub_atestados",
   "hub_candidaturas",
   "hub_chamados",

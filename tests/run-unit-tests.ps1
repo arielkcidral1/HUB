@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v85' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v86' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -84,7 +84,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v22[\s\S]*style\.css\?v=visible-auth-loading-v23[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v85[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v22[\s\S]*style\.css\?v=visible-auth-loading-v23[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v86[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -323,6 +323,13 @@ Assert-MatchText $companyBirthdays '"admissao"[\s\S]*"unidade"[\s\S]*"4- PL."[\s
   Assert-MatchText $script 'const VT_MONTH_NAMES = \["Janeiro"[\s\S]*"Dezembro"\][\s\S]*VT_MONTH_NAMES\.includes\(values\.mes\)' "VT valida o mes pelo nome sem ano"
   Assert-MatchText $script 'if \(!hasFullName\(values\.colaborador\)\)' "VT valida nome e sobrenome no script"
   Assert-MatchText $script 'vtRegistros: "hub_vt_registros"' "VT possui tabela PostgreSQL configurada"
+  Assert-MatchText $script 'disciplinaryRecords: "hub_advertencias_suspensoes"' "advertencias e suspensoes possuem tabela PostgreSQL configurada"
+  Assert-MatchText (Read-ProjectFile "api/db.js") '"hub_advertencias_suspensoes"' "API de registros permite a tabela de advertencias e suspensoes"
+  Assert-MatchText (Read-ProjectFile "api/bootstrap.js") 'disciplinaryRecords: "hub_advertencias_suspensoes"' "bootstrap carrega advertencias e suspensoes do PostgreSQL"
+  Assert-MatchText $script 'if \(collection === "disciplinaryRecords"\) \{[\s\S]*dataMedida: row\.data_medida \|\| ""' "cliente mapeia linhas de advertencias e suspensoes vindas do PostgreSQL"
+  Assert-MatchText $script 'if \(collection === "disciplinaryRecords"\) \{[\s\S]*data_medida: values\.dataMedida \|\| ""' "cliente monta payload de advertencias e suspensoes para o PostgreSQL"
+  Assert-MatchText $script 'const success = await addItem\("disciplinaryRecords", \{ \.\.\.values, createdBy: getCurrentUserName\(\) \}\)' "formulario de advertencia/suspensao grava via PostgreSQL em vez de so localStorage"
+  Assert-MatchText $script 'function excluirDisciplinaryRecord\(id\)[\s\S]*const deleted = await deleteItem\("disciplinaryRecords", id\)' "exclusao de advertencia/suspensao remove do PostgreSQL"
   Assert-MatchText $script 'documentosContratados: "hub_documentos_contratados"' "documentos de contratados possuem tabela PostgreSQL configurada"
   Assert-MatchText $script 'CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos"' "documentos de contratados usam bucket privado dedicado"
   Assert-MatchText $script 'function validateContractorDocumentFile\(file\)[\s\S]*file\.size <= 0[\s\S]*CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES[\s\S]*return null' "cliente aceita qualquer tipo de documento de contratado com limite de tamanho"
@@ -507,6 +514,11 @@ function Test-RlsBaseline {
   Assert-MatchText (Read-ProjectFile "postgres/migrations/20260702000200_create_public_contractor_documents_rpc.sql") 'create or replace function public\.hub_submit_contractor_documents\(payload jsonb\)[\s\S]*security definer[\s\S]*jsonb_array_length\(v_documentos\) > 20[\s\S]*10485760[\s\S]*grant execute on function public\.hub_submit_contractor_documents\(jsonb\) to anon, authenticated' "RPC publica salva documentos de contratados aceitando qualquer tipo com senha e limite"
   Assert-MatchText (Read-ProjectFile "postgres/migrations/20260702000200_create_public_contractor_documents_rpc.sql") 'where cpf = v_cpf[\s\S]*CPF ja possui envio de documentos registrado' "RPC bloqueia mais de um envio por CPF"
   Assert-MatchText (Read-ProjectFile "postgres/migrations/20260702000300_limit_contractor_documents_one_per_cpf.sql") 'create unique index if not exists hub_documentos_contratados_cpf_unique[\s\S]*on public\.hub_documentos_contratados \(cpf\)' "banco limita documentos de contratado a um envio por CPF"
+
+  $advertenciasMigration = Read-ProjectFile "postgres/migrations/20260812000300_create_advertencias_suspensoes.sql"
+  Assert-MatchText $advertenciasMigration 'create table if not exists public\.hub_advertencias_suspensoes[\s\S]*constraint hub_advertencias_suspensoes_tipo_check check \(tipo in \(''advertencia'', ''suspensao''\)\)' "migration cria tabela de advertencias e suspensoes"
+  Assert-MatchText $advertenciasMigration 'alter table if exists public\.hub_advertencias_suspensoes enable row level security' "RLS habilitado em advertencias e suspensoes"
+  Assert-MatchText $advertenciasMigration 'create policy "hub_advertencias_suspensoes_rh_all"[\s\S]*on public\.hub_advertencias_suspensoes[\s\S]*app_private\.hub_is_rh\(\)' "advertencias e suspensoes restritas ao RH"
 }
 
 Test-LoginHtml
