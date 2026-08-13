@@ -259,6 +259,7 @@ let chamadosSelectionMode = false;
 let showArchivedChamados = false;
 let denunciasSelectionMode = false;
 let showArchivedDenuncias = false;
+let showArchivedFeedbacks = false;
 let dashboardCalendarViewMode = "week";
 let visibleCalendarDate = new Date();
 let activeBoardId = "";
@@ -9502,14 +9503,25 @@ function renderFeedbacksSection() {
     return;
   }
 
-  const items = [...(data.feedbacks || [])].sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
+  const abertos = [...(data.feedbacks || [])].filter((item) => !isArchivedRecord(item));
+  const arquivados = [...(data.feedbacks || [])].filter((item) => isArchivedRecord(item));
+  const items = (showArchivedFeedbacks ? arquivados : abertos)
+    .sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
+
+  const primaryTitle = document.getElementById("feedbacks-primary-title");
+  if (primaryTitle) primaryTitle.textContent = showArchivedFeedbacks ? "Arquivados" : "Novos feedbacks";
+  const toggleButton = document.getElementById("toggle-archived-feedbacks");
+  if (toggleButton) toggleButton.textContent = showArchivedFeedbacks ? "Ocultar arquivados" : "Mostrar arquivados";
+
   if (!items.length) {
-    target.innerHTML = '<p class="empty-state">Nenhum feedback enviado ainda.</p>';
+    target.innerHTML = `<p class="empty-state">${showArchivedFeedbacks ? "Sem feedbacks arquivados" : "Nenhum feedback enviado ainda."}</p>`;
     return;
   }
 
   target.innerHTML = items.map((item) => `
-    <article class="item-card">
+    <article class="item-card"
+             data-record-context="feedback"
+             data-id="${escapeHtml(item.id)}">
       <div class="item-topline">
         <p class="item-title">${escapeHtml(item.tipo || "Feedback")}</p>
         <span class="tag">${escapeHtml(item.status || "Novo")}</span>
@@ -9517,6 +9529,7 @@ function renderFeedbacksSection() {
       <p><strong>Identificacao:</strong> ${escapeHtml(item.autorNome || "Nao informado")}</p>
       <p>${escapeHtml(item.mensagem || "")}</p>
       <p class="item-meta">${escapeHtml(item.createdAt || "Hoje")}</p>
+      ${showArchivedFeedbacks ? `<div class="job-actions section-top"><button class="secondary-link" type="button" data-action="reabrir-feedback" data-id="${escapeHtml(item.id)}">Reabrir</button></div>` : ""}
     </article>
   `).join("");
 }
@@ -10457,6 +10470,11 @@ document.getElementById("toggle-archived-chamados")?.addEventListener("click", (
 
 document.getElementById("toggle-archived-denuncias")?.addEventListener("click", () => {
   showArchivedDenuncias = !showArchivedDenuncias;
+  renderAll();
+});
+
+document.getElementById("toggle-archived-feedbacks")?.addEventListener("click", () => {
+  showArchivedFeedbacks = !showArchivedFeedbacks;
   renderAll();
 });
 
@@ -11472,7 +11490,7 @@ document.addEventListener("contextmenu", (event) => {
   const recordCard = event.target.closest("[data-record-context]");
   if (recordCard) {
     const type = recordCard.dataset.recordContext;
-    if ((type === "denuncia" || type === "chamado") && recordCard.dataset.id) {
+    if ((type === "denuncia" || type === "chamado" || type === "feedback") && recordCard.dataset.id) {
       event.preventDefault();
       openRecordContextMenu(event, type, recordCard.dataset.id);
       return;
@@ -12202,6 +12220,18 @@ function reabrirDenuncia(id) {
   });
 };
 
+function reabrirFeedback(id) {
+  showConfirmActionModal({
+    title: "Reabrir feedback",
+    text: "Deseja mover este feedback de volta para a lista de novos feedbacks?",
+    confirmText: "Reabrir",
+    onConfirm: async () => {
+      const success = await updateItem("feedbacks", id, { status: "Novo" });
+      if (success) showModal("Feedback reaberto", "O feedback voltou para a lista de novos feedbacks.", "info");
+    },
+  });
+};
+
 async function arquivarDenunciaPorContexto(id) {
   if (!id) return;
   const success = await atualizarStatusDenuncia(id, "Arquivada");
@@ -12217,6 +12247,17 @@ async function arquivarChamadoPorContexto(id) {
   renderAll();
   syncRecordStatusSilently("chamados", id, "Arquivado");
   showModal("Chamado arquivado", "O chamado foi movido para Arquivados.", "info");
+}
+
+async function arquivarFeedbackPorContexto(id) {
+  if (!id) return;
+  const feedback = (data.feedbacks || []).find((item) => String(item.id) === String(id));
+  if (!feedback) return;
+  feedback.status = "Arquivado";
+  saveLocalData();
+  renderAll();
+  syncRecordStatusSilently("feedbacks", id, "Arquivado");
+  showModal("Feedback arquivado", "O feedback foi movido para Arquivados.", "info");
 }
 
 function getChatMessageById(id) {
@@ -12310,15 +12351,16 @@ function openChatMessageContextMenu(event, id) {
 
 function openRecordContextMenu(event, type, id) {
   document.getElementById("record-context-menu")?.remove();
-  const item = (type === "denuncia" ? data.denuncias : data.chamados || []).find((record) => String(record.id) === String(id));
+  const recordsByType = { denuncia: data.denuncias, chamado: data.chamados, feedback: data.feedbacks };
+  const item = (recordsByType[type] || []).find((record) => String(record.id) === String(id));
   if (isArchivedRecord(item)) return;
   const menu = document.createElement("div");
   menu.id = "record-context-menu";
   menu.className = "board-context-menu record-context-menu";
   menu.style.left = `${event.clientX}px`;
   menu.style.top = `${event.clientY}px`;
-  const label = type === "denuncia" ? "Arquivar denúncia" : "Arquivar chamado";
-  menu.innerHTML = `<button type="button" class="danger" data-record-menu-action="archive">${label}</button>`;
+  const labels = { denuncia: "Arquivar denúncia", chamado: "Arquivar chamado", feedback: "Arquivar feedback" };
+  menu.innerHTML = `<button type="button" class="danger" data-record-menu-action="archive">${labels[type] || "Arquivar"}</button>`;
   menu.addEventListener("click", async (clickEvent) => {
     const actionButton = clickEvent.target.closest("[data-record-menu-action]");
     const action = actionButton?.dataset.recordMenuAction;
@@ -12328,6 +12370,7 @@ function openRecordContextMenu(event, type, id) {
     menu.remove();
     if (type === "denuncia") await arquivarDenunciaPorContexto(id);
     if (type === "chamado") await arquivarChamadoPorContexto(id);
+    if (type === "feedback") await arquivarFeedbackPorContexto(id);
   });
   document.body.appendChild(menu);
 }
@@ -13044,7 +13087,7 @@ document.addEventListener('click', (event) => {
   }
 
   // Acoes que precisam de stopPropagation.
-  if (['reabrir-denuncia', 'reabrir-chamado', 'editar-evento', 'excluir-evento'].includes(action)) {
+  if (['reabrir-denuncia', 'reabrir-chamado', 'reabrir-feedback', 'editar-evento', 'excluir-evento'].includes(action)) {
     event.stopPropagation();
   }
 
@@ -13057,6 +13100,9 @@ document.addEventListener('click', (event) => {
       break;
     case 'reabrir-chamado':
       reabrirChamado(id);
+      break;
+    case 'reabrir-feedback':
+      reabrirFeedback(id);
       break;
     case 'editar-malote': editarMalote(id); break;
     case 'baixar-documento-malote': baixarDocumentoMalote(id); break;
