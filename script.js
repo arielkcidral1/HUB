@@ -7620,6 +7620,8 @@ function applyDashboardScopeToMetricCards() {
     // hoje" nao aparece no painel dele.
     let allowed = allowedViews.has(card.dataset.view);
     if (isManager && card.querySelector("#metric-documentos")) allowed = false;
+    // "Chamados abertos hoje" e exclusivo das contas com cargo RH.
+    if (card.querySelector("#metric-chamados-hoje") && !isRhUser()) allowed = false;
     card.hidden = !allowed;
     card.style.display = allowed ? "" : "none";
   });
@@ -7645,6 +7647,11 @@ function renderDashboard() {
   if (document.getElementById("metric-documentos")) {
     document.getElementById("metric-documentos").textContent = documentRecords
       .filter((item) => canCurrentUserAccessDocumentRecord(item) && !isArchivedRecord(item) && isTodayLabel(item.createdAt))
+      .length;
+  }
+  if (document.getElementById("metric-chamados-hoje")) {
+    document.getElementById("metric-chamados-hoje").textContent = data.chamados
+      .filter((item) => item.status === "Aberto" && isTodayLabel(item.createdAt))
       .length;
   }
 
