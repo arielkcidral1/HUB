@@ -7628,9 +7628,6 @@ function renderDashboard() {
   if (document.getElementById("metric-comunicados")) {
     document.getElementById("metric-comunicados").textContent = unreadRhMessages.length;
   }
-  if (document.getElementById("metric-malotes")) {
-    document.getElementById("metric-malotes").textContent = data.malotes.filter((item) => !isArchivedRecord(item) && isTodayLabel(item.createdAt)).length;
-  }
   if (document.getElementById("metric-vagas")) {
     document.getElementById("metric-vagas").textContent = (data.candidaturas || []).filter((item) => isTodayLabel(item.createdAt)).length;
   }
@@ -7640,7 +7637,7 @@ function renderDashboard() {
   }
   if (document.getElementById("metric-documentos")) {
     document.getElementById("metric-documentos").textContent = documentRecords
-      .filter((item) => canCurrentUserAccessDocumentRecord(item) && !isArchivedRecord(item))
+      .filter((item) => canCurrentUserAccessDocumentRecord(item) && !isArchivedRecord(item) && isTodayLabel(item.createdAt))
       .length;
   }
 
