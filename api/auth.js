@@ -18,10 +18,9 @@ async function findUser(identifier) {
     `select id, nome, email, cpf, cargo, foto_perfil, password_hash, created_at
        from public.hub_users
       where lower(coalesce(email, '')) = lower($1)
-         or regexp_replace(coalesce(cpf, ''), '\\D', '', 'g') = $2
-         or lower(coalesce(nome, '')) = lower($3)
+         or (regexp_replace(coalesce(cpf, ''), '\\D', '', 'g') <> '' and regexp_replace(coalesce(cpf, ''), '\\D', '', 'g') = $2)
       limit 1`,
-    [email, cpf, normalized]
+    [email, cpf]
   );
   return result.rows[0] || null;
 }
