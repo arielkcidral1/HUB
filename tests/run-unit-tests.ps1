@@ -210,6 +210,8 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $index 'id="feedbacks-primary-title"[^>]*>[\s\S]*id="feedbacks-nao-lidos"[\s\S]*<h2>Lidos</h2>[\s\S]*id="feedbacks-lidos"' "aba de feedbacks possui colunas Nao Lidos e Lidos, igual denuncias"
   Assert-MatchText $script 'async function lerFeedback\(id\)[\s\S]*if \(\(feedback\.status \|\| "Novo"\) === "Novo"\)[\s\S]*const success = await updateItem\("feedbacks", id, \{ status: "Lido" \}\);' "clicar num feedback nao lido move para Lidos"
   Assert-MatchText $script "case 'ler-feedback':[\s\S]*lerFeedback\(id\);" "clique no card do feedback dispara leitura"
+  Assert-MatchText $script 'const publicFeedbackForm = document\.getElementById\("feedbacks-form"\);[\s\S]*const publicFormError = validatePublicFormSubmission\(formElement\);' "formulario publico de feedbacks usa a funcao de validacao existente"
+  Assert-True -Condition (-not ($script -match 'validatePublicSubmissionForm')) -Message "nenhum formulario publico chama a funcao inexistente validatePublicSubmissionForm"
   Assert-MatchText $script 'function renderFeedbacksSection\(\)[\s\S]*data-record-context="feedback"[\s\S]*data-action="reabrir-feedback" data-id="\$\{escapeHtml\(item\.id\)\}">Reabrir</button>' "feedback arquivado exibe botao para reabrir"
   Assert-MatchText $script 'function reabrirFeedback\(id\)[\s\S]*await updateItem\("feedbacks", id, \{ status: "Novo" \}\)' "reabertura de feedback volta o status para Novo"
   Assert-MatchText $script 'async function arquivarFeedbackPorContexto\(id\)[\s\S]*feedback\.status = "Arquivado";[\s\S]*syncRecordStatusSilently\("feedbacks", id, "Arquivado"\);' "arquivamento de feedback usa o mesmo padrao silencioso dos chamados"

@@ -10675,7 +10675,7 @@ if (publicFeedbackForm) {
   publicFeedbackForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formElement = event.currentTarget;
-    const publicFormError = validatePublicSubmissionForm(formElement);
+    const publicFormError = validatePublicFormSubmission(formElement);
     if (publicFormError) {
       showModal("Envio bloqueado", publicFormError, "error");
       return;
