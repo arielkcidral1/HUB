@@ -206,6 +206,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'function applyDashboardScopeToMetricCards\(\)[\s\S]*\.metric-card-link\[data-view\][\s\S]*allowedViews\.has\(card\.dataset\.view\)' "painel esconde cartoes de abas sem acesso"
   Assert-MatchText $script 'const sortedDashboardItems = dashboardItems[\s\S]*\.filter\(\(item\) => canAccessView\(getDashboardItemView\(item\)\)\)' "acompanhamento do painel respeita o escopo de abas"
   Assert-MatchText $script 'function shouldNotifyRealtimeItem\([\s\S]*if \(!canAccessView\(getViewForCollection\(collection\)\)\) return false;' "notificacao nao vaza conteudo de aba sem acesso"
+  Assert-MatchText $script 'function shouldNotifyRealtimeItem\([\s\S]*if \(collection === "chamados" && author && author === currentName\) return false;' "quem abre o chamado nao recebe notificacao do proprio chamado"
   Assert-MatchText $script 'function activateView\(viewId\)[\s\S]*!canAccessView\(viewId\)[\s\S]*activateView\("dashboard"\)' "troca de aba bloqueia destino fora do escopo"
   Assert-MatchText $index 'id="primary-sidebar"[^>]*aria-label="Navegacao principal"[\s\S]*id="mobile-menu-toggle"[^>]*aria-controls="primary-sidebar"[^>]*aria-expanded="false"' "mobile possui botao para abrir menu principal"
   Assert-MatchText $style '@media \(max-width: 900px\)[\s\S]*\.sidebar[\s\S]*position: fixed[\s\S]*transform: translateX\(-104%\)[\s\S]*\.app-shell\.mobile-menu-open \.sidebar[\s\S]*translateX\(0\)' "sidebar vira menu lateral no mobile"

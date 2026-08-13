@@ -8902,6 +8902,8 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   const author = normalizeLoginName(item.autor || item.createdBy || item.updatedBy || item.solicitante || "");
   const pageIsVisible = document.visibilityState === "visible" && document.hasFocus?.();
   if (collection === "comunicados" && author && author === currentName && pageIsVisible) return false;
+  // Quem abre o chamado nao precisa ser avisado do proprio chamado.
+  if (collection === "chamados" && author && author === currentName) return false;
 
   lastRealtimeNotificationSignature = signature;
   return true;
