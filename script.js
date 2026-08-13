@@ -1526,10 +1526,10 @@ function mergeReadReceiptRows(rows = []) {
 
 async function loadReadReceiptsFromPostgreSQL() {
   if (!postgresClient || !TABLES.readReceipts) return;
-  // Na leitura aceitamos tambem os aliases antigos, para nao perder recibos
-  // gravados antes de a escrita passar a usar somente o UUID da conta.
-  const userKeys = [...getReadReceiptUserIds(), ...getNotificationAccountAliases()]
-    .filter((value, index, list) => list.indexOf(value) === index);
+  // hub_read_receipts.user_id e uuid (FK para hub_users). Misturar aliases
+  // (e-mail/cpf/nome) no filtro "in" derruba a query inteira com "invalid
+  // input syntax for type uuid", entao nenhum recibo carrega - nem os validos.
+  const userKeys = getReadReceiptUserIds();
   if (!userKeys.length) return;
   try {
     const { data: rows, error } = await postgresClient
