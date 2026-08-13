@@ -13900,26 +13900,6 @@ document.addEventListener('DOMContentLoaded', () => {
     closeMobileMenu?.();
   }, true);
 
-  function ensureFeedbackStyles() {
-    if (document.getElementById("hub-feedback-module-styles")) return;
-    const style = document.createElement("style");
-    style.id = "hub-feedback-module-styles";
-    style.textContent = `
-      .hub-feedback-form textarea { min-height: 150px; resize: vertical; }
-      .hub-feedback-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
-      .hub-feedback-list { display: grid; gap: 12px; margin-top: 14px; }
-      .hub-feedback-card .item-title { margin-bottom: 0; }
-      .hub-feedback-card p { white-space: pre-wrap; }
-      .hub-feedback-card.is-admin { border-left: 4px solid var(--teal); }
-      .hub-feedback-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
-      .hub-feedback-delete-button { min-height: 34px; padding: 0 12px; }
-      .hub-feedback-filter { max-width: 280px; }
-      .hub-feedback-empty { padding: 16px; border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); color: var(--muted); background: var(--surface-soft); }
-      .hub-feedback-admin-note { background: var(--teal-surface); border: 1px solid var(--teal-border); color: var(--teal-dark); border-radius: var(--radius-lg); padding: 12px 14px; }
-    `;
-    document.head.appendChild(style);
-  }
-
   function createFeedbackSettingsButton() {
     return `
       <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclamacoes sugestao sugestoes melhoria usuario">
@@ -14039,7 +14019,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function ensureFeedbackSettingsUi() {
     if (isPublicPage?.()) return;
-    ensureFeedbackStyles();
 
     const settingsList = document.getElementById("settings-list");
     if (settingsList && !settingsList.querySelector(`[data-settings-target="${FEEDBACK_PANEL_ID}"]`)) {

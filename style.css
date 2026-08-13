@@ -185,7 +185,7 @@ html.auth-entry-pending body {
   min-height: 100dvh;
   background:
     linear-gradient(120deg, rgba(12, 98, 89, 0.72), rgba(8, 25, 22, 0.88)),
-    url("assets/hero-rh.svg") center / cover no-repeat;
+    url("assets/hub-operations.png") center / cover no-repeat;
 }
 
 html.auth-entry-pending .app-shell {
@@ -199,7 +199,7 @@ html.auth-entry-pending body::before {
   z-index: 9998;
   background:
     linear-gradient(120deg, rgba(12, 98, 89, 0.72), rgba(8, 25, 22, 0.88)),
-    url("assets/hero-rh.svg") center / cover no-repeat;
+    url("assets/hub-operations.png") center / cover no-repeat;
 }
 
 html.auth-entry-pending body::after {
@@ -228,7 +228,7 @@ html.auth-entry-pending body::after {
   margin: 0;
   background:
     linear-gradient(120deg, rgba(12, 98, 89, 0.72), rgba(8, 25, 22, 0.88)),
-    url("assets/hero-rh.svg") center / cover no-repeat;
+    url("assets/hub-operations.png") center / cover no-repeat;
 }
 
 .account-loading-screen {
@@ -7261,3 +7261,15 @@ form.panel[data-public-chamados="true"].panel {
     width: 100%;
   }
 }
+
+.hub-feedback-form textarea { min-height: 150px; resize: vertical; }
+.hub-feedback-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.hub-feedback-list { display: grid; gap: 12px; margin-top: 14px; }
+.hub-feedback-card .item-title { margin-bottom: 0; }
+.hub-feedback-card p { white-space: pre-wrap; }
+.hub-feedback-card.is-admin { border-left: 4px solid var(--teal); }
+.hub-feedback-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.hub-feedback-delete-button { min-height: 34px; padding: 0 12px; }
+.hub-feedback-filter { max-width: 280px; }
+.hub-feedback-empty { padding: 16px; border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); color: var(--muted); background: var(--surface-soft); }
+.hub-feedback-admin-note { background: var(--teal-surface); border: 1px solid var(--teal-border); color: var(--teal-dark); border-radius: var(--radius-lg); padding: 12px 14px; }
