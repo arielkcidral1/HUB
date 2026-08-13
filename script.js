@@ -12267,6 +12267,8 @@ function openChatMessageContextMenu(event, id) {
 
 function openRecordContextMenu(event, type, id) {
   document.getElementById("record-context-menu")?.remove();
+  const item = (type === "denuncia" ? data.denuncias : data.chamados || []).find((record) => String(record.id) === String(id));
+  if (isArchivedRecord(item)) return;
   const menu = document.createElement("div");
   menu.id = "record-context-menu";
   menu.className = "board-context-menu record-context-menu";
