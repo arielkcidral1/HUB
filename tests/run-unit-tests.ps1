@@ -37,7 +37,7 @@ function Test-LoginHtml {
   Assert-True -Condition ($text.StartsWith("<!doctype html>")) -Message "login.html inicia diretamente com <!doctype html>"
   Assert-MatchText $text 'Content-Security-Policy' "login.html possui CSP"
   Assert-MatchText $text 'object-src ''none''' "CSP bloqueia object-src"
-  Assert-MatchText $text 'frame-ancestors ''none''' "CSP bloqueia embed por frame"
+  Assert-MatchText (Read-ProjectFile "vercel.json") '"X-Frame-Options", "value": "DENY"' "CSP bloqueia embed por frame via header X-Frame-Options"
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
