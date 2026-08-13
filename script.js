@@ -1526,10 +1526,10 @@ function mergeReadReceiptRows(rows = []) {
 
 async function loadReadReceiptsFromPostgreSQL() {
   if (!postgresClient || !TABLES.readReceipts) return;
-  // Na leitura aceitamos tambem os aliases antigos, para nao perder recibos
-  // gravados antes de a escrita passar a usar somente o UUID da conta.
-  const userKeys = [...getReadReceiptUserIds(), ...getNotificationAccountAliases()]
-    .filter((value, index, list) => list.indexOf(value) === index);
+  // hub_read_receipts.user_id e uuid (FK para hub_users). Misturar aliases
+  // (e-mail/cpf/nome) no filtro "in" derruba a query inteira com "invalid
+  // input syntax for type uuid", entao nenhum recibo carrega - nem os validos.
+  const userKeys = getReadReceiptUserIds();
   if (!userKeys.length) return;
   try {
     const { data: rows, error } = await postgresClient
@@ -13897,26 +13897,6 @@ document.addEventListener('DOMContentLoaded', () => {
     closeMobileMenu?.();
   }, true);
 
-  function ensureFeedbackStyles() {
-    if (document.getElementById("hub-feedback-module-styles")) return;
-    const style = document.createElement("style");
-    style.id = "hub-feedback-module-styles";
-    style.textContent = `
-      .hub-feedback-form textarea { min-height: 150px; resize: vertical; }
-      .hub-feedback-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
-      .hub-feedback-list { display: grid; gap: 12px; margin-top: 14px; }
-      .hub-feedback-card .item-title { margin-bottom: 0; }
-      .hub-feedback-card p { white-space: pre-wrap; }
-      .hub-feedback-card.is-admin { border-left: 4px solid var(--teal); }
-      .hub-feedback-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
-      .hub-feedback-delete-button { min-height: 34px; padding: 0 12px; }
-      .hub-feedback-filter { max-width: 280px; }
-      .hub-feedback-empty { padding: 16px; border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); color: var(--muted); background: var(--surface-soft); }
-      .hub-feedback-admin-note { background: var(--teal-surface); border: 1px solid var(--teal-border); color: var(--teal-dark); border-radius: var(--radius-lg); padding: 12px 14px; }
-    `;
-    document.head.appendChild(style);
-  }
-
   function createFeedbackSettingsButton() {
     return `
       <button class="settings-item" type="button" data-settings-target="${FEEDBACK_PANEL_ID}" data-settings-keywords="feedback reclamacao reclamacoes sugestao sugestoes melhoria usuario">
@@ -14036,7 +14016,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function ensureFeedbackSettingsUi() {
     if (isPublicPage?.()) return;
-    ensureFeedbackStyles();
 
     const settingsList = document.getElementById("settings-list");
     if (settingsList && !settingsList.querySelector(`[data-settings-target="${FEEDBACK_PANEL_ID}"]`)) {
