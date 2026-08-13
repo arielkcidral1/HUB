@@ -202,25 +202,48 @@ html.auth-entry-pending body::before {
     url("assets/hub-operations.png") center / cover no-repeat;
 }
 
-html.auth-entry-pending body::after {
-  content: "Carregando HUB...";
+.app-loading-overlay {
+  display: none;
+}
+
+html.auth-entry-pending .app-loading-overlay {
+  display: grid;
   position: fixed;
-  left: 50%;
-  top: 50%;
+  inset: 0;
   z-index: 9999;
+  place-items: center;
+  padding: 24px;
+}
+
+.app-loading-card {
+  display: grid;
   width: min(340px, calc(100vw - 48px));
   min-height: 150px;
-  display: grid;
   place-items: center;
-  transform: translate(-50%, -50%);
+  gap: 10px;
+  padding: 28px;
   border: 1px solid rgba(61, 187, 171, 0.45);
   border-radius: 14px;
   color: #fff;
-  font-weight: 800;
-  letter-spacing: 0;
   text-align: center;
   background: linear-gradient(180deg, rgba(9, 77, 70, 0.96), rgba(5, 21, 18, 0.96));
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+}
+
+.app-loading-card img {
+  width: 60px;
+  height: 60px;
+}
+
+.app-loading-card strong {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.app-loading-card p {
+  margin: 0;
+  font-weight: 700;
 }
 
 .account-loading-page {
