@@ -7646,9 +7646,15 @@ function renderDashboard() {
     document.getElementById("metric-eventos").textContent = upcomingEvents.length;
   }
   if (document.getElementById("metric-documentos")) {
-    document.getElementById("metric-documentos").textContent = documentRecords
+    const documentosRh = documentRecords
       .filter((item) => canCurrentUserAccessDocumentRecord(item) && !isArchivedRecord(item) && isTodayLabel(item.createdAt))
       .length;
+    // Envios do formulario publico de contratados tambem contam como documento
+    // recebido no dia, desde que a conta enxergue a aba correspondente.
+    const documentosContratados = canAccessView("documentos-contratados")
+      ? (data.documentosContratados || []).filter((item) => !isArchivedRecord(item) && isTodayLabel(item.createdAt)).length
+      : 0;
+    document.getElementById("metric-documentos").textContent = documentosRh + documentosContratados;
   }
   if (document.getElementById("metric-chamados-hoje")) {
     document.getElementById("metric-chamados-hoje").textContent = data.chamados
@@ -8908,6 +8914,18 @@ function getRealtimeNotificationText(collection, item = {}) {
     };
   }
 
+  if (collection === "documentosContratados") {
+    const quantidade = (item.documentos || []).length;
+    return {
+      title: "Documentos de contratado recebidos",
+      message: [item.nome, item.empresa, quantidade ? `${quantidade} arquivo(s)` : ""].filter(Boolean).join(" - ")
+        || "Um contratado enviou documentos pelo formulario publico.",
+      icon: "\u{1F4C4}",
+      type: "documento",
+      tag: `hub-rh-documentos-contratados-${item.id || Date.now()}`,
+    };
+  }
+
   if (collection === "candidaturas") {
     const vaga = (data.vagas || []).find((vagaItem) => String(vagaItem.id) === String(item.vaga_id));
     return {
@@ -8925,7 +8943,7 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!isAuthenticated()) return false;
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
-  if (["usuarios", "eventos", "vtRegistros", "disciplinaryRecords", "malotes", "vagas", "atestados", "documentosContratados", "quadros"].includes(collection)) return false;
+  if (["usuarios", "eventos", "vtRegistros", "disciplinaryRecords", "malotes", "vagas", "atestados", "quadros"].includes(collection)) return false;
   // Sem aviso de aba fora do escopo: um gerente nao pode receber o conteudo de
   // uma denuncia por popup ou notificacao do sistema.
   if (!canAccessView(getViewForCollection(collection))) return false;
@@ -8980,7 +8998,7 @@ function markCurrentNotificationsAsShown() {
 function getNotificationPollingCandidates() {
   const sourceData = typeof data === "object" && data ? data : {};
   const candidates = [];
-  const allowedCollections = ["comunicados", "denuncias", "chamados", "candidaturas"];
+  const allowedCollections = ["comunicados", "denuncias", "chamados", "candidaturas", "documentosContratados"];
 
   allowedCollections.forEach((collection) => {
     const rows = Array.isArray(sourceData[collection]) ? sourceData[collection] : [];

@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v87' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v88' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -85,7 +85,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v87[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v88[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -240,6 +240,10 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $index 'id="toggle-archived-feedbacks"[^>]*>Mostrar arquivados</button>' "aba de feedbacks possui botao para mostrar arquivados"
   Assert-MatchText $script 'function applyDashboardScopeToMetricCards\(\)[\s\S]*\.metric-card-link\[data-view\][\s\S]*allowedViews\.has\(card\.dataset\.view\)' "painel esconde cartoes de abas sem acesso"
   Assert-MatchText $script 'function applyDashboardScopeToMetricCards\(\)[\s\S]*if \(isManager && card\.querySelector\("#metric-documentos"\)\) allowed = false;' "gerente nao ve o cartao Documentos enviados hoje no painel"
+  Assert-MatchText $script 'const documentosContratados = canAccessView\("documentos-contratados"\)[\s\S]*\(data\.documentosContratados \|\| \[\]\)\.filter\(\(item\) => !isArchivedRecord\(item\) && isTodayLabel\(item\.createdAt\)\)\.length' "cartao Documentos enviados hoje soma os envios do formulario de contratados"
+  Assert-True -Condition (-not ($script -match 'if \(\["usuarios", "eventos", "vtRegistros", "disciplinaryRecords", "malotes", "vagas", "atestados", "documentosContratados"')) -Message "envio de documentos de contratados nao fica na lista de colecoes sem notificacao"
+  Assert-MatchText $script 'const allowedCollections = \["comunicados", "denuncias", "chamados", "candidaturas", "documentosContratados"\]' "polling de notificacoes acompanha os envios de documentos de contratados"
+  Assert-MatchText $script 'if \(collection === "documentosContratados"\)[\s\S]*title: "Documentos de contratado recebidos"' "notificacao de documentos de contratados possui texto proprio"
   Assert-MatchText $index 'data-view="chamados"[^>]*>[\s\S]*<span>Chamados abertos hoje</span>[\s\S]*<strong id="metric-chamados-hoje">0</strong>' "painel possui cartao Chamados abertos hoje"
   Assert-MatchText $script 'if \(document\.getElementById\("metric-chamados-hoje"\)\)[\s\S]*data\.chamados[\s\S]*\.filter\(\(item\) => item\.status === "Aberto" && isTodayLabel\(item\.createdAt\)\)' "cartao Chamados abertos hoje conta chamados abertos criados no dia"
   Assert-MatchText $script 'function applyDashboardScopeToMetricCards\(\)[\s\S]*if \(card\.querySelector\("#metric-chamados-hoje"\) && !isRhUser\(\)\) allowed = false;' "cartao Chamados abertos hoje e exclusivo de contas com cargo RH"
@@ -523,8 +527,10 @@ function Test-PublicSubmitFunction {
   Assert-MatchText $fn 'hub_release_public_rate_limit' "envio publico libera rate limit em falha"
   Assert-MatchText $fn 'validateResumeFile\(file: File \| null\).*startsWith\(0x25, 0x50, 0x44, 0x46, 0x2d\).*startsWith\(0xd0, 0xcf, 0x11, 0xe0.*startsWith\(0x50, 0x4b, 0x03, 0x04\)' "curriculo valida assinatura real do arquivo na Edge Function"
   Assert-MatchText $fn 'TURNSTILE_SECRET_KEY' "envio publico suporta Turnstile quando configurado"
-  Assert-MatchText $contractorApi 'runtime: "edge"[\s\S]*POSTGRES_SERVICE_ROLE_KEY[\s\S]*fileToDataUrl[\s\S]*origem_html[\s\S]*hub_documentos_contratados[\s\S]*request\.formData\(\)[\s\S]*PGRST204' "API Vercel salva documentos de contratados sem depender da Edge Function antiga e tolera schema antigo"
-  Assert-MatchText $contractorApi 'result\?\.code === "23505"[\s\S]*CPF ja possui envio de documentos registrado' "API Vercel retorna mensagem clara para CPF duplicado"
+  Assert-MatchText $contractorApi 'import \{ assertDatabaseUrl, getBody, json, pool \} from "\./db\.js"[\s\S]*const body = await getBody\(req\)[\s\S]*hub_documentos_contratados[\s\S]*origem_html[\s\S]*error\?\.code !== "42703"' "API Vercel salva documentos de contratados pelo pool Postgres e tolera schema antigo"
+  Assert-True -Condition (-not ($contractorApi -match 'request\.formData\(\)')) -Message "API de documentos de contratados nao espera multipart, pois o formulario envia JSON"
+  Assert-MatchText $contractorApi 'text\(item\.dataUrl\)\.startsWith\("data:"\)' "API de documentos de contratados le os arquivos embutidos em dataUrl"
+  Assert-MatchText $contractorApi 'error\?\.code === "23505"[\s\S]*CPF ja possui envio de documentos registrado' "API Vercel retorna mensagem clara para CPF duplicado"
 }
 
 function Test-MaloteDeleteFunction {
