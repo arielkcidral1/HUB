@@ -2083,6 +2083,16 @@ function isTodayLabel(value) {
   return value === todayLabel() || value === "Hoje";
 }
 
+// Registros que guardam data e hora ("14/08/2026, 10:22") nunca batem com o
+// rotulo de data pura; aqui a comparacao usa so a parte da data.
+function isTodayDateTimeLabel(value) {
+  const text = String(value || "").trim();
+  if (!text) return false;
+  if (isTodayLabel(text)) return true;
+  const [datePart] = text.split(/[,\s]+/);
+  return isTodayLabel(datePart);
+}
+
 function formatEpiItems(items) {
   return items
     .filter((item) => item.nome && item.quantidade)
@@ -7649,7 +7659,7 @@ function renderDashboard() {
     // O cartao conta apenas os envios do formulario publico de contratados;
     // documentos internos do RH nao entram nesse numero.
     const documentosContratados = canAccessView("documentos-contratados")
-      ? (data.documentosContratados || []).filter((item) => !isArchivedRecord(item) && isTodayLabel(item.createdAt)).length
+      ? (data.documentosContratados || []).filter((item) => !isArchivedRecord(item) && isTodayDateTimeLabel(item.createdAt)).length
       : 0;
     document.getElementById("metric-documentos").textContent = documentosContratados;
   }
