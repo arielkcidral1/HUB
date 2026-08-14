@@ -9427,6 +9427,8 @@ function updateChamadosFilterClearButton() {
 function renderChamadosSection() {
   const chamadosAbertos = filterChamadosByCurrentFilters((data.chamados || []).filter((item) => item.status !== "Arquivado"));
   const chamadosArquivados = filterChamadosByCurrentFilters((data.chamados || []).filter((item) => item.status === "Arquivado"));
+  const hasChamadosArquivados = (data.chamados || []).some((item) => item.status === "Arquivado");
+  if (!hasChamadosArquivados && showArchivedChamados) showArchivedChamados = false;
   const primaryChamadosTitle = document.getElementById("chamados-primary-title");
   const toggleArchivedChamadosButton = document.getElementById("toggle-archived-chamados");
   updateChamadosFilterClearButton();
@@ -9435,6 +9437,7 @@ function renderChamadosSection() {
   if (toggleArchivedChamadosButton) {
     toggleArchivedChamadosButton.textContent = showArchivedChamados ? "Ocultar arquivados" : "Mostrar arquivados";
     toggleArchivedChamadosButton.disabled = false;
+    toggleArchivedChamadosButton.hidden = !hasChamadosArquivados;
   }
   const excluirArquivadosChamadosButton = document.getElementById("excluir-arquivados-chamados");
   if (excluirArquivadosChamadosButton) excluirArquivadosChamadosButton.hidden = !showArchivedChamados;
@@ -9479,6 +9482,7 @@ function renderDenunciasSection() {
   const naoLidas = data.denuncias.filter(item => item.status === "Aberta" || item.status === "Urgente");
   const lidas = data.denuncias.filter(item => item.status === "Lida");
   const arquivadas = data.denuncias.filter(item => item.status === "Arquivada");
+  if (!arquivadas.length && showArchivedDenuncias) showArchivedDenuncias = false;
   const primaryDenunciasTitle = document.getElementById("denuncias-primary-title");
   const toggleArchivedDenunciasButton = document.getElementById("toggle-archived-denuncias");
 
@@ -9486,6 +9490,7 @@ function renderDenunciasSection() {
   if (toggleArchivedDenunciasButton) {
     toggleArchivedDenunciasButton.textContent = showArchivedDenuncias ? "Ocultar arquivadas" : "Mostrar arquivadas";
     toggleArchivedDenunciasButton.disabled = false;
+    toggleArchivedDenunciasButton.hidden = !arquivadas.length;
   }
   const excluirArquivadasDenunciasButton = document.getElementById("excluir-arquivadas-denuncias");
   if (excluirArquivadasDenunciasButton) excluirArquivadasDenunciasButton.hidden = !showArchivedDenuncias;
@@ -9524,11 +9529,14 @@ function renderFeedbacksSection() {
 
   const excluirArquivadosFeedbacksButton = document.getElementById("excluir-arquivados-feedbacks");
 
+  const toggleButton = document.getElementById("toggle-archived-feedbacks");
+
   if (!isFredericoUser()) {
     naoLidosTarget.innerHTML = '<p class="empty-state">Acesso restrito.</p>';
     const lidosTarget = document.getElementById("feedbacks-lidos");
     if (lidosTarget) lidosTarget.innerHTML = "";
     if (excluirArquivadosFeedbacksButton) excluirArquivadosFeedbacksButton.hidden = true;
+    if (toggleButton) toggleButton.hidden = true;
     return;
   }
 
@@ -9536,11 +9544,14 @@ function renderFeedbacksSection() {
   const naoLidos = feedbacks.filter((item) => (item.status || "Novo") === "Novo");
   const lidos = feedbacks.filter((item) => item.status === "Lido");
   const arquivados = feedbacks.filter((item) => isArchivedRecord(item));
+  if (!arquivados.length && showArchivedFeedbacks) showArchivedFeedbacks = false;
 
   const primaryTitle = document.getElementById("feedbacks-primary-title");
   if (primaryTitle) primaryTitle.textContent = showArchivedFeedbacks ? "Arquivados" : "Não Lidos";
-  const toggleButton = document.getElementById("toggle-archived-feedbacks");
-  if (toggleButton) toggleButton.textContent = showArchivedFeedbacks ? "Ocultar arquivados" : "Mostrar arquivados";
+  if (toggleButton) {
+    toggleButton.textContent = showArchivedFeedbacks ? "Ocultar arquivados" : "Mostrar arquivados";
+    toggleButton.hidden = !arquivados.length;
+  }
   if (excluirArquivadosFeedbacksButton) excluirArquivadosFeedbacksButton.hidden = !showArchivedFeedbacks;
 
   const cardTemplate = (item, archived = false) => `
