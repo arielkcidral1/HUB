@@ -12200,11 +12200,12 @@ function setupPresenceHeartbeat() {
       body: JSON.stringify(buildPayload(online)),
     }).then((response) => {
       if (response.status !== 401) return;
-      return restoreAuthenticatedSession().then((restored) => {
-        if (restored) return;
-        clearAuthenticatedUser();
-        window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
-      });
+      // O servidor confirmou que essa sessao foi encerrada por outro login
+      // (session_version divergente). Nao adianta tentar "restaurar" pelo
+      // cache local: isso so reabriria a mesma conta na maquina que deveria
+      // ser desconectada. Encerra de verdade e manda para o login.
+      clearAuthenticatedUser();
+      window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
     }).catch(() => {});
   };
 

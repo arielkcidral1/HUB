@@ -102,8 +102,16 @@
     document.documentElement.classList.remove("auth-entry-pending");
   }
 
+  function clearStaleLocalIdentity() {
+    [SESSION_KEY, USER_KEY, EMAIL_KEY, ROLE_KEY, POSTGRES_SESSION_KEY, PERSISTED_USER_KEY].forEach((key) => {
+      window.localStorage.removeItem(key);
+      window.sessionStorage.removeItem(key);
+    });
+  }
+
   function redirectToLogin() {
     unlockEntry();
+    clearStaleLocalIdentity();
     window.location.replace("login.html?next=index.html");
   }
 
@@ -160,22 +168,30 @@
         signal: controller.signal,
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok || !persistAuthenticatedSession(result?.session)) {
-        const storedSession = buildStoredFallbackSession();
-        if (persistAuthenticatedSession(storedSession)) {
-          window.__hubAuthenticatedSession = storedSession;
-          renderAuthenticatedIdentity(storedSession.user);
+      if (response.ok) {
+        if (persistAuthenticatedSession(result?.session)) {
+          window.__hubAuthenticatedSession = result.session;
+          renderAuthenticatedIdentity(result.session.user);
           return true;
         }
-        if (hasStoredIdentity()) {
-          return true;
-        }
+        // O servidor respondeu com sucesso e disse que nao ha sessao valida
+        // (ex: sessao encerrada por outro login). Isso e um veredito
+        // definitivo do backend: nao cair para o cache local aqui, senao a
+        // maquina que deveria ser desconectada volta a entrar sozinha.
         redirectToLogin();
         return false;
       }
-      window.__hubAuthenticatedSession = result.session;
-      renderAuthenticatedIdentity(result.session.user);
-      return true;
+      const storedSession = buildStoredFallbackSession();
+      if (persistAuthenticatedSession(storedSession)) {
+        window.__hubAuthenticatedSession = storedSession;
+        renderAuthenticatedIdentity(storedSession.user);
+        return true;
+      }
+      if (hasStoredIdentity()) {
+        return true;
+      }
+      redirectToLogin();
+      return false;
     } catch (error) {
       const storedSession = buildStoredFallbackSession();
       if (persistAuthenticatedSession(storedSession)) {
