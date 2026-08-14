@@ -12354,6 +12354,32 @@ function excluirFeedbacksArquivados() {
   excluirRegistrosArquivadosPermanentemente("feedbacks", TABLES.feedbacks, "feedbacks");
 }
 
+async function excluirRegistroArquivadoIndividualmente(collection, table, id, labelFrase) {
+  showPasswordActionModal({
+    title: "Apagar registro arquivado",
+    text: `Confirme a senha de autorizacao para apagar definitivamente ${labelFrase}. Essa acao nao pode ser desfeita.`,
+    confirmText: "Apagar",
+    danger: true,
+    validatePassword: async (password) => verifyAuthorizationPassword(password),
+    onConfirm: async () => {
+      if (postgresClient) {
+        try {
+          const { error } = await postgresClient.from(table).delete().eq("id", id);
+          if (error) throw error;
+        } catch (error) {
+          console.error(`Erro ao apagar ${collection} no PostgreSQL:`, error);
+          showModal("Erro ao apagar", "Nao foi possivel apagar o registro no PostgreSQL. Tente novamente.", "error");
+          return;
+        }
+      }
+      data[collection] = (data[collection] || []).filter((record) => String(record.id) !== String(id));
+      saveLocalData();
+      renderAll();
+      showModal("Registro apagado", "O registro foi apagado definitivamente.", "info");
+    },
+  });
+}
+
 function getChatMessageById(id) {
   return (data.comunicados || []).find((item) => String(item.id) === String(id));
 }
@@ -12447,12 +12473,32 @@ function openRecordContextMenu(event, type, id) {
   document.getElementById("record-context-menu")?.remove();
   const recordsByType = { denuncia: data.denuncias, chamado: data.chamados, feedback: data.feedbacks };
   const item = (recordsByType[type] || []).find((record) => String(record.id) === String(id));
-  if (isArchivedRecord(item)) return;
+  if (!item) return;
+
   const menu = document.createElement("div");
   menu.id = "record-context-menu";
   menu.className = "board-context-menu record-context-menu";
   menu.style.left = `${event.clientX}px`;
   menu.style.top = `${event.clientY}px`;
+
+  if (isArchivedRecord(item)) {
+    // Registro ja arquivado: o menu de contexto passa a oferecer exclusao
+    // definitiva em vez de arquivar de novo.
+    const collectionsByType = { denuncia: "denuncias", chamado: "chamados", feedback: "feedbacks" };
+    const tablesByType = { denuncia: TABLES.denuncias, chamado: TABLES.chamados, feedback: TABLES.feedbacks };
+    const deleteLabels = { denuncia: "Excluir denúncia", chamado: "Excluir chamado", feedback: "Excluir feedback" };
+    const deleteLabelFrases = { denuncia: "esta denúncia", chamado: "este chamado", feedback: "este feedback" };
+    menu.innerHTML = `<button type="button" class="danger" data-record-menu-action="delete">${deleteLabels[type] || "Excluir"}</button>`;
+    menu.addEventListener("click", (clickEvent) => {
+      const actionButton = clickEvent.target.closest("[data-record-menu-action]");
+      if (actionButton?.dataset.recordMenuAction !== "delete") return;
+      menu.remove();
+      excluirRegistroArquivadoIndividualmente(collectionsByType[type], tablesByType[type], id, deleteLabelFrases[type] || "este registro");
+    });
+    document.body.appendChild(menu);
+    return;
+  }
+
   const labels = { denuncia: "Arquivar denúncia", chamado: "Arquivar chamado", feedback: "Arquivar feedback" };
   menu.innerHTML = `<button type="button" class="danger" data-record-menu-action="archive">${labels[type] || "Arquivar"}</button>`;
   menu.addEventListener("click", async (clickEvent) => {
