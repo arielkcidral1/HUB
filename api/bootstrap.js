@@ -14,6 +14,7 @@ const BOOTSTRAP_TABLES = {
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
+  feedbacks: "hub_feedbacks",
 };
 
 async function selectRows(client, table) {
