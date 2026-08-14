@@ -9436,6 +9436,8 @@ function renderChamadosSection() {
     toggleArchivedChamadosButton.textContent = showArchivedChamados ? "Ocultar arquivados" : "Mostrar arquivados";
     toggleArchivedChamadosButton.disabled = false;
   }
+  const excluirArquivadosChamadosButton = document.getElementById("excluir-arquivados-chamados");
+  if (excluirArquivadosChamadosButton) excluirArquivadosChamadosButton.hidden = !showArchivedChamados;
 
   const chamadoCard = (item, archived = false) => `
     <article class="item-card"
@@ -9485,6 +9487,8 @@ function renderDenunciasSection() {
     toggleArchivedDenunciasButton.textContent = showArchivedDenuncias ? "Ocultar arquivadas" : "Mostrar arquivadas";
     toggleArchivedDenunciasButton.disabled = false;
   }
+  const excluirArquivadasDenunciasButton = document.getElementById("excluir-arquivadas-denuncias");
+  if (excluirArquivadasDenunciasButton) excluirArquivadasDenunciasButton.hidden = !showArchivedDenuncias;
 
   const cardTemplate = (item, archived = false) => `
     <article class="item-card clickable"
@@ -9518,10 +9522,13 @@ function renderFeedbacksSection() {
   const naoLidosTarget = document.getElementById("feedbacks-nao-lidos");
   if (!naoLidosTarget) return;
 
+  const excluirArquivadosFeedbacksButton = document.getElementById("excluir-arquivados-feedbacks");
+
   if (!isFredericoUser()) {
     naoLidosTarget.innerHTML = '<p class="empty-state">Acesso restrito.</p>';
     const lidosTarget = document.getElementById("feedbacks-lidos");
     if (lidosTarget) lidosTarget.innerHTML = "";
+    if (excluirArquivadosFeedbacksButton) excluirArquivadosFeedbacksButton.hidden = true;
     return;
   }
 
@@ -9534,6 +9541,7 @@ function renderFeedbacksSection() {
   if (primaryTitle) primaryTitle.textContent = showArchivedFeedbacks ? "Arquivados" : "Não Lidos";
   const toggleButton = document.getElementById("toggle-archived-feedbacks");
   if (toggleButton) toggleButton.textContent = showArchivedFeedbacks ? "Ocultar arquivados" : "Mostrar arquivados";
+  if (excluirArquivadosFeedbacksButton) excluirArquivadosFeedbacksButton.hidden = !showArchivedFeedbacks;
 
   const cardTemplate = (item, archived = false) => `
     <article class="item-card clickable"
@@ -10505,6 +10513,18 @@ document.getElementById("toggle-archived-denuncias")?.addEventListener("click", 
 document.getElementById("toggle-archived-feedbacks")?.addEventListener("click", () => {
   showArchivedFeedbacks = !showArchivedFeedbacks;
   renderAll();
+});
+
+document.getElementById("excluir-arquivados-chamados")?.addEventListener("click", () => {
+  excluirChamadosArquivados();
+});
+
+document.getElementById("excluir-arquivadas-denuncias")?.addEventListener("click", () => {
+  excluirDenunciasArquivadas();
+});
+
+document.getElementById("excluir-arquivados-feedbacks")?.addEventListener("click", () => {
+  excluirFeedbacksArquivados();
 });
 
 document.querySelectorAll(".doc-tab").forEach((button) => {
@@ -12287,6 +12307,51 @@ async function arquivarFeedbackPorContexto(id) {
   renderAll();
   syncRecordStatusSilently("feedbacks", id, "Arquivado");
   showModal("Feedback arquivado", "O feedback foi movido para Arquivados.", "info");
+}
+
+async function excluirRegistrosArquivadosPermanentemente(collection, table, rotuloPlural) {
+  const arquivados = (data[collection] || []).filter((item) => isArchivedRecord(item));
+  if (!arquivados.length) {
+    showModal(`Nada para apagar`, `Nao ha ${rotuloPlural} arquivados no momento.`, "info");
+    return;
+  }
+
+  showPasswordActionModal({
+    title: `Apagar ${rotuloPlural} arquivados`,
+    text: `Confirme a senha de autorizacao para apagar definitivamente ${arquivados.length} ${rotuloPlural} arquivados. Essa acao nao pode ser desfeita.`,
+    confirmText: "Apagar",
+    danger: true,
+    validatePassword: async (password) => verifyAuthorizationPassword(password),
+    onConfirm: async () => {
+      const ids = arquivados.map((item) => item.id);
+      if (postgresClient) {
+        try {
+          const { error } = await postgresClient.from(table).delete().in("id", ids);
+          if (error) throw error;
+        } catch (error) {
+          console.error(`Erro ao apagar ${collection} arquivados no PostgreSQL:`, error);
+          showModal("Erro ao apagar", `Nao foi possivel apagar os ${rotuloPlural} arquivados no PostgreSQL. Tente novamente.`, "error");
+          return;
+        }
+      }
+      data[collection] = (data[collection] || []).filter((item) => !isArchivedRecord(item));
+      saveLocalData();
+      renderAll();
+      showModal("Registros apagados", `Os ${rotuloPlural} arquivados foram apagados definitivamente.`, "info");
+    },
+  });
+}
+
+function excluirChamadosArquivados() {
+  excluirRegistrosArquivadosPermanentemente("chamados", TABLES.chamados, "chamados");
+}
+
+function excluirDenunciasArquivadas() {
+  excluirRegistrosArquivadosPermanentemente("denuncias", TABLES.denuncias, "denuncias");
+}
+
+function excluirFeedbacksArquivados() {
+  excluirRegistrosArquivadosPermanentemente("feedbacks", TABLES.feedbacks, "feedbacks");
 }
 
 function getChatMessageById(id) {
