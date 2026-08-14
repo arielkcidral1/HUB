@@ -214,7 +214,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'const publicFeedbackForm = document\.getElementById\("feedbacks-form"\);[\s\S]*const publicFormError = validatePublicFormSubmission\(formElement\);' "formulario publico de feedbacks usa a funcao de validacao existente"
   Assert-True -Condition (-not ($script -match 'validatePublicSubmissionForm')) -Message "nenhum formulario publico chama a funcao inexistente validatePublicSubmissionForm"
   Assert-MatchText $script 'function renderFeedbacksSection\(\)[\s\S]*data-record-context="feedback"[\s\S]*data-action="reabrir-feedback" data-id="\$\{escapeHtml\(item\.id\)\}">Reabrir</button>' "feedback arquivado exibe botao para reabrir"
-  Assert-MatchText $script 'function reabrirFeedback\(id\)[\s\S]*await updateItem\("feedbacks", id, \{ status: "Novo" \}\)' "reabertura de feedback volta o status para Novo"
+  Assert-MatchText $script 'function reabrirFeedback\(id\)[\s\S]*await updateItem\("feedbacks", id, \{ status: "Lido" \}\)' "reabertura de feedback volta o status para Lido, igual denuncia volta para Lida"
   Assert-MatchText $script 'async function arquivarFeedbackPorContexto\(id\)[\s\S]*feedback\.status = "Arquivado";[\s\S]*syncRecordStatusSilently\("feedbacks", id, "Arquivado"\);' "arquivamento de feedback usa o mesmo padrao silencioso dos chamados"
   Assert-MatchText $index 'id="toggle-archived-feedbacks"[^>]*>Mostrar arquivados</button>' "aba de feedbacks possui botao para mostrar arquivados"
   Assert-MatchText $script 'function applyDashboardScopeToMetricCards\(\)[\s\S]*\.metric-card-link\[data-view\][\s\S]*allowedViews\.has\(card\.dataset\.view\)' "painel esconde cartoes de abas sem acesso"

@@ -12252,11 +12252,11 @@ function reabrirDenuncia(id) {
 function reabrirFeedback(id) {
   showConfirmActionModal({
     title: "Reabrir feedback",
-    text: "Deseja mover este feedback de volta para a lista de novos feedbacks?",
+    text: "Deseja mover este feedback de volta para a lista de Lidos?",
     confirmText: "Reabrir",
     onConfirm: async () => {
-      const success = await updateItem("feedbacks", id, { status: "Novo" });
-      if (success) showModal("Feedback reaberto", "O feedback voltou para a lista de novos feedbacks.", "info");
+      const success = await updateItem("feedbacks", id, { status: "Lido" });
+      if (success) showModal("Feedback reaberto", "O feedback voltou para a lista de Lidos.", "info");
     },
   });
 };
