@@ -13909,14 +13909,21 @@ class NotificationTracker {
   }
 
   clearAll() {
-    if (!confirm("Apagar estas notificações da sua conta? Elas somem em todos os aparelhos onde você usa o HUB.")) return;
-    const dismissKeys = this.notifications.map((notif) => notif.dismissKey || notif.id).filter(Boolean);
-    dismissNotifications(dismissKeys);
-    this.notifications = [];
-    this.filteredNotifications = [];
-    this.renderNotifications();
-    this.updateStats();
-    this.showNotification("Notificações apagadas da sua conta em todos os aparelhos.");
+    showConfirmActionModal({
+      title: "Apagar notificações",
+      text: "Apagar estas notificações da sua conta? Elas somem em todos os aparelhos onde você usa o HUB.",
+      confirmText: "Apagar",
+      danger: true,
+      onConfirm: async () => {
+        const dismissKeys = this.notifications.map((notif) => notif.dismissKey || notif.id).filter(Boolean);
+        dismissNotifications(dismissKeys);
+        this.notifications = [];
+        this.filteredNotifications = [];
+        this.renderNotifications();
+        this.updateStats();
+        this.showNotification("Notificações apagadas da sua conta em todos os aparelhos.");
+      },
+    });
   }
 
   showNotification(message) {
