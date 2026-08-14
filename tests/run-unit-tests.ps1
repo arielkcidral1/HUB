@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v92' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v93' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -85,7 +85,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v92[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v93[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -353,6 +353,7 @@ Assert-True -Condition (-not ($index -match 'value="malote"|value="evento"|value
 Assert-MatchText $script 'const dashboardItems = \[[\s\S]*\.\.\.\(data\.documentosContratados \|\| \[\]\)[\s\S]*kind: "contratado"[\s\S]*notificationId: getDashboardNotificationId\("contratado", item\)[\s\S]*view: "documentos-contratados"' "acompanhamento do painel lista envios de documentos de contratados"
 Assert-MatchText $script 'function getDashboardItemView\(item = \{\}\)[\s\S]*if \(kind === "contratado"\) return "documentos-contratados";' "documentos de contratados abrem a aba correta a partir da notificacao"
 Assert-MatchText $script 'clearAll\(\) \{[\s\S]*showConfirmActionModal\(\{[\s\S]*title: "Apagar notifica[^"]*"[\s\S]*onConfirm: async \(\) => \{[\s\S]*dismissNotifications\(dismissKeys\)' "apagar notificacoes usa modal proprio em vez de confirm nativo"
+Assert-MatchText $script 'function getUpcomingEvents\(\) \{[\s\S]*const weekDates = getCurrentWeekDates\(\);[\s\S]*const maxDateKey = weekDates\[weekDates\.length - 1\];[\s\S]*item\.data >= today && item\.data <= maxDateKey' "eventos proximos so contam o que acontece na mesma semana"
 Assert-MatchText $index 'id="abrir-relatorio-disciplinary"[^>]*type="button"[^>]*>' "aba advertencias e suspensoes possui botao de relatorio"
 Assert-True -Condition (-not ($index -match 'Anivers.rio de empresa|edit-calendar-events|AE</span>')) -Message "calendario nao exibe aniversario de empresa nem botao editar eventos"
 Assert-MatchText $script 'function getAllEvents\(\)[\s\S]*filter\(\(item\) => !isCompanyBirthdayEvent\(item\) && !String\(item\.id \|\| ""\)\.startsWith\("company-birthday-"\)\)' "aniversarios de empresa sao removidos da agenda"

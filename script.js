@@ -2709,11 +2709,10 @@ function getEventListMeta(item = {}) {
   return `${formatEventDate(item.data)} | ${getEventScheduleMeta(item)}`;
 }
 
-function getUpcomingEvents(daysAhead = 7) {
+function getUpcomingEvents() {
   const today = getLocalDateKey();
-  const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + daysAhead);
-  const maxDateKey = getLocalDateKey(maxDate);
+  const weekDates = getCurrentWeekDates();
+  const maxDateKey = weekDates[weekDates.length - 1];
   return getSortedEvents().filter((item) => !isArchivedRecord(item) && item.data && item.data >= today && item.data <= maxDateKey);
 }
 
