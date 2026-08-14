@@ -7646,15 +7646,12 @@ function renderDashboard() {
     document.getElementById("metric-eventos").textContent = upcomingEvents.length;
   }
   if (document.getElementById("metric-documentos")) {
-    const documentosRh = documentRecords
-      .filter((item) => canCurrentUserAccessDocumentRecord(item) && !isArchivedRecord(item) && isTodayLabel(item.createdAt))
-      .length;
-    // Envios do formulario publico de contratados tambem contam como documento
-    // recebido no dia, desde que a conta enxergue a aba correspondente.
+    // O cartao conta apenas os envios do formulario publico de contratados;
+    // documentos internos do RH nao entram nesse numero.
     const documentosContratados = canAccessView("documentos-contratados")
       ? (data.documentosContratados || []).filter((item) => !isArchivedRecord(item) && isTodayLabel(item.createdAt)).length
       : 0;
-    document.getElementById("metric-documentos").textContent = documentosRh + documentosContratados;
+    document.getElementById("metric-documentos").textContent = documentosContratados;
   }
   if (document.getElementById("metric-chamados-hoje")) {
     document.getElementById("metric-chamados-hoje").textContent = data.chamados

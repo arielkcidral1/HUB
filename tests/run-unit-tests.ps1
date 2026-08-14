@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v88' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v89' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -85,7 +85,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v88[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v89[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -240,7 +240,8 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $index 'id="toggle-archived-feedbacks"[^>]*>Mostrar arquivados</button>' "aba de feedbacks possui botao para mostrar arquivados"
   Assert-MatchText $script 'function applyDashboardScopeToMetricCards\(\)[\s\S]*\.metric-card-link\[data-view\][\s\S]*allowedViews\.has\(card\.dataset\.view\)' "painel esconde cartoes de abas sem acesso"
   Assert-MatchText $script 'function applyDashboardScopeToMetricCards\(\)[\s\S]*if \(isManager && card\.querySelector\("#metric-documentos"\)\) allowed = false;' "gerente nao ve o cartao Documentos enviados hoje no painel"
-  Assert-MatchText $script 'const documentosContratados = canAccessView\("documentos-contratados"\)[\s\S]*\(data\.documentosContratados \|\| \[\]\)\.filter\(\(item\) => !isArchivedRecord\(item\) && isTodayLabel\(item\.createdAt\)\)\.length' "cartao Documentos enviados hoje soma os envios do formulario de contratados"
+  Assert-MatchText $script 'if \(document\.getElementById\("metric-documentos"\)\)[\s\S]*const documentosContratados = canAccessView\("documentos-contratados"\)[\s\S]*\(data\.documentosContratados \|\| \[\]\)\.filter\(\(item\) => !isArchivedRecord\(item\) && isTodayLabel\(item\.createdAt\)\)\.length[\s\S]*textContent = documentosContratados;' "cartao Documentos enviados hoje conta apenas os envios do formulario de contratados"
+  Assert-MatchText $index 'data-view="documentos-contratados"[^>]*>[\s\S]*<span>Documentos enviados hoje</span>[\s\S]*<strong id="metric-documentos">0</strong>' "cartao Documentos enviados hoje abre a aba Documentos de Contratados"
   Assert-True -Condition (-not ($script -match 'if \(\["usuarios", "eventos", "vtRegistros", "disciplinaryRecords", "malotes", "vagas", "atestados", "documentosContratados"')) -Message "envio de documentos de contratados nao fica na lista de colecoes sem notificacao"
   Assert-MatchText $script 'const allowedCollections = \["comunicados", "denuncias", "chamados", "candidaturas", "documentosContratados"\]' "polling de notificacoes acompanha os envios de documentos de contratados"
   Assert-MatchText $script 'if \(collection === "documentosContratados"\)[\s\S]*title: "Documentos de contratado recebidos"' "notificacao de documentos de contratados possui texto proprio"
