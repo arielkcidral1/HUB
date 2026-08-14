@@ -7537,6 +7537,7 @@ function getDashboardItemView(item = {}) {
   if (kind === "chamado") return "chamados";
   if (kind === "vaga") return "vagas";
   if (kind === "malote") return "malotes";
+  if (kind === "contratado") return "documentos-contratados";
   return "dashboard";
 }
 
@@ -7754,6 +7755,21 @@ function renderDashboard() {
           date: item.createdAt,
           dateTime: item.sortAt || item.createdAt,
           view: "vagas",
+        };
+      }),
+    ...(data.documentosContratados || [])
+      .map((item) => {
+        const origem = getContractorSourceLabel(item.origemHtml, item.empresa) || "Documento";
+        return {
+          kind: "contratado",
+          notificationId: getDashboardNotificationId("contratado", item),
+          title: `Documentos - ${item.nome || "Contratado"}`,
+          text: `${origem} - ${(item.documentos || []).length} documento(s) enviado(s).`,
+          details: `Nome: ${item.nome || "Nao informado"}\nCPF: ${formatCpf(item.cpf || "") || "Nao informado"}\nTelefone: ${formatPhone(item.telefone || "") || item.telefone || "Nao informado"}\nOrigem: ${origem}\nDocumentos enviados: ${(item.documentos || []).length}\nRecebido em: ${item.createdAt || "Nao informado"}`,
+          tag: origem,
+          date: item.createdAt,
+          dateTime: item.sortAt || item.createdAt,
+          view: "documentos-contratados",
         };
       })  ];
 

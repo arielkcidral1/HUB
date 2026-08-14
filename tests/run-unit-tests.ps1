@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v90' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v91' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -85,7 +85,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v90[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v91[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -348,8 +348,10 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $index 'id="vt-mes" name="mes" required>[\s\S]*<option>Janeiro</option>[\s\S]*<option>Dezembro</option>' "campo de mes do VT registra somente o mes"
   Assert-MatchText $index 'panel-header vt-records-header[\s\S]*class="vt-filter-bar"[\s\S]*class="vt-filter-fields"[\s\S]*id="vt-filter-nome"[^>]*placeholder="Nome"[\s\S]*id="vt-filter-mes"[\s\S]*<option value="">[^<]*</option>[\s\S]*id="vt-filter-unidade"[^>]*data-unit-select[^>]*data-unit-placeholder="Unidade"[\s\S]*<button class="secondary-link compact-filter-button" id="limpar-filtros-vt"[^>]*hidden[^>]*>Limpar</button>' "aba VT possui filtros minimalistas no canto superior direito"
 Assert-MatchText $index 'id="abrir-relatorio-vt"[^>]*type="button"[^>]*>' "aba VT possui botao de relatorio"
-Assert-MatchText $index 'id="tracker-filter-type"[\s\S]*value="denuncia"[\s\S]*value="mensagem"[\s\S]*value="chamado"[\s\S]*value="vaga"' "menu de notificacoes filtra apenas tipos ativos"
+Assert-MatchText $index 'id="tracker-filter-type"[\s\S]*value="denuncia"[\s\S]*value="mensagem"[\s\S]*value="chamado"[\s\S]*value="vaga"[\s\S]*value="contratado"' "menu de notificacoes filtra apenas tipos ativos"
 Assert-True -Condition (-not ($index -match 'value="malote"|value="evento"|value="documento"|value="atestado"|value="quadro"|value="disciplinar"')) -Message "menu de notificacoes nao exibe tipos removidos"
+Assert-MatchText $script 'const dashboardItems = \[[\s\S]*\.\.\.\(data\.documentosContratados \|\| \[\]\)[\s\S]*kind: "contratado"[\s\S]*notificationId: getDashboardNotificationId\("contratado", item\)[\s\S]*view: "documentos-contratados"' "acompanhamento do painel lista envios de documentos de contratados"
+Assert-MatchText $script 'function getDashboardItemView\(item = \{\}\)[\s\S]*if \(kind === "contratado"\) return "documentos-contratados";' "documentos de contratados abrem a aba correta a partir da notificacao"
 Assert-MatchText $index 'id="abrir-relatorio-disciplinary"[^>]*type="button"[^>]*>' "aba advertencias e suspensoes possui botao de relatorio"
 Assert-True -Condition (-not ($index -match 'Anivers.rio de empresa|edit-calendar-events|AE</span>')) -Message "calendario nao exibe aniversario de empresa nem botao editar eventos"
 Assert-MatchText $script 'function getAllEvents\(\)[\s\S]*filter\(\(item\) => !isCompanyBirthdayEvent\(item\) && !String\(item\.id \|\| ""\)\.startsWith\("company-birthday-"\)\)' "aniversarios de empresa sao removidos da agenda"
