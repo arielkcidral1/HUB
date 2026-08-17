@@ -368,17 +368,18 @@ const UNIT_CITY_ALIASES = {
   mtz: "Joinville",
   sbs: "Sao Bento do Sul",
   itj: "Itajai",
-  plc: "Balneario Picarras",
-  gua: "Guaramirim",
-  "dpa jc": "Jaragua do Sul",
-  "dpa iri": "Irineopolis",
+  plc: "Palhoca",
+  gua: "Joinville",
+  "dpa jc": "Joinville",
+  "dpa iri": "Joinville",
   jpl: "Joinville",
   bc: "Balneario Camboriu",
+  "gcs gpo": "Araquari",
   gcs: "Joinville",
   jrg: "Jaragua do Sul",
   brq: "Brusque",
   fln: "Florianopolis",
-  fac: "Florianopolis",
+  fac: "Joinville",
   rng: "Rio Negrinho",
   bnu: "Blumenau",
   trinca: "Joinville",
@@ -388,7 +389,12 @@ const UNIT_CITY_ALIASES = {
 function getUnitCity(value) {
   const unit = getCanonicalUnit(value);
   const text = normalizeUnitText(unit).replace(/^\d+\s*-\s*/, "");
-  const key = Object.keys(UNIT_CITY_ALIASES).find((alias) => text.includes(alias));
+  if (!text || text.startsWith("selecione")) return "";
+  // Do alias mais especifico para o mais generico: "gcs gpo" precisa vencer
+  // "gcs", senao GCS GPO herdaria a cidade da GCS JLLE.
+  const key = Object.keys(UNIT_CITY_ALIASES)
+    .sort((a, b) => b.length - a.length)
+    .find((alias) => text.includes(alias));
   return key ? UNIT_CITY_ALIASES[key] : "";
 }
 
@@ -3729,6 +3735,7 @@ function mapContractorDocumentRow(row = {}) {
     nome: row.nome || "",
     cpf: row.cpf || "",
     telefone: row.telefone || "",
+    email: row.email || "",
     documentos: parseContractorDocumentsValue(row.documentos),
     createdBy: row.created_by || row.createdBy || "Publico",
     createdAt: formatDateTime(row.created_at || row.createdAt),
@@ -4261,6 +4268,7 @@ if (collection === "eventos") {
       nome: values.nome,
       cpf: values.cpf,
       telefone: values.telefone || "",
+      email: values.email || "",
       documentos: values.documentos || [],
       created_by: values.createdBy || "Publico",
     };
@@ -5489,7 +5497,7 @@ async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, c
   return Array.isArray(result.data) ? result.data[0] : result.data;
 }
 
-async function submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, documentos, accessPassword, turnstileToken }) {
+async function submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, email, documentos, accessPassword, turnstileToken }) {
   const embeddedDocuments = await buildContractorDocumentPayload(documentos);
 
   const attempts = [{ url: "/api/contractor-documents", type: "documentosContratados", localApi: true }];
@@ -5505,6 +5513,7 @@ async function submitPublicContractorDocuments({ empresa, origemHtml, nome, tele
         nome: String(nome || ""),
         telefone: String(telefone || ""),
         cpf: String(cpf || ""),
+        email: String(email || ""),
         accessPassword: String(accessPassword || ""),
         documentos: embeddedDocuments,
         turnstileToken: String(turnstileToken || ""),
@@ -7448,6 +7457,7 @@ function renderDocumentosContratados() {
       </div>
       <p><strong>CPF:</strong> ${escapeHtml(formatCpf(item.cpf || ""))}</p>
       <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || "Não informado")}</p>
+      <p><strong>E-mail:</strong> ${escapeHtml(item.email || "Não informado")}</p>
       <p><strong>Origem:</strong> ${escapeHtml(getContractorSourceLabel(item.origemHtml, item.empresa) || "Não informada")}</p>
       <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Enviado por ${escapeHtml(item.nome || "Contratado não informado")}</p>
       <div class="contractor-file-list">
@@ -11307,7 +11317,8 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
   const localField = formElement.elements.local;
   unitField?.addEventListener("change", () => {
     const city = getUnitCity(unitField.value);
-    if (localField && city) localField.value = city;
+    // Voltar para o placeholder limpa a cidade em vez de manter a anterior.
+    if (localField) localField.value = city;
   });
 
   formElement.addEventListener("submit", async (event) => {
@@ -11979,16 +11990,22 @@ if (contratadoDocForm) {
     const nome = String(form.get("nome") || "").trim();
     const telefone = String(form.get("telefone") || "").trim();
     const cpf = String(form.get("cpf") || "").trim();
+    const email = String(form.get("email") || "").trim();
     const documentos = form.getAll("documentos").filter((file) => file && file.name);
     const turnstileToken = getPublicChallengeToken(formElement);
 
-    if (!empresa || !nome || !telefone || !cpf || !documentos.length) {
+    if (!empresa || !nome || !telefone || !cpf || !email || !documentos.length) {
       showModal("Dados obrigatórios", "Preencha todos os dados e anexe pelo menos um documento.", "error");
       return;
     }
 
     if (!isValidCpf(cpf)) {
       showModal("CPF inválido", "Informe um CPF válido no formato 000.000.000-00.", "error");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      showModal("E-mail inválido", "Informe um e-mail válido para contato.", "error");
       return;
     }
 
@@ -11999,7 +12016,7 @@ if (contratadoDocForm) {
     }
 
     try {
-      await submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, documentos, accessPassword: contractorAccessPassword, turnstileToken });
+      await submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, email, documentos, accessPassword: contractorAccessPassword, turnstileToken });
       formElement.reset();
       resetContractorDocumentFields(contractorDocumentsFields);
       showModal("Documentos enviados", "Os documentos foram enviados com sucesso para o RH.", "info");

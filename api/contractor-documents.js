@@ -24,6 +24,7 @@ function isValidPayload(payload) {
   if (payload.nome.length < 3 || payload.nome.length > 160) return "Nome invalido.";
   if (!/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(payload.cpf)) return "CPF invalido.";
   if (!/^\d{10,11}$/.test(payload.telefone.replace(/\D/g, ""))) return "Telefone invalido.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(payload.email) || payload.email.length > 160) return "E-mail invalido.";
   return null;
 }
 
@@ -59,6 +60,7 @@ export default async function handler(req, res) {
       nome: text(body.nome),
       telefone: text(body.telefone),
       cpf: text(body.cpf),
+      email: text(body.email),
     };
 
     const validationError = isValidPayload(payload);
@@ -70,33 +72,34 @@ export default async function handler(req, res) {
       return json(res, 400, { error: "Cada documento deve ter entre 1 byte e 10 MB." });
     }
 
-    const values = [
-      payload.empresa,
-      payload.origemHtml,
-      payload.nome,
-      payload.telefone,
-      payload.cpf,
-      JSON.stringify(documentos),
-      "Publico",
-    ];
+    const columns = new Map([
+      ["empresa", payload.empresa],
+      ["origem_html", payload.origemHtml],
+      ["nome", payload.nome],
+      ["telefone", payload.telefone],
+      ["cpf", payload.cpf],
+      ["email", payload.email],
+      ["documentos", JSON.stringify(documentos)],
+      ["created_by", "Publico"],
+    ]);
+    // Colunas opcionais (origem_html, email) podem faltar em bancos antigos;
+    // nesse caso o Postgres devolve 42703 e a coluna citada e removida do insert.
+    const optionalColumns = new Set(["origem_html", "email"]);
 
-    let result;
-    try {
-      result = await pool.query(
-        `insert into public."hub_documentos_contratados"
-           ("empresa", "origem_html", "nome", "telefone", "cpf", "documentos", "created_by")
-         values ($1, $2, $3, $4, $5, $6::jsonb, $7) returning *`,
-        values,
-      );
-    } catch (error) {
-      // Bancos antigos ainda nao possuem a coluna origem_html.
-      if (error?.code !== "42703") throw error;
-      result = await pool.query(
-        `insert into public."hub_documentos_contratados"
-           ("empresa", "nome", "telefone", "cpf", "documentos", "created_by")
-         values ($1, $2, $3, $4, $5::jsonb, $6) returning *`,
-        [payload.empresa, payload.nome, payload.telefone, payload.cpf, JSON.stringify(documentos), "Publico"],
-      );
+    let result = null;
+    while (!result) {
+      const names = [...columns.keys()];
+      const placeholders = names.map((name, index) => (name === "documentos" ? `$${index + 1}::jsonb` : `$${index + 1}`));
+      const sql = `insert into public."hub_documentos_contratados" (${names.map((name) => `"${name}"`).join(", ")})
+         values (${placeholders.join(", ")}) returning *`;
+      try {
+        result = await pool.query(sql, [...columns.values()]);
+      } catch (error) {
+        const missing = [...optionalColumns].find((name) => error?.code === "42703" && String(error.message || "").includes(name));
+        if (!missing) throw error;
+        columns.delete(missing);
+        optionalColumns.delete(missing);
+      }
     }
 
     return json(res, 200, { data: result.rows[0] || null });
