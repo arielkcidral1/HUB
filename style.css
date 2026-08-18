@@ -1787,7 +1787,7 @@ textarea {
 
 .chamados-filter-fields.vaga-filter-fields {
   display: grid;
-  grid-template-columns: 150px 105px 130px;
+  grid-template-columns: 150px 105px 130px 170px;
   justify-content: end;
   width: auto;
   max-width: 100%;
@@ -1813,6 +1813,10 @@ textarea {
 
 #vaga-filter-unidade {
   width: 130px;
+}
+
+#vaga-filter-curriculo {
+  width: 170px;
 }
 
 .chamados-filter-fields input,

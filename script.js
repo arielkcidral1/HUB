@@ -5769,7 +5769,9 @@ if (collection === "eventos") {
           ? "Sem permissao para salvar a vaga. Verifique se seu usuario tem cargo 'RH' na tabela hub_users e se o e-mail do perfil coincide com o e-mail do login. Rode o hub-vagas-fix.sql para corrigir."
           : collection === "vagas"
             ? `Nao foi possivel salvar a vaga. ${error?.message || "Confira se as colunas descricao, requisitos e created_by existem em hub_vagas (rode hub-vagas-fix.sql)."}`
-            : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
+            : collection === "disciplinaryRecords"
+              ? `Nao foi possivel salvar a advertencia/suspensao. ${error?.message || "Confira se a tabela hub_advertencias_suspensoes existe."} Rode o arquivo postgres/migrations/20260812000300_create_advertencias_suspensoes.sql no PostgreSQL para criar a tabela.`
+              : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
     showModal("Erro ao Salvar", message, "error");
     return false;
   }
@@ -9391,7 +9393,12 @@ function getVagasFilterValues() {
     unidade: normalizeUnitText(unidade) === normalizeUnitText("Unidade") ? "" : unidade,
     nome: String(document.getElementById("vaga-filter-nome")?.value || "").trim().toLowerCase(),
     cpf: String(document.getElementById("vaga-filter-cpf")?.value || "").replace(/\D/g, ""),
+    comCurriculo: document.getElementById("vaga-filter-curriculo")?.value === "com-curriculo",
   };
+}
+
+function vagaTemCandidaturas(vagaId) {
+  return (data.candidaturas || []).some((c) => String(c.vaga_id || c.vagaId) === String(vagaId));
 }
 
 function getVagaCandidaturas(vagaId, filters = null) {
@@ -9410,6 +9417,7 @@ function filterVagasByCurrentFilters(items = []) {
   return items.filter((item) => {
     if (filters.unidade && getCanonicalUnit(item.unidade) !== filters.unidade) return false;
     if ((filters.nome || filters.cpf) && !getVagaCandidaturas(item.id, filters).length) return false;
+    if (filters.comCurriculo && !vagaTemCandidaturas(item.id)) return false;
     return true;
   });
 }
@@ -9418,11 +9426,11 @@ function updateVagasFilterClearButton() {
   const clearButton = document.getElementById("limpar-filtros-vagas");
   if (!clearButton) return;
   const filters = getVagasFilterValues();
-  clearButton.hidden = !Boolean(filters.unidade || filters.nome || filters.cpf);
+  clearButton.hidden = !Boolean(filters.unidade || filters.nome || filters.cpf || filters.comCurriculo);
 }
 
 function clearVagasFilters() {
-  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf"].forEach((id) => {
+  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf", "vaga-filter-curriculo"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
@@ -9465,7 +9473,7 @@ function renderVagasSection() {
 
     if (candidaturas.length > 0) {
       candidaturasHtml = candidaturas.map(c => `
-        <div class="candidate-row">
+        <div class="candidate-row" data-candidatura-context="curriculo" data-id="${escapeHtml(c.id)}" title="Clique com o botao direito para excluir o curriculo">
           <p>
             <strong>${escapeHtml(c.nome)}</strong>
             <span class="candidate-meta-line">
@@ -10525,6 +10533,7 @@ document.getElementById("vaga-filter-cpf")?.addEventListener("input", (event) =>
   event.currentTarget.value = formatCpf(event.currentTarget.value);
   renderAll();
 });
+document.getElementById("vaga-filter-curriculo")?.addEventListener("change", renderAll);
 document.getElementById("limpar-filtros-vagas")?.addEventListener("click", () => {
   clearVagasFilters();
   renderAll();
@@ -11589,6 +11598,7 @@ document.addEventListener("click", (event) => {
   if (!event.target.closest("#record-context-menu")) document.getElementById("record-context-menu")?.remove();
   if (!event.target.closest("#chat-message-context-menu")) document.getElementById("chat-message-context-menu")?.remove();
   if (!event.target.closest("#event-context-menu")) document.getElementById("event-context-menu")?.remove();
+  if (!event.target.closest("#candidatura-context-menu")) document.getElementById("candidatura-context-menu")?.remove();
   const addListButton = event.target.closest("[data-action='add-board-list']");
   if (addListButton) {
     const board = getActiveBoard();
@@ -11623,6 +11633,12 @@ document.addEventListener("contextmenu", (event) => {
   if (chatMessage) {
     event.preventDefault();
     openChatMessageContextMenu(event, chatMessage.dataset.chatMessageId);
+    return;
+  }
+  const candidaturaRow = event.target.closest("[data-candidatura-context]");
+  if (candidaturaRow && candidaturaRow.dataset.id) {
+    event.preventDefault();
+    openCandidaturaContextMenu(event, candidaturaRow.dataset.id);
     return;
   }
   const recordCard = event.target.closest("[data-record-context]");
@@ -12609,6 +12625,41 @@ function openRecordContextMenu(event, type, id) {
     if (type === "feedback") await arquivarFeedbackPorContexto(id);
   });
   document.body.appendChild(menu);
+}
+
+function openCandidaturaContextMenu(event, id) {
+  document.getElementById("candidatura-context-menu")?.remove();
+  const item = (data.candidaturas || []).find((c) => String(c.id) === String(id));
+  if (!item) return;
+
+  const menu = document.createElement("div");
+  menu.id = "candidatura-context-menu";
+  menu.className = "board-context-menu record-context-menu";
+  menu.style.left = `${event.clientX}px`;
+  menu.style.top = `${event.clientY}px`;
+  menu.innerHTML = `<button type="button" class="danger" data-candidatura-menu-action="delete">Excluir currículo</button>`;
+  menu.addEventListener("click", (clickEvent) => {
+    const actionButton = clickEvent.target.closest("[data-candidatura-menu-action]");
+    if (actionButton?.dataset.candidaturaMenuAction !== "delete") return;
+    menu.remove();
+    excluirCandidatura(id);
+  });
+  document.body.appendChild(menu);
+}
+
+function excluirCandidatura(id) {
+  const item = (data.candidaturas || []).find((c) => String(c.id) === String(id));
+  if (!item) return;
+  showPasswordActionModal({
+    title: "Excluir currículo",
+    text: `Confirme a senha de autorizacao para excluir o curriculo de "${item.nome || "candidato nao informado"}".`,
+    confirmText: "Excluir",
+    danger: true,
+    validatePassword: async (password) => verifyAuthorizationPassword(password),
+    onConfirm: async () => {
+      await deleteItem("candidaturas", id);
+    },
+  });
 }
 
 function openEventContextMenu(event, id) {
