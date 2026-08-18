@@ -7720,6 +7720,9 @@ function renderDashboard() {
     groupedMessages.push({
       kind: "notificacao",
       notificationId: "mensagens-rh",
+      // A chave de exclusao inclui a ultima mensagem para que o cartao volte a
+      // aparecer quando chegar mensagem nova, mesmo apos o usuario apagar o card.
+      dismissKey: `mensagens-rh:${latestMessage.id || messageIds[0] || "vazio"}`,
       messageIds,
       chatMessages: sortedRhMessagesOldestFirst,
       title: "Mensagens do RH",
@@ -7811,7 +7814,7 @@ function renderDashboard() {
   // gerente nao ve denuncia, chamado nem curriculo aqui.
   const sortedDashboardItems = dashboardItems
     .filter((item) => canAccessView(getDashboardItemView(item)))
-    .filter((item) => !isNotificationDismissed(item.notificationId))
+    .filter((item) => !isNotificationDismissed(item.dismissKey || item.notificationId))
     .map((item, index) => ({ ...item, _sortIndex: index }));
   sortedDashboardItems.sort((a, b) => {
     const aRead = isDashboardActivityReadForOrdering(a);
@@ -13534,6 +13537,7 @@ class NotificationTracker {
         const originalStatus = isRead ? "pending" : (isUrgent ? "urgent" : "unread");
         pushNotification({
           id: item.notificationId || `${type}-${item.id || item._sortIndex || notifications.length}`,
+          dismissKey: item.dismissKey || item.notificationId,
           type,
           title: item.title || "Notificacao",
           description: item.text || "",
