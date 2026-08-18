@@ -757,6 +757,10 @@ function isCeoUser() {
   return getCurrentUserNormalizedRole() === "ceo";
 }
 
+function isReceptionistUser() {
+  return getCurrentUserNormalizedRole() === "recepcionista";
+}
+
 /**
  * Controle de UI baseado no usuario autenticado carregado do PostgreSQL.
  * A verificacao de permissao real continua sendo feita no backend por RLS.
@@ -765,7 +769,7 @@ function isCashierUser() {
   return AuthHelper.isCashier();
 }
 
-// Gerente enxerga apenas Painel, Comunicacao RH, Quadros, Calendario e
+// Gerente enxerga apenas Painel, Comunicação, Quadros, Calendario e
 // Documentos RH. Chamados fica de fora da aba interna: o gerente so tem o
 // formulario publico de solicitacao (chamados.html).
 const MANAGER_ALLOWED_VIEWS = Object.freeze([
@@ -774,6 +778,15 @@ const MANAGER_ALLOWED_VIEWS = Object.freeze([
   "quadros",
   "calendario",
   "documentos",
+  "conta",
+]);
+
+// Recepcionista enxerga apenas Painel, Comunicacao, Quadros e Calendario.
+const RECEPTIONIST_ALLOWED_VIEWS = Object.freeze([
+  "dashboard",
+  "comunicacao",
+  "quadros",
+  "calendario",
   "conta",
 ]);
 
@@ -787,6 +800,7 @@ const ALL_ALLOWED_VIEWS = Object.freeze([
 // exibir numero, pendencia ou aviso de uma aba que o usuario nao acessa.
 function getAllowedViewsForCurrentUser() {
   if (isManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
+  if (isReceptionistUser()) return new Set(RECEPTIONIST_ALLOWED_VIEWS);
   const allowed = new Set(ALL_ALLOWED_VIEWS);
   if (isFredericoUser()) allowed.add("feedbacks");
   // Denuncias Recebidas fica restrita a Ariel e Frederico.
@@ -7716,7 +7730,7 @@ function renderDashboard() {
         .slice(-20)
         .map((msg) => `${msg.createdAt || "Sem data"} - ${msg.autor || "Equipe"}: ${msg.mensagem || "Nova notificação recebida."}`)
         .join("\n\n"),
-      detailsHeader: "Comunicação RH",
+      detailsHeader: "Comunicação",
       tag: hasUnread ? "Nova" : "Lida",
       date: latestMessage.createdAt,
       dateTime: latestMessage.sortAt || latestMessage.createdAt,
@@ -8925,10 +8939,10 @@ function showHubCrossPageNotification(title, message, options = {}) {
 
 function getRealtimeNotificationText(collection, item = {}) {
   if (collection === "comunicados") {
-    const author = item.autor || "Comunicação RH";
+    const author = item.autor || "Comunicação";
     const text = getChatMessageText(item.mensagem) || "Nova mensagem recebida.";
     return {
-      title: `Comunicação RH - ${author}`,
+      title: `Comunicação - ${author}`,
       message: text.length > 110 ? `${text.slice(0, 107)}...` : text,
       icon: "\u{1F4AC}",
       type: "mensagem",
@@ -9125,7 +9139,7 @@ function notifyUnreadRhMessages(count) {
   newUnreadIds.forEach((id) => wasNotificationAlreadyShown(`mensagem-rh-${id}`));
   playUserNotificationSound();
   if (currentUserSettings.desktopNotifications && isBrowserNotificationSupported() && Notification.permission === "granted") {
-    const notification = new Notification("Comunicacao RH", {
+    const notification = new Notification("Comunicação", {
       body: messageText,
       icon: "assets/logo.svg",
       badge: "assets/logo.svg",
@@ -9140,7 +9154,7 @@ function notifyUnreadRhMessages(count) {
     };
   }
 
-  showHubCrossPageNotification("Comunicacao RH", messageText, {
+  showHubCrossPageNotification("Comunicação", messageText, {
     type: "mensagem",
     icon: "\u{1F4AC}",
     tag: "hub-rh-comunicacao",

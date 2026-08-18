@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v95' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v96' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -85,7 +85,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v95[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v96[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -198,6 +198,12 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'const ALL_ALLOWED_VIEWS = Object\.freeze\(\[[\s\S]*"dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros",[\s\S]*"vagas", "calendario", "documentos", "advertencias-suspensoes",[\s\S]*"documentos-contratados", "gerenciamento-vt", "equipe", "conta",' "usuarios autenticados veem abas principais do HUB"
   Assert-MatchText $script 'const MANAGER_ALLOWED_VIEWS = Object\.freeze\(\[[\s\S]*"dashboard",[\s\S]*"comunicacao",[\s\S]*"quadros",[\s\S]*"calendario",[\s\S]*"documentos",[\s\S]*"conta",[\s\S]*\]\)' "gerente so acessa painel comunicacao quadros calendario e documentos"
   Assert-True -Condition (-not ($script -match 'MANAGER_ALLOWED_VIEWS = Object\.freeze\(\[[^\]]*"chamados"')) -Message "gerente nao acessa a aba interna de chamados"
+  Assert-MatchText $script 'function isReceptionistUser\(\)[\s\S]*return getCurrentUserNormalizedRole\(\) === "recepcionista";' "cargo recepcionista e reconhecido"
+  Assert-MatchText $script 'const RECEPTIONIST_ALLOWED_VIEWS = Object\.freeze\(\[[\s\S]*"dashboard",[\s\S]*"comunicacao",[\s\S]*"quadros",[\s\S]*"calendario",[\s\S]*"conta",[\s\S]*\]\)' "recepcionista so acessa painel comunicacao quadros calendario e conta"
+  Assert-True -Condition (-not ($script -match 'RECEPTIONIST_ALLOWED_VIEWS = Object\.freeze\(\[[^\]]*"documentos"')) -Message "recepcionista nao acessa a aba de documentos"
+  Assert-MatchText $script 'function getAllowedViewsForCurrentUser\(\)[\s\S]*if \(isManagerUser\(\)\) return new Set\(MANAGER_ALLOWED_VIEWS\);[\s\S]*if \(isReceptionistUser\(\)\) return new Set\(RECEPTIONIST_ALLOWED_VIEWS\);' "escopo de abas do recepcionista usa a mesma fonte unica de verdade dos demais cargos"
+  Assert-MatchText $index 'data-view="comunicacao" type="button">Comunica..o</button>' "aba lateral usa o nome Comunicacao em vez de Comunicacao RH"
+  Assert-True -Condition (-not ($script -match 'Comunica..o RH')) -Message "nenhum texto do sistema ainda chama a aba de Comunicacao RH"
   Assert-MatchText $script 'function applyRoleAccess\(\)[\s\S]*const allowedViews = getAllowedViewsForCurrentUser\(\)[\s\S]*const allowedExternalUrls = isCashierUser\(\) \|\| isManagerUser\(\)\s*\?\s*new Set\(\[\.\.\.chamadosUrls, \.\.\.denunciaUrls\]\)' "gerente recebe os formularios publicos de solicitacao de EPI e canal de denuncia"
   Assert-MatchText $script 'function isCeoUser\(\)[\s\S]*return getCurrentUserNormalizedRole\(\) === "ceo";' "cargo CEO e reconhecido"
   Assert-MatchText $script 'function canCurrentUserAccessEventRecord\(item = \{\}\)[\s\S]*if \(isRhUser\(\) \|\| isCeoUser\(\)\) return true;[\s\S]*if \(!isManagerUser\(\)\) return true;[\s\S]*const author = normalizeLoginName\(item\.createdBy \|\| ""\);[\s\S]*return Boolean\(author && getCurrentEventAccessNames\(\)\.includes\(author\)\);' "gerente so acessa eventos que ele mesmo criou; RH e CEO acessam todos"
