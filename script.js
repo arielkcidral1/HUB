@@ -12854,11 +12854,12 @@ function excluirDisciplinaryRecord(id) {
   const registro = (data.disciplinaryRecords || []).find((item) => String(item.id) === String(id));
   if (!registro) return;
 
-  showConfirmActionModal({
+  showPasswordActionModal({
     title: "Deletar registro",
-    text: `Tem certeza que deseja deletar a medida de "${registro.colaborador || "funcionario nao informado"}"?`,
+    text: `Confirme a senha de exclusao para deletar a medida de "${registro.colaborador || "funcionario nao informado"}".`,
     confirmText: "Deletar",
     danger: true,
+    validatePassword: async (password) => verifyAuthorizationPassword(password),
     onConfirm: async () => {
       const deleted = await deleteItem("disciplinaryRecords", id);
       if (deleted) {
