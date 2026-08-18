@@ -1,5 +1,10 @@
 import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
 
+// Sem isso a Vercel aplica o limite padrao de 4.5mb por requisicao e rejeita
+// o envio antes mesmo de chegar no handler, bem abaixo do que a pagina anuncia
+// (ate 10mb por arquivo). 30mb casa com o teto que getBody ja aplica em db.js.
+export const config = { api: { bodyParser: { sizeLimit: "30mb" } } };
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_FILES = 20;
 const ACCESS_PASSWORDS = {
