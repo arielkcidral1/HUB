@@ -1799,6 +1799,8 @@ textarea {
 .chamados-filter-fields.vaga-filter-fields input,
 .chamados-filter-fields.vaga-filter-fields select {
   width: 160px;
+  height: 34px;
+  box-sizing: border-box;
   flex: 0 0 auto;
 }
 
@@ -1812,7 +1814,9 @@ textarea {
   height: 34px;
   box-sizing: border-box;
   padding: 0 14px;
+  margin: 0;
   font-size: 12px;
+  line-height: normal;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--surface-soft);
