@@ -1786,9 +1786,10 @@ textarea {
 }
 
 .chamados-filter-fields.vaga-filter-fields {
-  display: grid;
-  grid-template-columns: 150px 105px 130px auto;
-  justify-content: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
   align-items: center;
   width: auto;
   max-width: 100%;
@@ -1797,32 +1798,20 @@ textarea {
 
 .chamados-filter-fields.vaga-filter-fields input,
 .chamados-filter-fields.vaga-filter-fields select {
-  width: 100%;
-}
-
-#vaga-filter-nome {
-  width: 150px;
-}
-
-#vaga-filter-cpf {
-  width: 105px;
-}
-
-#vaga-filter-cargo {
-  width: 150px;
-}
-
-#vaga-filter-unidade {
-  width: 130px;
+  width: 160px;
+  flex: 0 0 auto;
 }
 
 .vaga-filter-checkbox {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   white-space: nowrap;
-  min-height: 34px;
-  padding: 7px 12px;
+  height: 34px;
+  box-sizing: border-box;
+  padding: 0 14px;
   font-size: 12px;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -1836,6 +1825,7 @@ textarea {
   width: 15px;
   height: 15px;
   margin: 0;
+  flex: 0 0 auto;
   cursor: pointer;
   accent-color: var(--teal);
 }
