@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v94' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v95' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -85,7 +85,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v94[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v95[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -109,7 +109,7 @@ function Test-ClientSecurityFunctions {
   $encodingArtifacts = @(([char]0x00C3), ([char]0x00C2), ([char]0x00E2))
   Assert-True -Condition (-not ($encodingArtifacts | Where-Object { $index.Contains([string]$_) })) -Message "index.html nao possui caracteres corrompidos por encoding"
   Assert-MatchText $script 'function isValidCpf\(value\).*\/\^\\d\{11\}\$\/\.test\(cpf\).*\/\^\(\\d\)\\1\{10\}\$\/\.test\(cpf\)' "validacao de CPF rejeita formato invalido e sequencias repetidas"
-  Assert-MatchText $script 'RESUME_MAX_SIZE_BYTES\s*=\s*5\s*\*\s*1024\s*\*\s*1024' "curriculo limitado a 5 MB no cliente"
+  Assert-MatchText $script 'RESUME_MAX_SIZE_BYTES\s*=\s*3\s*\*\s*1024\s*\*\s*1024' "curriculo limitado a 3 MB no cliente, dentro do teto real de ~4.5mb por requisicao da Vercel"
   Assert-MatchText $script 'RESUME_ALLOWED_EXTENSIONS\s*=\s*new Set\(\["pdf", "doc", "docx"\]\)' "curriculo permite apenas pdf/doc/docx"
   Assert-MatchText $script 'RESUME_ALLOWED_MIME_TYPES\s*=\s*new Set\(\[[\s\S]*application\/pdf[\s\S]*application\/msword[\s\S]*officedocument\.wordprocessingml\.document' "curriculo valida MIME permitido"
   Assert-MatchText $script 'function safePublicFileName\(fileName = "arquivo"\)[\s\S]*\[\^a-z0-9_\.-\]' "helper sanitiza nomes publicos de arquivo"
@@ -345,7 +345,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $contractorApi 'email: text\(body\.email\)[\s\S]*\["email", payload\.email\]' "API grava o e-mail do contratado"
   Assert-MatchText $contractorApi 'const optionalColumns = new Set\(\["origem_html", "email"\]\)' "colunas opcionais somem do insert quando o banco ainda nao as tem"
   Assert-MatchText $docsFredy 'Checklist%20de%20Admissao%20-%20Empresas\.xlsx' "paginas de documentos possuem checklist para download"
-  Assert-MatchText $docsFredy 'script\.js\?v=20260817-docs-email' "paginas de documentos quebram cache do script"
+  Assert-MatchText $docsFredy 'script\.js\?v=20260818-payload-fix' "paginas de documentos quebram cache do script"
   Assert-MatchText $index '<section class="view" id="gerenciamento-vt"[\s\S]*<input name="id" type="hidden" />[\s\S]*id="vt-colaborador"[\s\S]*id="vt-mes"[\s\S]*id="vt-unidade"[\s\S]*id="vt-dias-uteis"[\s\S]*id="vt-valor-passagem"[\s\S]*id="vt-saldo-atual"[\s\S]*id="vt-valor-necessario"[\s\S]*id="cancelar-edicao-vt"[\s\S]*id="vt-registros-list"' "aba VT possui nome mes unidade e suporte a edicao"
   Assert-MatchText $index 'id="vt-colaborador"[^>]*pattern="\\S\+\\s\+\\S\+\.\*"[^>]*placeholder="Nome e sobrenome"[^>]*required' "VT exige nome e sobrenome do colaborador"
   Assert-MatchText $index 'id="vt-unidade"[^>]*required' "unidade do VT e obrigatoria"
@@ -398,7 +398,8 @@ Assert-MatchText $companyBirthdays '"admissao"[\s\S]*"unidade"[\s\S]*"4- PL."[\s
   Assert-MatchText $script 'CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos"' "documentos de contratados usam bucket privado dedicado"
   Assert-MatchText $script 'function validateContractorDocumentFile\(file\)[\s\S]*file\.size <= 0[\s\S]*CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES[\s\S]*return null' "cliente aceita qualquer tipo de documento de contratado com limite de tamanho"
   Assert-MatchText $script 'function readFileAsDataUrl\(file\)[\s\S]*FileReader[\s\S]*readAsDataURL' "cliente consegue embutir arquivos quando necessario"
-  Assert-MatchText $script 'async function buildContractorDocumentPayload\(documentos\)[\s\S]*type: String\(file\.type \|\| "application/octet-stream"\)[\s\S]*dataUrl: await readFileAsDataUrl\(file\)' "cliente monta documentos de contratado em data URL sem restringir MIME"
+  Assert-MatchText $script 'async function buildContractorDocumentPayload\(documentos, batchId\)[\s\S]*const path = `contratados/\$\{batchId\}/\$\{Date\.now\(\)\}-\$\{safeName\}`;[\s\S]*const upload = await uploadPublicFile\(file, path\);[\s\S]*path: upload\?\.path \|\| path,' "cliente envia cada documento de contratado em requisicao propria via /api/files, em vez de embutir tudo em dataUrl numa unica chamada"
+  Assert-True -Condition (-not ($script -match 'async function buildContractorDocumentPayload[\s\S]{0,400}dataUrl: await readFileAsDataUrl')) -Message "envio de documentos de contratado nao volta a embutir arquivos em dataUrl numa unica requisicao"
   Assert-MatchText $script 'function createContractorDocumentField\(required = false\)[\s\S]*name="documentos" type="file" multiple[\s\S]*remover-documento-contratado[\s\S]*addContractorDocumentButton\?\.addEventListener\("click"[\s\S]*insertAdjacentHTML\("beforeend", createContractorDocumentField\(false\)\)' "cliente adiciona campos extras para multiplos documentos com botao remover"
   Assert-MatchText $script 'contractorDocumentsFields\?\.addEventListener\("click"[\s\S]*remover-documento-contratado[\s\S]*fields\.length <= 1[\s\S]*return[\s\S]*closest\("\.contractor-document-field"\)\?\.remove\(\)' "cliente remove campo de documento somente quando houver mais de um"
   Assert-MatchText $script 'resetContractorDocumentFields\(contractorDocumentsFields\)[\s\S]*CPF j[aÃ¡] possui envio|CPF ja possui envio[\s\S]*Este CPF j[aÃ¡] possui um envio de documentos registrado' "cliente trata CPF duplicado em documentos de contratados"
@@ -544,7 +545,8 @@ function Test-PublicSubmitFunction {
   Assert-MatchText $fn 'TURNSTILE_SECRET_KEY' "envio publico suporta Turnstile quando configurado"
   Assert-MatchText $contractorApi 'import \{ assertDatabaseUrl, getBody, json, pool \} from "\./db\.js"[\s\S]*const body = await getBody\(req\)[\s\S]*origem_html[\s\S]*hub_documentos_contratados[\s\S]*error\?\.code === "42703"' "API Vercel salva documentos de contratados pelo pool Postgres e tolera schema antigo"
   Assert-True -Condition (-not ($contractorApi -match 'request\.formData\(\)')) -Message "API de documentos de contratados nao espera multipart, pois o formulario envia JSON"
-  Assert-MatchText $contractorApi 'text\(item\.dataUrl\)\.startsWith\("data:"\)' "API de documentos de contratados le os arquivos embutidos em dataUrl"
+  Assert-MatchText $contractorApi 'const PATH_PATTERN = /\^contratados\\/\[a-z0-9-\]\+\\/\[a-z0-9_\.-\]\+\$/i;[\s\S]*PATH_PATTERN\.test\(text\(item\.path\)\)' "API de documentos de contratados aceita o caminho de cada arquivo ja enviado a /api/files, em vez de dataUrl embutido"
+  Assert-True -Condition (-not ($contractorApi -match 'item\.dataUrl')) -Message "API de documentos de contratados nao volta a esperar dataUrl embutido no corpo"
   Assert-MatchText $contractorApi 'error\?\.code === "23505"[\s\S]*CPF ja possui envio de documentos registrado' "API Vercel retorna mensagem clara para CPF duplicado"
 }
 

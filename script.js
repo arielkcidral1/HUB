@@ -36,16 +36,19 @@ const RESUME_BUCKET = "hub-curriculos";
 const RESUME_PUBLIC_PREFIX = "candidaturas";
 const CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos";
 const ATESTADOS_BUCKET = "hub-atestados";
-const ATESTADO_MAX_SIZE_BYTES = 10 * 1024 * 1024;
-const CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
-const RESUME_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+// A Vercel rejeita qualquer requisicao acima de ~4.5mb antes do handler
+// rodar, e esse teto nao pode ser configurado por codigo. 3mb de arquivo cru
+// vira ~4mb depois do base64, com margem segura abaixo do limite real.
+const ATESTADO_MAX_SIZE_BYTES = 3 * 1024 * 1024;
+const CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES = 3 * 1024 * 1024;
+const RESUME_MAX_SIZE_BYTES = 3 * 1024 * 1024;
 const RESUME_ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
 const RESUME_ALLOWED_EXTENSIONS = new Set(["pdf", "doc", "docx"]);
-const CHAT_FILE_MAX_SIZE_BYTES = 10 * 1024 * 1024;
+const CHAT_FILE_MAX_SIZE_BYTES = 3 * 1024 * 1024;
 const CHAT_FILE_ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -4775,7 +4778,7 @@ function validateChatFile(file) {
   }
 
   if (file.size > CHAT_FILE_MAX_SIZE_BYTES) {
-    return "O arquivo do chat deve ter no maximo 10 MB.";
+    return "O arquivo do chat deve ter no maximo 3 MB.";
   }
 
   return null;
@@ -5295,7 +5298,7 @@ function validateResumeFile(file) {
   }
 
   if (file.size > RESUME_MAX_SIZE_BYTES) {
-    return "O curriculo deve ter no maximo 5 MB.";
+    return "O curriculo deve ter no maximo 3 MB.";
   }
 
   if (file.size <= 0) {
@@ -5308,7 +5311,7 @@ function validateResumeFile(file) {
 function validateContractorDocumentFile(file) {
   if (!file || !file.name) return "Anexe pelo menos um documento.";
   if (file.size <= 0) return "Um dos arquivos enviados parece estar vazio.";
-  if (file.size > CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES) return "Cada documento deve ter no máximo 10 MB.";
+  if (file.size > CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES) return "Cada documento deve ter no máximo 3 MB.";
   return null;
 }
 
@@ -5347,18 +5350,25 @@ function resetContractorDocumentFields(container) {
   container.innerHTML = createContractorDocumentField(true);
 }
 
-async function buildContractorDocumentPayload(documentos) {
+// Cada arquivo vai num POST separado para /api/files (mesmo caminho usado por
+// atestados e curriculo). Embutir todos os anexos numa unica requisicao
+// estourava o limite de ~4.5mb por requisicao da Vercel, que a plataforma nao
+// deixa configurar por codigo.
+async function buildContractorDocumentPayload(documentos, batchId) {
   const files = Array.from(documentos || []);
-  const embeddedDocuments = [];
+  const uploadedDocuments = [];
   for (const file of files) {
-    embeddedDocuments.push({
+    const safeName = safePublicFileName(file.name || "documento");
+    const path = `contratados/${batchId}/${Date.now()}-${safeName}`;
+    const upload = await uploadPublicFile(file, path);
+    uploadedDocuments.push({
       name: String(file.name || "documento"),
       size: Number(file.size || 0),
       type: String(file.type || "application/octet-stream"),
-      dataUrl: await readFileAsDataUrl(file),
+      path: upload?.path || path,
     });
   }
-  return embeddedDocuments;
+  return uploadedDocuments;
 }
 
 async function uploadPublicFile(file, path = "") {
@@ -5498,7 +5508,7 @@ async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, c
 }
 
 async function submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, email, documentos, accessPassword, turnstileToken }) {
-  const embeddedDocuments = await buildContractorDocumentPayload(documentos);
+  const uploadedDocuments = await buildContractorDocumentPayload(documentos, generateUUID());
 
   const attempts = [{ url: "/api/contractor-documents", type: "documentosContratados", localApi: true }];
 
@@ -5515,7 +5525,7 @@ async function submitPublicContractorDocuments({ empresa, origemHtml, nome, tele
         cpf: String(cpf || ""),
         email: String(email || ""),
         accessPassword: String(accessPassword || ""),
-        documentos: embeddedDocuments,
+        documentos: uploadedDocuments,
         turnstileToken: String(turnstileToken || ""),
       }),
     });
@@ -14633,7 +14643,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function getAtestadoMaxSize() {
-    return typeof ATESTADO_MAX_SIZE_BYTES !== "undefined" ? ATESTADO_MAX_SIZE_BYTES : 10 * 1024 * 1024;
+    return typeof ATESTADO_MAX_SIZE_BYTES !== "undefined" ? ATESTADO_MAX_SIZE_BYTES : 3 * 1024 * 1024;
   }
 
   function getFileExtension(fileName = "") {
@@ -14643,7 +14653,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function validateAtestadoFile(file) {
     if (!file || !file.name) return "Anexe o atestado antes de enviar.";
-    if (file.size > getAtestadoMaxSize()) return "O arquivo deve ter no máximo 10 MB.";
+    if (file.size > getAtestadoMaxSize()) return "O arquivo deve ter no máximo 3 MB.";
 
     const extension = getFileExtension(file.name);
     const mime = String(file.type || "").toLowerCase();

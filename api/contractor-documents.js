@@ -1,12 +1,8 @@
 import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
 
-// Sem isso a Vercel aplica o limite padrao de 4.5mb por requisicao e rejeita
-// o envio antes mesmo de chegar no handler, bem abaixo do que a pagina anuncia
-// (ate 10mb por arquivo). 30mb casa com o teto que getBody ja aplica em db.js.
-export const config = { api: { bodyParser: { sizeLimit: "30mb" } } };
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = 3 * 1024 * 1024;
 const MAX_FILES = 20;
+const PATH_PATTERN = /^contratados\/[a-z0-9-]+\/[a-z0-9_.-]+$/i;
 const ACCESS_PASSWORDS = {
   "Fredy Pneus": "fredy5212",
   "Besten Pneus": "besten5212",
@@ -33,25 +29,22 @@ function isValidPayload(payload) {
   return null;
 }
 
+// Cada arquivo ja foi enviado antes pelo cliente para /api/files (um por
+// requisicao); aqui so chega o caminho onde ele ficou salvo. Embutir todos os
+// arquivos em dataUrl numa unica requisicao estourava o limite de ~4.5mb por
+// requisicao da Vercel, que nao pode ser configurado por codigo.
 function normalizeDocuments(documentos) {
   const list = Array.isArray(documentos) ? documentos : [];
   return list
-    .filter((item) => item && typeof item === "object" && text(item.dataUrl).startsWith("data:"))
-    .map((item) => {
-      const dataUrl = text(item.dataUrl);
-      const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
-      const size = Number(item.size || 0) || Buffer.from(base64, "base64").length;
-      return {
-        name: safeFileName(item.name),
-        size,
-        type: text(item.type) || "application/octet-stream",
-        dataUrl,
-      };
-    });
+    .filter((item) => item && typeof item === "object" && PATH_PATTERN.test(text(item.path)))
+    .map((item) => ({
+      name: safeFileName(item.name),
+      size: Number(item.size || 0),
+      type: text(item.type) || "application/octet-stream",
+      path: text(item.path),
+    }));
 }
 
-// O formulario publico envia JSON com os arquivos ja embutidos em dataUrl;
-// a rota antiga esperava multipart e quebrava com "Unrecognized content-type header".
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") return json(res, 405, { error: "Metodo nao permitido." });
@@ -74,7 +67,7 @@ export default async function handler(req, res) {
     const documentos = normalizeDocuments(body.documentos);
     if (!documentos.length || documentos.length > MAX_FILES) return json(res, 400, { error: "Documentos invalidos." });
     if (documentos.some((file) => file.size <= 0 || file.size > MAX_FILE_SIZE)) {
-      return json(res, 400, { error: "Cada documento deve ter entre 1 byte e 10 MB." });
+      return json(res, 400, { error: "Cada documento deve ter entre 1 byte e 3 MB." });
     }
 
     const columns = new Map([
