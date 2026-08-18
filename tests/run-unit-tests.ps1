@@ -340,6 +340,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'function getUnitCity\(value\)[\s\S]*if \(!text \|\| text\.startsWith\("selecione"\)\) return "";[\s\S]*\.sort\(\(a, b\) => b\.length - a\.length\)' "placeholder de unidade nao gera cidade e o alias mais especifico vence"
   Assert-MatchText $script 'const city = getUnitCity\(unitField\.value\);[\s\S]*if \(localField\) localField\.value = city;' "voltar ao placeholder limpa a cidade da advertencia"
   Assert-MatchText ($docsFredy + $docsBesten + $docsAchei + $docsTrinca) '(?s)(<label>E-mail\s*<input name="email" type="email" maxlength="160"[^>]*required />.*?){4}' "as quatro paginas de documentos pedem e-mail do contratado"
+  Assert-MatchText $style '\.contractor-add-document-button[\s\S]*@media \(max-width: 640px\)[\s\S]*\.contractor-add-document-button[\s\S]*display: none;' "botao de adicionar documento fica so no desktop pois o mobile ja aceita varios anexos no mesmo input"
   Assert-MatchText $script 'const email = String\(form\.get\("email"\) \|\| ""\)\.trim\(\);[\s\S]*!empresa \|\| !nome \|\| !telefone \|\| !cpf \|\| !email' "envio de documentos exige o e-mail informado"
   Assert-MatchText $contractorApi 'email: text\(body\.email\)[\s\S]*\["email", payload\.email\]' "API grava o e-mail do contratado"
   Assert-MatchText $contractorApi 'const optionalColumns = new Set\(\["origem_html", "email"\]\)' "colunas opcionais somem do insert quando o banco ainda nao as tem"
