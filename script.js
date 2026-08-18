@@ -9393,7 +9393,7 @@ function getVagasFilterValues() {
     unidade: normalizeUnitText(unidade) === normalizeUnitText("Unidade") ? "" : unidade,
     nome: String(document.getElementById("vaga-filter-nome")?.value || "").trim().toLowerCase(),
     cpf: String(document.getElementById("vaga-filter-cpf")?.value || "").replace(/\D/g, ""),
-    comCurriculo: document.getElementById("vaga-filter-curriculo")?.value === "com-curriculo",
+    comCurriculo: Boolean(document.getElementById("vaga-filter-curriculo")?.checked),
   };
 }
 
@@ -9430,10 +9430,12 @@ function updateVagasFilterClearButton() {
 }
 
 function clearVagasFilters() {
-  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf", "vaga-filter-curriculo"].forEach((id) => {
+  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
+  const curriculoCheckbox = document.getElementById("vaga-filter-curriculo");
+  if (curriculoCheckbox) curriculoCheckbox.checked = false;
   updateVagasFilterClearButton();
   renderAll();
 }
