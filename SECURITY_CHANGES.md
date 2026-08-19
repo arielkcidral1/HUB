@@ -2,38 +2,75 @@
 
 Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, Auth, Storage ou fluxo publico.
 
-## Estado atual
+> **Migracao de arquitetura (2026-08):** o projeto saiu do Supabase (Auth, Edge
+> Functions, Storage, RLS por JWT) e passou a rodar em Postgres puro no Azure,
+> com autenticacao propria e todo acesso mediado por Functions da Vercel em
+> `api/`. As entradas do "Historico" anteriores a esta migracao descrevem a
+> arquitetura antiga e ficam mantidas so como registro; elas nao refletem o
+> comportamento atual.
 
-- Login migrado para PostgreSQL Auth.
-- RLS ativo nas tabelas `hub_*`.
-- Regras por cargo aplicadas no banco:
-  - `RH`: acesso interno amplo conforme policies.
-  - `Gerente`: chat `geral-gerentes` e DMs proprias.
-  - `Caixa`/`Crediarista`: chat `geral-caixa` e DMs proprias.
-- Fluxos publicos limitados:
-  - `denuncias`: envio via Edge Function `hub-public-submit`.
-  - `chamados`: envio via Edge Function `hub-public-submit`.
-  - `candidaturas`: envio via Edge Function `hub-public-submit`.
-  - `vagas`: leitura publica via Edge Function `hub-public-submit`.
-- Bucket `hub-curriculos` privado, com upload publico feito somente via Edge Function.
-- Bucket `hub-chat-files` privado, limitado a 10 MB, MIME restrito e acesso por cargo/canal para leitura e upload; update/delete seguem RH-only.
+## Estado atual (pos-migracao para Azure Postgres)
+
+- **Autenticacao**: login proprio em `api/auth.js`. Senha comparada por hash
+  bcrypt (com fallback a sha256/texto puro para contas antigas ainda nao
+  migradas) contra `hub_users.password_hash`. A sessao fica num cookie
+  `HttpOnly` assinado (`hub_auth_session`) com `session_version`, que e
+  incrementado no banco a cada login para invalidar sessoes antigas.
+- **Acesso ao banco**: `api/db.js` mantem um pool `pg` unico, conectado
+  direto via `DATABASE_URL` (ou `AZURE_POSTGRES_URL`/`POSTGRES_URL`). Essa
+  conexao nao carrega JWT nem `auth.jwt()`, entao as policies de RLS
+  descritas em `postgres-rls-hub.sql` (que dependiam da role `authenticated`
+  do Supabase) nao sao avaliadas nessa conexao; elas ficam mantidas so pelos
+  testes automatizados (`tests/run-unit-tests.ps1`), nao como controle de
+  acesso real no banco de producao.
+- **Controle de acesso real**: hoje e feito em duas camadas de aplicacao, nao
+  no banco:
+  1. `api/db.js` mantem um allowlist (`TABLES`) das tabelas `hub_*` que
+     `/api/records` pode tocar.
+  2. `script.js` decide o que cada cargo ve/edita na UI (`isRhUser`,
+     `isManagerUser`, `canAccessView`, etc.). Isso e controle de interface,
+     nao uma barreira de seguranca: um cliente que chame `/api/records`
+     direto ainda passa pelo allowlist de tabelas, mas nao ha checagem de
+     cargo/dono do registro no servidor para update/delete (ver aviso de
+     IDOR nos comentarios de `deleteItem`/`updateItem` em `script.js`).
+- **Arquivos/anexos**: nao ha mais bucket de Storage. Uploads (curriculos,
+  anexos de chat, documentos de contratados, avatares) sao gravados como
+  `data_url` (base64) na tabela `public.hub_files`, criada sob demanda por
+  `api/files.js`. O `GET /api/files?path=...` **nao exige sessao**; qualquer
+  pessoa que souber ou adivinhar o `path` consegue baixar o arquivo. A
+  privacidade hoje depende so do path nao ser previsivel/divulgado.
+- **Formularios publicos** (`denuncias`, `chamados`, `candidaturas`,
+  documentos de contratados): passam por `/api/records.js` e
+  `/api/contractor-documents.js`, sem Edge Function. O campo Turnstile
+  continua no front (`turnstileSiteKey` em `script.js`), mas hoje esta vazio
+  (nao configurado) e o token, quando enviado, **nao e validado em nenhum
+  lugar do servidor** — a validacao server-side existia so na Edge Function
+  antiga, que foi removida.
 - `.env`, `*.env` e arquivos locais sensiveis estao no `.gitignore`.
-- O app nao depende mais de `postgres-config.js`; a configuracao publica padrao fica centralizada em `script.js`.
-- Historico antigo do Git foi reescrito para reduzir risco de senhas antigas em commits.
-- Coluna legada `hub_users.senha` removida do banco.
-- PostgreSQL JS usa SRI nos HTMLs.
-- CSP nao usa mais `unsafe-inline`.
-- Sem Turnstile configurado, denuncias publicas usam rate limit no servidor; chamados e candidaturas seguem bloqueados.
-- Usuarios autenticados nao possuem mais `UPDATE` direto em `hub_users`.
-- Dados internos do HUB usam `sessionStorage` e sao apagados no logout; caches legados em `localStorage` tambem sao removidos.
+- Historico antigo do Git foi reescrito uma vez (era ainda) para reduzir
+  risco de senhas antigas em commits.
 
 ## Pendencias conhecidas
 
-- Preencher `email` em todos os perfis de `hub_users`; atualmente o RLS por cargo depende desse vinculo ou de `app_metadata.cargo`.
-- Configurar `TURNSTILE_SECRET_KEY` na Edge Function e `turnstileSiteKey` no front para exigir CAPTCHA tambem nas denuncias publicas.
-- Ativar no PostgreSQL Auth a protecao contra senhas vazadas e forcar redefinicao de senha dos usuarios antigos.
+- **Sem rate limit server-side**: os formularios publicos (denuncias,
+  chamados, candidaturas, documentos de contratados) nao tem nenhum limite
+  de envios por IP/tempo no backend atual. O rate limit descrito no
+  historico abaixo era da Edge Function do Supabase e nao existe mais.
+- **Turnstile decorativo**: `turnstileSiteKey` esta vazio e nao ha
+  verificacao server-side do token, mesmo se alguem configurar a site key no
+  front sem tambem implementar a validacao em `api/`.
+- **`/api/files` sem controle de acesso**: o download de qualquer arquivo
+  gravado em `hub_files` (curriculos, documentos de contratados, anexos de
+  chat, avatares) nao exige login; a unica protecao e o path ser dificil de
+  adivinhar. Vale avaliar exigir sessao valida nesse endpoint.
+- **RLS de `postgres-rls-hub.sql` nao e enforcada em producao**: as policies
+  continuam no repositorio e nos testes, mas a conexao real do app (pool
+  `pg` direto) nao passa por elas. O controle de acesso efetivo esta nas
+  checagens de `api/db.js`/`script.js` descritas acima.
+- Preencher `email` em todos os perfis de `hub_users` continua recomendado
+  para manter os relatorios e o vinculo de conta consistentes.
 
-## Historico
+## Historico (arquitetura anterior, baseada em Supabase)
 
 ### 2026-06-21 - Calendario
 
