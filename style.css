@@ -1748,6 +1748,29 @@ textarea {
   font-size: 14px;
 }
 
+.chat-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  min-height: 240px;
+  opacity: 0.55;
+}
+
+.chat-empty-state img {
+  width: 56px;
+  height: 56px;
+}
+
+.chat-empty-state strong {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
 .denuncia-list .item-card {
   background: var(--gold-surface);
   border-color: var(--gold-border);
@@ -2201,6 +2224,17 @@ textarea {
   border-color: var(--teal-border);
   background: var(--teal-surface);
   color: var(--teal-dark);
+}
+
+.channel-item.is-group {
+  border-left: 3px solid var(--teal);
+  background: var(--surface-soft);
+  font-weight: 700;
+}
+
+.channel-item.is-group:hover,
+.channel-item.is-group.active {
+  border-left-color: var(--teal-dark);
 }
 
 .channel-item span {

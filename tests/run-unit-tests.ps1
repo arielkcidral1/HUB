@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v98' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v99' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -85,7 +85,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v98[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v25[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v99[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -127,7 +127,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'let activeChatChannel = "";' "chat nao abre canal automaticamente ao entrar em Comunicacao RH"
   Assert-MatchText $script 'function getActiveChatChannel\(\)[\s\S]*return channels\.find\(\(channel\) => channel\.id === activeChatChannel\) \|\| null' "chat nao usa fallback automatico para primeiro canal"
   Assert-MatchText $script 'if \(activeChatChannel && \(!channels\.some\(\(channel\) => channel\.id === activeChatChannel\)' "lista de canais nao seleciona o primeiro canal automaticamente"
-  Assert-MatchText $script 'Selecione um canal de comunica..o para visualizar as mensagens' "chat orienta o usuario a escolher um canal"
+  Assert-MatchText $script 'chat-empty-state[\s\S]*assets/logo\.svg' "chat orienta o usuario a escolher um canal"
   Assert-MatchText $index 'id="create-poll-button"[^>]*data-action="open-chat-poll"[^>]*hidden' "chat possui botao de enquete inicialmente oculto"
   Assert-MatchText $script 'const CHAT_POLL_PREFIX = "__HUB_POLL__:"' "chat possui prefixo seguro para mensagens de enquete"
   Assert-MatchText $script 'function parseChatPollMessage\(value\)[\s\S]*text\.startsWith\(CHAT_POLL_PREFIX\)[\s\S]*JSON\.parse' "chat interpreta mensagens de enquete"
@@ -539,6 +539,21 @@ Assert-MatchText $script 'function showVtReportMenu\(\).*data-action="gerar-rela
   Assert-True -Condition (-not ($script -match 'publicVagaUnidadeFilter|public-vaga-unidade-filter|public-vaga-unidade-options')) -Message "script publico de vagas nao usa filtro de unidade"
   Assert-MatchText $script 'public-vaga-cargo-filter[\s\S]*publicVagaCargoFilter[\s\S]*public-vaga-cidade-filter[\s\S]*publicVagaCidadeFilter[\s\S]*clear-public-vaga-filters' "inputs publicos de vagas atualizam e limpam filtros"
   Assert-MatchText $script 'unidade: values\.unidade \|\| ""' "payload de vagas envia unidade destinada"
+
+  Assert-MatchText $script 'chat-empty-state[\s\S]*<img src="assets/logo\.svg" alt="HUB" />[\s\S]*<strong>HUB</strong>' "chat sem canal selecionado mostra a logo e o nome do HUB"
+  Assert-MatchText $style '\.chat-empty-state \{[\s\S]*\.chat-empty-state img \{[\s\S]*\.chat-empty-state strong \{' "estado vazio do chat possui estilo dedicado"
+  Assert-MatchText $script 'class="channel-item \$\{channel\.isGroup \? "is-group" : ""\}' "canais em grupo recebem uma classe visual propria na lista"
+  Assert-MatchText $style '\.channel-item\.is-group \{[\s\S]*border-left: 3px solid var\(--teal\);' "canais em grupo tem destaque visual proprio na lista de comunicacao"
+  Assert-True -Condition (-not ($script -match 'CASHIER_GENERAL_CHANNEL|geral-caixa|RH \+ Caixa')) -Message "grupo RH + Caixa foi removido do chat"
+  Assert-MatchText $script 'function getActiveDisciplinaryTab\(\)[\s\S]*dataset\.disciplinaryDoc \|\| "advertencia"' "lista de advertencias/suspensoes sabe qual aba esta ativa"
+  Assert-MatchText $script 'function getFilteredDisciplinaryRecords\(\)[\s\S]*const tipoFilter = getActiveDisciplinaryTab\(\);[\s\S]*if \(String\(item\.tipo \|\| "advertencia"\)\.toLowerCase\(\) !== tipoFilter\) return false;' "lista de advertencias/suspensoes so mostra registros do tipo da aba ativa"
+  Assert-MatchText $script 'document\.querySelectorAll\("\[data-disciplinary-doc\]"\)\.forEach\(\(button\) => \{[\s\S]*renderDisciplinaryRecords\(\);' "trocar de aba advertencia/suspensao atualiza a lista"
+  Assert-True -Condition (-not ($index -match 'id="document-filter-type"')) -Message "filtro manual de tipo de documento foi removido do html de Documentos RH"
+  Assert-MatchText $script 'function getActiveDocumentTab\(\)[\s\S]*dataset\.doc \|\| "admissao"' "Documentos RH sabe qual aba de formulario esta ativa"
+  Assert-MatchText $script 'function getDocumentFilterValues\(\)[\s\S]*tipo: getActiveDocumentTab\(\),' "lista de Documentos RH filtra pelo tipo da aba ativa em vez de um dropdown"
+  Assert-MatchText $script 'if \(button\.dataset\.doc\) \{[\s\S]*renderDocumentRecords\(\);[\s\S]*updateDocumentFilterClearButton\(\);[\s\S]*\}' "trocar de aba em Documentos RH atualiza a lista de registrados"
+  Assert-MatchText $script 'function normalizeEventDateKey\(value\)[\s\S]*match\(/\^\\d\{4\}-\\d\{2\}-\\d\{2\}/\)' "eventos normalizam a data recebida do Postgres para yyyy-mm-dd"
+  Assert-MatchText $script 'if \(collection === "eventos"\) \{[\s\S]*data: normalizeEventDateKey\(row\.data\),' "cliente normaliza a data do evento ao mapear linhas do Postgres, corrigindo o calendario"
 }
 
 function Test-PublicSubmitFunction {

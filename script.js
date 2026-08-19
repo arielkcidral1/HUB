@@ -27,7 +27,6 @@ const RH_CHANNEL = "rh";
 const USERS_TABLE = "hub_users";
 const GENERAL_CHANNEL = "geral";
 const MANAGER_GENERAL_CHANNEL = "geral-gerentes";
-const CASHIER_GENERAL_CHANNEL = "geral-caixa";
 const CHAT_POLL_PREFIX = "__HUB_POLL__:";
 const CHAT_EDIT_PREFIX = "__HUB_EDIT__:";
 const CHAT_EDIT_WINDOW_MS = 15 * 60 * 1000;
@@ -602,12 +601,11 @@ function isValidDirectChannel(channelId) {
 function isCurrentUserInChannel(channelId) {
   if (channelId === GENERAL_CHANNEL) return !isManagerUser() && !isCashierUser();
   if (channelId === MANAGER_GENERAL_CHANNEL) return !isCashierUser();
-  if (channelId === CASHIER_GENERAL_CHANNEL) return !isManagerUser();
   return isValidDirectChannel(channelId) && getDirectChannelUsers(channelId).includes(normalizeLoginName(getCurrentUserName()));
 }
 
 function isGeneralChatChannel(channelId) {
-  return [GENERAL_CHANNEL, MANAGER_GENERAL_CHANNEL, CASHIER_GENERAL_CHANNEL].includes(channelId);
+  return [GENERAL_CHANNEL, MANAGER_GENERAL_CHANNEL].includes(channelId);
 }
 
 function getTeamUsers() {
@@ -627,10 +625,7 @@ function getChatChannels() {
     }));
 
   let channels = isCashierUser()
-    ? [
-        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunicação geral entre caixas/crediaristas e equipe de RH", isGroup: true },
-        ...directChannels,
-      ]
+    ? [...directChannels]
     : isManagerUser()
     ? [
         { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
@@ -639,7 +634,6 @@ function getChatChannels() {
     : [
         { id: GENERAL_CHANNEL, label: "Chat geral RH", subtitle: "Mensagens compartilhadas apenas pela equipe de RH", isGroup: true },
         { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
-        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunicação geral entre caixas/crediaristas e equipe de RH", isGroup: true },
         ...directChannels,
       ];
 
@@ -667,7 +661,6 @@ function getAllowedChatChannelIds() {
 function normalizeChatChannel(canal) {
   if (!canal || canal === GENERAL_CHANNEL) return GENERAL_CHANNEL;
   if (canal === MANAGER_GENERAL_CHANNEL) return MANAGER_GENERAL_CHANNEL;
-  if (canal === CASHIER_GENERAL_CHANNEL) return CASHIER_GENERAL_CHANNEL;
   if (isDirectChannel(canal)) return canal;
   if (canal === RH_CHANNEL) return getDirectChannel(getCurrentUserName(), "Ariel");
   if (String(canal).startsWith("usuario:")) {
@@ -681,7 +674,6 @@ function canAccessChatChannel(canal) {
   return (
     (channel === GENERAL_CHANNEL && !isManagerUser() && !isCashierUser()) ||
     (channel === MANAGER_GENERAL_CHANNEL && !isCashierUser()) ||
-    (channel === CASHIER_GENERAL_CHANNEL && !isManagerUser()) ||
     (isValidDirectChannel(channel) && isCurrentUserInChannel(channel))
   );
 }
@@ -2048,6 +2040,16 @@ function eventoDateToIso(value) {
   const match = String(value || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!match) return "";
   return `${match[3]}-${match[2]}-${match[1]}`;
+}
+
+// A coluna "data" de hub_eventos e do tipo date/timestamp no Postgres; o
+// driver devolve isso como "2026-08-25T00:00:00.000Z" em vez do
+// "2026-08-25" puro que o resto do codigo usa. A comparacao exata do
+// calendario ("item.data === date") nunca batia por causa disso, mesmo o
+// evento aparecendo em "Eventos proximos" (que so compara intervalos).
+function normalizeEventDateKey(value) {
+  const match = String(value || "").match(/^\d{4}-\d{2}-\d{2}/);
+  return match ? match[0] : String(value || "");
 }
 
 function applyDateMask(input) {
@@ -3633,7 +3635,7 @@ if (collection === "eventos") {
     return rows.map((row) => ({
       id: row.id,
       titulo: row.titulo,
-      data: row.data,
+      data: normalizeEventDateKey(row.data),
       horario: row.horario,
       responsavel: row.responsavel,
       tipo: row.tipo || "Evento",
@@ -7318,13 +7320,19 @@ function getDisciplinaryTypeLabel(type) {
   return String(type || "").toLowerCase() === "suspensao" ? "Suspensao" : "Advertencia";
 }
 
+function getActiveDisciplinaryTab() {
+  return document.querySelector("[data-disciplinary-doc].active")?.dataset.disciplinaryDoc || "advertencia";
+}
+
 function getFilteredDisciplinaryRecords() {
+  const tipoFilter = getActiveDisciplinaryTab();
   const nameFilter = String(document.getElementById("disciplinary-filter-name")?.value || "").trim().toLowerCase();
   const observationsFilter = String(document.getElementById("disciplinary-filter-observations")?.value || "").trim().toLowerCase();
   const monthFilter = document.getElementById("disciplinary-filter-date")?.value || "";
   const unitFilter = document.getElementById("disciplinary-filter-unit")?.value || "";
 
   return (data.disciplinaryRecords || []).filter((item) => {
+    if (String(item.tipo || "advertencia").toLowerCase() !== tipoFilter) return false;
     if (nameFilter && !String(item.colaborador || "").toLowerCase().includes(nameFilter)) return false;
     if (observationsFilter && !String(item.motivo || "").toLowerCase().includes(observationsFilter)) return false;
     if (monthFilter && String(item.dataMedida || "").slice(5, 7) !== monthFilter) return false;
@@ -9577,7 +9585,7 @@ function renderChatChannels() {
       }
 
       return `
-        <button class="channel-item ${channel.id === activeChatChannel ? "active" : ""}" data-chat-channel="${escapeHtml(channel.id)}" type="button">
+        <button class="channel-item ${channel.isGroup ? "is-group" : ""} ${channel.id === activeChatChannel ? "active" : ""}" data-chat-channel="${escapeHtml(channel.id)}" type="button">
           <div class="inline-flex-sm clip-text">
             ${avatarHtml}
             <span class="clip-text">${escapeHtml(channel.label)}</span>
@@ -10206,10 +10214,14 @@ document.getElementById("dashboard-notifications-prev")?.addEventListener("click
   renderDashboard();
 });
 
+function getActiveDocumentTab() {
+  return document.querySelector(".doc-tab.active")?.dataset.doc || "admissao";
+}
+
 function getDocumentFilterValues() {
   return {
     nome: String(document.getElementById("document-filter-name")?.value || "").trim().toLowerCase(),
-    tipo: String(document.getElementById("document-filter-type")?.value || "").trim(),
+    tipo: getActiveDocumentTab(),
     cpf: String(document.getElementById("document-filter-cpf")?.value || "").replace(/\D/g, ""),
   };
 }
@@ -10218,7 +10230,7 @@ function updateDocumentFilterClearButton() {
   const clearButton = document.getElementById("clear-document-filters");
   if (!clearButton) return;
   const filters = getDocumentFilterValues();
-  clearButton.hidden = !Boolean(filters.nome || filters.tipo || filters.cpf);
+  clearButton.hidden = !Boolean(filters.nome || filters.cpf);
 }
 
 function getDocumentRecordCpf(item = {}) {
@@ -10356,7 +10368,12 @@ function renderChat(options = {}) {
     }
     closeChatAttachMenu();
     closeChatEmojiMenu();
-    target.innerHTML = '<p class="empty-state">Selecione um canal de comunicação para visualizar as mensagens.</p>';
+    target.innerHTML = `
+      <div class="chat-empty-state">
+        <img src="assets/logo.svg" alt="HUB" />
+        <strong>HUB</strong>
+      </div>
+    `;
     return;
   }
 
@@ -10799,10 +10816,6 @@ document.getElementById("document-filter-name")?.addEventListener("input", () =>
   renderDocumentRecords();
   updateDocumentFilterClearButton();
 });
-document.getElementById("document-filter-type")?.addEventListener("change", () => {
-  renderDocumentRecords();
-  updateDocumentFilterClearButton();
-});
 document.getElementById("document-filter-cpf")?.addEventListener("input", (event) => {
   const field = event.currentTarget;
   field.value = String(field.value || "").replace(/\D/g, "").slice(0, 11);
@@ -10810,7 +10823,7 @@ document.getElementById("document-filter-cpf")?.addEventListener("input", (event
   updateDocumentFilterClearButton();
 });
 document.getElementById("clear-document-filters")?.addEventListener("click", () => {
-  ["document-filter-name", "document-filter-type", "document-filter-cpf"].forEach((id) => {
+  ["document-filter-name", "document-filter-cpf"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
@@ -10886,6 +10899,13 @@ document.querySelectorAll(".doc-tab").forEach((button) => {
     document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
     document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
+
+    // A lista de "Registrados" abaixo so mostra documentos do mesmo tipo da
+    // aba selecionada.
+    if (button.dataset.doc) {
+      renderDocumentRecords();
+      updateDocumentFilterClearButton();
+    }
 
     // Cancela a edição se o usuário trocar de aba de documento
     if (window.editingDocId) {
@@ -11587,6 +11607,8 @@ document.querySelectorAll("[data-disciplinary-doc]").forEach((button) => {
     document.querySelectorAll(".disciplinary-view").forEach((view) => {
       view.classList.toggle("active", view.id === `disciplinary-${targetDoc}`);
     });
+    // A lista abaixo so mostra registros do mesmo tipo da aba selecionada.
+    renderDisciplinaryRecords();
   });
 });
 
