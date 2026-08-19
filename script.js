@@ -3670,6 +3670,7 @@ if (collection === "eventos") {
       unidade: row.unidade || "",
       local: row.local || "",
       motivo: row.motivo || "",
+      diasSuspensao: row.dias_suspensao || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
@@ -4288,6 +4289,7 @@ if (collection === "eventos") {
       unidade: values.unidade || "",
       local: values.local || "",
       motivo: values.motivo || "",
+      dias_suspensao: values.diasSuspensao ? Number(values.diasSuspensao) : null,
       created_by: values.createdBy || getCurrentUserName(),
     };
   }
@@ -4562,6 +4564,11 @@ function withoutOptionalJobColumns(payload) {
 
 function withoutOptionalApplicationColumns(payload) {
   const { telefone, created_by, ...rest } = payload;
+  return rest;
+}
+
+function withoutDiasSuspensaoColumn(payload) {
+  const { dias_suspensao, ...rest } = payload;
   return rest;
 }
 
@@ -5729,6 +5736,27 @@ async function addItem(collection, values) {
         saveLocalData();
         setSyncStatus("PostgreSQL precisa migracao", false);
         renderAll();
+        return true;
+      }
+
+      if (collection === "disciplinaryRecords" && isMissingColumn(error, "dias_suspensao")) {
+        const { data: insertedLegacy, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutDiasSuspensaoColumn(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedLegacy])[0],
+          diasSuspensao: values.diasSuspensao || "",
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        renderAll();
+        showModal("Banco precisa atualizar", "O registro foi salvo, mas rode a migration 20260819000100 no PostgreSQL para gravar os dias de suspensao.", "info");
         return true;
       }
 
@@ -7155,13 +7183,13 @@ function appendBytes(target, bytes) {
   bytes.forEach((byte) => target.push(byte));
 }
 
-function createZipBlob(files) {
+function createZipBlob(files, mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
   const encoder = new TextEncoder();
   const output = [];
   const central = [];
   files.forEach((file) => {
     const nameBytes = encoder.encode(file.name);
-    const contentBytes = encoder.encode(file.content);
+    const contentBytes = typeof file.content === "string" ? encoder.encode(file.content) : file.content;
     const crc = crc32(contentBytes);
     const offset = output.length;
     writeUint32(output, 0x04034b50);
@@ -7207,7 +7235,7 @@ function createZipBlob(files) {
   writeUint32(output, central.length);
   writeUint32(output, centralOffset);
   writeUint16(output, 0);
-  return new Blob([new Uint8Array(output)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  return new Blob([new Uint8Array(output)], { type: mimeType });
 }
 
 function createVtReportXlsxBlob(rows) {
@@ -7327,9 +7355,11 @@ function renderDisciplinaryRecords() {
       <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Nao informada")}</p>
       <p><strong>Data:</strong> ${escapeHtml(formatEventDate(item.dataMedida || ""))}</p>
       <p><strong>Local:</strong> ${escapeHtml(item.local || "Nao informado")}</p>
+      ${String(item.tipo || "").toLowerCase() === "suspensao" ? `<p><strong>Dias de suspensao:</strong> ${escapeHtml(item.diasSuspensao || "Nao informado")}</p>` : ""}
       <p><strong>Motivo:</strong> ${escapeHtml(item.motivo || "Nao informado")}</p>
       <p class="item-meta">${escapeHtml(item.createdAt || "")} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</p>
       <div class="job-actions">
+        <button class="secondary-link" type="button" data-action="gerar-documento-disciplinary" data-id="${escapeHtml(item.id)}">Gerar documento</button>
         <button class="danger-button" type="button" data-action="excluir-disciplinary" data-id="${escapeHtml(item.id)}">Deletar</button>
       </div>
     </article>
@@ -7393,6 +7423,161 @@ function createDisciplinaryReportXlsxBlob(rows) {
     { name: "xl/styles.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2F7D6D"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` },
     { name: "xl/worksheets/sheet1.xml", content: worksheet },
   ]);
+}
+
+// Le o diretorio central de um .docx (zip) e devolve os bytes crus (ainda
+// compactados) de cada parte. So a leitura do diretorio central e necessaria
+// aqui; os tamanhos comprimidos ja vem de la, sem depender do local header.
+function readZipEntries(buffer) {
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+  let eocdOffset = -1;
+  for (let index = bytes.length - 22; index >= 0; index -= 1) {
+    if (view.getUint32(index, true) === 0x06054b50) {
+      eocdOffset = index;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error("Modelo de documento invalido.");
+
+  const totalEntries = view.getUint16(eocdOffset + 10, true);
+  let centralOffset = view.getUint32(eocdOffset + 16, true);
+  const decoder = new TextDecoder();
+  const entries = [];
+  for (let index = 0; index < totalEntries; index += 1) {
+    if (view.getUint32(centralOffset, true) !== 0x02014b50) throw new Error("Modelo de documento invalido.");
+    const method = view.getUint16(centralOffset + 10, true);
+    const compressedSize = view.getUint32(centralOffset + 20, true);
+    const nameLength = view.getUint16(centralOffset + 28, true);
+    const extraLength = view.getUint16(centralOffset + 30, true);
+    const commentLength = view.getUint16(centralOffset + 32, true);
+    const localHeaderOffset = view.getUint32(centralOffset + 42, true);
+    const name = decoder.decode(bytes.subarray(centralOffset + 46, centralOffset + 46 + nameLength));
+    entries.push({ name, method, compressedSize, localHeaderOffset });
+    centralOffset += 46 + nameLength + extraLength + commentLength;
+  }
+
+  return entries.map((entry) => {
+    const localNameLength = view.getUint16(entry.localHeaderOffset + 26, true);
+    const localExtraLength = view.getUint16(entry.localHeaderOffset + 28, true);
+    const dataStart = entry.localHeaderOffset + 30 + localNameLength + localExtraLength;
+    return {
+      name: entry.name,
+      method: entry.method,
+      bytes: bytes.slice(dataStart, dataStart + entry.compressedSize),
+    };
+  });
+}
+
+// As partes de um .docx salvo pelo Word vem compactadas em deflate. O
+// DecompressionStream nativo evita depender de uma lib externa so para isso.
+async function inflateZipEntry(entry) {
+  if (entry.method === 0) return entry.bytes;
+  if (entry.method !== 8) throw new Error(`Metodo de compactacao do modelo nao suportado (${entry.method}).`);
+  if (typeof DecompressionStream === "undefined") {
+    throw new Error("Atualize o navegador (Chrome, Edge ou Firefox recentes) para gerar este documento.");
+  }
+  const stream = new Blob([entry.bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+function escapeDocumentXmlText(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// A ordem destes 22 modelos casa exatamente com a ordem de UNIT_OPTIONS (uma
+// unidade, um modelo, na mesma posicao) - confirmado pelos nomes de empresa:
+// JPL na posicao 8, FAC na 15, TRINCA na 19, DPA nas 6-7, GCS nas 10-11.
+const DISCIPLINARY_TEMPLATE_FILES = [
+  "01_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0001_17.docx",
+  "02_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0003_89.docx",
+  "03_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0004_60.docx",
+  "04_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0011_99.docx",
+  "05_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0013_50.docx",
+  "06_Advertencia_DPA_COMERCIO_DE_PNEUS_LTDA_CNPJ_10_432_113_0001_10.docx",
+  "07_Advertencia_DPA_COMERCIO_DE_PNEUS_LTDA_CNPJ_10_432_113_0002_09.docx",
+  "08_Advertencia_JPL_COMERCIO_DE_AUTOPECAS_LTDA_BESTEN_CNPJ_05_218_575_0001_07.docx",
+  "09_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0005_40.docx",
+  "10_Advertencia_GCS_COMERCIO_DE_PNEUS_LTDA_ACHEI_CNPJ_05_326_792_0001_02.docx",
+  "11_Advertencia_GCS_COMERCIO_DE_PNEUS_LTDA_ACHEI_CNPJ_05_326_792_0007_06.docx",
+  "12_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0009_74.docx",
+  "13_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0008_93.docx",
+  "14_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0007_02.docx",
+  "15_Advertencia_FAC_CNPJ_31_708_683_0001_58.docx",
+  "16_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0012_70.docx",
+  "17_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0014_31.docx",
+  "18_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0015_12.docx",
+  "19_Advertencia_TRINCA_CNPJ_56_067_067_0001_06.docx",
+  "20_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0016_01.docx",
+  "21_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0019_46.docx",
+  "22_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0017_84.docx",
+];
+
+function getDisciplinaryTemplateFile(unidade) {
+  const index = UNIT_OPTIONS.indexOf(getCanonicalUnit(unidade));
+  return index >= 0 ? DISCIPLINARY_TEMPLATE_FILES[index] : null;
+}
+
+// So os tres campos em branco do modelo (nome, motivo e local/data) mudam por
+// registro; para suspensao o cabecalho e o corpo trocam ADVERTENCIA/
+// ADVERTIDO(A) por SUSPENSAO/SUSPENSO(A), citando os dias informados no form.
+function buildDisciplinaryDocumentXml(xml, record) {
+  const isSuspensao = String(record.tipo || "").toLowerCase() === "suspensao";
+  const nome = escapeDocumentXmlText(record.colaborador);
+  const motivo = escapeDocumentXmlText(record.motivo);
+  const local = escapeDocumentXmlText(record.local);
+  const [year, month, day] = String(record.dataMedida || "").split("-");
+  const dia = day ? String(Number(day)) : "____";
+  const mesExtenso = month ? (VT_MONTH_NAMES[Number(month) - 1] || "").toLowerCase() : "__________";
+  const ano = year || "______";
+
+  let filled = xml
+    .replace(/NOME DO EMPREGADO: _+/, `NOME DO EMPREGADO: ${nome}`)
+    .replace(/MOTIVO: <\/w:t><\/w:r><w:r><w:t>_+/, `MOTIVO: </w:t></w:r><w:r><w:t>${motivo}`)
+    .replace(/Local e data: _+, _+ de _+ de _+\./, `Local e data: ${local}, ${dia} de ${mesExtenso} de ${ano}.`);
+
+  if (isSuspensao) {
+    const dias = escapeDocumentXmlText(String(record.diasSuspensao || "").replace(/\D/g, "") || "___");
+    filled = filled
+      .replace(/AVISO DE ADVERT[ÊE]NCIA AO EMPREGADO/, "AVISO DE SUSPENSÃO AO EMPREGADO")
+      .replace(/identificado\(a\) ADVERTIDO\(A\) pelo/, `identificado(a) SUSPENSO(A) POR ${dias} DIA(S) pelo`);
+  }
+
+  return filled;
+}
+
+async function gerarDocumentoDisciplinary(id) {
+  const record = (data.disciplinaryRecords || []).find((item) => String(item.id) === String(id));
+  if (!record) return;
+
+  const templateFile = getDisciplinaryTemplateFile(record.unidade);
+  if (!templateFile) {
+    showModal("Sem modelo cadastrado", "Nao ha modelo de documento para a unidade deste registro.", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(`assets/modelos-advertencia/${templateFile}`);
+    if (!response.ok) throw new Error("Nao foi possivel carregar o modelo do documento.");
+    const templateBuffer = await response.arrayBuffer();
+    const entries = readZipEntries(templateBuffer);
+
+    const files = await Promise.all(entries.map(async (entry) => {
+      const inflated = await inflateZipEntry(entry);
+      if (entry.name !== "word/document.xml") return { name: entry.name, content: inflated };
+      const xml = new TextDecoder().decode(inflated);
+      return { name: entry.name, content: new TextEncoder().encode(buildDisciplinaryDocumentXml(xml, record)) };
+    }));
+
+    const blob = createZipBlob(files, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    downloadBlob(blob, safeDownloadName(`${record.tipo}-${record.colaborador}`, "docx"));
+  } catch (error) {
+    console.error("Erro ao gerar documento disciplinar:", error);
+    showModal("Erro ao gerar documento", error.message || "Nao foi possivel gerar o documento.", "error");
+  }
 }
 
 function gerarRelatorioDisciplinary(scope = "filtered") {
@@ -11406,6 +11591,11 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
     event.preventDefault();
     const form = new FormData(formElement);
     const tipo = formElement.dataset.disciplinaryForm || "advertencia";
+    const diasSuspensao = String(form.get("dias_suspensao") || "").trim();
+    if (tipo === "suspensao" && (!diasSuspensao || Number(diasSuspensao) < 1)) {
+      showModal("Dias obrigatorios", "Informe a quantidade de dias de suspensao.", "error");
+      return;
+    }
     const values = {
       tipo,
       colaborador: String(form.get("colaborador") || "").trim(),
@@ -11413,6 +11603,7 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
       unidade: String(form.get("unidade") || ""),
       local: String(form.get("local") || "").trim(),
       motivo: String(form.get("motivo") || "").trim(),
+      diasSuspensao: tipo === "suspensao" ? diasSuspensao : "",
     };
     const success = await addItem("disciplinaryRecords", { ...values, createdBy: getCurrentUserName() });
     if (success) {
@@ -13454,6 +13645,7 @@ document.addEventListener('click', (event) => {
     case 'excluir-vt': excluirVtRegistro(id); break;
     case 'gerar-relatorio-vt': gerarRelatorioVt(target.dataset.scope); break;
     case 'excluir-disciplinary': excluirDisciplinaryRecord(id); break;
+    case 'gerar-documento-disciplinary': gerarDocumentoDisciplinary(id); break;
     case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary(target.dataset.scope); break;
     case 'editar-documento': editarDocumento(id); break;
     case 'baixar-documento-rh': baixarDocumentoRH(id); break;
