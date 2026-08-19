@@ -4792,12 +4792,12 @@ form.panel[data-public-chamados="true"].panel {
 }
 
 .document-filter-fields {
-  grid-template-columns: 150px 120px 150px;
+  grid-template-columns: 150px 150px;
   gap: 12px;
 }
 
 .vt-filter-bar:has(.document-filter-fields) + #document-records {
-  margin-top: 14px;
+  margin-top: 20px;
 }
 
 .disciplinary-filter-bar {

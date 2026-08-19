@@ -3700,10 +3700,10 @@ if (collection === "eventos") {
       details: row.detalhes || "",
       formData: row.dados && typeof row.dados === "object" ? row.dados : {},
       createdBy: row.created_by || getSystemFallbackAuthor(),
-      createdAt: formatDate(row.created_at),
+      createdAt: formatDateTime(row.created_at),
       sortAt: row.created_at || "",
       updatedBy: row.updated_by || "",
-      updatedAt: row.updated_at ? formatDate(row.updated_at) : "",
+      updatedAt: row.updated_at ? formatDateTime(row.updated_at) : "",
       updatedSortAt: row.updated_at || "",
     }));
   }
@@ -7760,7 +7760,7 @@ function renderDocumentosContratados() {
       <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || "Não informado")}</p>
       <p><strong>E-mail:</strong> ${escapeHtml(item.email || "Não informado")}</p>
       <p><strong>Origem:</strong> ${escapeHtml(getContractorSourceLabel(item.origemHtml, item.empresa) || "Não informada")}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Enviado por ${escapeHtml(item.nome || "Contratado não informado")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())}</p>
       <div class="contractor-file-list">
         ${formatContractorDocumentList(item.documentos || [])}
       </div>
@@ -9666,6 +9666,7 @@ function getVagasFilterValues() {
   const unidade = String(document.getElementById("vaga-filter-unidade")?.value || "").trim();
   return {
     unidade: normalizeUnitText(unidade) === normalizeUnitText("Unidade") ? "" : unidade,
+    cargo: String(document.getElementById("vaga-filter-cargo")?.value || "").trim().toLowerCase(),
     nome: String(document.getElementById("vaga-filter-nome")?.value || "").trim().toLowerCase(),
     cpf: String(document.getElementById("vaga-filter-cpf")?.value || "").replace(/\D/g, ""),
     comCurriculo: Boolean(document.getElementById("vaga-filter-curriculo")?.checked),
@@ -9691,6 +9692,7 @@ function filterVagasByCurrentFilters(items = []) {
   const filters = getVagasFilterValues();
   return items.filter((item) => {
     if (filters.unidade && getCanonicalUnit(item.unidade) !== filters.unidade) return false;
+    if (filters.cargo && !String(item.cargo || "").toLowerCase().includes(filters.cargo)) return false;
     if ((filters.nome || filters.cpf) && !getVagaCandidaturas(item.id, filters).length) return false;
     if (filters.comCurriculo && !vagaTemCandidaturas(item.id)) return false;
     return true;
@@ -9701,11 +9703,11 @@ function updateVagasFilterClearButton() {
   const clearButton = document.getElementById("limpar-filtros-vagas");
   if (!clearButton) return;
   const filters = getVagasFilterValues();
-  clearButton.hidden = !Boolean(filters.unidade || filters.nome || filters.cpf || filters.comCurriculo);
+  clearButton.hidden = !Boolean(filters.unidade || filters.cargo || filters.nome || filters.cpf || filters.comCurriculo);
 }
 
 function clearVagasFilters() {
-  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf"].forEach((id) => {
+  ["vaga-filter-unidade", "vaga-filter-cargo", "vaga-filter-nome", "vaga-filter-cpf"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
@@ -9867,7 +9869,7 @@ function renderDenunciasSection() {
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
       </div>
       <p>${escapeHtml(item.descricao.substring(0, 80))}${item.descricao.length > 80 ? '...' : ''}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt)}</p>
       ${archived ? `<div class="job-actions section-top"><button class="secondary-link" type="button" data-action="reabrir-denuncia" data-id="${escapeHtml(item.id)}">Reabrir</button></div>` : ""}
     </article>
   `;
@@ -10332,15 +10334,13 @@ function renderDocumentRecords() {
         <div class="item-topline">
           <p class="item-title">${escapeHtml(documentLabels[item.type] || item.type)}</p>
           <div>
-            <span class="tag">${escapeHtml(item.createdAt)}</span>
             <button type="button" class="tag tag-button teal-tag-button" data-action="baixar-documento-rh" data-id="${item.id}">Gerar documento</button>
             <button type="button" class="tag tag-button teal-tag-button" data-action="editar-documento" data-id="${item.id}">Editar</button>
             <button type="button" class="tag alert tag-button" data-action="excluir-documento" data-id="${item.id}">Excluir</button>
           </div>
         </div>
         <p>${escapeHtml(item.summary)}</p>
-        <p class="item-meta">${escapeHtml(item.details)}</p>
-        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}${item.updatedAt ? ` em ${escapeHtml(item.updatedAt)}` : ""}</p>
+        <p class="item-meta">${escapeHtml(item.updatedAt || item.createdAt)}</p>
       </article>
     `)
     .join("");
@@ -10769,7 +10769,12 @@ document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
 document.getElementById("mobile-menu-toggle")?.addEventListener("click", toggleMobileMenu);
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeMobileMenu();
+  if (event.key === "Escape") {
+    closeMobileMenu();
+    if (document.getElementById("documentos")?.classList.contains("active") && getActiveDocumentTab()) {
+      deselectActiveDocumentTab();
+    }
+  }
 });
 
 window.addEventListener("resize", () => {
@@ -10830,6 +10835,7 @@ document.getElementById("limpar-filtros-chamados")?.addEventListener("click", ()
 });
 
 document.getElementById("vaga-filter-unidade")?.addEventListener("change", renderAll);
+document.getElementById("vaga-filter-cargo")?.addEventListener("input", renderAll);
 document.getElementById("vaga-filter-nome")?.addEventListener("input", renderAll);
 document.getElementById("vaga-filter-cpf")?.addEventListener("input", (event) => {
   event.currentTarget.value = formatCpf(event.currentTarget.value);
@@ -10922,6 +10928,26 @@ document.getElementById("excluir-arquivados-feedbacks")?.addEventListener("click
   excluirFeedbacksArquivados();
 });
 
+function cancelActiveDocumentEditing() {
+  if (!window.editingDocId) return;
+  window.editingDocId = null;
+  document.querySelectorAll("[data-doc-form]").forEach(form => {
+    form.reset();
+    const btn = form.querySelector("button[type='submit']");
+    if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+  });
+}
+
+// Fecha o formulario de documento selecionado, voltando a tela para o
+// estado inicial (imagem/logo do HUB) sem nenhuma aba ativa.
+function deselectActiveDocumentTab() {
+  document.querySelectorAll("#documentos .doc-tab").forEach((item) => item.classList.remove("active"));
+  document.querySelectorAll("#documentos .doc-view").forEach((view) => view.classList.remove("active"));
+  cancelActiveDocumentEditing();
+  renderDocumentRecords();
+  updateDocumentFilterClearButton();
+}
+
 document.querySelectorAll("#documentos .doc-tab").forEach((button) => {
   button.addEventListener("click", () => {
     document.querySelectorAll("#documentos .doc-tab").forEach((item) => item.classList.remove("active"));
@@ -10937,14 +10963,7 @@ document.querySelectorAll("#documentos .doc-tab").forEach((button) => {
     }
 
     // Cancela a edição se o usuário trocar de aba de documento
-    if (window.editingDocId) {
-      window.editingDocId = null;
-      document.querySelectorAll("[data-doc-form]").forEach(form => {
-        form.reset();
-        const btn = form.querySelector("button[type='submit']");
-        if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
-      });
-    }
+    cancelActiveDocumentEditing();
   });
 });
 

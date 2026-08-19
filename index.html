@@ -40,7 +40,7 @@
           <button class="nav-item" data-view="quadros" type="button">Quadros</button>
           <button class="nav-item" data-view="vagas" type="button">Vagas e Projetos</button>
           <button class="nav-item" data-view="calendario" type="button">Calendario</button>
-          <button class="nav-item" data-view="documentos" type="button">Documentos RH</button>
+          <button class="nav-item" data-view="documentos" type="button">Documentos de Uso Geral</button>
           <button class="nav-item" data-view="advertencias-suspensoes" type="button">Advertencias e Suspensoes</button>
           <button class="nav-item" data-view="documentos-contratados" type="button">Documentos de Contratados</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/chamados.html" type="button">Solicitar EPIs</button>
@@ -604,6 +604,7 @@
                 <h2>Vagas cadastradas</h2>
                 <div class="chamados-filter-bar" aria-label="Filtros de vagas">
                   <div class="chamados-filter-fields vaga-filter-fields">
+                    <input id="vaga-filter-cargo" type="search" placeholder="Cargo da vaga" autocomplete="off" aria-label="Filtrar vagas por cargo" />
                     <input id="vaga-filter-nome" type="search" placeholder="Nome do candidato" autocomplete="off" aria-label="Filtrar vagas por nome do candidato" />
                     <input id="vaga-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF do candidato" autocomplete="off" aria-label="Filtrar vagas por CPF do candidato" />
                     <select id="vaga-filter-unidade" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar vagas por unidade"></select>
@@ -1089,10 +1090,10 @@
                 <div class="panel-header">
                   <h2>Registros salvos</h2>
                 </div>
-                <div class="vt-filter-bar" aria-label="Filtros de Documentos RH">
-                  <div class="vt-filter-fields">
+                <div class="vt-filter-bar" aria-label="Filtros de Documentos de Uso Geral">
+                  <div class="vt-filter-fields document-filter-fields">
                     <input id="document-filter-name" type="search" placeholder="Nome do colaborador" autocomplete="off" aria-label="Filtrar por nome do colaborador" />
-                  <input id="document-filter-cpf" type="search" placeholder="CPF" inputmode="numeric" maxlength="14" autocomplete="off" aria-label="Filtrar por CPF" />
+                    <input id="document-filter-cpf" type="search" placeholder="CPF" inputmode="numeric" maxlength="14" autocomplete="off" aria-label="Filtrar por CPF" />
                   </div>
                   <button class="secondary-link compact-filter-button" id="clear-document-filters" type="button" hidden>Limpar</button>
                 </div>
