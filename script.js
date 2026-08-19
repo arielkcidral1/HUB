@@ -7524,19 +7524,31 @@ function getDisciplinaryTemplateFile(unidade) {
 // So os tres campos em branco do modelo (nome, motivo e local/data) mudam por
 // registro; para suspensao o cabecalho e o corpo trocam ADVERTENCIA/
 // ADVERTIDO(A) por SUSPENSAO/SUSPENSO(A), citando os dias informados no form.
+// O modelo reserva 3 linhas de sublinhado para o motivo (cada uma como um
+// <w:r> separado por <w:br/>). As 3 juntas viram um unico texto: se o motivo
+// for curto, o resto fica em branco em vez de continuar com sublinhados.
+function buildMotivoRunsXml(motivo) {
+  const lines = String(motivo || "").split(/\r\n|\r|\n/).map((line) => escapeDocumentXmlText(line));
+  return lines
+    .map((line) => `<w:t xml:space="preserve">${line}</w:t>`)
+    .join("<w:br/></w:r><w:r>");
+}
+
 function buildDisciplinaryDocumentXml(xml, record) {
   const isSuspensao = String(record.tipo || "").toLowerCase() === "suspensao";
   const nome = escapeDocumentXmlText(record.colaborador);
-  const motivo = escapeDocumentXmlText(record.motivo);
+  const motivoRuns = buildMotivoRunsXml(record.motivo);
   const local = escapeDocumentXmlText(record.local);
   const [year, month, day] = String(record.dataMedida || "").split("-");
   const dia = day ? String(Number(day)) : "____";
   const mesExtenso = month ? (VT_MONTH_NAMES[Number(month) - 1] || "").toLowerCase() : "__________";
   const ano = year || "______";
 
+  const motivoBlankLines = /MOTIVO: <\/w:t><\/w:r><w:r><w:t>_+<\/w:t><w:br\/><\/w:r><w:r><w:t>_+<\/w:t><w:br\/><\/w:r><w:r><w:t>_+<\/w:t><\/w:r>/;
   let filled = xml
     .replace(/NOME DO EMPREGADO: _+/, `NOME DO EMPREGADO: ${nome}`)
-    .replace(/MOTIVO: <\/w:t><\/w:r><w:r><w:t>_+/, `MOTIVO: </w:t></w:r><w:r><w:t>${motivo}`)
+    .replace(motivoBlankLines, `MOTIVO: </w:t></w:r><w:r>${motivoRuns}</w:r>`)
+    .replace(/MOTIVO: <\/w:t><\/w:r><w:r><w:t>_+/, `MOTIVO: </w:t></w:r><w:r>${motivoRuns}`)
     .replace(/Local e data: _+, _+ de _+ de _+\./, `Local e data: ${local}, ${dia} de ${mesExtenso} de ${ano}.`);
 
   if (isSuspensao) {

@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v97' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v98' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -85,7 +85,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v97[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v24[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v98[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -405,7 +405,8 @@ Assert-MatchText $companyBirthdays '"admissao"[\s\S]*"unidade"[\s\S]*"4- PL."[\s
   Assert-MatchText $script 'const DISCIPLINARY_TEMPLATE_FILES = \[' "modelos de advertencia possuem lista de arquivos por unidade"
   Assert-True -Condition ((Get-Content (Join-Path $ProjectRoot "script.js") -Raw) -match '(?s)const DISCIPLINARY_TEMPLATE_FILES = \[(.*?)\];' -and (([regex]::Matches($Matches[1], '\.docx"')).Count -eq 22)) -Message "existem exatamente 22 modelos, um por unidade de UNIT_OPTIONS"
   Assert-MatchText $script 'function getDisciplinaryTemplateFile\(unidade\)[\s\S]*const index = UNIT_OPTIONS\.indexOf\(getCanonicalUnit\(unidade\)\);[\s\S]*return index >= 0 \? DISCIPLINARY_TEMPLATE_FILES\[index\] : null;' "modelo do documento e escolhido pela posicao da unidade em UNIT_OPTIONS"
-  Assert-MatchText $script 'function buildDisciplinaryDocumentXml\(xml, record\)[\s\S]*NOME DO EMPREGADO: \$\{nome\}[\s\S]*w:t>\$\{motivo\}[\s\S]*Local e data: \$\{local\}, \$\{dia\} de \$\{mesExtenso\} de \$\{ano\}\.' "geracao do documento preenche nome motivo local e data no modelo"
+  Assert-MatchText $script 'function buildDisciplinaryDocumentXml\(xml, record\)[\s\S]*NOME DO EMPREGADO: \$\{nome\}[\s\S]*MOTIVO: </w:t></w:r><w:r>\$\{motivoRuns\}</w:r>[\s\S]*Local e data: \$\{local\}, \$\{dia\} de \$\{mesExtenso\} de \$\{ano\}\.' "geracao do documento preenche nome motivo local e data no modelo"
+  Assert-MatchText $script 'function buildMotivoRunsXml\(motivo\)[\s\S]*split\(/\\r\\n\|\\r\|\\n/\)[\s\S]*join\("<w:br/></w:r><w:r>"\)' "as 3 linhas em branco do motivo viram um so texto, sem sublinhados sobrando"
   Assert-MatchText $script 'if \(isSuspensao\)[\s\S]*replace\(/AVISO DE ADVERT\[.E\]NCIA AO EMPREGADO/, "AVISO DE SUSPENS.O AO EMPREGADO"\)[\s\S]*replace\(/identificado\\\(a\\\) ADVERTIDO\\\(A\\\) pelo/, `identificado\(a\) SUSPENSO\(A\) POR \$\{dias\} DIA\(S\) pelo`\)' "documento de suspensao troca o texto de advertencia e cita os dias"
   Assert-MatchText $script 'async function gerarDocumentoDisciplinary\(id\)[\s\S]*const templateFile = getDisciplinaryTemplateFile\(record\.unidade\);[\s\S]*fetch\(`assets/modelos-advertencia/\$\{templateFile\}`\)' "geracao do documento busca o modelo da unidade em assets/modelos-advertencia"
   Assert-MatchText $script 'data-action="gerar-documento-disciplinary" data-id="\$\{escapeHtml\(item\.id\)\}">Gerar documento</button>' "card de advertencia/suspensao tem botao para gerar o documento"
