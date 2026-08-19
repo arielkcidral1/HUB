@@ -3664,10 +3664,10 @@ if (collection === "eventos") {
   if (collection === "documentos") {
     return rows.map((row) => ({
       id: row.id,
-      type: row.type || "",
-      summary: row.summary || "",
-      details: row.details || "",
-      formData: row.form_data && typeof row.form_data === "object" ? row.form_data : {},
+      type: row.tipo || "",
+      summary: row.resumo || "",
+      details: row.detalhes || "",
+      formData: row.dados && typeof row.dados === "object" ? row.dados : {},
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
@@ -4279,10 +4279,10 @@ if (collection === "eventos") {
 
   if (collection === "documentos") {
     return {
-      type: values.type || "",
-      summary: values.summary || "",
-      details: values.details || "",
-      form_data: values.formData || {},
+      tipo: values.type || "",
+      resumo: values.summary || "",
+      detalhes: values.details || "",
+      dados: values.formData || {},
       created_by: values.createdBy || getCurrentUserName(),
       updated_by: values.updatedBy || null,
     };
@@ -5798,7 +5798,7 @@ if (collection === "eventos") {
             : collection === "disciplinaryRecords"
               ? `Nao foi possivel salvar a advertencia/suspensao. ${error?.message || "Confira se a tabela hub_advertencias_suspensoes existe."} Rode o arquivo postgres/migrations/20260812000300_create_advertencias_suspensoes.sql no PostgreSQL para criar a tabela.`
               : collection === "documentos"
-                ? `Nao foi possivel salvar o documento. ${error?.message || "Confira se a tabela hub_documentos existe."} Rode o arquivo postgres/migrations/20260819000100_create_hub_documentos.sql no PostgreSQL para criar a tabela.`
+                ? `Nao foi possivel salvar o documento. ${error?.message || "Confira as colunas da tabela hub_documentos (tipo, resumo, detalhes, dados, created_by)."}`
                 : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
     showModal("Erro ao Salvar", message, "error");
     return false;

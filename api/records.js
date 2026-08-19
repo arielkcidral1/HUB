@@ -7,7 +7,7 @@ const OPERATORS = {
 
 const JSON_COLUMNS = new Map([
   ["hub_documentos_contratados", new Set(["documentos"])],
-  ["hub_documentos", new Set(["form_data"])],
+  ["hub_documentos", new Set(["dados"])],
   ["hub_malotes", new Set(["colaboradores"])],
   ["hub_quadros", new Set(["listas"])],
   ["hub_users", new Set(["configuracoes"])],
