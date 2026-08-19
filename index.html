@@ -604,9 +604,11 @@
                 <h2>Vagas cadastradas</h2>
                 <div class="chamados-filter-bar" aria-label="Filtros de vagas">
                   <div class="chamados-filter-fields vaga-filter-fields">
-                    <input id="vaga-filter-cargo" type="search" placeholder="Cargo da vaga" autocomplete="off" aria-label="Filtrar vagas por cargo" />
                     <input id="vaga-filter-nome" type="search" placeholder="Nome do candidato" autocomplete="off" aria-label="Filtrar vagas por nome do candidato" />
-                    <input id="vaga-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF do candidato" autocomplete="off" aria-label="Filtrar vagas por CPF do candidato" />
+                    <input id="vaga-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF" autocomplete="off" aria-label="Filtrar vagas por CPF do candidato" />
+                    <select id="vaga-filter-cargo" aria-label="Filtrar vagas por cargo">
+                      <option value="">Cargo</option>
+                    </select>
                     <select id="vaga-filter-unidade" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar vagas por unidade"></select>
                     <label class="vaga-filter-checkbox" for="vaga-filter-curriculo">
                       <input type="checkbox" id="vaga-filter-curriculo" />

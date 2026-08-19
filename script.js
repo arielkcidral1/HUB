@@ -9666,11 +9666,25 @@ function getVagasFilterValues() {
   const unidade = String(document.getElementById("vaga-filter-unidade")?.value || "").trim();
   return {
     unidade: normalizeUnitText(unidade) === normalizeUnitText("Unidade") ? "" : unidade,
-    cargo: String(document.getElementById("vaga-filter-cargo")?.value || "").trim().toLowerCase(),
+    cargo: String(document.getElementById("vaga-filter-cargo")?.value || "").trim(),
     nome: String(document.getElementById("vaga-filter-nome")?.value || "").trim().toLowerCase(),
     cpf: String(document.getElementById("vaga-filter-cpf")?.value || "").replace(/\D/g, ""),
     comCurriculo: Boolean(document.getElementById("vaga-filter-curriculo")?.checked),
   };
+}
+
+// Preenche o select de cargo com os cargos ja cadastrados nas vagas, sem
+// duplicar vagas com o mesmo texto de cargo.
+function populateVagaCargoFilterOptions() {
+  const select = document.getElementById("vaga-filter-cargo");
+  if (!select) return;
+  const currentValue = select.value;
+  const cargos = [...new Set((data.vagas || []).map((item) => String(item.cargo || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  select.innerHTML = `<option value="">Cargo</option>` + cargos
+    .map((cargo) => `<option value="${escapeHtml(cargo)}">${escapeHtml(cargo)}</option>`)
+    .join("");
+  if (currentValue && cargos.includes(currentValue)) select.value = currentValue;
 }
 
 function vagaTemCandidaturas(vagaId) {
@@ -9692,7 +9706,7 @@ function filterVagasByCurrentFilters(items = []) {
   const filters = getVagasFilterValues();
   return items.filter((item) => {
     if (filters.unidade && getCanonicalUnit(item.unidade) !== filters.unidade) return false;
-    if (filters.cargo && !String(item.cargo || "").toLowerCase().includes(filters.cargo)) return false;
+    if (filters.cargo && String(item.cargo || "").trim() !== filters.cargo) return false;
     if ((filters.nome || filters.cpf) && !getVagaCandidaturas(item.id, filters).length) return false;
     if (filters.comCurriculo && !vagaTemCandidaturas(item.id)) return false;
     return true;
@@ -9740,6 +9754,7 @@ function safeRenderSection(section, renderFn) {
 }
 
 function renderVagasSection() {
+  populateVagaCargoFilterOptions();
   updateVagasFilterClearButton();
   const vagasFilters = getVagasFilterValues();
   renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
@@ -10341,6 +10356,7 @@ function renderDocumentRecords() {
         </div>
         <p>${escapeHtml(item.summary)}</p>
         <p class="item-meta">${escapeHtml(item.updatedAt || item.createdAt)}</p>
+        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}</p>
       </article>
     `)
     .join("");
@@ -10774,6 +10790,9 @@ document.addEventListener("keydown", (event) => {
     if (document.getElementById("documentos")?.classList.contains("active") && getActiveDocumentTab()) {
       deselectActiveDocumentTab();
     }
+    if (document.getElementById("advertencias-suspensoes")?.classList.contains("active") && getActiveDisciplinaryTab()) {
+      deselectActiveDisciplinaryTab();
+    }
   }
 });
 
@@ -10835,7 +10854,7 @@ document.getElementById("limpar-filtros-chamados")?.addEventListener("click", ()
 });
 
 document.getElementById("vaga-filter-unidade")?.addEventListener("change", renderAll);
-document.getElementById("vaga-filter-cargo")?.addEventListener("input", renderAll);
+document.getElementById("vaga-filter-cargo")?.addEventListener("change", renderAll);
 document.getElementById("vaga-filter-nome")?.addEventListener("input", renderAll);
 document.getElementById("vaga-filter-cpf")?.addEventListener("input", (event) => {
   event.currentTarget.value = formatCpf(event.currentTarget.value);
@@ -11647,6 +11666,14 @@ document.getElementById("limpar-filtros-vt")?.addEventListener("click", () => {
   if (unitFilter) unitFilter.value = "";
   renderVtRegistros();
 });
+
+// Fecha o formulario de advertencia/suspensao selecionado, voltando a tela
+// para o estado inicial (imagem/logo do HUB) sem nenhuma aba ativa.
+function deselectActiveDisciplinaryTab() {
+  document.querySelectorAll("[data-disciplinary-doc]").forEach((tab) => tab.classList.remove("active"));
+  document.querySelectorAll(".disciplinary-view").forEach((view) => view.classList.remove("active"));
+  renderDisciplinaryRecords();
+}
 
 document.querySelectorAll("[data-disciplinary-doc]").forEach((button) => {
   button.addEventListener("click", () => {
