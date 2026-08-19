@@ -150,6 +150,7 @@ const TABLES = {
   eventos: "hub_eventos",
   vtRegistros: "hub_vt_registros",
   disciplinaryRecords: "hub_advertencias_suspensoes",
+  documentos: "hub_documentos",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
@@ -227,6 +228,7 @@ const defaultData = {
   eventos: [],
   vtRegistros: [],
   disciplinaryRecords: [],
+  documentos: [],
   documentosContratados: [],
   candidaturas: [],
   atestados: [],
@@ -250,7 +252,6 @@ let activeChatChannel = "";
 let refreshTimer = null;
 let refreshInProgress = false;
 let coreCollectionsRepairInProgress = false;
-let documentRecords = loadDocumentRecords();
 let currentAuthUser = null;
 let currentUserProfile = null;
 let appInitializationPromise = null;
@@ -1344,6 +1345,7 @@ function loadLocalData() {
     eventos: parsed.eventos || [],
     vtRegistros: parsed.vtRegistros || [],
     disciplinaryRecords: parsed.disciplinaryRecords || [],
+    documentos: parsed.documentos || [],
     documentosContratados: (parsed.documentosContratados || [])
       .filter((item) => !String(item.id || "").startsWith("local-") && !item.pendingSync)
       .map(mapContractorDocumentRow),
@@ -1352,10 +1354,6 @@ function loadLocalData() {
     usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
     readReceipts: parsed.readReceipts || [],
   };
-}
-
-function loadDocumentRecords() {
-  return storageService.getSessionItem(DOCUMENT_RECORDS_KEY, storageService.getLocalItem(DOCUMENT_RECORDS_KEY, []));
 }
 
 function disableSensitiveFieldAutofill() {
@@ -1379,11 +1377,6 @@ function getPublicClientId() {
     sessionStorage.setItem(PUBLIC_CLIENT_ID_KEY, clientId);
   }
   return clientId;
-}
-
-function saveDocumentRecords() {
-  storageService.setSessionItem(DOCUMENT_RECORDS_KEY, documentRecords);
-  storageService.setLocalItem(DOCUMENT_RECORDS_KEY, documentRecords);
 }
 
 function saveLocalData() {
@@ -3668,6 +3661,22 @@ if (collection === "eventos") {
     }));
   }
 
+  if (collection === "documentos") {
+    return rows.map((row) => ({
+      id: row.id,
+      type: row.type || "",
+      summary: row.summary || "",
+      details: row.details || "",
+      formData: row.form_data && typeof row.form_data === "object" ? row.form_data : {},
+      createdBy: row.created_by || getSystemFallbackAuthor(),
+      createdAt: formatDate(row.created_at),
+      sortAt: row.created_at || "",
+      updatedBy: row.updated_by || "",
+      updatedAt: row.updated_at ? formatDate(row.updated_at) : "",
+      updatedSortAt: row.updated_at || "",
+    }));
+  }
+
   if (collection === "atestados") {
     return rows.map(mapAtestadoRow);
   }
@@ -4116,6 +4125,11 @@ function renderRealtimeUpdate(collection) {
     return;
   }
 
+  if (collection === "documentos") {
+    renderDocumentRecords();
+    return;
+  }
+
   renderAll();
 }
 
@@ -4260,6 +4274,17 @@ if (collection === "eventos") {
       local: values.local || "",
       motivo: values.motivo || "",
       created_by: values.createdBy || getCurrentUserName(),
+    };
+  }
+
+  if (collection === "documentos") {
+    return {
+      type: values.type || "",
+      summary: values.summary || "",
+      details: values.details || "",
+      form_data: values.formData || {},
+      created_by: values.createdBy || getCurrentUserName(),
+      updated_by: values.updatedBy || null,
     };
   }
 
@@ -5771,7 +5796,9 @@ if (collection === "eventos") {
             ? `Nao foi possivel salvar a vaga. ${error?.message || "Confira se as colunas descricao, requisitos e created_by existem em hub_vagas (rode hub-vagas-fix.sql)."}`
             : collection === "disciplinaryRecords"
               ? `Nao foi possivel salvar a advertencia/suspensao. ${error?.message || "Confira se a tabela hub_advertencias_suspensoes existe."} Rode o arquivo postgres/migrations/20260812000300_create_advertencias_suspensoes.sql no PostgreSQL para criar a tabela.`
-              : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
+              : collection === "documentos"
+                ? `Nao foi possivel salvar o documento. ${error?.message || "Confira se a tabela hub_documentos existe."} Rode o arquivo postgres/migrations/20260819000100_create_hub_documentos.sql no PostgreSQL para criar a tabela.`
+                : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
     showModal("Erro ao Salvar", message, "error");
     return false;
   }
@@ -5896,6 +5923,11 @@ if (collection === "eventos") {
     }
     if (collection === "vagas") {
       delete payload.created_by;
+    }
+    if (collection === "documentos") {
+      delete payload.created_by;
+      payload.updated_by = values.updatedBy || getCurrentUserName();
+      payload.updated_at = new Date().toISOString();
     }
     const { data: updated, error } = await postgresClient
       .from(TABLES[collection])
@@ -10027,7 +10059,7 @@ function renderDocumentRecords() {
   const target = document.getElementById("document-records");
   if (!target) return;
 
-  const records = filterDocumentRecords(documentRecords);
+  const records = filterDocumentRecords(data.documentos || []);
 
   if (!records.length) {
     target.innerHTML = '<p class="empty-state">Nenhum registro salvo ainda.</p>';
@@ -10055,7 +10087,7 @@ function renderDocumentRecords() {
 }
 
 function getAccessibleDocumentRecord(id) {
-  const doc = documentRecords.find((item) => String(item.id) === String(id));
+  const doc = (data.documentos || []).find((item) => String(item.id) === String(id));
   if (!doc || !canCurrentUserAccessDocumentRecord(doc)) return null;
   return doc;
 }
@@ -10677,7 +10709,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
     }
   });
 
-  formElement.addEventListener("submit", (event) => {
+  formElement.addEventListener("submit", async (event) => {
     event.preventDefault();
     normalizeDocumentDateInputs(event.currentTarget);
     const form = new FormData(event.currentTarget);
@@ -10689,45 +10721,31 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
       .map(([key, value]) => `${key}: ${value}`)
       .join(" | ");
 
-    let savedDocId;
+    let success;
 
     if (window.editingDocId) {
-      savedDocId = window.editingDocId;
-      // Atualiza o documento existente
-      const index = documentRecords.findIndex(d => d.id === window.editingDocId);
-      if (index > -1) {
-        documentRecords[index] = {
-          ...documentRecords[index],
-          summary: String(collaborator),
-          details: details || "Registro salvo",
-          formData: Object.fromEntries(entries),
-          updatedBy: getCurrentUserName(),
-          updatedAt: todayLabel(),
-          updatedSortAt: new Date().toISOString(),
-        };
+      success = await updateItem("documentos", window.editingDocId, {
+        summary: String(collaborator),
+        details: details || "Registro salvo",
+        formData: Object.fromEntries(entries),
+        updatedBy: getCurrentUserName(),
+      });
+      if (success) {
+        window.editingDocId = null;
+        const btn = event.currentTarget.querySelector("button[type='submit']");
+        if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
       }
-      window.editingDocId = null;
-      const btn = event.currentTarget.querySelector("button[type='submit']");
-      if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
     } else {
-      savedDocId = generateUUID();
-      // Cria um novo documento
-      documentRecords.unshift({
-        id: savedDocId,
+      success = await addItem("documentos", {
         type: event.currentTarget.dataset.docForm,
         summary: String(collaborator),
         details: details || "Registro salvo",
         formData: Object.fromEntries(entries),
         createdBy: getCurrentUserName(),
-        createdAt: todayLabel(),
-        sortAt: new Date().toISOString(),
       });
     }
 
-    saveDocumentRecords();
-    renderDocumentRecords();
-
-    event.currentTarget.reset();
+    if (success) event.currentTarget.reset();
   });
 });
 
@@ -12734,10 +12752,8 @@ function excluirDocumento(id) {
     confirmText: "Excluir",
     danger: true,
     validatePassword: async (password) => verifyAuthorizationPassword(password),
-    onConfirm: () => {
-      documentRecords = documentRecords.filter(d => d.id !== id);
-      saveDocumentRecords();
-      renderDocumentRecords();
+    onConfirm: async () => {
+      await deleteItem("documentos", id);
     },
   });
 };

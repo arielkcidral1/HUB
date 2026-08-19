@@ -11,6 +11,7 @@ const BOOTSTRAP_TABLES = {
   eventos: "hub_eventos",
   vtRegistros: "hub_vt_registros",
   disciplinaryRecords: "hub_advertencias_suspensoes",
+  documentos: "hub_documentos",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
