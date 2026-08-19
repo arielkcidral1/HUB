@@ -462,9 +462,13 @@ function getLoginDisplayName(value) {
   return findLocalTeamUser(value)?.nome || String(value || "").trim();
 }
 
-function isFredericoUser() {
+function stripAccents(value) {
+  return normalizeLoginName(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function getCurrentUserNameCandidates() {
   const user = getCurrentUserRecord?.() || {};
-  const candidates = [
+  return [
     getCurrentUserName?.(),
     user.nome,
     user.email,
@@ -474,10 +478,21 @@ function isFredericoUser() {
     currentAuthUser?.user_metadata?.nome,
     currentAuthUser?.user_metadata?.name,
   ];
-  return candidates.some((candidate) => {
-    const normalized = normalizeLoginName(candidate).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return normalized === "frederico" || normalized.startsWith("frederico");
+}
+
+// Compara o usuario logado contra uma lista de nomes/logins conhecidos
+// (sem acento, case-insensitive). Usado para permissoes atreladas a contas
+// especificas em vez do cargo, que pode ser editado depois.
+function currentUserMatchesName(...targets) {
+  const normalizedTargets = targets.map(stripAccents);
+  return getCurrentUserNameCandidates().some((candidate) => {
+    const normalized = stripAccents(candidate);
+    return normalizedTargets.some((target) => normalized === target || normalized.startsWith(target));
   });
+}
+
+function isFredericoUser() {
+  return currentUserMatchesName("frederico");
 }
 
 function loadTeamUsersStore() {
@@ -10028,8 +10043,17 @@ function getCurrentDocumentAccessNames() {
     .filter(Boolean);
 }
 
+// Frederico, Alex e Jose Alcione enxergam Documentos RH por completo, igual
+// ao RH, independente do cargo cadastrado (que pode mudar depois).
+function hasFullDocumentAccess() {
+  return isRhUser()
+    || isFredericoUser()
+    || currentUserMatchesName("alex", "alexsandro")
+    || currentUserMatchesName("alcione", "jose alcione");
+}
+
 function canCurrentUserAccessDocumentRecord(item = {}) {
-  if (isRhUser()) return true;
+  if (hasFullDocumentAccess()) return true;
   if (!isManagerUser()) return true;
   const author = normalizeLoginName(item.createdBy || item.ownerName || item.autor || "");
   return Boolean(author && getCurrentDocumentAccessNames().includes(author));
