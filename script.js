@@ -494,6 +494,16 @@ function isFredericoUser() {
   return currentUserMatchesName("frederico");
 }
 
+// Jucimara, Alex e Alcione recebem o mesmo acesso de Frederico/CEO (todas as
+// abas, denuncias, feedbacks, eventos de qualquer gerente) sem trocar o
+// cargo cadastrado de cada um (Gerente Financeiro, Diretor, etc.).
+function hasFredericoLevelAccess() {
+  return isFredericoUser()
+    || currentUserMatchesName("jucimara")
+    || currentUserMatchesName("alex", "alexsandro")
+    || currentUserMatchesName("alcione", "jose alcione");
+}
+
 function loadTeamUsersStore() {
   return storageService.getSessionItem(TEAM_USERS_KEY, []);
 }
@@ -638,6 +648,9 @@ function getChatChannels() {
       ];
 
   channels.sort((a, b) => {
+    // Os canais em grupo ficam sempre fixos no topo, acima das conversas
+    // individuais, independente de quem mandou mensagem mais recente.
+    if (a.isGroup !== b.isGroup) return a.isGroup ? -1 : 1;
     const msgA = data.comunicados.find(m => normalizeChatChannel(m.canal) === a.id);
     const msgB = data.comunicados.find(m => normalizeChatChannel(m.canal) === b.id);
     if (!msgA && !msgB) return 0;
@@ -810,9 +823,9 @@ function getAllowedViewsForCurrentUser() {
   if (isManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
   if (isReceptionistUser()) return new Set(RECEPTIONIST_ALLOWED_VIEWS);
   const allowed = new Set(ALL_ALLOWED_VIEWS);
-  if (isFredericoUser()) allowed.add("feedbacks");
-  // Denuncias Recebidas fica restrita a Ariel e Frederico.
-  const canSeeDenuncias = isFredericoUser() || (typeof window.isArielUser === "function" && window.isArielUser());
+  if (hasFredericoLevelAccess()) allowed.add("feedbacks");
+  // Denuncias Recebidas fica restrita a Ariel, Frederico e quem tem o mesmo nivel de acesso.
+  const canSeeDenuncias = hasFredericoLevelAccess() || (typeof window.isArielUser === "function" && window.isArielUser());
   if (!canSeeDenuncias) allowed.delete("denuncias");
   return allowed;
 }
@@ -2606,7 +2619,7 @@ function getCurrentEventAccessNames() {
 }
 
 function canCurrentUserAccessEventRecord(item = {}) {
-  if (isRhUser() || isCeoUser()) return true;
+  if (isRhUser() || isCeoUser() || hasFredericoLevelAccess()) return true;
   if (!isManagerUser()) return true;
   const author = normalizeLoginName(item.createdBy || "");
   return Boolean(author && getCurrentEventAccessNames().includes(author));
@@ -2746,7 +2759,7 @@ function getUpcomingEvents() {
   const today = getLocalDateKey();
   const weekDates = getCurrentWeekDates();
   const maxDateKey = weekDates[weekDates.length - 1];
-  return getSortedEvents().filter((item) => !isArchivedRecord(item) && item.data && item.data >= today && item.data <= maxDateKey);
+  return getSortedEvents().filter((item) => !isArchivedRecord(item) && !isBirthdayEvent(item) && item.data && item.data >= today && item.data <= maxDateKey);
 }
 
 function getCompactAgendaItems(events = []) {
@@ -7321,7 +7334,7 @@ function getDisciplinaryTypeLabel(type) {
 }
 
 function getActiveDisciplinaryTab() {
-  return document.querySelector("[data-disciplinary-doc].active")?.dataset.disciplinaryDoc || "advertencia";
+  return document.querySelector("[data-disciplinary-doc].active")?.dataset.disciplinaryDoc || "";
 }
 
 function getFilteredDisciplinaryRecords() {
@@ -7354,7 +7367,16 @@ function updateDisciplinaryFilterClearButton() {
 
 function renderDisciplinaryRecords() {
   updateDisciplinaryFilterClearButton();
-  renderCards("disciplinary-records", getFilteredDisciplinaryRecords(), (item) => `
+  const records = getFilteredDisciplinaryRecords();
+  const emptyState = document.getElementById("disciplinary-empty-state");
+  const registrosPanel = document.getElementById("disciplinary-registros-panel");
+  const hasActiveTab = Boolean(getActiveDisciplinaryTab());
+  if (emptyState) emptyState.hidden = hasActiveTab;
+  // A secao "Registros salvos" so aparece com uma aba selecionada e pelo
+  // menos um registro daquele tipo, para nao ficar vazia na tela.
+  if (registrosPanel) registrosPanel.hidden = !hasActiveTab || !records.length;
+
+  renderCards("disciplinary-records", records, (item) => `
     <article class="item-card">
       <div class="item-topline">
         <p class="item-title">${escapeHtml(item.colaborador || "Funcionario nao informado")}</p>
@@ -9871,7 +9893,7 @@ function renderFeedbacksSection() {
 
   const toggleButton = document.getElementById("toggle-archived-feedbacks");
 
-  if (!isFredericoUser()) {
+  if (!hasFredericoLevelAccess()) {
     naoLidosTarget.innerHTML = '<p class="empty-state">Acesso restrito.</p>';
     const lidosTarget = document.getElementById("feedbacks-lidos");
     if (lidosTarget) lidosTarget.innerHTML = "";
@@ -10215,7 +10237,7 @@ document.getElementById("dashboard-notifications-prev")?.addEventListener("click
 });
 
 function getActiveDocumentTab() {
-  return document.querySelector(".doc-tab.active")?.dataset.doc || "admissao";
+  return document.querySelector("#documentos .doc-tab.active")?.dataset.doc || "";
 }
 
 function getDocumentFilterValues() {
@@ -10252,13 +10274,10 @@ function getCurrentDocumentAccessNames() {
     .filter(Boolean);
 }
 
-// Frederico, Alex e Jose Alcione enxergam Documentos RH por completo, igual
-// ao RH, independente do cargo cadastrado (que pode mudar depois).
+// Frederico, Jucimara, Alex e Jose Alcione enxergam Documentos RH por
+// completo, igual ao RH, independente do cargo cadastrado.
 function hasFullDocumentAccess() {
-  return isRhUser()
-    || isFredericoUser()
-    || currentUserMatchesName("alex", "alexsandro")
-    || currentUserMatchesName("alcione", "jose alcione");
+  return isRhUser() || hasFredericoLevelAccess();
 }
 
 function canCurrentUserAccessDocumentRecord(item = {}) {
@@ -10278,7 +10297,7 @@ function filterDocumentRecords(items = []) {
       if (!collaboratorName.includes(filters.nome)) return false;
     }
 
-    if (filters.tipo && item.type !== filters.tipo) return false;
+    if (item.type !== filters.tipo) return false;
 
     if (filters.cpf) {
       const cpf = getDocumentRecordCpf(item);
@@ -10294,9 +10313,16 @@ function renderDocumentRecords() {
   if (!target) return;
 
   const records = filterDocumentRecords(data.documentos || []);
+  const emptyState = document.getElementById("documentos-empty-state");
+  const registrosPanel = document.getElementById("documentos-registros-panel");
+  const hasActiveTab = Boolean(getActiveDocumentTab());
+  if (emptyState) emptyState.hidden = hasActiveTab;
+  // A secao "Registros salvos" so aparece com uma aba selecionada e pelo
+  // menos um registro daquele tipo, para nao ficar vazia na tela.
+  if (registrosPanel) registrosPanel.hidden = !hasActiveTab || !records.length;
 
   if (!records.length) {
-    target.innerHTML = '<p class="empty-state">Nenhum registro salvo ainda.</p>';
+    target.innerHTML = "";
     return;
   }
 
@@ -10344,6 +10370,7 @@ function renderChat(options = {}) {
   const pollButton = document.getElementById("create-poll-button");
   const filterInput = document.getElementById("chat-message-filter");
   const pollMenuOption = document.querySelector('[data-attach-type="poll"]');
+  const chatForm = document.getElementById("chat-form");
   if (!activeChannel) {
     clearChatMessageFilter();
     if (title) title.textContent = "Comunicação interna";
@@ -10366,10 +10393,11 @@ function renderChat(options = {}) {
       fileButton.disabled = true;
       fileButton.classList.add("disabled");
     }
+    if (chatForm) chatForm.hidden = true;
     closeChatAttachMenu();
     closeChatEmojiMenu();
     target.innerHTML = `
-      <div class="chat-empty-state">
+      <div class="chat-empty-state chat-empty-state-lg">
         <img src="assets/logo.svg" alt="HUB" />
         <strong>HUB</strong>
       </div>
@@ -10379,6 +10407,7 @@ function renderChat(options = {}) {
 
   if (title) title.textContent = activeChannel.label;
   if (subtitle) subtitle.textContent = activeChannel.subtitle;
+  if (chatForm) chatForm.hidden = false;
   if (messageInput) {
     messageInput.placeholder = isGeneralChatChannel(activeChannel.id) ? `Escreva em ${activeChannel.label}` : `Mensagem para ${activeChannel.label}`;
     messageInput.disabled = false;
@@ -10893,10 +10922,10 @@ document.getElementById("excluir-arquivados-feedbacks")?.addEventListener("click
   excluirFeedbacksArquivados();
 });
 
-document.querySelectorAll(".doc-tab").forEach((button) => {
+document.querySelectorAll("#documentos .doc-tab").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
-    document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
+    document.querySelectorAll("#documentos .doc-tab").forEach((item) => item.classList.remove("active"));
+    document.querySelectorAll("#documentos .doc-view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
     document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
 
@@ -12966,10 +12995,10 @@ function editarDocumento(id) {
 
   window.editingDocId = id;
 
-  document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
-  document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
-  
-  const tabButton = document.querySelector(`.doc-tab[data-doc="${doc.type}"]`);
+  document.querySelectorAll("#documentos .doc-tab").forEach((item) => item.classList.remove("active"));
+  document.querySelectorAll("#documentos .doc-view").forEach((view) => view.classList.remove("active"));
+
+  const tabButton = document.querySelector(`#documentos .doc-tab[data-doc="${doc.type}"]`);
   if (tabButton) tabButton.classList.add("active");
   
   const viewElement = document.getElementById(`doc-${doc.type}`);

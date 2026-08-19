@@ -7,7 +7,7 @@
     <title>HUB | RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
     <script src="auth-entry.js?v=auth-entry-model-v23"></script>
-    <link rel="stylesheet" href="style.css?v=visible-auth-loading-v25" />
+    <link rel="stylesheet" href="style.css?v=visible-auth-loading-v26" />
        <link rel="stylesheet" href="message-size-enhancement.css" />
     <link rel="stylesheet" href="vagas-format.css" />
     <link rel="stylesheet" href="vagas-admin-enhance.css" />
@@ -693,7 +693,7 @@
                   <p class="item-meta">Formularios digitais</p>
                 </div>
               </div>
-              <button class="doc-tab active" data-doc="admissao" type="button">Checklist de Admissao</button>
+              <button class="doc-tab" data-doc="admissao" type="button">Checklist de Admissao</button>
               <button class="doc-tab" data-doc="ausencia" type="button">Entrevista ausencia</button>
               <button class="doc-tab" data-doc="desligamento" type="button">Entrevista desligamento</button>
               <button class="doc-tab" data-doc="beneficios" type="button">Plano saude e odonto</button>
@@ -706,7 +706,11 @@
             </aside>
 
             <div class="doc-content">
-              <section class="doc-view active" id="doc-admissao">
+              <div class="chat-empty-state" id="documentos-empty-state">
+                <img src="assets/logo.svg" alt="HUB" />
+                <strong>HUB</strong>
+              </div>
+              <section class="doc-view" id="doc-admissao">
                 <form class="panel doc-form" data-doc-form="admissao">
                   <div class="panel-header split-header">
                     <div>
@@ -1081,7 +1085,7 @@
                 </form>
               </section>
 
-              <div class="panel">
+              <div class="panel" id="documentos-registros-panel" hidden>
                 <div class="panel-header">
                   <h2>Registros salvos</h2>
                 </div>
@@ -1140,12 +1144,16 @@
                   <p class="item-meta">Advertencias e suspensoes</p>
                 </div>
               </div>
-              <button class="doc-tab disciplinary-tab active" data-disciplinary-doc="advertencia" type="button">Advertencia</button>
+              <button class="doc-tab disciplinary-tab" data-disciplinary-doc="advertencia" type="button">Advertencia</button>
               <button class="doc-tab disciplinary-tab" data-disciplinary-doc="suspensao" type="button">Suspensao</button>
             </aside>
 
             <div class="doc-content">
-              <section class="doc-view disciplinary-view active" id="disciplinary-advertencia">
+              <div class="chat-empty-state" id="disciplinary-empty-state">
+                <img src="assets/logo.svg" alt="HUB" />
+                <strong>HUB</strong>
+              </div>
+              <section class="doc-view disciplinary-view" id="disciplinary-advertencia">
                 <form class="panel doc-form disciplinary-form" data-disciplinary-form="advertencia" autocomplete="off">
                   <div class="panel-header split-header">
                     <div>
@@ -1184,7 +1192,7 @@
                 </form>
               </section>
 
-              <div class="panel">
+              <div class="panel" id="disciplinary-registros-panel" hidden>
                 <div class="panel-header">
                   <h2>Registros salvos</h2>
                 </div>
@@ -1513,7 +1521,7 @@
     </div>
     <script src="hub-postgres-client.js?v=db-load-v3"></script>
     <script src="assets/company-birthdays.js?v=2026-08-05"></script>
-    <script src="script.js?v=wait-for-dashboard-data-v99"></script>
+    <script src="script.js?v=wait-for-dashboard-data-v100"></script>
     <script src="auth-display-guard.js?v=preserve-session-v8"></script>
     <script src="vagas-admin-filters.js?v=vagas-admin-filters-v2"></script>
   </body>

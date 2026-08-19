@@ -41,7 +41,7 @@ function Test-LoginHtml {
   Assert-MatchText $text 'form id="login-form" method="post" action="login.html" autocomplete="off"' "formulario de login nunca envia credenciais por GET"
   Assert-MatchText $text 'name="identificador"[^>]*autocomplete="off"' "campo e-mail/CPF desativa autocomplete"
   Assert-MatchText $text 'name="senha"[^>]*autocomplete="off"' "campo senha desativa autocomplete"
-  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v99' "login possui controlador de autenticacao antes do script principal"
+  Assert-MatchText $text 'hub-postgres-client\.js\?v=db-load-v3[\s\S]*login-submit\.js\?v=no-password-save-v5[\s\S]*script\.js\?v=wait-for-dashboard-data-v100' "login possui controlador de autenticacao antes do script principal"
 }
 
 function Test-ClientSecurityFunctions {
@@ -85,7 +85,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText (Read-ProjectFile "api/auth/heartbeat.js") 'validateAuthSession\(req\)[\s\S]*json\(res, 401[\s\S]*Sessao encerrada por outro login' "heartbeat encerra maquinas com sessao antiga"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v25[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v99[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v26[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v100[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"
@@ -206,7 +206,7 @@ function Test-ClientSecurityFunctions {
   Assert-True -Condition (-not ($script -match 'Comunica..o RH')) -Message "nenhum texto do sistema ainda chama a aba de Comunicacao RH"
   Assert-MatchText $script 'function applyRoleAccess\(\)[\s\S]*const allowedViews = getAllowedViewsForCurrentUser\(\)[\s\S]*const allowedExternalUrls = isCashierUser\(\) \|\| isManagerUser\(\)\s*\?\s*new Set\(\[\.\.\.chamadosUrls, \.\.\.denunciaUrls\]\)' "gerente recebe os formularios publicos de solicitacao de EPI e canal de denuncia"
   Assert-MatchText $script 'function isCeoUser\(\)[\s\S]*return getCurrentUserNormalizedRole\(\) === "ceo";' "cargo CEO e reconhecido"
-  Assert-MatchText $script 'function canCurrentUserAccessEventRecord\(item = \{\}\)[\s\S]*if \(isRhUser\(\) \|\| isCeoUser\(\)\) return true;[\s\S]*if \(!isManagerUser\(\)\) return true;[\s\S]*const author = normalizeLoginName\(item\.createdBy \|\| ""\);[\s\S]*return Boolean\(author && getCurrentEventAccessNames\(\)\.includes\(author\)\);' "gerente so acessa eventos que ele mesmo criou; RH e CEO acessam todos"
+  Assert-MatchText $script 'function canCurrentUserAccessEventRecord\(item = \{\}\)[\s\S]*if \(isRhUser\(\) \|\| isCeoUser\(\) \|\| hasFredericoLevelAccess\(\)\) return true;[\s\S]*if \(!isManagerUser\(\)\) return true;[\s\S]*const author = normalizeLoginName\(item\.createdBy \|\| ""\);[\s\S]*return Boolean\(author && getCurrentEventAccessNames\(\)\.includes\(author\)\);' "gerente so acessa eventos que ele mesmo criou; RH, CEO e acesso nivel Frederico acessam todos"
   Assert-MatchText $script 'function getAllEvents\(\)[\s\S]*isCompanyBirthdayEvent\(item\)[\s\S]*\.filter\(\(item\) => canCurrentUserAccessEventRecord\(item\)\)' "agenda aplica o filtro de acesso por gerente a todos os eventos, incluindo aniversarios"
   Assert-MatchText $script 'async function excluirEvento\(id\)[\s\S]*const evento = findCalendarEventById\(id\);' "exclusao de evento respeita o mesmo escopo de acesso da agenda"
   Assert-MatchText $script 'function openRecordContextMenu\(event, type, id\)[\s\S]*const recordsByType = \{ denuncia: data\.denuncias, chamado: data\.chamados, feedback: data\.feedbacks \};[\s\S]*const item = \(recordsByType\[type\] \|\| \[\]\)\.find\(\(record\) => String\(record\.id\) === String\(id\)\);[\s\S]*if \(!item\) return;' "menu de contexto localiza o registro por tipo antes de decidir a acao"
@@ -214,7 +214,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $script 'if \(isArchivedRecord\(item\)\) \{[\s\S]*const deleteLabels = \{ denuncia: "Excluir den[^"]*", chamado: "Excluir chamado", feedback: "Excluir feedback" \};[\s\S]*data-record-menu-action="delete"[\s\S]*excluirRegistroArquivadoIndividualmente\(collectionsByType\[type\], tablesByType\[type\], id, deleteLabelFrases\[type\] \|\| "este registro"\);' "menu de contexto de registro arquivado oferece excluir em vez de arquivar"
   Assert-MatchText $script 'async function excluirRegistroArquivadoIndividualmente\(collection, table, id, labelFrase\)[\s\S]*validatePassword: async \(password\) => verifyAuthorizationPassword\(password\)[\s\S]*const \{ error \} = await postgresClient\.from\(table\)\.delete\(\)\.eq\("id", id\)' "exclusao individual de arquivado exige senha de autorizacao"
   Assert-MatchText $script 'const recordCard = event\.target\.closest\("\[data-record-context\]"\);[\s\S]*if \(\(type === "denuncia" \|\| type === "chamado" \|\| type === "feedback"\) && recordCard\.dataset\.id\)' "clique direito abre menu de contexto tambem para feedback"
-  Assert-MatchText $script 'function renderFeedbacksSection\(\)[\s\S]*if \(!isFredericoUser\(\)\)[\s\S]*const naoLidos = feedbacks\.filter\(\(item\) => \(item\.status \|\| "Novo"\) === "Novo"\);[\s\S]*const lidos = feedbacks\.filter\(\(item\) => item\.status === "Lido"\);[\s\S]*const arquivados = feedbacks\.filter\(\(item\) => isArchivedRecord\(item\)\);' "aba de feedbacks separa nao lidos, lidos e arquivados"
+  Assert-MatchText $script 'function renderFeedbacksSection\(\)[\s\S]*if \(!hasFredericoLevelAccess\(\)\)[\s\S]*const naoLidos = feedbacks\.filter\(\(item\) => \(item\.status \|\| "Novo"\) === "Novo"\);[\s\S]*const lidos = feedbacks\.filter\(\(item\) => item\.status === "Lido"\);[\s\S]*const arquivados = feedbacks\.filter\(\(item\) => isArchivedRecord\(item\)\);' "aba de feedbacks separa nao lidos, lidos e arquivados"
   Assert-MatchText $script 'function renderFeedbacksSection\(\)[\s\S]*if \(showArchivedFeedbacks\)[\s\S]*renderCards\("feedbacks-nao-lidos", arquivados, \(item\) => cardTemplate\(item, true\)\);[\s\S]*renderCards\("feedbacks-nao-lidos", naoLidos, \(item\) => cardTemplate\(item, false\)\);[\s\S]*renderCards\("feedbacks-lidos", lidos, \(item\) => cardTemplate\(item, false\)\);' "coluna Nao Lidos vira Arquivados no toggle; coluna Lidos fica fixa"
   Assert-MatchText $index 'id="feedbacks-primary-title"[^>]*>[\s\S]*id="feedbacks-nao-lidos"[\s\S]*<h2>Lidos</h2>[\s\S]*id="feedbacks-lidos"' "aba de feedbacks possui colunas Nao Lidos e Lidos, igual denuncias"
   Assert-MatchText $script 'async function lerFeedback\(id\)[\s\S]*if \(\(feedback\.status \|\| "Novo"\) === "Novo"\)[\s\S]*const success = await updateItem\("feedbacks", id, \{ status: "Lido" \}\);' "clicar num feedback nao lido move para Lidos"
@@ -256,7 +256,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $index 'data-view="chamados"[^>]*>[\s\S]*<span>Chamados abertos hoje</span>[\s\S]*<strong id="metric-chamados-hoje">0</strong>' "painel possui cartao Chamados abertos hoje"
   Assert-MatchText $script 'if \(document\.getElementById\("metric-chamados-hoje"\)\)[\s\S]*data\.chamados[\s\S]*\.filter\(\(item\) => item\.status === "Aberto" && isTodayLabel\(item\.createdAt\)\)' "cartao Chamados abertos hoje conta chamados abertos criados no dia"
   Assert-MatchText $script 'function applyDashboardScopeToMetricCards\(\)[\s\S]*if \(card\.querySelector\("#metric-chamados-hoje"\) && !isRhUser\(\)\) allowed = false;' "cartao Chamados abertos hoje e exclusivo de contas com cargo RH"
-  Assert-MatchText $script 'function getAllowedViewsForCurrentUser\(\)[\s\S]*const canSeeDenuncias = isFredericoUser\(\) \|\| \(typeof window\.isArielUser === "function" && window\.isArielUser\(\)\);[\s\S]*if \(!canSeeDenuncias\) allowed\.delete\("denuncias"\);' "aba Denuncias Recebidas fica restrita a Ariel e Frederico"
+  Assert-MatchText $script 'function getAllowedViewsForCurrentUser\(\)[\s\S]*const canSeeDenuncias = hasFredericoLevelAccess\(\) \|\| \(typeof window\.isArielUser === "function" && window\.isArielUser\(\)\);[\s\S]*if \(!canSeeDenuncias\) allowed\.delete\("denuncias"\);' "aba Denuncias Recebidas fica restrita a Ariel e a quem tem acesso nivel Frederico"
   Assert-MatchText $script 'const sortedDashboardItems = dashboardItems[\s\S]*\.filter\(\(item\) => canAccessView\(getDashboardItemView\(item\)\)\)' "acompanhamento do painel respeita o escopo de abas"
   Assert-MatchText $script 'function shouldNotifyRealtimeItem\([\s\S]*if \(!canAccessView\(getViewForCollection\(collection\)\)\) return false;' "notificacao nao vaza conteudo de aba sem acesso"
   Assert-MatchText $script 'function shouldNotifyRealtimeItem\([\s\S]*if \(collection === "chamados" && author && author === currentName\) return false;' "quem abre o chamado nao recebe notificacao do proprio chamado"
@@ -545,15 +545,40 @@ Assert-MatchText $script 'function showVtReportMenu\(\).*data-action="gerar-rela
   Assert-MatchText $script 'class="channel-item \$\{channel\.isGroup \? "is-group" : ""\}' "canais em grupo recebem uma classe visual propria na lista"
   Assert-MatchText $style '\.channel-item\.is-group \{[\s\S]*border-left: 3px solid var\(--teal\);' "canais em grupo tem destaque visual proprio na lista de comunicacao"
   Assert-True -Condition (-not ($script -match 'CASHIER_GENERAL_CHANNEL|geral-caixa|RH \+ Caixa')) -Message "grupo RH + Caixa foi removido do chat"
-  Assert-MatchText $script 'function getActiveDisciplinaryTab\(\)[\s\S]*dataset\.disciplinaryDoc \|\| "advertencia"' "lista de advertencias/suspensoes sabe qual aba esta ativa"
   Assert-MatchText $script 'function getFilteredDisciplinaryRecords\(\)[\s\S]*const tipoFilter = getActiveDisciplinaryTab\(\);[\s\S]*if \(String\(item\.tipo \|\| "advertencia"\)\.toLowerCase\(\) !== tipoFilter\) return false;' "lista de advertencias/suspensoes so mostra registros do tipo da aba ativa"
   Assert-MatchText $script 'document\.querySelectorAll\("\[data-disciplinary-doc\]"\)\.forEach\(\(button\) => \{[\s\S]*renderDisciplinaryRecords\(\);' "trocar de aba advertencia/suspensao atualiza a lista"
   Assert-True -Condition (-not ($index -match 'id="document-filter-type"')) -Message "filtro manual de tipo de documento foi removido do html de Documentos RH"
-  Assert-MatchText $script 'function getActiveDocumentTab\(\)[\s\S]*dataset\.doc \|\| "admissao"' "Documentos RH sabe qual aba de formulario esta ativa"
+  Assert-MatchText $script 'function getActiveDocumentTab\(\)[\s\S]*#documentos \.doc-tab\.active[\s\S]*dataset\.doc \|\| ""' "Documentos RH sabe qual aba de formulario esta ativa, sem cruzar com a aba de advertencias"
   Assert-MatchText $script 'function getDocumentFilterValues\(\)[\s\S]*tipo: getActiveDocumentTab\(\),' "lista de Documentos RH filtra pelo tipo da aba ativa em vez de um dropdown"
   Assert-MatchText $script 'if \(button\.dataset\.doc\) \{[\s\S]*renderDocumentRecords\(\);[\s\S]*updateDocumentFilterClearButton\(\);[\s\S]*\}' "trocar de aba em Documentos RH atualiza a lista de registrados"
   Assert-MatchText $script 'function normalizeEventDateKey\(value\)[\s\S]*match\(/\^\\d\{4\}-\\d\{2\}-\\d\{2\}/\)' "eventos normalizam a data recebida do Postgres para yyyy-mm-dd"
   Assert-MatchText $script 'if \(collection === "eventos"\) \{[\s\S]*data: normalizeEventDateKey\(row\.data\),' "cliente normaliza a data do evento ao mapear linhas do Postgres, corrigindo o calendario"
+
+  Assert-MatchText $script 'function hasFredericoLevelAccess\(\)[\s\S]*return isFredericoUser\(\)[\s\S]*currentUserMatchesName\("jucimara"\)[\s\S]*currentUserMatchesName\("alex", "alexsandro"\)[\s\S]*currentUserMatchesName\("alcione", "jose alcione"\)' "Jucimara, Alex e Alcione tem o mesmo nivel de acesso de Frederico"
+  Assert-MatchText $script 'if \(hasFredericoLevelAccess\(\)\) allowed\.add\("feedbacks"\)' "aba de feedbacks aberta para quem tem acesso nivel Frederico"
+  Assert-MatchText $script 'const canSeeDenuncias = hasFredericoLevelAccess\(\)' "aba de denuncias aberta para quem tem acesso nivel Frederico"
+  Assert-MatchText $script 'function hasFullDocumentAccess\(\)[\s\S]*return isRhUser\(\) \|\| hasFredericoLevelAccess\(\);' "Documentos RH completo para quem tem acesso nivel Frederico"
+  Assert-MatchText $script 'if \(!hasFredericoLevelAccess\(\)\) \{[\s\S]*Acesso restrito' "aba de feedbacks bloqueia quem nao tem acesso nivel Frederico"
+  Assert-MatchText $script 'function canCurrentUserAccessEventRecord\(item = \{\}\)[\s\S]*if \(isRhUser\(\) \|\| isCeoUser\(\) \|\| hasFredericoLevelAccess\(\)\) return true;' "eventos de qualquer gerente ficam visiveis para quem tem acesso nivel Frederico"
+
+  Assert-MatchText $script 'function getUpcomingEvents\(\)[\s\S]*!isBirthdayEvent\(item\) && item\.data && item\.data >= today' "aniversarios nao contam como evento proximo no painel"
+
+  Assert-MatchText $script 'if \(a\.isGroup !== b\.isGroup\) return a\.isGroup \? -1 : 1;' "canais em grupo ficam fixos no topo da lista de comunicacao"
+
+  Assert-True -Condition (-not ($index -match 'id="doc-admissao"[\s\S]{0,400}active')) -Message "nenhuma aba de Documentos RH vem pre-selecionada"
+  Assert-MatchText $index 'id="documentos-empty-state"' "Documentos RH mostra a logo do sistema quando nenhum formulario esta selecionado"
+  Assert-MatchText $index 'id="documentos-registros-panel" hidden' "lista de Registros salvos de Documentos RH comeca escondida sem aba selecionada"
+  Assert-MatchText $script 'const hasActiveTab = Boolean\(getActiveDocumentTab\(\)\);[\s\S]*if \(emptyState\) emptyState\.hidden = hasActiveTab;[\s\S]*if \(registrosPanel\) registrosPanel\.hidden = !hasActiveTab \|\| !records\.length;' "painel de Registros salvos de Documentos RH so aparece com aba ativa e registros"
+
+  Assert-MatchText $index 'id="disciplinary-empty-state"' "Advertencias e Suspensoes mostra a logo do sistema quando nenhum formulario esta selecionado"
+  Assert-MatchText $index 'id="disciplinary-registros-panel" hidden' "lista de Registros salvos de Advertencias comeca escondida sem aba selecionada"
+  Assert-MatchText $script 'function getActiveDisciplinaryTab\(\)[\s\S]*dataset\.disciplinaryDoc \|\| ""' "aba ativa de advertencia/suspensao comeca vazia, sem selecao padrao"
+  Assert-MatchText $script 'const hasActiveTab = Boolean\(getActiveDisciplinaryTab\(\)\);[\s\S]*if \(emptyState\) emptyState\.hidden = hasActiveTab;[\s\S]*if \(registrosPanel\) registrosPanel\.hidden = !hasActiveTab \|\| !records\.length;' "painel de Registros salvos de Advertencias so aparece com aba ativa e registros"
+
+  Assert-MatchText $script 'if \(chatForm\) chatForm\.hidden = true;' "composer do chat some quando nenhum canal esta selecionado"
+  Assert-MatchText $script 'if \(chatForm\) chatForm\.hidden = false;' "composer do chat volta quando um canal e selecionado"
+  Assert-MatchText $script 'chat-empty-state chat-empty-state-lg' "estado vazio do chat usa a variante grande e centralizada"
+  Assert-MatchText $style '\.chat-empty-state-lg \{[\s\S]*\.chat-empty-state-lg img \{[\s\S]*width: 96px;[\s\S]*\.chat-empty-state-lg strong \{[\s\S]*font-size: 30px;' "logo e nome do chat vazio ficam maiores que o padrao"
 }
 
 function Test-PublicSubmitFunction {
