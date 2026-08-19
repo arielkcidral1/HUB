@@ -3800,6 +3800,7 @@ textarea {
 .doc-content {
   display: grid;
   gap: 20px;
+  min-height: 480px;
 }
 
 .doc-view {
