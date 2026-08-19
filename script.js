@@ -4426,6 +4426,7 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
       "eventos",
       "vtRegistros",
       "disciplinaryRecords",
+      "documentos",
       "documentosContratados",
       "candidaturas",
       "atestados",
