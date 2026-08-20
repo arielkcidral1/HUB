@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import { assertDatabaseUrl, getBody, json, pool, SESSION_SECRET } from "./db.js";
+import { assertDatabaseUrl, getBody, json, pool, SESSION_SECRET, safeErrorResponse } from "./db.js";
 import { checkPublicRateLimit } from "./rate-limit.js";
 
 function normalize(value) {
@@ -142,9 +142,11 @@ export default async function handler(req, res) {
       return json(res, 200, { session: session?.user ? session : null });
     }
 
-    // Limite por IP, nao por identificador: impede tentativa de forca bruta
-    // sem bloquear o dono legitimo da conta se alguem errar a senha dele.
-    const allowedAttempt = await checkPublicRateLimit(req, "login_attempt");
+    // Combina IP + identificador tentado: limita forca bruta contra uma
+    // conta especifica sem travar o escritorio inteiro (mesmo IP) so porque
+    // uma pessoa errou a propria senha varias vezes.
+    const attemptedIdentifier = normalize(body.identifier || body.email || body.cpf || body.nome).toLowerCase();
+    const allowedAttempt = await checkPublicRateLimit(req, "login_attempt", attemptedIdentifier);
     if (!allowedAttempt) return json(res, 429, { error: "Muitas tentativas de login. Aguarde alguns minutos." });
 
     const user = await findUser(body.identifier || body.email || body.cpf || body.nome);
@@ -172,6 +174,6 @@ export default async function handler(req, res) {
       session,
     });
   } catch (error) {
-    return json(res, error.statusCode || 500, { error: error.message || "Erro de autenticacao." });
+    return safeErrorResponse(res, error, "Erro de autenticacao.");
   }
 }

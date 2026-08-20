@@ -1,5 +1,6 @@
-import { assertDatabaseUrl, json, pool, quoteIdent, stripSensitiveColumns } from "./db.js";
+import { assertDatabaseUrl, json, pool, quoteIdent, stripSensitiveColumns, safeErrorResponse } from "./db.js";
 import { validateAuthSession } from "./auth.js";
+import { canReadTable, getForcedRowFilter } from "./authorize.js";
 
 const BOOTSTRAP_TABLES = {
   usuarios: "hub_users",
@@ -19,14 +20,16 @@ const BOOTSTRAP_TABLES = {
   feedbacks: "hub_feedbacks",
 };
 
-async function selectRows(client, table) {
+async function selectRows(client, table, forcedFilter) {
   const quotedTable = quoteIdent(table);
+  const where = forcedFilter ? ` where ${quoteIdent(forcedFilter.column)} = $1` : "";
+  const params = forcedFilter ? [forcedFilter.value] : [];
   try {
-    const result = await client.query(`select * from public.${quotedTable} order by "created_at" desc`);
+    const result = await client.query(`select * from public.${quotedTable}${where} order by "created_at" desc`, params);
     return result.rows;
   } catch (error) {
     if (error?.code !== "42703") throw error;
-    const result = await client.query(`select * from public.${quotedTable}`);
+    const result = await client.query(`select * from public.${quotedTable}${where}`, params);
     return result.rows;
   }
 }
@@ -48,17 +51,25 @@ export default async function handler(req, res) {
     const errors = {};
 
     await Promise.all(Object.entries(BOOTSTRAP_TABLES).map(async ([collection, table]) => {
+      // Mesmo escopo por cargo do /api/records: Gerente/Recepcionista e
+      // afins nao recebem no bootstrap uma tabela que a interface deles
+      // nem mostra (denuncias, advertencias, atestados, etc.).
+      if (!canReadTable(session, table)) {
+        data[collection] = [];
+        return;
+      }
       try {
-        data[collection] = stripSensitiveColumns(table, await selectRows(client, table));
+        data[collection] = stripSensitiveColumns(table, await selectRows(client, table, getForcedRowFilter(session, table)));
       } catch (error) {
         data[collection] = [];
-        errors[collection] = error.message || "Erro ao carregar tabela.";
+        console.error(`Erro ao carregar ${table} no bootstrap:`, error);
+        errors[collection] = "Erro ao carregar tabela.";
       }
     }));
 
     return json(res, 200, { data, errors });
   } catch (error) {
-    return json(res, error.statusCode || 500, { error: error.message || "Erro ao carregar dados iniciais." });
+    return safeErrorResponse(res, error, "Erro ao carregar dados iniciais.");
   } finally {
     client?.release();
   }

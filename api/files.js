@@ -1,11 +1,17 @@
-import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
+import { assertDatabaseUrl, getBody, json, pool, safeErrorResponse } from "./db.js";
 import { validateAuthSession } from "./auth.js";
+import { checkPublicRateLimit } from "./rate-limit.js";
 
 // A Vercel enforca um teto real de ~4.5mb por requisicao antes do handler
 // rodar, e isso nao e configuravel por codigo (sizeLimit so ajusta o parser do
 // framework). Cada chamada aqui deve carregar 1 arquivo de no maximo ~3mb
 // cru para caber com folga depois do base64.
 export const config = { api: { bodyParser: { sizeLimit: "15mb" } } };
+
+// Prefixos que os formularios publicos (sem login) usam para enviar arquivo
+// antes do registro (curriculo, atestado, documento de contratado). Qualquer
+// outro caminho (avatares, anexos de chat, etc.) exige sessao.
+const PUBLIC_UPLOAD_PREFIXES = ["candidaturas/", "atestados/", "contratados/"];
 
 function safeName(name) {
   return String(name || "arquivo").replace(/[^a-z0-9_.-]/gi, "-");
@@ -16,6 +22,10 @@ function isValidStoragePath(path) {
   if (!value || value.length > 512) return false;
   if (/^(data:|https?:)/i.test(value)) return false;
   return /^[a-z0-9][a-z0-9_.\/-]*$/i.test(value);
+}
+
+function isPublicUploadPath(path) {
+  return PUBLIC_UPLOAD_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
 async function ensureFilesTable() {
@@ -78,16 +88,40 @@ export default async function handler(req, res) {
     if (!path || !dataUrl) return json(res, 400, { error: "Arquivo invalido." });
     if (!isValidStoragePath(path)) return json(res, 400, { error: "Caminho do arquivo invalido." });
 
-    await pool.query(
-      `insert into public.hub_files (path, name, size, type, data_url)
-       values ($1, $2, $3, $4, $5)
-       on conflict (path) do update set
+    const session = await validateAuthSession(req);
+    const isAuthenticated = Boolean(session?.user?.id);
+
+    if (!isAuthenticated) {
+      // Sem sessao, so aceita path dos formularios publicos conhecidos -
+      // avatar/anexo de chat/etc exigem login.
+      if (!isPublicUploadPath(path)) return json(res, 401, { error: "Sessao invalida ou expirada." });
+      const allowed = await checkPublicRateLimit(req, "file_upload");
+      if (!allowed) return json(res, 429, { error: "Muitos envios em pouco tempo. Tente novamente mais tarde." });
+    }
+
+    // Upload publico nunca sobrescreve um arquivo ja existente (path tem
+    // UUID, entao colisao real e praticamente impossivel - se aconteceu, e
+    // sinal de tentativa de sobrescrever algo). Sessao autenticada pode
+    // substituir o proprio arquivo (ex: trocar avatar).
+    const conflictClause = isAuthenticated
+      ? `on conflict (path) do update set
          name = excluded.name,
          size = excluded.size,
          type = excluded.type,
-         data_url = excluded.data_url`,
+         data_url = excluded.data_url`
+      : "on conflict (path) do nothing";
+
+    const result = await pool.query(
+      `insert into public.hub_files (path, name, size, type, data_url)
+       values ($1, $2, $3, $4, $5)
+       ${conflictClause}
+       returning path`,
       [path, name, body.size || 0, body.type || "application/octet-stream", dataUrl]
     );
+
+    if (!isAuthenticated && !result.rows.length) {
+      return json(res, 409, { error: "Ja existe um arquivo nesse caminho." });
+    }
 
     return json(res, 200, {
       path,
@@ -96,6 +130,6 @@ export default async function handler(req, res) {
       type: body.type || "application/octet-stream",
     });
   } catch (error) {
-    return json(res, error.statusCode || 500, { error: error.message || "Erro ao processar arquivo." });
+    return safeErrorResponse(res, error, "Erro ao processar arquivo.");
   }
 }

@@ -1,4 +1,4 @@
-import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
+import { assertDatabaseUrl, getBody, json, pool, timingSafeStringEqual, safeErrorResponse } from "./db.js";
 import { checkPublicRateLimit } from "./rate-limit.js";
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024;
@@ -23,7 +23,7 @@ function safeFileName(name) {
 
 function isValidPayload(payload) {
   if (!Object.prototype.hasOwnProperty.call(ACCESS_PASSWORDS, payload.empresa)) return "Empresa invalida.";
-  if (ACCESS_PASSWORDS[payload.empresa] !== payload.accessPassword) return "Senha de acesso invalida.";
+  if (!timingSafeStringEqual(ACCESS_PASSWORDS[payload.empresa], payload.accessPassword)) return "Senha de acesso invalida.";
   if (!/^documentos-(fredy|besten|achei|trinca)\.html$/.test(payload.origemHtml)) return "Origem invalida.";
   if (payload.nome.length < 3 || payload.nome.length > 160) return "Nome invalido.";
   if (!/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(payload.cpf)) return "CPF invalido.";
@@ -108,9 +108,9 @@ export default async function handler(req, res) {
 
     return json(res, 200, { data: result.rows[0] || null });
   } catch (error) {
-    const message = error?.code === "23505"
-      ? "CPF ja possui envio de documentos registrado."
-      : error?.message || "Nao foi possivel salvar documentos.";
-    return json(res, error?.statusCode || 500, { error: message, code: error?.code });
+    if (error?.code === "23505") {
+      return json(res, 409, { error: "CPF ja possui envio de documentos registrado.", code: error.code });
+    }
+    return safeErrorResponse(res, error, "Nao foi possivel salvar documentos.");
   }
 }

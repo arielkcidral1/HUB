@@ -218,3 +218,28 @@ export function getBody(req) {
 export function quoteIdent(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
 }
+
+// So devolve error.message pro cliente quando fomos NOS que jogamos o erro
+// de proposito (com statusCode, ex: "Curriculo invalido."). Um erro sem
+// statusCode veio direto do pg ou de uma excecao inesperada - devolver a
+// mensagem crua podia vazar nome de coluna/tabela/constraint do banco.
+export function safeErrorResponse(res, error, fallbackMessage = "Erro no servidor.") {
+  if (error?.statusCode) {
+    return json(res, error.statusCode, { error: error.message || fallbackMessage, code: error.code });
+  }
+  console.error(fallbackMessage, error);
+  return json(res, 500, { error: fallbackMessage });
+}
+
+// Comparacao de string em tempo constante, para senhas/segredos curtos onde
+// um "!==" direto poderia (em teoria) vazar informacao pelo tempo de resposta.
+export function timingSafeStringEqual(a, b) {
+  const bufferA = Buffer.from(String(a ?? ""));
+  const bufferB = Buffer.from(String(b ?? ""));
+  if (bufferA.length !== bufferB.length) {
+    // Ainda compara contra algo do mesmo tamanho, pra nao vazar o tamanho certo por atalho.
+    crypto.timingSafeEqual(bufferA, bufferA);
+    return false;
+  }
+  return crypto.timingSafeEqual(bufferA, bufferB);
+}

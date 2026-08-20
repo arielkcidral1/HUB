@@ -14,8 +14,11 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 - **Autenticacao**: login proprio em `api/auth.js`. Senha comparada por hash
   bcrypt (com fallback a sha256/texto puro para contas antigas ainda nao
   migradas) contra `hub_users.password_hash`. A sessao fica num cookie
-  `HttpOnly` assinado (`hub_auth_session`) com `session_version`, que e
-  incrementado no banco a cada login para invalidar sessoes antigas.
+  `HttpOnly` **assinado com HMAC** (`hub_auth_session`, ver `SESSION_SECRET`
+  em `api/db.js`) com `session_version`, que e incrementado no banco a cada
+  login para invalidar sessoes antigas. Sem assinatura valida, o cookie e
+  rejeitado — nao da mais pra forjar sessao de outra conta so sabendo o id
+  dela.
 - **Acesso ao banco**: `api/db.js` mantem um pool `pg` unico, conectado
   direto via `DATABASE_URL` (ou `AZURE_POSTGRES_URL`/`POSTGRES_URL`). Essa
   conexao nao carrega JWT nem `auth.jwt()`, entao as policies de RLS
@@ -23,50 +26,74 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
   do Supabase) nao sao avaliadas nessa conexao; elas ficam mantidas so pelos
   testes automatizados (`tests/run-unit-tests.ps1`), nao como controle de
   acesso real no banco de producao.
-- **Controle de acesso real**: hoje e feito em duas camadas de aplicacao, nao
-  no banco:
-  1. `api/db.js` mantem um allowlist (`TABLES`) das tabelas `hub_*` que
-     `/api/records` pode tocar.
-  2. `script.js` decide o que cada cargo ve/edita na UI (`isRhUser`,
-     `isManagerUser`, `canAccessView`, etc.). Isso e controle de interface,
-     nao uma barreira de seguranca: um cliente que chame `/api/records`
-     direto ainda passa pelo allowlist de tabelas, mas nao ha checagem de
-     cargo/dono do registro no servidor para update/delete (ver aviso de
-     IDOR nos comentarios de `deleteItem`/`updateItem` em `script.js`).
-- **Arquivos/anexos**: nao ha mais bucket de Storage. Uploads (curriculos,
-  anexos de chat, documentos de contratados, avatares) sao gravados como
-  `data_url` (base64) na tabela `public.hub_files`, criada sob demanda por
-  `api/files.js`. O `GET /api/files?path=...` **nao exige sessao**; qualquer
-  pessoa que souber ou adivinhar o `path` consegue baixar o arquivo. A
-  privacidade hoje depende so do path nao ser previsivel/divulgado.
-- **Formularios publicos** (`denuncias`, `chamados`, `candidaturas`,
-  documentos de contratados): passam por `/api/records.js` e
-  `/api/contractor-documents.js`, sem Edge Function. O campo Turnstile
-  continua no front (`turnstileSiteKey` em `script.js`), mas hoje esta vazio
-  (nao configurado) e o token, quando enviado, **nao e validado em nenhum
-  lugar do servidor** — a validacao server-side existia so na Edge Function
-  antiga, que foi removida.
+- **Controle de acesso real**: `/api/records` e `/api/bootstrap` exigem
+  sessao valida para toda operacao, com poucas excecoes explicitas (leitura
+  publica de vagas abertas; insercao publica sanitizada dos formularios do
+  site — ver `PUBLIC_READ_TABLES`/`PUBLIC_INSERT_TABLES` em `api/db.js`).
+  Alem disso, `api/authorize.js` aplica o mesmo escopo por cargo que a UI ja
+  usa (`getAllowedViewsForCurrentUser` em `script.js`): Gerente e
+  Recepcionista so tocam um punhado de tabelas (chat, quadros, calendario,
+  conta, e Documentos de Uso Geral no caso do Gerente); `hub_denuncias` e
+  `hub_feedbacks` ficam restritos a quem tem "nivel Frederico"; qualquer
+  conta so pode editar os proprios campos seguros (`nome`, `foto_perfil`,
+  `configuracoes`) em `hub_users` — trocar o proprio `cargo` ou editar outra
+  conta exige RH. Gerente tambem so le/edita/apaga os documentos que ele
+  mesmo criou em `hub_documentos` (`getForcedRowFilter`), tanto via
+  `/api/records` quanto no `/api/bootstrap`. `password_hash` nunca sai de
+  nenhuma resposta dessas APIs (`stripSensitiveColumns`).
+- **Rate limit**: `api/rate-limit.js` limita por IP (hash, nunca guarda o IP
+  puro) os formularios publicos, o upload de arquivo publico, o login e a
+  senha de acao compartilhada (`api/malote-delete.js`, usada por varias
+  exclusoes do app). O IP e lido do ultimo valor da cadeia
+  `x-forwarded-for` (o que a borda da Vercel acrescenta, mais dificil de
+  forjar do que o primeiro). Login combina IP + identificador tentado, pra
+  nao travar um escritorio inteiro por um erro de senha de uma pessoa so.
+- **Arquivos/anexos**: nao ha bucket de Storage; uploads (curriculos, atestados,
+  documentos de contratados, anexos de chat, avatares) ficam como `data_url`
+  (base64) em `public.hub_files`, criada sob demanda por `api/files.js`.
+  `GET /api/files` exige sessao valida. `POST` (upload) sem sessao so aceita
+  os prefixos usados pelos formularios publicos (`candidaturas/`,
+  `atestados/`, `contratados/`) e nunca sobrescreve um arquivo ja existente
+  nesse caminho; upload autenticado continua podendo substituir o proprio
+  arquivo (ex: trocar avatar).
+- **Mensagens de erro**: `safeErrorResponse` (em `api/db.js`) so deixa passar
+  pro cliente uma mensagem de erro quando o proprio codigo jogou o erro de
+  proposito (com `statusCode`); qualquer excecao inesperada do Postgres
+  volta como mensagem generica, evitando vazar nome de coluna/tabela/
+  constraint. Comparacoes de senha curta (senha de acao dos contratados) usam
+  `timingSafeStringEqual`.
+- **Formularios publicos** (`denuncias`, `feedbacks`, `chamados`,
+  `candidaturas`, `atestados`, documentos de contratados): passam por
+  `/api/records.js`, `/api/files.js` e `/api/contractor-documents.js`, sem
+  Edge Function. O campo Turnstile continua no front (`turnstileSiteKey` em
+  `script.js`), mas hoje esta vazio (nao configurado) e o token, quando
+  enviado, **nao e validado em nenhum lugar do servidor** — a validacao
+  server-side existia so na Edge Function antiga, que foi removida; o rate
+  limit por IP cobre a lacuna de spam/flood enquanto isso.
+- Senhas de acesso do formulario de contratados vem de variavel de ambiente
+  (`CONTRACTOR_ACCESS_PASSWORD_*`), com fallback ao valor historico se a
+  variavel nao estiver configurada.
 - `.env`, `*.env` e arquivos locais sensiveis estao no `.gitignore`.
 - Historico antigo do Git foi reescrito uma vez (era ainda) para reduzir
   risco de senhas antigas em commits.
 
 ## Pendencias conhecidas
 
-- **Sem rate limit server-side**: os formularios publicos (denuncias,
-  chamados, candidaturas, documentos de contratados) nao tem nenhum limite
-  de envios por IP/tempo no backend atual. O rate limit descrito no
-  historico abaixo era da Edge Function do Supabase e nao existe mais.
 - **Turnstile decorativo**: `turnstileSiteKey` esta vazio e nao ha
   verificacao server-side do token, mesmo se alguem configurar a site key no
-  front sem tambem implementar a validacao em `api/`.
-- **`/api/files` sem controle de acesso**: o download de qualquer arquivo
-  gravado em `hub_files` (curriculos, documentos de contratados, anexos de
-  chat, avatares) nao exige login; a unica protecao e o path ser dificil de
-  adivinhar. Vale avaliar exigir sessao valida nesse endpoint.
+  front sem tambem implementar a validacao em `api/`. O rate limit por IP
+  reduz o risco, mas nao substitui um CAPTCHA de verdade.
 - **RLS de `postgres-rls-hub.sql` nao e enforcada em producao**: as policies
   continuam no repositorio e nos testes, mas a conexao real do app (pool
   `pg` direto) nao passa por elas. O controle de acesso efetivo esta nas
-  checagens de `api/db.js`/`script.js` descritas acima.
+  checagens de `api/authorize.js`/`api/db.js` descritas acima.
+- **Escopo por linha cobre so `hub_documentos`**: outras tabelas com
+  "dono" implicito (ex: quem criou um card de quadro) ainda nao tem
+  restricao de proprietario no servidor, so a checagem por tabela/cargo.
+  Baixo risco hoje porque as contas com acesso amplo a essas tabelas ja sao
+  as mesmas que a UI deixa mexer em qualquer registro.
+- **Senhas de usuario fracas em algumas contas**: nao ha validacao de forca
+  minima de senha nem obrigatoriedade de troca periodica.
 - Preencher `email` em todos os perfis de `hub_users` continua recomendado
   para manter os relatorios e o vinculo de conta consistentes.
 

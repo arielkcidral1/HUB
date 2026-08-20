@@ -1,4 +1,4 @@
-import { assertDatabaseUrl, getBody, json, pool } from "../db.js";
+import { assertDatabaseUrl, getBody, json, pool, safeErrorResponse } from "../db.js";
 import { validateAuthSession } from "../auth.js";
 
 function normalize(value) {
@@ -55,6 +55,6 @@ export default async function handler(req, res) {
 
     return json(res, 200, { data: result.rows[0] || null });
   } catch (error) {
-    return json(res, error.statusCode || 500, { error: error.message || "Erro ao atualizar presenca." });
+    return safeErrorResponse(res, error, "Erro ao atualizar presenca.");
   }
 }
