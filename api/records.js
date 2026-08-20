@@ -1,4 +1,5 @@
-import { assertDatabaseUrl, assertTable, getBody, json, pool, quoteIdent } from "./db.js";
+import { assertDatabaseUrl, assertTable, getBody, json, pool, quoteIdent, PUBLIC_READ_TABLES, PUBLIC_INSERT_TABLES, stripSensitiveColumns } from "./db.js";
+import { validateAuthSession } from "./auth.js";
 
 const OPERATORS = {
   eq: "=",
@@ -91,6 +92,10 @@ function buildLimit(limit) {
   return Number.isInteger(value) && value > 0 ? ` limit ${value}` : "";
 }
 
+function unauthorized(res) {
+  return json(res, 401, { error: "Sessao invalida ou expirada." });
+}
+
 export default async function handler(req, res) {
   try {
     assertDatabaseUrl();
@@ -98,20 +103,38 @@ export default async function handler(req, res) {
     const table = url.searchParams.get("table") || "";
     assertTable(table);
 
+    // Toda tabela exige sessao valida, exceto os poucos casos abaixo
+    // (leitura publica de vagas abertas e insercao publica dos formularios do
+    // site). Sem isso, qualquer pessoa sem login conseguia ler/gravar/apagar
+    // qualquer tabela da allowlist so conhecendo o nome dela.
+    const session = await validateAuthSession(req);
+    const isAuthenticated = Boolean(session?.user?.id);
+
     if (req.method === "GET") {
+      if (!isAuthenticated && !PUBLIC_READ_TABLES.has(table)) return unauthorized(res);
+
       const filters = JSON.parse(url.searchParams.get("filters") || "[]");
       const order = JSON.parse(url.searchParams.get("order") || "[]");
       const select = normalizeColumns(url.searchParams.get("select") || "*");
-      const where = buildWhere(filters);
+      // Visitante sem sessao so ve vagas abertas, mesmo que o filtro nao peca isso.
+      const effectiveFilters = !isAuthenticated && table === "hub_vagas"
+        ? [...filters, { column: "status", op: "eq", value: "Aberta" }]
+        : filters;
+      const where = buildWhere(effectiveFilters);
       const sql = `select ${select} from public.${quoteIdent(table)}${where.sql}${buildOrder(order)}${buildLimit(url.searchParams.get("limit"))}`;
       const result = await pool.query(sql, where.values);
-      return json(res, 200, { data: result.rows });
+      return json(res, 200, { data: stripSensitiveColumns(table, result.rows) });
     }
 
     const body = await getBody(req);
 
     if (req.method === "POST") {
-      const rows = Array.isArray(body.rows) ? body.rows : [body.row || body];
+      let rows = Array.isArray(body.rows) ? body.rows : [body.row || body];
+      if (!isAuthenticated) {
+        const sanitize = PUBLIC_INSERT_TABLES.get(table);
+        if (!sanitize) return unauthorized(res);
+        rows = rows.map(sanitize);
+      }
       // Recibos de leitura sao reenviados a cada sessao; sem isso a primeira
       // linha repetida viola a chave primaria e derruba o lote inteiro.
       const ignoreConflict = url.searchParams.get("on_conflict") === "ignore";
@@ -126,8 +149,12 @@ export default async function handler(req, res) {
         const result = await pool.query(sql, values);
         if (result.rows[0]) inserted.push(result.rows[0]);
       }
-      return json(res, 200, { data: inserted });
+      return json(res, 200, { data: stripSensitiveColumns(table, inserted) });
     }
+
+    // PATCH e DELETE nunca ficam publicos: nenhum fluxo do site sem login
+    // precisa alterar ou apagar registros.
+    if (!isAuthenticated) return unauthorized(res);
 
     if (req.method === "PATCH") {
       const filters = Array.isArray(body.filters) ? body.filters : [];
@@ -139,7 +166,7 @@ export default async function handler(req, res) {
       const shiftedWhereSql = where.sql.replace(/\$(\d+)/g, (_, number) => `$${Number(number) + values.length}`);
       const sql = `update public.${quoteIdent(table)} set ${sets.join(", ")}${shiftedWhereSql} returning *`;
       const result = await pool.query(sql, values.concat(where.values));
-      return json(res, 200, { data: result.rows });
+      return json(res, 200, { data: stripSensitiveColumns(table, result.rows) });
     }
 
     if (req.method === "DELETE") {

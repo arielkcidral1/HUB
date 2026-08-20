@@ -1,4 +1,5 @@
-import { assertDatabaseUrl, json, pool, quoteIdent } from "./db.js";
+import { assertDatabaseUrl, json, pool, quoteIdent, stripSensitiveColumns } from "./db.js";
+import { validateAuthSession } from "./auth.js";
 
 const BOOTSTRAP_TABLES = {
   usuarios: "hub_users",
@@ -36,13 +37,19 @@ export default async function handler(req, res) {
   let client;
   try {
     assertDatabaseUrl();
+    // O bootstrap devolve o conteudo de praticamente todas as tabelas do
+    // HUB de uma vez; nenhuma pagina publica precisa dele, entao exige
+    // sessao valida.
+    const session = await validateAuthSession(req);
+    if (!session?.user?.id) return json(res, 401, { error: "Sessao invalida ou expirada." });
+
     client = await pool.connect();
     const data = {};
     const errors = {};
 
     await Promise.all(Object.entries(BOOTSTRAP_TABLES).map(async ([collection, table]) => {
       try {
-        data[collection] = await selectRows(client, table);
+        data[collection] = stripSensitiveColumns(table, await selectRows(client, table));
       } catch (error) {
         data[collection] = [];
         errors[collection] = error.message || "Erro ao carregar tabela.";

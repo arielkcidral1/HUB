@@ -1,4 +1,5 @@
 import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
+import { validateAuthSession } from "./auth.js";
 
 // A Vercel enforca um teto real de ~4.5mb por requisicao antes do handler
 // rodar, e isso nao e configuravel por codigo (sizeLimit so ajusta o parser do
@@ -43,6 +44,12 @@ export default async function handler(req, res) {
     await ensureFilesTable();
 
     if (req.method === "GET") {
+      // Currículos, atestados, documentos de contratados e anexos de chat
+      // sao lidos so pela area interna autenticada; nenhum fluxo publico
+      // precisa baixar um arquivo de volta.
+      const session = await validateAuthSession(req);
+      if (!session?.user?.id) return json(res, 401, { error: "Sessao invalida ou expirada." });
+
       const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
       const path = url.searchParams.get("path") || "";
       if (!path) return json(res, 400, { error: "Arquivo nao informado." });

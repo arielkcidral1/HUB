@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -11,6 +12,12 @@ const DATABASE_URL = firstValidDatabaseUrl(
   process.env.POSTGRES_URL,
   process.env.DATABASE_URL
 );
+
+// Preferir SESSION_SECRET quando configurado. Sem ele, deriva uma chave
+// estavel a partir da DATABASE_URL (ja secreta e unica por ambiente) para o
+// cookie de sessao continuar assinado mesmo sem uma variavel nova no deploy.
+export const SESSION_SECRET = process.env.SESSION_SECRET
+  || (DATABASE_URL ? crypto.createHash("sha256").update(`hub-session:${DATABASE_URL}`).digest("hex") : "");
 
 function getPoolMax() {
   const value = Number(process.env.POSTGRES_POOL_MAX || 1);
@@ -63,6 +70,99 @@ export function assertTable(table) {
     error.statusCode = 400;
     throw error;
   }
+}
+
+// Tabelas que um visitante sem sessao pode LER via /api/records (GET).
+// So a vaga em si; curriculos, denuncias etc. nunca ficam legiveis sem login.
+export const PUBLIC_READ_TABLES = new Set(["hub_vagas"]);
+
+function text(value) {
+  return String(value ?? "").trim();
+}
+
+// Caminho de arquivo ja enviado antes para /api/files (ex: candidaturas/<uuid>/nome.pdf).
+function isSafeFilePath(value) {
+  const path = text(value);
+  return Boolean(path) && path.length <= 512 && /^[a-z0-9][a-z0-9_./-]*$/i.test(path) && !path.includes("..");
+}
+
+// Tabelas que um visitante sem sessao pode INSERIR via /api/records (POST).
+// Cada funcao recebe a linha crua enviada pelo cliente e devolve so os
+// campos permitidos, com valores sensiveis (status, created_by) fixados no
+// servidor - o cliente nunca decide isso sozinho.
+export const PUBLIC_INSERT_TABLES = new Map([
+  ["hub_denuncias", (row) => ({
+    identificacao: "Anonimo",
+    categoria: "Denuncia anonima",
+    descricao: text(row.descricao).slice(0, 4000),
+    status: "Aberta",
+  })],
+  ["hub_feedbacks", (row) => ({
+    tipo: text(row.tipo) || "Sugestao",
+    mensagem: text(row.mensagem).slice(0, 4000),
+    autor_nome: text(row.autor_nome).slice(0, 160) || null,
+    autor_email: text(row.autor_email).slice(0, 160) || null,
+    status: "Novo",
+    created_by: text(row.autor_nome).slice(0, 160) || "Formulario publico",
+  })],
+  ["hub_chamados", (row) => ({
+    solicitante: text(row.solicitante).slice(0, 160),
+    unidade: text(row.unidade).slice(0, 120),
+    setor: text(row.setor).slice(0, 120),
+    epis: text(row.epis).slice(0, 4000),
+    observacoes: text(row.observacoes).slice(0, 4000),
+    status: "Aberto",
+    created_by: "Publico",
+  })],
+  ["hub_candidaturas", (row) => {
+    if (!isSafeFilePath(row.curriculo_url)) {
+      const error = new Error("Curriculo invalido.");
+      error.statusCode = 400;
+      throw error;
+    }
+    return {
+      vaga_id: text(row.vaga_id),
+      nome: text(row.nome).slice(0, 160),
+      telefone: text(row.telefone).slice(0, 30),
+      cpf: text(row.cpf).slice(0, 20),
+      curriculo_url: text(row.curriculo_url),
+      created_by: "Publico",
+    };
+  }],
+  ["hub_atestados", (row) => {
+    if (!isSafeFilePath(row.arquivo_url)) {
+      const error = new Error("Arquivo invalido.");
+      error.statusCode = 400;
+      throw error;
+    }
+    return {
+      nome: text(row.nome).slice(0, 160),
+      cpf: text(row.cpf).slice(0, 20),
+      telefone: text(row.telefone).slice(0, 30),
+      unidade: text(row.unidade).slice(0, 120),
+      arquivo_nome: text(row.arquivo_nome).slice(0, 200) || "Atestado",
+      arquivo_tamanho: Number(row.arquivo_tamanho) || 0,
+      arquivo_tipo: text(row.arquivo_tipo).slice(0, 120) || "application/octet-stream",
+      arquivo_url: text(row.arquivo_url),
+      status: "Recebido",
+      created_by: "Publico",
+    };
+  }],
+]);
+
+// Colunas que nunca devem sair de /api/records, autenticado ou nao.
+export const SENSITIVE_COLUMNS = new Map([
+  ["hub_users", new Set(["password_hash"])],
+]);
+
+export function stripSensitiveColumns(table, rows) {
+  const hidden = SENSITIVE_COLUMNS.get(table);
+  if (!hidden || !hidden.size) return rows;
+  return rows.map((row) => {
+    const clean = { ...row };
+    hidden.forEach((column) => delete clean[column]);
+    return clean;
+  });
 }
 
 export function json(res, status, body) {

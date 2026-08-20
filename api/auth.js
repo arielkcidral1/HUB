@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
+import { assertDatabaseUrl, getBody, json, pool, SESSION_SECRET } from "./db.js";
 
 function normalize(value) {
   return String(value || "").trim();
@@ -51,13 +51,33 @@ function publicUser(row) {
   };
 }
 
+// O cookie carrega o payload em base64 + uma assinatura HMAC, para que um
+// cliente nao possa forjar sessao (ex: id/cargo/session_version de outro
+// usuario) sem conhecer o SESSION_SECRET do servidor.
+function signPayload(payloadB64) {
+  return crypto.createHmac("sha256", SESSION_SECRET).update(payloadB64).digest("base64url");
+}
+
 function encodeCookiePayload(value) {
-  return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+  const payloadB64 = Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+  return `${payloadB64}.${signPayload(payloadB64)}`;
 }
 
 function decodeCookiePayload(value) {
+  if (!SESSION_SECRET) return null;
+  const raw = String(value || "");
+  const separatorIndex = raw.lastIndexOf(".");
+  if (separatorIndex < 1) return null;
+  const payloadB64 = raw.slice(0, separatorIndex);
+  const signature = raw.slice(separatorIndex + 1);
+  const expectedSignature = signPayload(payloadB64);
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+  if (signatureBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
+    return null;
+  }
   try {
-    return JSON.parse(Buffer.from(String(value || ""), "base64url").toString("utf8"));
+    return JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
   } catch {
     return null;
   }
