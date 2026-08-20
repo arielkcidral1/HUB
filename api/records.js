@@ -1,5 +1,6 @@
 import { assertDatabaseUrl, assertTable, getBody, json, pool, quoteIdent, PUBLIC_READ_TABLES, PUBLIC_INSERT_TABLES, stripSensitiveColumns } from "./db.js";
 import { validateAuthSession } from "./auth.js";
+import { checkPublicRateLimit } from "./rate-limit.js";
 
 const OPERATORS = {
   eq: "=",
@@ -133,6 +134,8 @@ export default async function handler(req, res) {
       if (!isAuthenticated) {
         const sanitize = PUBLIC_INSERT_TABLES.get(table);
         if (!sanitize) return unauthorized(res);
+        const allowed = await checkPublicRateLimit(req, table);
+        if (!allowed) return json(res, 429, { error: "Muitos envios em pouco tempo. Tente novamente mais tarde." });
         rows = rows.map(sanitize);
       }
       // Recibos de leitura sao reenviados a cada sessao; sem isso a primeira

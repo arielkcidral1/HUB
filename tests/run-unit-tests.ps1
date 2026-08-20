@@ -103,6 +103,17 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $bootstrapApi 'const session = await validateAuthSession\(req\)[\s\S]*if \(!session\?\.user\?\.id\) return json\(res, 401' "bootstrap exige sessao valida"
   Assert-MatchText $bootstrapApi 'stripSensitiveColumns\(table, await selectRows\(client, table\)\)' "bootstrap remove colunas sensiveis antes de responder"
   Assert-MatchText $filesApi 'if \(req\.method === "GET"\) \{[\s\S]*const session = await validateAuthSession\(req\)[\s\S]*if \(!session\?\.user\?\.id\) return json\(res, 401' "download de arquivo exige sessao valida"
+
+  $rateLimitApi = Read-ProjectFile "api/rate-limit.js"
+  $contractorApi2 = Read-ProjectFile "api/contractor-documents.js"
+
+  Assert-MatchText $rateLimitApi 'const LIMITS = \{[\s\S]*hub_denuncias[\s\S]*hub_feedbacks[\s\S]*hub_chamados[\s\S]*hub_candidaturas[\s\S]*hub_atestados[\s\S]*contractor_documents[\s\S]*login_attempt' "rate limit cobre todos os formularios publicos e o login"
+  Assert-MatchText $rateLimitApi 'export async function checkPublicRateLimit\(req, scope, identifierOverride\)[\s\S]*count >= rule\.max\) return false' "rate limit bloqueia apos exceder o limite da janela"
+  Assert-MatchText $rateLimitApi 'function hashClientKey\(scope, identifier\)[\s\S]*crypto\.createHash\("sha256"\)\.update\(`\$\{SESSION_SECRET\}:\$\{scope\}:\$\{identifier\}`\)' "rate limit guarda so o hash do IP, nunca o IP puro"
+  Assert-MatchText $recordsApi 'const allowed = await checkPublicRateLimit\(req, table\)[\s\S]*if \(!allowed\) return json\(res, 429' "insercao publica em /api/records passa pelo rate limit"
+  Assert-MatchText $contractorApi2 'const allowed = await checkPublicRateLimit\(req, "contractor_documents"\)[\s\S]*if \(!allowed\) return json\(res, 429' "upload de documentos de contratado passa pelo rate limit"
+  Assert-MatchText $authApi 'const allowedAttempt = await checkPublicRateLimit\(req, "login_attempt"\)[\s\S]*if \(!allowedAttempt\) return json\(res, 429' "login limita tentativas por IP"
+  Assert-MatchText $contractorApi2 'const ACCESS_PASSWORDS = \{[\s\S]*"Fredy Pneus": process\.env\.CONTRACTOR_ACCESS_PASSWORD_FREDY \|\| "fredy5212"[\s\S]*"Besten Pneus": process\.env\.CONTRACTOR_ACCESS_PASSWORD_BESTEN \|\| "besten5212"[\s\S]*"Achei Pneus": process\.env\.CONTRACTOR_ACCESS_PASSWORD_ACHEI \|\| "Achei5212"[\s\S]*"Trinca Mkt": process\.env\.CONTRACTOR_ACCESS_PASSWORD_TRINCA \|\| "trinca5212"' "senhas de contratados vem de variavel de ambiente, com fallback ao valor atual"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
   Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=visible-auth-loading-v26[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=wait-for-dashboard-data-v100[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"

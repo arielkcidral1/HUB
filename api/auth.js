@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { assertDatabaseUrl, getBody, json, pool, SESSION_SECRET } from "./db.js";
+import { checkPublicRateLimit } from "./rate-limit.js";
 
 function normalize(value) {
   return String(value || "").trim();
@@ -140,6 +141,11 @@ export default async function handler(req, res) {
       const session = await validateAuthSession(req);
       return json(res, 200, { session: session?.user ? session : null });
     }
+
+    // Limite por IP, nao por identificador: impede tentativa de forca bruta
+    // sem bloquear o dono legitimo da conta se alguem errar a senha dele.
+    const allowedAttempt = await checkPublicRateLimit(req, "login_attempt");
+    if (!allowedAttempt) return json(res, 429, { error: "Muitas tentativas de login. Aguarde alguns minutos." });
 
     const user = await findUser(body.identifier || body.email || body.cpf || body.nome);
     if (!user || !isPasswordValid(body.password || body.senha, user.password_hash)) {

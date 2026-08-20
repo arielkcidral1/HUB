@@ -1,13 +1,16 @@
 import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
+import { checkPublicRateLimit } from "./rate-limit.js";
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024;
 const MAX_FILES = 20;
 const PATH_PATTERN = /^contratados\/[a-z0-9-]+\/[a-z0-9_.-]+$/i;
+// Senha de cada empresa vem de variavel de ambiente; sem ela configurada,
+// cai no valor atual para nao quebrar o formulario em producao.
 const ACCESS_PASSWORDS = {
-  "Fredy Pneus": "fredy5212",
-  "Besten Pneus": "besten5212",
-  "Achei Pneus": "Achei5212",
-  "Trinca Mkt": "trinca5212",
+  "Fredy Pneus": process.env.CONTRACTOR_ACCESS_PASSWORD_FREDY || "fredy5212",
+  "Besten Pneus": process.env.CONTRACTOR_ACCESS_PASSWORD_BESTEN || "besten5212",
+  "Achei Pneus": process.env.CONTRACTOR_ACCESS_PASSWORD_ACHEI || "Achei5212",
+  "Trinca Mkt": process.env.CONTRACTOR_ACCESS_PASSWORD_TRINCA || "trinca5212",
 };
 
 function text(value) {
@@ -49,6 +52,9 @@ export default async function handler(req, res) {
   try {
     if (req.method !== "POST") return json(res, 405, { error: "Metodo nao permitido." });
     assertDatabaseUrl();
+
+    const allowed = await checkPublicRateLimit(req, "contractor_documents");
+    if (!allowed) return json(res, 429, { error: "Muitos envios em pouco tempo. Tente novamente mais tarde." });
 
     const body = await getBody(req);
     const payload = {
