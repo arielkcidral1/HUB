@@ -1,4 +1,5 @@
 import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
+import { validateAuthSession } from "./auth.js";
 
 export const config = { api: { bodyParser: { sizeLimit: "15mb" } } };
 
@@ -37,6 +38,9 @@ export default async function handler(req, res) {
   try {
     assertDatabaseUrl();
     await ensureFilesTable();
+
+    const session = await validateAuthSession(req);
+    if (!session) return json(res, 401, { error: "Sessao invalida ou expirada." });
 
     if (req.method === "GET") {
       const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);

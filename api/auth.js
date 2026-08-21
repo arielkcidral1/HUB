@@ -25,11 +25,15 @@ async function findUser(identifier) {
   return result.rows[0] || null;
 }
 
+function isBcryptHash(hash) {
+  return hash.startsWith("$2a$") || hash.startsWith("$2b$") || hash.startsWith("$2y$");
+}
+
 function isPasswordValid(password, hash) {
   const value = normalize(password);
   const stored = normalize(hash);
   if (!value || !stored) return false;
-  if (stored.startsWith("$2a$") || stored.startsWith("$2b$") || stored.startsWith("$2y$")) {
+  if (isBcryptHash(stored)) {
     return bcrypt.compareSync(value, stored);
   }
   if (stored === value) return true;
@@ -51,13 +55,37 @@ function publicUser(row) {
   };
 }
 
+function getAuthSecret() {
+  const configured = normalize(process.env.AUTH_SESSION_SECRET);
+  if (configured) return configured;
+  // Fallback para nao quebrar deploys existentes; defina AUTH_SESSION_SECRET
+  // no ambiente para uma assinatura forte e independente da string de conexao.
+  return crypto.createHash("sha256").update(normalize(process.env.DATABASE_URL) || "hub-fallback-secret").digest("hex");
+}
+
+function sign(payload) {
+  return crypto.createHmac("sha256", getAuthSecret()).update(payload).digest("base64url");
+}
+
 function encodeCookiePayload(value) {
-  return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+  const payload = Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+  return `${payload}.${sign(payload)}`;
 }
 
 function decodeCookiePayload(value) {
   try {
-    return JSON.parse(Buffer.from(String(value || ""), "base64url").toString("utf8"));
+    const raw = String(value || "");
+    const separatorIndex = raw.lastIndexOf(".");
+    if (separatorIndex <= 0) return null;
+    const payload = raw.slice(0, separatorIndex);
+    const signature = raw.slice(separatorIndex + 1);
+    const expected = sign(payload);
+    const signatureBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expected);
+    if (signatureBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
+      return null;
+    }
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
   } catch {
     return null;
   }
@@ -124,6 +152,13 @@ export default async function handler(req, res) {
     const user = await findUser(body.identifier || body.email || body.cpf || body.nome);
     if (!user || !isPasswordValid(body.password || body.senha, user.password_hash)) {
       return json(res, 401, { error: "Credenciais invalidas." });
+    }
+
+    // Login legado (SHA-256/texto puro) bem-sucedido: migra silenciosamente para bcrypt.
+    if (!isBcryptHash(normalize(user.password_hash))) {
+      const rehashed = bcrypt.hashSync(normalize(body.password || body.senha), 10);
+      await pool.query(`update public.hub_users set password_hash = $1 where id = $2`, [rehashed, user.id]);
+      user.password_hash = rehashed;
     }
 
     const versionedUser = (await pool.query(
