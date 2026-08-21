@@ -1,4 +1,7 @@
 import { assertDatabaseUrl, assertTable, getBody, json, pool, quoteIdent } from "./db.js";
+import { validateAuthSession } from "./auth.js";
+
+const RESTRICTED_TABLES = new Set(["hub_users", "hub_sessions"]);
 
 const OPERATORS = {
   eq: "=",
@@ -96,6 +99,13 @@ export default async function handler(req, res) {
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const table = url.searchParams.get("table") || "";
     assertTable(table);
+
+    if (RESTRICTED_TABLES.has(table)) {
+      return json(res, 403, { error: "Tabela nao acessivel por esta API." });
+    }
+
+    const session = await validateAuthSession(req);
+    if (!session) return json(res, 401, { error: "Sessao invalida ou expirada." });
 
     if (req.method === "GET") {
       const filters = JSON.parse(url.searchParams.get("filters") || "[]");
