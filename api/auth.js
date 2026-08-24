@@ -52,6 +52,9 @@ function publicUser(row) {
   };
 }
 
+// O cookie carrega o payload em base64 + uma assinatura HMAC, para que um
+// cliente nao possa forjar sessao (ex: id/cargo/session_version de outro
+// usuario) sem conhecer o SESSION_SECRET do servidor.
 function signPayload(payloadB64) {
   return crypto.createHmac("sha256", SESSION_SECRET).update(payloadB64).digest("base64url");
 }
@@ -139,6 +142,9 @@ export default async function handler(req, res) {
       return json(res, 200, { session: session?.user ? session : null });
     }
 
+    // Combina IP + identificador tentado: limita forca bruta contra uma
+    // conta especifica sem travar o escritorio inteiro (mesmo IP) so porque
+    // uma pessoa errou a propria senha varias vezes.
     const attemptedIdentifier = normalize(body.identifier || body.email || body.cpf || body.nome).toLowerCase();
     const allowedAttempt = await checkPublicRateLimit(req, "login_attempt", attemptedIdentifier);
     if (!allowedAttempt) return json(res, 429, { error: "Muitas tentativas de login. Aguarde alguns minutos." });

@@ -1,3 +1,10 @@
+-- Este arquivo foi reescrito em 2026-08-12 para refletir a tabela que existe de
+-- fato no banco. A versao anterior declarava user_id como text, sem chave
+-- primaria e sem chave estrangeira, o que nao correspondia a producao e levou a
+-- codigo cliente que gravava linhas recusadas silenciosamente pelo banco.
+-- Quem escrever aqui precisa saber que user_id e um uuid de hub_users e que
+-- (user_id, item_type, item_id) e unico: insercoes repetidas exigem
+-- on conflict do nothing.
 create table if not exists public.hub_read_receipts (
   user_id uuid not null references public.hub_users (id) on delete cascade,
   item_type text not null,

@@ -40,6 +40,9 @@ export default async function handler(req, res) {
   let client;
   try {
     assertDatabaseUrl();
+    // O bootstrap devolve o conteudo de praticamente todas as tabelas do
+    // HUB de uma vez; nenhuma pagina publica precisa dele, entao exige
+    // sessao valida.
     const session = await validateAuthSession(req);
     if (!session?.user?.id) return json(res, 401, { error: "Sessao invalida ou expirada." });
 
@@ -48,6 +51,9 @@ export default async function handler(req, res) {
     const errors = {};
 
     await Promise.all(Object.entries(BOOTSTRAP_TABLES).map(async ([collection, table]) => {
+      // Mesmo escopo por cargo do /api/records: Gerente/Recepcionista e
+      // afins nao recebem no bootstrap uma tabela que a interface deles
+      // nem mostra (denuncias, advertencias, atestados, etc.).
       if (!canReadTable(session, table)) {
         data[collection] = [];
         return;

@@ -1,3 +1,4 @@
+// Gerado de planilha aniversaariante de empresa e de ano.xlsx. Usa nome, nascimento, admissao e unidade.
 window.HUB_COMPANY_BIRTHDAYS = [
     {
         "nome":  "ALEXSANDRO CARDOSO DOS SANTOS",

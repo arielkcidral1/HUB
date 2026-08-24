@@ -109,16 +109,25 @@ export default async function handler(req, res) {
     const table = url.searchParams.get("table") || "";
     assertTable(table);
 
+    // Toda tabela exige sessao valida, exceto os poucos casos abaixo
+    // (leitura publica de vagas abertas e insercao publica dos formularios do
+    // site). Sem isso, qualquer pessoa sem login conseguia ler/gravar/apagar
+    // qualquer tabela da allowlist so conhecendo o nome dela.
     const session = await validateAuthSession(req);
     const isAuthenticated = Boolean(session?.user?.id);
 
     if (req.method === "GET") {
       if (!isAuthenticated && !PUBLIC_READ_TABLES.has(table)) return unauthorized(res);
+      // Autenticado, mas fora do escopo do cargo (ex: Gerente pedindo
+      // hub_denuncias direto pela API, algo que a interface nem mostra pra ele).
       if (isAuthenticated && !canReadTable(session, table)) return forbidden(res);
 
       const filters = JSON.parse(url.searchParams.get("filters") || "[]");
       const order = JSON.parse(url.searchParams.get("order") || "[]");
       const select = normalizeColumns(url.searchParams.get("select") || "*");
+      // Visitante sem sessao so ve vagas abertas, mesmo que o filtro nao peca isso.
+      // Autenticado com escopo restrito por linha (ex: Gerente em hub_documentos)
+      // so ve os proprios registros, mesmo que o filtro nao peca isso.
       const forcedFilter = isAuthenticated ? getForcedRowFilter(session, table) : null;
       const effectiveFilters = [
         ...filters,
@@ -144,9 +153,12 @@ export default async function handler(req, res) {
       } else {
         const columns = [...new Set(rows.flatMap((row) => Object.keys(row || {})))];
         if (!authorizeWrite(session, table, { method: "POST", filters: [], columns })) return forbidden(res);
+        // Gerente nao pode criar um documento e assinar como se fosse outra pessoa.
         const forcedFilter = getForcedRowFilter(session, table);
         if (forcedFilter) rows = rows.map((row) => ({ ...row, [forcedFilter.column]: forcedFilter.value }));
       }
+      // Recibos de leitura sao reenviados a cada sessao; sem isso a primeira
+      // linha repetida viola a chave primaria e derruba o lote inteiro.
       const ignoreConflict = url.searchParams.get("on_conflict") === "ignore";
       const conflictClause = ignoreConflict ? " on conflict do nothing" : "";
       const inserted = [];
@@ -162,6 +174,8 @@ export default async function handler(req, res) {
       return json(res, 200, { data: stripSensitiveColumns(table, inserted) });
     }
 
+    // PATCH e DELETE nunca ficam publicos: nenhum fluxo do site sem login
+    // precisa alterar ou apagar registros.
     if (!isAuthenticated) return unauthorized(res);
 
     if (req.method === "PATCH") {
@@ -169,6 +183,8 @@ export default async function handler(req, res) {
       const row = body.row || {};
       const entries = Object.entries(row).filter(([, value]) => value !== undefined);
       if (!authorizeWrite(session, table, { method: "PATCH", filters, columns: entries.map(([key]) => key) })) return forbidden(res);
+      // Gerente so consegue de fato alterar linhas onde ele e o autor; a
+      // clausula extra faz a query nao afetar nenhuma linha de outra pessoa.
       const forcedFilter = getForcedRowFilter(session, table);
       const effectiveFilters = forcedFilter ? [...filters, forcedFilter] : filters;
       const values = entries.map(([key, value]) => normalizeDbValue(table, key, value));

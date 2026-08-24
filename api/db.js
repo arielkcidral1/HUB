@@ -13,6 +13,9 @@ const DATABASE_URL = firstValidDatabaseUrl(
   process.env.DATABASE_URL
 );
 
+// Preferir SESSION_SECRET quando configurado. Sem ele, deriva uma chave
+// estavel a partir da DATABASE_URL (ja secreta e unica por ambiente) para o
+// cookie de sessao continuar assinado mesmo sem uma variavel nova no deploy.
 export const SESSION_SECRET = process.env.SESSION_SECRET
   || (DATABASE_URL ? crypto.createHash("sha256").update(`hub-session:${DATABASE_URL}`).digest("hex") : "");
 
@@ -69,17 +72,24 @@ export function assertTable(table) {
   }
 }
 
+// Tabelas que um visitante sem sessao pode LER via /api/records (GET).
+// So a vaga em si; curriculos, denuncias etc. nunca ficam legiveis sem login.
 export const PUBLIC_READ_TABLES = new Set(["hub_vagas"]);
 
 function text(value) {
   return String(value ?? "").trim();
 }
 
+// Caminho de arquivo ja enviado antes para /api/files (ex: candidaturas/<uuid>/nome.pdf).
 function isSafeFilePath(value) {
   const path = text(value);
   return Boolean(path) && path.length <= 512 && /^[a-z0-9][a-z0-9_./-]*$/i.test(path) && !path.includes("..");
 }
 
+// Tabelas que um visitante sem sessao pode INSERIR via /api/records (POST).
+// Cada funcao recebe a linha crua enviada pelo cliente e devolve so os
+// campos permitidos, com valores sensiveis (status, created_by) fixados no
+// servidor - o cliente nunca decide isso sozinho.
 export const PUBLIC_INSERT_TABLES = new Map([
   ["hub_denuncias", (row) => ({
     identificacao: "Anonimo",
@@ -140,6 +150,7 @@ export const PUBLIC_INSERT_TABLES = new Map([
   }],
 ]);
 
+// Colunas que nunca devem sair de /api/records, autenticado ou nao.
 export const SENSITIVE_COLUMNS = new Map([
   ["hub_users", new Set(["password_hash"])],
 ]);
@@ -208,6 +219,10 @@ export function quoteIdent(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
 }
 
+// So devolve error.message pro cliente quando fomos NOS que jogamos o erro
+// de proposito (com statusCode, ex: "Curriculo invalido."). Um erro sem
+// statusCode veio direto do pg ou de uma excecao inesperada - devolver a
+// mensagem crua podia vazar nome de coluna/tabela/constraint do banco.
 export function safeErrorResponse(res, error, fallbackMessage = "Erro no servidor.") {
   if (error?.statusCode) {
     return json(res, error.statusCode, { error: error.message || fallbackMessage, code: error.code });
@@ -216,10 +231,13 @@ export function safeErrorResponse(res, error, fallbackMessage = "Erro no servido
   return json(res, 500, { error: fallbackMessage });
 }
 
+// Comparacao de string em tempo constante, para senhas/segredos curtos onde
+// um "!==" direto poderia (em teoria) vazar informacao pelo tempo de resposta.
 export function timingSafeStringEqual(a, b) {
   const bufferA = Buffer.from(String(a ?? ""));
   const bufferB = Buffer.from(String(b ?? ""));
   if (bufferA.length !== bufferB.length) {
+    // Ainda compara contra algo do mesmo tamanho, pra nao vazar o tamanho certo por atalho.
     crypto.timingSafeEqual(bufferA, bufferA);
     return false;
   }

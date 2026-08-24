@@ -116,6 +116,7 @@
   }
 
   async function reauthenticateOnReload() {
+    // O reload deve repetir a entrada normal sem limpar a sessao ou os dados.
     const authenticated = await reauthenticateInDatabase();
     if (authenticated) window.__hubReloadReauthenticated = true;
     return authenticated;
@@ -173,6 +174,10 @@
           renderAuthenticatedIdentity(result.session.user);
           return true;
         }
+        // O servidor respondeu com sucesso e disse que nao ha sessao valida
+        // (ex: sessao encerrada por outro login). Isso e um veredito
+        // definitivo do backend: nao cair para o cache local aqui, senao a
+        // maquina que deveria ser desconectada volta a entrar sozinha.
         redirectToLogin();
         return false;
       }
@@ -204,5 +209,6 @@
     }
   }
 
+  // Do not initialize a private page until the persistent auth cookie is valid.
   window.__hubAuthEntryPromise = reauthenticateOnReload();
 })();

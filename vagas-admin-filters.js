@@ -1,3 +1,5 @@
+/* Compatibilidade da aba Vagas e Projetos.
+   A renderizacao e os filtros reais ficam em script.js. */
 (function () {
   function bind() {
     const legacyName = document.getElementById("vaga-filter-candidato");

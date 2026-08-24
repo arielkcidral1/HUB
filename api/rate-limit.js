@@ -17,6 +17,10 @@ async function ensureRateLimitTable() {
   tableReady = true;
 }
 
+// Usa o ULTIMO IP da cadeia x-forwarded-for, nao o primeiro: e o valor que a
+// borda da Vercel acrescenta por ultimo, entao e o mais dificil de forjar -
+// um cliente pode mandar qualquer coisa nesse header, mas nao controla o
+// que a Vercel anexa no final.
 function getClientIp(req) {
   const chain = String(req.headers["x-forwarded-for"] || "")
     .split(",")
@@ -26,6 +30,7 @@ function getClientIp(req) {
   return req.socket?.remoteAddress || "unknown";
 }
 
+// A chave nunca guarda o IP em texto puro no banco, so um hash dele.
 function hashClientKey(scope, identifier) {
   return crypto.createHash("sha256").update(`${SESSION_SECRET}:${scope}:${identifier}`).digest("hex");
 }
@@ -42,14 +47,21 @@ const LIMITS = {
   action_password_attempt: { max: 10, windowMinutes: 10 },
 };
 
+// Evita hub_rate_limits crescer pra sempre: chance pequena por chamada de
+// apagar registros com mais de 1 dia, em vez de rodar isso toda hora.
 async function maybeCleanup() {
   if (Math.random() > 0.02) return;
   try {
     await pool.query(`delete from public.hub_rate_limits where created_at < now() - interval '1 day'`);
   } catch (_) {
+    // limpeza e best-effort; uma falha aqui nao pode derrubar o rate limit em si.
   }
 }
 
+// Devolve true se o pedido pode seguir. Ja registra a tentativa no banco
+// quando permite, para a proxima chamada contar corretamente.
+// extraKeyPart combina com o IP (nao substitui) - usado no login para nao
+// travar o escritorio inteiro se uma pessoa errar a propria senha varias vezes.
 export async function checkPublicRateLimit(req, scope, extraKeyPart) {
   const rule = LIMITS[scope];
   if (!rule) return true;

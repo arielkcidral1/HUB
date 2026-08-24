@@ -1,3 +1,5 @@
+-- HUB RH - baseline RLS para Postgres/PostgREST.
+
 create schema if not exists app_private;
 
 create or replace function app_private.hub_is_rh()
