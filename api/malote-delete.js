@@ -8,9 +8,6 @@ export default async function handler(req, res) {
     if (req.method !== "POST") return json(res, 405, { error: "Metodo nao permitido." });
     assertDatabaseUrl();
 
-    // A senha de acao sozinha nao bastava: sem exigir sessao, qualquer
-    // pessoa na internet podia tentar adivinhar essa senha, sem nem estar
-    // logada no HUB.
     const session = await validateAuthSession(req);
     if (!session?.user?.id) return json(res, 401, { error: "Sessao invalida ou expirada." });
 

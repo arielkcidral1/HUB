@@ -4,8 +4,6 @@ import { checkPublicRateLimit } from "./rate-limit.js";
 const MAX_FILE_SIZE = 3 * 1024 * 1024;
 const MAX_FILES = 20;
 const PATH_PATTERN = /^contratados\/[a-z0-9-]+\/[a-z0-9_.-]+$/i;
-// Senha de cada empresa vem de variavel de ambiente; sem ela configurada,
-// cai no valor atual para nao quebrar o formulario em producao.
 const ACCESS_PASSWORDS = {
   "Fredy Pneus": process.env.CONTRACTOR_ACCESS_PASSWORD_FREDY || "fredy5212",
   "Besten Pneus": process.env.CONTRACTOR_ACCESS_PASSWORD_BESTEN || "besten5212",

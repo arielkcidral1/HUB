@@ -9511,8 +9511,6 @@ function getVagasFilterValues() {
   };
 }
 
-// Preenche o select de cargo com os cargos ja cadastrados nas vagas, sem
-// duplicar vagas com o mesmo texto de cargo.
 function populateVagaCargoFilterOptions() {
   const select = document.getElementById("vaga-filter-cargo");
   if (!select) return;
@@ -10789,8 +10787,6 @@ function cancelActiveDocumentEditing() {
   });
 }
 
-// Fecha o formulario de documento selecionado, voltando a tela para o
-// estado inicial (imagem/logo do HUB) sem nenhuma aba ativa.
 function deselectActiveDocumentTab() {
   document.querySelectorAll("#documentos .doc-tab").forEach((item) => item.classList.remove("active"));
   document.querySelectorAll("#documentos .doc-view").forEach((view) => view.classList.remove("active"));
@@ -11488,8 +11484,6 @@ document.getElementById("limpar-filtros-vt")?.addEventListener("click", () => {
   renderVtRegistros();
 });
 
-// Fecha o formulario de advertencia/suspensao selecionado, voltando a tela
-// para o estado inicial (imagem/logo do HUB) sem nenhuma aba ativa.
 function deselectActiveDisciplinaryTab() {
   document.querySelectorAll("[data-disciplinary-doc]").forEach((tab) => tab.classList.remove("active"));
   document.querySelectorAll(".disciplinary-view").forEach((view) => view.classList.remove("active"));

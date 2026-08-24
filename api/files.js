@@ -4,9 +4,6 @@ import { checkPublicRateLimit } from "./rate-limit.js";
 
 export const config = { api: { bodyParser: { sizeLimit: "15mb" } } };
 
-// Prefixos que os formularios publicos (sem login) usam para enviar arquivo
-// antes do registro (curriculo, atestado, documento de contratado). Qualquer
-// outro caminho (avatares, anexos de chat, etc.) exige sessao.
 const PUBLIC_UPLOAD_PREFIXES = ["candidaturas/", "atestados/", "contratados/"];
 
 function safeName(name) {
@@ -50,9 +47,6 @@ export default async function handler(req, res) {
     await ensureFilesTable();
 
     if (req.method === "GET") {
-      // Currículos, atestados, documentos de contratados e anexos de chat
-      // sao lidos so pela area interna autenticada; nenhum fluxo publico
-      // precisa baixar um arquivo de volta.
       const session = await validateAuthSession(req);
       if (!session?.user?.id) return json(res, 401, { error: "Sessao invalida ou expirada." });
 
@@ -88,17 +82,11 @@ export default async function handler(req, res) {
     const isAuthenticated = Boolean(session?.user?.id);
 
     if (!isAuthenticated) {
-      // Sem sessao, so aceita path dos formularios publicos conhecidos -
-      // avatar/anexo de chat/etc exigem login.
       if (!isPublicUploadPath(path)) return json(res, 401, { error: "Sessao invalida ou expirada." });
       const allowed = await checkPublicRateLimit(req, "file_upload");
       if (!allowed) return json(res, 429, { error: "Muitos envios em pouco tempo. Tente novamente mais tarde." });
     }
 
-    // Upload publico nunca sobrescreve um arquivo ja existente (path tem
-    // UUID, entao colisao real e praticamente impossivel - se aconteceu, e
-    // sinal de tentativa de sobrescrever algo). Sessao autenticada pode
-    // substituir o proprio arquivo (ex: trocar avatar).
     const conflictClause = isAuthenticated
       ? `on conflict (path) do update set
          name = excluded.name,
