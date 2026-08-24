@@ -3640,7 +3640,7 @@ if (collection === "malotes") {
       cpf: row.cpf,
       curriculo_url: row.curriculo_url,
       createdBy: row.created_by || row.nome,
-      createdAt: formatDate(row.created_at),
+      createdAt: formatDateTime(row.created_at),
       sortAt: row.created_at || "",
     }));
   }
@@ -5480,18 +5480,6 @@ function isValidCpf(value) {
     return remainder === 10 ? 0 : remainder;
   };
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
-}
-
-function matchesContractorAccessPassword(password, expectedPassword) {
-  const typedPassword = String(password || "").trim();
-  const targetPassword = String(expectedPassword || "").trim();
-
-  if (typedPassword === targetPassword) return true;
-  if (!typedPassword || !targetPassword) return false;
-  if (typedPassword.length !== targetPassword.length) return false;
-
-  return typedPassword.charAt(0).toLocaleLowerCase("pt-BR") === targetPassword.charAt(0).toLocaleLowerCase("pt-BR")
-    && typedPassword.slice(1) === targetPassword.slice(1);
 }
 
 function validatePublicFormSubmission(formElement) {
@@ -7960,7 +7948,7 @@ function renderDashboard() {
     document.getElementById("metric-comunicados").textContent = unreadRhMessages.length;
   }
   if (document.getElementById("metric-vagas")) {
-    document.getElementById("metric-vagas").textContent = (data.candidaturas || []).filter((item) => isTodayLabel(item.createdAt)).length;
+    document.getElementById("metric-vagas").textContent = (data.candidaturas || []).filter((item) => isTodayDateTimeLabel(item.createdAt)).length;
   }
   const upcomingEvents = getUpcomingEvents();
   if (document.getElementById("metric-eventos")) {
@@ -9772,7 +9760,8 @@ function renderVagasSection() {
             <strong>${escapeHtml(c.nome)}</strong>
             <span class="candidate-meta-line">
               <span class="meta-line">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
-              <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
+              <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span><br />
+              <span class="meta-line">Recebido em: ${escapeHtml(c.createdAt || "Nao informado")}</span>
           </p>
           <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver Curriculo</button>
         </div>
@@ -10010,7 +9999,8 @@ function renderAll() {
             <strong>${escapeHtml(c.nome)}</strong>
             <span class="candidate-meta-line">
               <span class="meta-line">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
-              <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
+              <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span><br />
+              <span class="meta-line">Recebido em: ${escapeHtml(c.createdAt || "Nao informado")}</span>
           </p>
           <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver Currículo</button>
         </div>
@@ -12330,16 +12320,31 @@ if (contratadoDocForm) {
     button.closest(".contractor-document-field")?.remove();
   });
 
-  contractorPasswordForm?.addEventListener("submit", (event) => {
+  contractorPasswordForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const password = String(form.get("senha_acesso") || "");
-    const expectedPassword = String(contractorLayout?.dataset.contractorPassword || "");
-    if (!matchesContractorAccessPassword(password, expectedPassword)) {
-      showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
+    const password = String(form.get("senha_acesso") || "").trim();
+    const empresa = String(contractorLayout?.dataset.contractorCompany || "");
+    const submitButton = contractorPasswordForm.querySelector("button[type='submit']");
+    if (submitButton) submitButton.disabled = true;
+    try {
+      const response = await fetch("/api/contractor-documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verify: true, empresa, accessPassword: password }),
+      });
+      if (!response.ok) {
+        showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+      showModal("Erro", "Não foi possível verificar a senha. Verifique sua conexão e tente novamente.", "error");
       return;
+    } finally {
+      if (submitButton) submitButton.disabled = false;
     }
-    contractorAccessPassword = expectedPassword;
+    contractorAccessPassword = password;
     contractorPasswordForm.hidden = true;
     contratadoDocForm.hidden = false;
   });
