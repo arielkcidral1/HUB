@@ -5390,18 +5390,6 @@ function isValidCpf(value) {
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
 }
 
-function matchesContractorAccessPassword(password, expectedPassword) {
-  const typedPassword = String(password || "").trim();
-  const targetPassword = String(expectedPassword || "").trim();
-
-  if (typedPassword === targetPassword) return true;
-  if (!typedPassword || !targetPassword) return false;
-  if (typedPassword.length !== targetPassword.length) return false;
-
-  return typedPassword.charAt(0).toLocaleLowerCase("pt-BR") === targetPassword.charAt(0).toLocaleLowerCase("pt-BR")
-    && typedPassword.slice(1) === targetPassword.slice(1);
-}
-
 function validatePublicFormSubmission(formElement) {
   const honeypot = String(formElement?.elements?.website?.value || "").trim();
 
@@ -12135,16 +12123,31 @@ if (contratadoDocForm) {
     button.closest(".contractor-document-field")?.remove();
   });
 
-  contractorPasswordForm?.addEventListener("submit", (event) => {
+  contractorPasswordForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const password = String(form.get("senha_acesso") || "");
-    const expectedPassword = String(contractorLayout?.dataset.contractorPassword || "");
-    if (!matchesContractorAccessPassword(password, expectedPassword)) {
-      showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
+    const password = String(form.get("senha_acesso") || "").trim();
+    const empresa = String(contractorLayout?.dataset.contractorCompany || "");
+    const submitButton = contractorPasswordForm.querySelector("button[type='submit']");
+    if (submitButton) submitButton.disabled = true;
+    try {
+      const response = await fetch("/api/contractor-documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verify: true, empresa, accessPassword: password }),
+      });
+      if (!response.ok) {
+        showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+      showModal("Erro", "Não foi possível verificar a senha. Verifique sua conexão e tente novamente.", "error");
       return;
+    } finally {
+      if (submitButton) submitButton.disabled = false;
     }
-    contractorAccessPassword = expectedPassword;
+    contractorAccessPassword = password;
     contractorPasswordForm.hidden = true;
     contratadoDocForm.hidden = false;
   });
