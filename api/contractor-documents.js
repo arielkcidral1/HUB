@@ -4,8 +4,6 @@ import { checkPublicRateLimit } from "./rate-limit.js";
 const MAX_FILE_SIZE = 3 * 1024 * 1024;
 const MAX_FILES = 20;
 const PATH_PATTERN = /^contratados\/[a-z0-9-]+\/[a-z0-9_.-]+$/i;
-// Senha de cada empresa vem de variavel de ambiente; sem ela configurada,
-// cai no valor atual para nao quebrar o formulario em producao.
 const ACCESS_PASSWORDS = {
   "Fredy Pneus": process.env.CONTRACTOR_ACCESS_PASSWORD_FREDY || "fredy5212",
   "Besten Pneus": process.env.CONTRACTOR_ACCESS_PASSWORD_BESTEN || "besten5212",
@@ -37,10 +35,6 @@ function isValidPayload(payload) {
   return null;
 }
 
-// Cada arquivo ja foi enviado antes pelo cliente para /api/files (um por
-// requisicao); aqui so chega o caminho onde ele ficou salvo. Embutir todos os
-// arquivos em dataUrl numa unica requisicao estourava o limite de ~4.5mb por
-// requisicao da Vercel, que nao pode ser configurado por codigo.
 function normalizeDocuments(documentos) {
   const list = Array.isArray(documentos) ? documentos : [];
   return list
@@ -99,8 +93,6 @@ export default async function handler(req, res) {
       ["documentos", JSON.stringify(documentos)],
       ["created_by", "Publico"],
     ]);
-    // Colunas opcionais (origem_html, email) podem faltar em bancos antigos;
-    // nesse caso o Postgres devolve 42703 e a coluna citada e removida do insert.
     const optionalColumns = new Set(["origem_html", "email"]);
 
     let result = null;
