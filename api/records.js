@@ -153,12 +153,9 @@ export default async function handler(req, res) {
       } else {
         const columns = [...new Set(rows.flatMap((row) => Object.keys(row || {})))];
         if (!authorizeWrite(session, table, { method: "POST", filters: [], columns })) return forbidden(res);
-        // Gerente nao pode criar um documento e assinar como se fosse outra pessoa.
         const forcedFilter = getForcedRowFilter(session, table);
         if (forcedFilter) rows = rows.map((row) => ({ ...row, [forcedFilter.column]: forcedFilter.value }));
       }
-      // Recibos de leitura sao reenviados a cada sessao; sem isso a primeira
-      // linha repetida viola a chave primaria e derruba o lote inteiro.
       const ignoreConflict = url.searchParams.get("on_conflict") === "ignore";
       const conflictClause = ignoreConflict ? " on conflict do nothing" : "";
       const inserted = [];

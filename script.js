@@ -14,9 +14,6 @@ const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
 const SHOWN_NOTIFICATIONS_KEY = "hub-rh-shown-notification-ids";
 const DISMISSED_NOTIFICATIONS_KEY = "hub-rh-dismissed-notification-ids";
-// IMPORTANTE: os IDs lidos não entram no cache sensível.
-// Assim, ao fechar/abrir o site ou perder a sessão, as notificações já visualizadas
-// não voltam como não lidas.
 const SENSITIVE_CLIENT_CACHE_KEYS = [
   STORAGE_KEY,
   DOCUMENT_RECORDS_KEY,
@@ -35,9 +32,6 @@ const RESUME_BUCKET = "hub-curriculos";
 const RESUME_PUBLIC_PREFIX = "candidaturas";
 const CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos";
 const ATESTADOS_BUCKET = "hub-atestados";
-// A Vercel rejeita qualquer requisicao acima de ~4.5mb antes do handler
-// rodar, e esse teto nao pode ser configurado por codigo. 3mb de arquivo cru
-// vira ~4mb depois do base64, com margem segura abaixo do limite real.
 const ATESTADO_MAX_SIZE_BYTES = 3 * 1024 * 1024;
 const CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES = 3 * 1024 * 1024;
 const RESUME_MAX_SIZE_BYTES = 3 * 1024 * 1024;
@@ -87,11 +81,6 @@ const CHAT_FILE_EXTENSION_MIME_TYPES = new Map([
   ["mp4", "video/mp4"],
   ["mov", "video/quicktime"],
 ]);
-// Lista de emojis do seletor do chat. Escrita com escapes \u{...} de proposito:
-// a versao anterior guardava os emojis literais e foi destruida por um
-// salvamento com codificacao lossy, virando "??" em todas as entradas.
-// Nada de Emoji 12.0 ou mais novo (2019 em diante): o Segoe UI Emoji do
-// Windows 10 nao desenha esses, e eles aparecem quebrados para a equipe.
 const CHAT_EMOJIS = [
   "\u{1F600}", "\u{1F603}", "\u{1F604}", "\u{1F601}", "\u{1F606}", "\u{1F605}", "\u{1F602}", "\u{1F923}",
   "\u{1F60A}", "\u{1F607}", "\u{1F642}", "\u{1F643}", "\u{1F609}", "\u{1F60C}", "\u{1F60D}", "\u{1F970}",
@@ -235,8 +224,6 @@ const defaultData = {
   readReceipts: [],
 };
 
-// O cache local nunca pode derrubar o carregamento do painel: se estiver
-// corrompido, seguimos com o estado padrao e deixamos o PostgreSQL repovoar.
 let data = (() => {
   try {
     return loadLocalData();
@@ -339,7 +326,6 @@ const UNIT_OPTIONS = [
 ];
 UNIT_OPTIONS.splice(3, 1, "4- PL\u00C7");
 
-// Normaliza texto para comparação: remove acentos, caixa e espaços extras.
 function normalizeUnitText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -348,15 +334,11 @@ function normalizeUnitText(value) {
     .trim();
 }
 
-// Vagas antigas podem ter sido gravadas com texto livre (ex: "JRG", "JGR").
-// Aqui mapeamos esses valores legados para a opção oficial correspondente.
 const UNIT_ALIASES = {
   jrg: "13- JRG 1",
   jgr: "13- JRG 1",
 };
 
-// Retorna o valor oficial da unidade (UNIT_OPTIONS) a partir de um valor
-// gravado, mesmo que tenha sido salvo com grafia diferente ou sem o prefixo.
 function getCanonicalUnit(value) {
   const raw = String(value || "").trim();
   if (!raw) return raw;
@@ -393,8 +375,6 @@ function getUnitCity(value) {
   const unit = getCanonicalUnit(value);
   const text = normalizeUnitText(unit).replace(/^\d+\s*-\s*/, "");
   if (!text || text.startsWith("selecione")) return "";
-  // Do alias mais especifico para o mais generico: "gcs gpo" precisa vencer
-  // "gcs", senao GCS GPO herdaria a cidade da GCS JLLE.
   const key = Object.keys(UNIT_CITY_ALIASES)
     .sort((a, b) => b.length - a.length)
     .find((alias) => text.includes(alias));
@@ -479,9 +459,6 @@ function getCurrentUserNameCandidates() {
   ];
 }
 
-// Compara o usuario logado contra uma lista de nomes/logins conhecidos
-// (sem acento, case-insensitive). Usado para permissoes atreladas a contas
-// especificas em vez do cargo, que pode ser editado depois.
 function currentUserMatchesName(...targets) {
   const normalizedTargets = targets.map(stripAccents);
   return getCurrentUserNameCandidates().some((candidate) => {
@@ -494,9 +471,6 @@ function isFredericoUser() {
   return currentUserMatchesName("frederico");
 }
 
-// Jucimara, Alex e Alcione recebem o mesmo acesso de Frederico/CEO (todas as
-// abas, denuncias, feedbacks, eventos de qualquer gerente) sem trocar o
-// cargo cadastrado de cada um (Gerente Financeiro, Diretor, etc.).
 function hasFredericoLevelAccess() {
   return isFredericoUser()
     || currentUserMatchesName("jucimara")
@@ -648,8 +622,6 @@ function getChatChannels() {
       ];
 
   channels.sort((a, b) => {
-    // Os canais em grupo ficam sempre fixos no topo, acima das conversas
-    // individuais, independente de quem mandou mensagem mais recente.
     if (a.isGroup !== b.isGroup) return a.isGroup ? -1 : 1;
     const msgA = data.comunicados.find(m => normalizeChatChannel(m.canal) === a.id);
     const msgB = data.comunicados.find(m => normalizeChatChannel(m.canal) === b.id);
@@ -722,11 +694,6 @@ function getCurrentUserName() {
   return [profileName, authName, storedName].find((name) => name && !isGenericAuthName(name)) || "Voce";
 }
 
-/**
- * [ALERTA DE SEGURANÇA] A verificação de permissão real DEVE ser feita no backend
- * com Row Level Security (RLS) do PostgreSQL. Estas funções são apenas para controle de UI.
- * A 'role' é lida do token JWT para maior segurança no frontend, mas a RLS é indispensável.
- */
 const AuthHelper = {
   _getClaim(claim) {
     return currentAuthUser?.app_metadata?.[claim] || "";
@@ -756,16 +723,9 @@ function getCurrentUserRole() {
 
 function getCurrentUserNormalizedRole() {
   const user = getCurrentUserRecord?.() || {};
-  // O cargo do cookie de sessao e congelado no login e vale 30 dias. Uma
-  // mudanca de cargo no banco so valeria no proximo login se confiassemos
-  // nele, entao a linha de hub_users tem prioridade quando ja foi carregada.
   return normalizeLoginName(user.cargo || AuthHelper.getRole() || currentUserProfile?.cargo || "");
 }
 
-/**
- * Controle de UI baseado no usuario autenticado carregado do PostgreSQL.
- * A verificacao de permissao real continua sendo feita no backend por RLS.
- */
 function isManagerUser() {
   return getCurrentUserNormalizedRole() === "gerente";
 }
@@ -782,17 +742,10 @@ function isReceptionistUser() {
   return getCurrentUserNormalizedRole() === "recepcionista";
 }
 
-/**
- * Controle de UI baseado no usuario autenticado carregado do PostgreSQL.
- * A verificacao de permissao real continua sendo feita no backend por RLS.
- */
 function isCashierUser() {
   return AuthHelper.isCashier();
 }
 
-// Gerente enxerga apenas Painel, Comunicação, Quadros, Calendario e
-// Documentos RH. Chamados fica de fora da aba interna: o gerente so tem o
-// formulario publico de solicitacao (chamados.html).
 const MANAGER_ALLOWED_VIEWS = Object.freeze([
   "dashboard",
   "comunicacao",
@@ -802,7 +755,6 @@ const MANAGER_ALLOWED_VIEWS = Object.freeze([
   "conta",
 ]);
 
-// Recepcionista enxerga apenas Painel, Comunicacao, Quadros e Calendario.
 const RECEPTIONIST_ALLOWED_VIEWS = Object.freeze([
   "dashboard",
   "comunicacao",
@@ -817,14 +769,11 @@ const ALL_ALLOWED_VIEWS = Object.freeze([
   "documentos-contratados", "gerenciamento-vt", "equipe", "conta",
 ]);
 
-// Fonte unica de verdade do escopo de telas. O painel se apoia nela para nao
-// exibir numero, pendencia ou aviso de uma aba que o usuario nao acessa.
 function getAllowedViewsForCurrentUser() {
   if (isManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
   if (isReceptionistUser()) return new Set(RECEPTIONIST_ALLOWED_VIEWS);
   const allowed = new Set(ALL_ALLOWED_VIEWS);
   if (hasFredericoLevelAccess()) allowed.add("feedbacks");
-  // Denuncias Recebidas fica restrita a Ariel, Frederico e quem tem o mesmo nivel de acesso.
   const canSeeDenuncias = hasFredericoLevelAccess() || (typeof window.isArielUser === "function" && window.isArielUser());
   if (!canSeeDenuncias) allowed.delete("denuncias");
   return allowed;
@@ -1214,9 +1163,6 @@ async function validateLogin(identifier, password) {
 async function verifyCurrentPassword(password) {
   if (!password) return false;
 
-  // Verifica a senha via endpoint REST sem substituir a sessao ativa.
-  // signInWithPassword sobrescreve o token em memoria e pode causar
-  // redirecionamentos antes do onConfirm ser chamado.
   const authUser = await getCurrentAuthUser();
   const email = authUser?.email || "";
   if (!email) return false;
@@ -1291,8 +1237,6 @@ async function setupLogin() {
     if (!entryAuthenticated) return false;
   }
   postgresClient = postgresClient || getPostgreSQLClient();
-  // A login page never restores an existing session automatically.
-  // After reload, the user must submit the credentials again.
   const hasAuthSession = isLoginPage() ? false : await restoreAuthenticatedSession();
   const hasValidDisplayIdentity = hasAuthSession && !isGenericAuthName(getCurrentUserName());
 
@@ -1304,7 +1248,6 @@ async function setupLogin() {
     }
   }
 
-  // Redirecionamentos Inteligentes
   if (hasAuthSession && hasValidDisplayIdentity) {
     if (isLoginPage()) {
       window.location.replace(getLoginRedirectTarget());
@@ -1566,9 +1509,6 @@ function mergeReadReceiptRows(rows = []) {
 
 async function loadReadReceiptsFromPostgreSQL() {
   if (!postgresClient || !TABLES.readReceipts) return;
-  // hub_read_receipts.user_id e uuid (FK para hub_users). Misturar aliases
-  // (e-mail/cpf/nome) no filtro "in" derruba a query inteira com "invalid
-  // input syntax for type uuid", entao nenhum recibo carrega - nem os validos.
   const userKeys = getReadReceiptUserIds();
   if (!userKeys.length) return;
   try {
@@ -1586,8 +1526,6 @@ async function loadReadReceiptsFromPostgreSQL() {
   }
 }
 
-// hub_read_receipts.user_id tem FK para hub_users(id): aliases como e-mail, CPF
-// ou nome sao recusados pelo banco e derrubam o lote inteiro. So gravamos o UUID.
 function getReadReceiptUserIds() {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return [currentUserProfile?.id, currentAuthUser?.id]
@@ -1691,8 +1629,6 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
   return true;
 }
 
-// Apagar uma notificacao vale para a conta inteira, em qualquer maquina: alem do
-// cache local, gravamos um recibo "dismissed" no PostgreSQL, lido na entrada.
 function dismissNotifications(dismissKeys = []) {
   const cleanKeys = (Array.isArray(dismissKeys) ? dismissKeys : [dismissKeys])
     .filter((key) => key !== undefined && key !== null && String(key).trim())
@@ -1892,9 +1828,6 @@ function renderMaloteReport() {
   `;
 }
 
-// Valores ja formatados (ex.: "12/08/2026 15:56") voltam do cache local e nao
-// sao aceitos por new Date(); nesse caso devolvemos o texto original em vez de
-// deixar o Intl lancar RangeError e derrubar o carregamento do painel.
 function toValidDate(value) {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -2045,7 +1978,6 @@ function formatMaskedDate(value) {
   return `${day}/${month}/${year}`;
 }
 
-// aliases para compatibilidade com chamadas existentes
 const formatDocumentDate = formatMaskedDate;
 const formatEventoDate   = formatMaskedDate;
 
@@ -2055,11 +1987,6 @@ function eventoDateToIso(value) {
   return `${match[3]}-${match[2]}-${match[1]}`;
 }
 
-// A coluna "data" de hub_eventos e do tipo date/timestamp no Postgres; o
-// driver devolve isso como "2026-08-25T00:00:00.000Z" em vez do
-// "2026-08-25" puro que o resto do codigo usa. A comparacao exata do
-// calendario ("item.data === date") nunca batia por causa disso, mesmo o
-// evento aparecendo em "Eventos proximos" (que so compara intervalos).
 function normalizeEventDateKey(value) {
   const match = String(value || "").match(/^\d{4}-\d{2}-\d{2}/);
   return match ? match[0] : String(value || "");
@@ -2072,15 +1999,13 @@ function applyDateMask(input) {
   input.maxLength = 10;
   input.placeholder = "dd/mm/aaaa";
   input.dataset.dateMask = "true";
-  input.dataset.docDate = "true"; // mantém compatibilidade
+  input.dataset.docDate = "true";
   input.dataset.dateMaskApplied = "true";
   input.value = formatMaskedDate(input.value);
 }
 
 function normalizeDocumentDateInputs(root = document) {
-  // cobre doc-forms e o campo de data do evento-form
   root.querySelectorAll('[data-doc-form] input[type="date"], #evento-form input[type="date"]').forEach(applyDateMask);
-  // reinicializa campos que já foram convertidos mas podem ter recebido valor ISO novo
   root.querySelectorAll('[data-date-mask="true"]').forEach((input) => {
     input.value = formatMaskedDate(input.value);
   });
@@ -2129,8 +2054,6 @@ function isTodayLabel(value) {
   return value === todayLabel() || value === "Hoje";
 }
 
-// Registros que guardam data e hora ("14/08/2026, 10:22") nunca batem com o
-// rotulo de data pura; aqui a comparacao usa so a parte da data.
 function isTodayDateTimeLabel(value) {
   const text = String(value || "").trim();
   if (!text) return false;
@@ -2599,10 +2522,6 @@ function getEventDisplayTitle(item = {}) {
   return item.titulo || "Evento";
 }
 
-// Cada gerente enxerga apenas os eventos que ele mesmo criou. Aniversarios
-// (gerados a partir da planilha) tambem sao eventos e nao pertencem a
-// nenhum gerente, entao ficam fora da agenda dele. RH e CEO enxergam a
-// agenda inteira, de todos os gerentes e os aniversarios.
 function getCurrentEventAccessNames() {
   const user = getCurrentUserRecord?.() || {};
   return [
@@ -3540,7 +3459,7 @@ function mapRows(collection, rows) {
       identificacao: row.identificacao,
       categoria: row.categoria,
       descricao: row.descricao,
-      status: row.status || "Aberta", // Garante o mapeamento do status
+      status: row.status || "Aberta",
       createdBy: row.created_by || "Sistema",
       createdAt: formatDateTime(row.created_at),
       sortAt: row.created_at || "",
@@ -4603,9 +4522,6 @@ async function loadFromPostgreSQL(options = {}) {
     if (bootstrapRows) {
       const loaded = applyBootstrapRowsToState(bootstrapRows, { forceCore: true, overwriteEmpty: true });
       ensureRequiredTeamUsers();
-      // O bootstrap nao traz hub_read_receipts (e por conta, nao global), entao o
-      // estado de lidas/apagadas precisa ser buscado aqui tambem. Sem isso ele
-      // ficava so no localStorage e nao acompanhava a conta entre maquinas.
       await loadReadReceiptsFromPostgreSQL();
       publishHubDataCounts();
       if (setupLive) {
@@ -4736,9 +4652,6 @@ async function refreshFromPostgreSQL() {
 function setupAutoRefresh() {
   if (refreshTimer) return;
 
-  // Atualiza mesmo com a aba em segundo plano/minimizada, para que notificacoes
-  // de novas mensagens continuem chegando. O navegador pode limitar a frequencia
-  // de setInterval em abas ocultas, mas o timer continua rodando.
   refreshTimer = window.setInterval(() => {
     refreshFromPostgreSQL();
   }, 5000);
@@ -4790,7 +4703,6 @@ function setupRealtime() {
       realtimeBroadcastReady = false;
       console.warn("HUB realtime desconectado:", status);
       setSyncStatus("Reconectando...", false);
-      // Remove canal atual e agenda reconexão
       try { realtimeChannel.unsubscribe(); } catch (_) {}
       realtimeChannel = null;
       setTimeout(() => {
@@ -5427,10 +5339,6 @@ function resetContractorDocumentFields(container) {
   container.innerHTML = createContractorDocumentField(true);
 }
 
-// Cada arquivo vai num POST separado para /api/files (mesmo caminho usado por
-// atestados e curriculo). Embutir todos os anexos numa unica requisicao
-// estourava o limite de ~4.5mb por requisicao da Vercel, que a plataforma nao
-// deixa configurar por codigo.
 async function buildContractorDocumentPayload(documentos, batchId) {
   const files = Array.from(documentos || []);
   const uploadedDocuments = [];
@@ -5948,13 +5856,6 @@ async function deleteChatMessageRecord(id) {
   }
 }
 
-/**
- * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente.
- * Sem uma política de Row Level Security (RLS) no PostgreSQL, um usuário autenticado
- * poderia, teoricamente, alterar este 'id' para modificar ou deletar um registro
- * que não lhe pertence.
- * SOLUÇÃO: Implemente políticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuário só possa operar nos registros que ele tem permissão (ex: que ele mesmo criou).
- */
 async function updateItem(collection, id, values) {
   if (!id) return false;
 
@@ -6086,13 +5987,6 @@ if (collection === "eventos") {
   }
 }
 
-/**
- * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente para exclusão.
- * Sem uma política de Row Level Security (RLS) no PostgreSQL, um usuário autenticado
- * poderia, teoricamente, alterar este 'id' para deletar um registro
- * que não lhe pertence.
- * SOLUÇÃO: Implemente políticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuário só possa deletar os registros que ele tem permissão.
- */
 async function deleteItem(collection, id) {
   if (!id) return false;
 
@@ -6358,8 +6252,6 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
     const persistedUser = { ...updatedUser, ...saved };
     upsertLocalUser(persistedUser);
 
-    // Rendering prioritizes this in-memory profile over the local user list.
-    // Keep it in sync so a newly uploaded avatar is shown immediately.
     currentUserProfile = { ...(currentUserProfile || {}), ...persistedUser };
     if (newName) storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
     setSyncStatus("PostgreSQL EIXO online", true);
@@ -6837,8 +6729,6 @@ function renderCards(targetId, items, template) {
 }
 
 function activateView(viewId) {
-  // Barra qualquer caminho alternativo para uma aba fora do escopo: atalho de
-  // teclado, cartao do painel, link interno ou chamada direta pelo console.
   if (isAuthenticated() && !isPublicPage() && !canAccessView(viewId)) {
     if (viewId !== "dashboard" && canAccessView("dashboard")) activateView("dashboard");
     return;
@@ -7372,8 +7262,6 @@ function renderDisciplinaryRecords() {
   const registrosPanel = document.getElementById("disciplinary-registros-panel");
   const hasActiveTab = Boolean(getActiveDisciplinaryTab());
   if (emptyState) emptyState.hidden = hasActiveTab;
-  // A secao "Registros salvos" so aparece com uma aba selecionada e pelo
-  // menos um registro daquele tipo, para nao ficar vazia na tela.
   if (registrosPanel) registrosPanel.hidden = !hasActiveTab || !records.length;
 
   renderCards("disciplinary-records", records, (item) => `
@@ -7455,9 +7343,6 @@ function createDisciplinaryReportXlsxBlob(rows) {
   ]);
 }
 
-// Le o diretorio central de um .docx (zip) e devolve os bytes crus (ainda
-// compactados) de cada parte. So a leitura do diretorio central e necessaria
-// aqui; os tamanhos comprimidos ja vem de la, sem depender do local header.
 function readZipEntries(buffer) {
   const view = new DataView(buffer);
   const bytes = new Uint8Array(buffer);
@@ -7499,8 +7384,6 @@ function readZipEntries(buffer) {
   });
 }
 
-// As partes de um .docx salvo pelo Word vem compactadas em deflate. O
-// DecompressionStream nativo evita depender de uma lib externa so para isso.
 async function inflateZipEntry(entry) {
   if (entry.method === 0) return entry.bytes;
   if (entry.method !== 8) throw new Error(`Metodo de compactacao do modelo nao suportado (${entry.method}).`);
@@ -7518,9 +7401,6 @@ function escapeDocumentXmlText(value) {
     .replace(/>/g, "&gt;");
 }
 
-// A ordem destes 22 modelos casa exatamente com a ordem de UNIT_OPTIONS (uma
-// unidade, um modelo, na mesma posicao) - confirmado pelos nomes de empresa:
-// JPL na posicao 8, FAC na 15, TRINCA na 19, DPA nas 6-7, GCS nas 10-11.
 const DISCIPLINARY_TEMPLATE_FILES = [
   "01_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0001_17.docx",
   "02_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0003_89.docx",
@@ -7551,12 +7431,6 @@ function getDisciplinaryTemplateFile(unidade) {
   return index >= 0 ? DISCIPLINARY_TEMPLATE_FILES[index] : null;
 }
 
-// So os tres campos em branco do modelo (nome, motivo e local/data) mudam por
-// registro; para suspensao o cabecalho e o corpo trocam ADVERTENCIA/
-// ADVERTIDO(A) por SUSPENSAO/SUSPENSO(A), citando os dias informados no form.
-// O modelo reserva 3 linhas de sublinhado para o motivo (cada uma como um
-// <w:r> separado por <w:br/>). As 3 juntas viram um unico texto: se o motivo
-// for curto, o resto fica em branco em vez de continuar com sublinhados.
 function buildMotivoRunsXml(motivo) {
   const lines = String(motivo || "").split(/\r\n|\r|\n/).map((line) => escapeDocumentXmlText(line));
   return lines
@@ -7781,14 +7655,6 @@ function resetVtForm() {
   updateVtCalculation();
 }
 
-/**
- * [ALERTA DE SEGURANÇA] Esta função controla a visibilidade dos elementos da UI
- * com base na role do usuário armazenada no sessionStorage. Um usuário mal-intencionado
- * pode facilmente alterar essa role no console do navegador para obter acesso visual
- * a seções restritas.
- * A segurança real da aplicação NÃO PODE depender desta função. Ela deve ser garantida
- * por políticas de Row Level Security (RLS) no PostgreSQL, que filtram os dados no servidor.
- */
 function applyRoleAccess() {
   if (!isAuthenticated() || isPublicPage() || !document.querySelector(".nav-list")) return;
   refreshCurrentUserRoleFromData();
@@ -7817,7 +7683,6 @@ function applyRoleAccess() {
   if (!activeView || !allowedViews.has(activeView.id)) activateView("dashboard");
 }
 
-// Traduz a colecao de dados para a aba correspondente.
 function getViewForCollection(collection) {
   const views = {
     comunicados: "comunicacao",
@@ -7838,7 +7703,6 @@ function getViewForCollection(collection) {
   return views[String(collection || "")] || "dashboard";
 }
 
-// Traduz o tipo de item do acompanhamento para a aba correspondente.
 function getDashboardItemView(item = {}) {
   if (item.view) return item.view;
   const kind = String(item.kind || "");
@@ -7933,16 +7797,12 @@ function isDashboardActivityReadForOrdering(item = {}) {
   return isDashboardNotificationRead(item);
 }
 
-// Esconde do painel os cartoes que levam a abas fora do escopo do usuario.
 function applyDashboardScopeToMetricCards() {
   const allowedViews = getAllowedViewsForCurrentUser();
   const isManager = isManagerUser();
   document.querySelectorAll(".metric-card-link[data-view]").forEach((card) => {
-    // Gerente acessa a aba Documentos RH, mas o cartao "Documentos enviados
-    // hoje" nao aparece no painel dele.
     let allowed = allowedViews.has(card.dataset.view);
     if (isManager && card.querySelector("#metric-documentos")) allowed = false;
-    // "Chamados abertos hoje" e exclusivo das contas com cargo RH.
     if (card.querySelector("#metric-chamados-hoje") && !isRhUser()) allowed = false;
     card.hidden = !allowed;
     card.style.display = allowed ? "" : "none";
@@ -7967,8 +7827,6 @@ function renderDashboard() {
     document.getElementById("metric-eventos").textContent = upcomingEvents.length;
   }
   if (document.getElementById("metric-documentos")) {
-    // O cartao conta apenas os envios do formulario publico de contratados;
-    // documentos internos do RH nao entram nesse numero.
     const documentosContratados = canAccessView("documentos-contratados")
       ? (data.documentosContratados || []).filter((item) => !isArchivedRecord(item) && isTodayDateTimeLabel(item.createdAt)).length
       : 0;
@@ -7980,8 +7838,6 @@ function renderDashboard() {
       .length;
   }
 
-  // Mensagens do RH aparecem como um único bloco no acompanhamento.
-  // Quando ficam lidas, não mudam de cor; apenas perdem prioridade para itens novos.
   const accessibleRhMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
   const sortedRhMessagesNewestFirst = [...accessibleRhMessages]
     .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
@@ -7997,8 +7853,6 @@ function renderDashboard() {
     groupedMessages.push({
       kind: "notificacao",
       notificationId: "mensagens-rh",
-      // A chave de exclusao inclui a ultima mensagem para que o cartao volte a
-      // aparecer quando chegar mensagem nova, mesmo apos o usuario apagar o card.
       dismissKey: `mensagens-rh:${latestMessage.id || messageIds[0] || "vazio"}`,
       messageIds,
       chatMessages: sortedRhMessagesOldestFirst,
@@ -8086,9 +7940,6 @@ function renderDashboard() {
         };
       })  ];
 
-  // Notificacoes apagadas pela conta somem do acompanhamento em qualquer maquina.
-  // O acompanhamento tambem nao pode revelar pendencia de aba sem acesso: um
-  // gerente nao ve denuncia, chamado nem curriculo aqui.
   const sortedDashboardItems = dashboardItems
     .filter((item) => canAccessView(getDashboardItemView(item)))
     .filter((item) => !isNotificationDismissed(item.dismissKey || item.notificationId))
@@ -8103,8 +7954,6 @@ function renderDashboard() {
   const dashboardPageSize = 3;
   dashboardNotificationOffset = 0;
 
-  // Acompanhamento da tela principal deve exibir somente notificações não lidas.
-  // Quando todas estiverem lidas, a lista fica vazia.
   const unreadDashboardItems = sortedDashboardItems.filter((item) => !isDashboardActivityReadForOrdering(item));
   const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
   allDashboardActivityItems = sortedDashboardItems;
@@ -8265,19 +8114,16 @@ function renderCalendar() {
   renderCards("eventos-list", visibleEvents, (item) => renderCalendarEventCard(item, "article", "calendar-event-manage-block"));
 }
 
-// Logica de abertura de denuncia para leitura e transicao de estado automatica
 async function lerDenuncia(id) {
   const denuncia = data.denuncias.find(item => String(item.id) === String(id));
   if (!denuncia) return;
 
-  // Mostra o relato em formato de modal customizado
   showModal(
     "Visualizacao da Denuncia",
     `Categoria: ${denuncia.categoria}\nRecebida em: ${denuncia.createdAt}\nStatus Atual: ${denuncia.status}\n\nRelato:\n"${denuncia.descricao}"`,
     "info"
   );
 
-  // Se a denúncia ainda constar como Não lida ("Aberta"), movemos para "Lida"
   if (denuncia.status === "Aberta") {
     if (!postgresClient) {
       denuncia.status = "Lida";
@@ -8309,14 +8155,12 @@ async function lerFeedback(id) {
   const feedback = (data.feedbacks || []).find((item) => String(item.id) === String(id));
   if (!feedback) return;
 
-  // Mostra o feedback em formato de modal customizado
   showModal(
     "Visualização do Feedback",
     `Tipo: ${feedback.tipo || "Feedback"}\nIdentificação: ${feedback.autorNome || "Não informado"}\nRecebido em: ${feedback.createdAt || "Hoje"}\n\nMensagem:\n"${feedback.mensagem || ""}"`,
     "info"
   );
 
-  // Se o feedback ainda constar como Não lido ("Novo"), movemos para "Lido"
   if ((feedback.status || "Novo") === "Novo") {
     const success = await updateItem("feedbacks", id, { status: "Lido" });
     if (!success) {
@@ -8592,7 +8436,6 @@ function migrateUserSettingsToCurrentKey(settings) {
       localStorage.setItem(currentKey, JSON.stringify(normalizeUserSettings(settings)));
     }
   } catch {
-    // Mantem o fallback global se o navegador bloquear escrita na chave por usuario.
   }
 }
 
@@ -8656,7 +8499,6 @@ function reloadUserSettingsForCurrentUser() {
   try {
     localStorage.setItem(getUserSettingsStorageKey(), JSON.stringify(currentUserSettings));
   } catch {
-    // Mantem as preferências em memoria se o navegador bloquear localStorage.
   }
   applyUserSettings();
   renderAccountSettings();
@@ -8941,7 +8783,6 @@ function playUserNotificationSound() {
       try { audioContext.close?.(); } catch (_) {}
     }, 1700);
   } catch {
-    // Sem som quando o navegador bloquear autoplay/audio context.
   }
 }
 
@@ -9280,8 +9121,6 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
   if (["usuarios", "eventos", "vtRegistros", "disciplinaryRecords", "malotes", "vagas", "atestados", "quadros"].includes(collection)) return false;
-  // Sem aviso de aba fora do escopo: um gerente nao pode receber o conteudo de
-  // uma denuncia por popup ou notificacao do sistema.
   if (!canAccessView(getViewForCollection(collection))) return false;
 
   const signature = [collection, action, item.id || "", item.updatedAt || item.updated_at || item.createdAt || item.created_at || ""].join("|");
@@ -9291,7 +9130,6 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   const author = normalizeLoginName(item.autor || item.createdBy || item.updatedBy || item.solicitante || "");
   const pageIsVisible = document.visibilityState === "visible" && document.hasFocus?.();
   if (collection === "comunicados" && author && author === currentName && pageIsVisible) return false;
-  // Quem abre o chamado nao precisa ser avisado do proprio chamado.
   if (collection === "chamados" && author && author === currentName) return false;
 
   lastRealtimeNotificationSignature = signature;
@@ -10139,8 +9977,6 @@ function openDashboardActivity(index) {
 
   const hasChatMessages = Array.isArray(item.chatMessages) && item.chatMessages.length;
 
-  // Mensagens abertas pelo acompanhamento principal devem usar exatamente
-  // o mesmo modal/detalhe do painel completo de notificações.
   if (hasChatMessages && window.notificationTracker && typeof window.notificationTracker.openModal === "function") {
     const tracker = window.notificationTracker;
     tracker.openModal();
@@ -10291,8 +10127,6 @@ function getCurrentDocumentAccessNames() {
     .filter(Boolean);
 }
 
-// Frederico, Jucimara, Alex e Jose Alcione enxergam Documentos RH por
-// completo, igual ao RH, independente do cargo cadastrado.
 function hasFullDocumentAccess() {
   return isRhUser() || hasFredericoLevelAccess();
 }
@@ -10334,8 +10168,6 @@ function renderDocumentRecords() {
   const registrosPanel = document.getElementById("documentos-registros-panel");
   const hasActiveTab = Boolean(getActiveDocumentTab());
   if (emptyState) emptyState.hidden = hasActiveTab;
-  // A secao "Registros salvos" so aparece com uma aba selecionada e pelo
-  // menos um registro daquele tipo, para nao ficar vazia na tela.
   if (registrosPanel) registrosPanel.hidden = !hasActiveTab || !records.length;
 
   if (!records.length) {
@@ -10974,14 +10806,11 @@ document.querySelectorAll("#documentos .doc-tab").forEach((button) => {
     button.classList.add("active");
     document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
 
-    // A lista de "Registrados" abaixo so mostra documentos do mesmo tipo da
-    // aba selecionada.
     if (button.dataset.doc) {
       renderDocumentRecords();
       updateDocumentFilterClearButton();
     }
 
-    // Cancela a edição se o usuário trocar de aba de documento
     cancelActiveDocumentEditing();
   });
 });
@@ -11175,12 +11004,11 @@ if (chatForm) {
     chatForm.requestSubmit();
   });
 
-  // Garante que Enter em qualquer elemento do formulario tambem envia.
   chatForm.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
-    if (event.target === chatMessageInput) return; // já tratado acima
-    if (event.target.tagName === "BUTTON") return; // Deixa botoes funcionarem normalmente.
+    if (event.target === chatMessageInput) return;
+    if (event.target.tagName === "BUTTON") return;
     event.preventDefault();
     chatForm.requestSubmit();
   });
@@ -11217,7 +11045,6 @@ if (chatForm) {
     const clientMutationId = generateUUID();
     beginChatMutation();
 
-    // -- OTIMISMO: mostra a mensagem imediatamente --------------------------
     const pendingMessages = files.length
       ? files.map((file, index) => {
         const attachmentType = getChatFileMimeType(file);
@@ -11249,7 +11076,6 @@ if (chatForm) {
     pendingMessages.forEach((item) => markChatMessageAsLocalEcho(item));
     data.comunicados = mergeLocalChatMessages([...pendingMessages, ...(data.comunicados || [])], data.comunicados);
     renderChat({ skipPostRender: true });
-    // Limpa o formulário imediatamente
     formElement.reset();
     clearChatSelectedFile();
     window.setTimeout(() => {
@@ -11259,7 +11085,6 @@ if (chatForm) {
 
     window.setTimeout(async () => {
     try {
-    // -- UPLOAD de arquivos em background ----------------------------------
     const uploadedFiles = [];
     try {
       for (const file of files) {
@@ -11269,7 +11094,6 @@ if (chatForm) {
       }
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
-      // Remove mensagens otimistas em caso de falha
       pendingMessages.forEach((item) => {
         sendChatRealtimeBroadcast("chat", { action: "delete", id: item.id });
       });
@@ -11490,7 +11314,6 @@ if (eventoForm) {
     });
   };
 
-  // inicializa o campo de data com màscara (caso tenha valor default)
   const eventoDataInput = eventoForm.elements.data;
   if (eventoDataInput) {
     eventoDataInput.value = formatEventoDate(eventoDataInput.value);
@@ -11500,7 +11323,6 @@ if (eventoForm) {
       const prev = input.value;
       const next = formatEventoDate(prev);
       input.value = next;
-      // reposiciona cursor de forma inteligente
       const diff = next.length - prev.length;
       if (diff !== 0) input.setSelectionRange(pos + diff, pos + diff);
       input.setCustomValidity("");
@@ -11513,7 +11335,6 @@ if (eventoForm) {
     const form = new FormData(formElement);
     const id = form.get("id") || formElement.dataset.editEventId || "";
 
-    // converte dd/mm/aaaa ? yyyy-mm-dd para salvar
     const dataDisplay = String(form.get("data") || "");
     const dataIso = eventoDateToIso(dataDisplay);
     if (!dataIso) {
@@ -11682,7 +11503,6 @@ document.querySelectorAll("[data-disciplinary-doc]").forEach((button) => {
     document.querySelectorAll(".disciplinary-view").forEach((view) => {
       view.classList.toggle("active", view.id === `disciplinary-${targetDoc}`);
     });
-    // A lista abaixo so mostra registros do mesmo tipo da aba selecionada.
     renderDisciplinaryRecords();
   });
 });
@@ -11692,7 +11512,6 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
   const localField = formElement.elements.local;
   unitField?.addEventListener("change", () => {
     const city = getUnitCity(unitField.value);
-    // Voltar para o placeholder limpa a cidade em vez de manter a anterior.
     if (localField) localField.value = city;
   });
 
@@ -12121,13 +11940,11 @@ document.addEventListener("drop", async (event) => {
 
 document.addEventListener("keydown", handleSettingsKeyboardShortcut);
 
-// Function to initialize account settings form
 function initializeAccountSettingsForm() {
   currentUserSettings = loadUserSettings();
   applyUserSettings();
   renderAccountSettings();
   
-  // Handle file input changes
   const fotoInput = document.getElementById("foto-perfil-input");
   if (fotoInput) {
     fotoInput.addEventListener("change", (e) => {
@@ -12142,7 +11959,6 @@ function initializeAccountSettingsForm() {
   }
 }
 
-// Function to validate account update
 function validateAccountUpdate(newName, fotoFile) {
   const errors = [];
   
@@ -12173,7 +11989,6 @@ function validateAccountUpdate(newName, fotoFile) {
   return { isValid: errors.length === 0, errors };
 }
 
-// Function to set form loading state
 function setAccountFormLoading(isLoading) {
   const submitBtn = document.querySelector("#conta-form .primary-button");
   if (submitBtn) {
@@ -12192,14 +12007,12 @@ if (contaForm) {
     const newName = String(form.get("novo_nome") || "").trim();
     const fotoFile = form.get("foto_perfil");
 
-    // Validate form
     const validation = validateAccountUpdate(newName, fotoFile);
     if (!validation.isValid) {
       showModal("Erro de validacao", validation.errors.join("\n"), "error");
       return;
     }
 
-    // Show loading state
     setAccountFormLoading(true);
 
     let fotoUrl = null;
@@ -12235,7 +12048,6 @@ if (contaForm) {
   });
 }
 
-// Initialize account settings when section is visible
 document.querySelectorAll("[data-settings-target]").forEach((button) => {
   if (button.dataset.settingsTarget === "settings-account-panel") {
     button.addEventListener("click", () => {
@@ -12244,7 +12056,6 @@ document.querySelectorAll("[data-settings-target]").forEach((button) => {
   }
 });
 
-// Initialize on page load
 initializeAccountSettingsForm();
 
 const candidaturaForm = document.getElementById("candidatura-form");
@@ -12559,8 +12370,6 @@ async function initializeAppData() {
     loadIndexVagasData({ render: true });
   }, 0);
   setupPresenceHeartbeat();
-  // The static HTML must never be exposed as an authenticated dashboard.
-  // Release it only after the profile and the initial database read finish.
   window.__hubAuthReady = true;
   document.documentElement.classList.remove("auth-entry-pending");
 }
@@ -12645,10 +12454,6 @@ function setupPresenceHeartbeat() {
       body: JSON.stringify(buildPayload(online)),
     }).then((response) => {
       if (response.status !== 401) return;
-      // O servidor confirmou que essa sessao foi encerrada por outro login
-      // (session_version divergente). Nao adianta tentar "restaurar" pelo
-      // cache local: isso so reabriria a mesma conta na maquina que deveria
-      // ser desconectada. Encerra de verdade e manda para o login.
       clearAuthenticatedUser();
       window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
     }).catch(() => {});
@@ -12677,7 +12482,6 @@ function setupPresencePolling() {
       renderChatChannels();
       renderChat();
     } catch (_) {
-      // Mantem o ultimo estado conhecido se a consulta falhar.
     }
   };
 
@@ -12939,8 +12743,6 @@ function openRecordContextMenu(event, type, id) {
   menu.style.top = `${event.clientY}px`;
 
   if (isArchivedRecord(item)) {
-    // Registro ja arquivado: o menu de contexto passa a oferecer exclusao
-    // definitiva em vez de arquivar de novo.
     const collectionsByType = { denuncia: "denuncias", chamado: "chamados", feedback: "feedbacks" };
     const tablesByType = { denuncia: TABLES.denuncias, chamado: TABLES.chamados, feedback: TABLES.feedbacks };
     const deleteLabels = { denuncia: "Excluir denúncia", chamado: "Excluir chamado", feedback: "Excluir feedback" };
@@ -13139,7 +12941,6 @@ function editarEvento(id) {
   form.elements.id.value = evento.systemBirthday ? "" : evento.id;
   form.dataset.editEventId = String(evento.id || "");
   form.elements.titulo.value = evento.titulo || "";
-  // converte ISO yyyy-mm-dd para dd/mm/aaaa na màscara
   form.elements.data.value = formatEventoDate(evento.data || "");
   form.elements.horario.value = evento.horario || "";
   form.elements.responsavel.value = evento.responsavel || "";
@@ -13438,9 +13239,7 @@ async function verifyAuthorizationPassword(password) {
   });
   if (response.ok) return true;
   const result = await response.json().catch(() => ({}));
-  // Se a Edge Function nao suporta validateOnly, tenta id invalido para checar apenas a senha
   if (result.error === "Senha de autorizacao invalida.") return false;
-  // Qualquer outro erro (ex: id invalido) significa que a senha foi aceita
   return response.status !== 401 && response.status !== 403;
 }
 
@@ -13612,7 +13411,6 @@ function downloadStyledRhDocument(doc, title) {
 
           .document { width: 100%; }
 
-          /* Letterhead */
           .letterhead { display: table; width: 100%; padding-bottom: 12px; border-bottom: 3px solid #1f3a3a; }
           .letterhead-brand, .letterhead-meta { display: table-cell; vertical-align: bottom; }
           .letterhead-brand h1 { margin: 0; font-size: 20px; font-weight: 700; color: #1f3a3a; letter-spacing: 2px; }
@@ -13620,34 +13418,28 @@ function downloadStyledRhDocument(doc, title) {
           .letterhead-meta { text-align: right; font-size: 9px; color: #4b5b5b; line-height: 1.6; }
           .letterhead-meta strong { color: #1f3a3a; }
 
-          /* Title block */
           .doc-title { margin-top: 18px; margin-bottom: 4px; }
           .doc-title .doc-kicker { margin: 0; font-size: 9px; font-weight: 700; color: #1f7a6f; text-transform: uppercase; letter-spacing: 2px; }
           .doc-title h2 { margin: 4px 0 0; font-size: 17px; font-weight: 700; color: #1f2933; }
           .doc-title p { margin: 5px 0 0; font-size: 10.5px; color: #6b7c7c; font-style: italic; }
           .doc-title-rule { height: 1px; background: #d8e0e0; margin: 12px 0 18px; }
 
-          /* Section heading */
           .section-heading { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; margin: 0 0 10px; border-bottom: 1px solid #1f3a3a; }
 
-          /* Data table */
           .data-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
           .data-table td { border: 1px solid #d8e0e0; padding: 7px 10px; vertical-align: top; }
           .data-table td.label-cell { width: 32%; background: #f4f7f7; font-size: 9px; font-weight: 700; color: #4b5b5b; text-transform: uppercase; letter-spacing: .5px; }
           .data-table td.value-cell { font-size: 11px; color: #1f2933; font-weight: 500; }
 
-          /* Long-form notes */
           .note-section { margin-top: 16px; }
           .note-section h3 { margin: 0 0 6px; font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; border-bottom: 1px solid #1f3a3a; }
           .note-section p { margin: 0; padding: 10px 12px; border: 1px solid #d8e0e0; border-radius: 2px; min-height: 46px; line-height: 1.65; white-space: normal; color: #344048; background: #fafcfc; }
 
-          /* Signatures */
           .signature-box { display: table; width: 100%; margin-top: 56px; table-layout: fixed; }
           .signature-col { display: table-cell; width: 50%; padding: 0 24px; text-align: center; }
           .signature-line { border-top: 1px solid #1f2933; margin: 0 0 6px; }
           .signature-col span { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: .8px; }
 
-          /* Footer */
           .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #d8e0e0; color: #9aa8a8; font-size: 8.5px; text-align: center; letter-spacing: .5px; text-transform: uppercase; }
         </style>
       </head>
@@ -13711,13 +13503,11 @@ document.addEventListener('click', (event) => {
 
   const { action, id } = target.dataset;
 
-  // Acao especial para nao fazer nada, util para checkboxes dentro de elementos clicaveis.
   if (action === 'no-op') {
     event.stopPropagation();
     return;
   }
 
-  // Acoes que precisam de stopPropagation.
   if (['reabrir-denuncia', 'reabrir-chamado', 'reabrir-feedback', 'editar-evento', 'excluir-evento'].includes(action)) {
     event.stopPropagation();
   }
@@ -13806,9 +13596,7 @@ document.addEventListener('click', (event) => {
       break;
   }
 });
-/* ==================== TRACKER MODAL ==================== */
 
-// Classe para gerenciar o modal de acompanhamento
 class NotificationTracker {
   constructor() {
     this.modal = document.getElementById("tracker-modal");
@@ -13891,11 +13679,8 @@ class NotificationTracker {
       const time = item.time || item.date || item.createdAt || "Recentemente";
       const rawDateTime = item.sortAt || item.updatedSortAt || item.updatedAt || item.createdSortAt || item.createdAt || item.dateTime || item.date || time;
       const id = String(item.id || `${type}-${notifications.length}-${Date.now()}`);
-      // A chave de exclusao pode diferir do id: o card agregado de mensagens usa
-      // a ultima mensagem, para que uma mensagem nova volte a aparecer.
       const dismissKey = String(item.dismissKey || id);
       if (isNotificationDismissed(dismissKey)) return;
-      // O acompanhamento completo respeita o mesmo escopo de abas do painel.
       const targetView = item.view || this.getViewForType(type);
       if (typeof canAccessView === "function" && !canAccessView(targetView)) return;
       const hasBeenRead = readNotificationIds.has(id);
@@ -14375,7 +14160,6 @@ class NotificationTracker {
   }
 }
 
-// Inicializar quando o DOM estiver pronto
 function maybeOpenNotificationTrackerFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -14484,7 +14268,6 @@ window.addEventListener("storage", (event) => {
   try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
 });
 
-// Manter compatibilidade com botoes antigos.
 document.addEventListener('DOMContentLoaded', () => {
   const prevBtn = document.getElementById('dashboard-notifications-prev');
   const nextBtn = document.getElementById('dashboard-notifications-next');
@@ -14492,12 +14275,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (prevBtn) prevBtn.style.display = 'none';
   if (nextBtn) nextBtn.style.display = 'none';
 });
-/* ==========================================================================
-   PERMISSÃO ARIEL + FEEDBACKS/RECLAMAÇÕES/SUGESTÕES
-   - Equipe visível somente para o usuário Ariel
-   - Nova aba em Conta > Configurações para envio de feedbacks
-   - Ariel visualiza todos os envios
-   ========================================================================== */
 (function setupArielAccessAndFeedbackModule() {
   const FEEDBACK_TABLE = "hub_feedbacks";
   const FEEDBACK_LOCAL_KEY = "hub-feedbacks-local-v1";
@@ -14709,8 +14486,6 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       event.stopPropagation();
 
-      // Quando o botão vem do menu do usuário, precisa abrir a aba Conta antes.
-      // de selecionar o painel interno de Feedbacks.
       activateView?.("conta");
       ensureFeedbackSettingsUi();
       showSettingsPanel?.(FEEDBACK_PANEL_ID);
@@ -14917,7 +14692,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtered = filter === "todos" ? items : items.filter((item) => item.tipo === filter);
 
     if (isArielUser()) {
-      // Ariel somente visualiza os envios recebidos. Ele não envia por esta aba.
       renderFeedbackItems(document.getElementById("hub-feedback-admin-list"), filtered, { admin: true });
     } else {
       renderFeedbackItems(document.getElementById("hub-feedback-user-list"), items, { canDelete: true });
@@ -15036,9 +14810,6 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 
 
-/* ========================================================================
-   ATESTADOS PUBLICOS + ABA INTERNA DE VISUALIZAÇÃO
-   ======================================================================== */
 (function setupAtestadosModule() {
   const ATESTADOS_TABLE = "hub_atestados";
   const ATESTADOS_LOCAL_KEY = "hub-atestados-local-v1";
@@ -15286,11 +15057,6 @@ document.addEventListener('DOMContentLoaded', () => {
       created_by: "Publico",
     };
 
-    // IMPORTANTE:
-    // Não usar .select().single() no envio público.
-    // O visitante/anon tem permissão apenas para INSERIR, não para LER a tabela.
-    // Quando o INSERT pede retorno com .select(), o PostgreSQL tenta aplicar SELECT
-    // e pode retornar erro de RLS mesmo com a policy de INSERT correta.
     const { error: insertError } = await postgresClient
       .from(ATESTADOS_TABLE)
       .insert(payload);

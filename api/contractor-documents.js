@@ -32,10 +32,6 @@ function isValidPayload(payload) {
   return null;
 }
 
-// Cada arquivo ja foi enviado antes pelo cliente para /api/files (um por
-// requisicao); aqui so chega o caminho onde ele ficou salvo. Embutir todos os
-// arquivos em dataUrl numa unica requisicao estourava o limite de ~4.5mb por
-// requisicao da Vercel, que nao pode ser configurado por codigo.
 function normalizeDocuments(documentos) {
   const list = Array.isArray(documentos) ? documentos : [];
   return list
@@ -86,8 +82,6 @@ export default async function handler(req, res) {
       ["documentos", JSON.stringify(documentos)],
       ["created_by", "Publico"],
     ]);
-    // Colunas opcionais (origem_html, email) podem faltar em bancos antigos;
-    // nesse caso o Postgres devolve 42703 e a coluna citada e removida do insert.
     const optionalColumns = new Set(["origem_html", "email"]);
 
     let result = null;

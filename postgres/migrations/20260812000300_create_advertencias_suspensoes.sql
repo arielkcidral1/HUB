@@ -1,7 +1,3 @@
--- Advertencias e suspensoes eram salvas so no localStorage/sessionStorage do
--- navegador (nunca chegavam ao Postgres), entao cada RH via apenas os
--- registros feitos na propria maquina. Esta tabela passa a guardar os
--- registros como as demais colecoes do HUB.
 create table if not exists public.hub_advertencias_suspensoes (
   id uuid primary key default gen_random_uuid(),
   tipo text not null default 'advertencia',

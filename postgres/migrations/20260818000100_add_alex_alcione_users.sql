@@ -1,8 +1,3 @@
--- Cadastra os logins de Alexsandro Cardoso dos Santos (Diretor) e
--- Jose Alcione Bayer (Gerente Administrativo), unidade Matriz.
--- Senhas ja gravadas como hash bcrypt (mesmo formato que api/auth.js aceita).
--- Idempotente: nao duplica se ja existir usuario com o mesmo email ou cpf.
-
 insert into public.hub_users (nome, email, cpf, cargo, unidade, password_hash, created_by)
 select 'Alexsandro Cardoso dos Santos', 'alex@fredypneus.com.br', '01521750912', 'Diretor', 'Matriz',
        '$2a$10$2eru4Fv1VVn9O0yXjEUYyOZ6/3RCw1OnV4oX7xy.BV1skGKFguJJ2', 'Migration'

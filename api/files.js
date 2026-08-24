@@ -2,10 +2,6 @@ import { assertDatabaseUrl, getBody, json, pool, safeErrorResponse } from "./db.
 import { validateAuthSession } from "./auth.js";
 import { checkPublicRateLimit } from "./rate-limit.js";
 
-// A Vercel enforca um teto real de ~4.5mb por requisicao antes do handler
-// rodar, e isso nao e configuravel por codigo (sizeLimit so ajusta o parser do
-// framework). Cada chamada aqui deve carregar 1 arquivo de no maximo ~3mb
-// cru para caber com folga depois do base64.
 export const config = { api: { bodyParser: { sizeLimit: "15mb" } } };
 
 // Prefixos que os formularios publicos (sem login) usam para enviar arquivo
