@@ -94,10 +94,38 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
   as mesmas que a UI deixa mexer em qualquer registro.
 - **Senhas de usuario fracas em algumas contas**: nao ha validacao de forca
   minima de senha nem obrigatoriedade de troca periodica.
+- Rodar `node scripts/check-password-hashes.mjs` periodicamente; quando `sha256_like`
+  chegar a 0, remover o fallback de hash legado em `isPasswordValid` (`api/auth.js`).
+- Mover as senhas fixas de `api/contractor-documents.js` (`ACCESS_PASSWORDS`)
+  para variaveis de ambiente.
 - Preencher `email` em todos os perfis de `hub_users` continua recomendado
   para manter os relatorios e o vinculo de conta consistentes.
 
 ## Historico (arquitetura anterior, baseada em Supabase)
+
+### 2026-08-20 - Autenticacao/autorizacao das APIs serverless
+
+- `api/records.js`, `api/bootstrap.js` e `api/files.js` nao exigiam sessao valida:
+  qualquer requisicao conseguia ler/escrever qualquer tabela `hub_*` (incluindo
+  `hub_users` com `password_hash`) e baixar qualquer arquivo salvo. Todos passaram
+  a exigir `validateAuthSession(req)` antes de qualquer operacao.
+- `api/records.js` passou a bloquear por completo as tabelas `hub_users` e
+  `hub_sessions` (retorna 403), ja que essa API generica nao deve gerenciar
+  credenciais.
+- `api/bootstrap.js` deixou de incluir `password_hash` na lista de usuarios
+  retornada ao cliente.
+- O cookie de sessao (`hub_auth_session`) era apenas `base64url(JSON)`, sem
+  assinatura: um atacante que soubesse/adivinhasse um `user.id` (sequencial)
+  conseguia forjar login como qualquer usuario. Passou a ser assinado com
+  HMAC-SHA256 (`AUTH_SESSION_SECRET`) e verificado com `crypto.timingSafeEqual`.
+- `isPasswordValid` (`api/auth.js`) ainda aceita hashes legados (SHA-256 sem
+  salt/texto puro) para nao bloquear contas antigas, mas agora, apos um login
+  legado bem-sucedido, a senha e migrada automaticamente para bcrypt no banco.
+  Ver `scripts/check-password-hashes.mjs` para acompanhar quantos usuarios
+  ainda estao em formato legado.
+- Adicionada `AUTH_SESSION_SECRET` em `.env.example`; sem ela definida em
+  producao o backend usa um fallback derivado de `DATABASE_URL` (funcional,
+  porem recomenda-se configurar um segredo dedicado).
 
 ### 2026-06-21 - Calendario
 
