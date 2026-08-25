@@ -5934,6 +5934,9 @@ if (collection === "eventos") {
       payload.updated_by = values.updatedBy || getCurrentUserName();
       payload.updated_at = new Date().toISOString();
     }
+    if (collection === "disciplinaryRecords") {
+      delete payload.created_by;
+    }
     const { data: updated, error } = await postgresClient
       .from(TABLES[collection])
       .update(payload)
@@ -7326,6 +7329,7 @@ function renderDisciplinaryRecords() {
       <div class="job-actions">
         <button class="secondary-link" type="button" data-action="gerar-documento-disciplinary" data-id="${escapeHtml(item.id)}">Gerar documento</button>
         ${item.arquivoUrl ? `<button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-medidas-disciplinares" data-private-storage-path="${escapeHtml(item.arquivoUrl)}" data-private-storage-name="${escapeHtml(item.arquivoNome || "anexo")}">Ver anexo</button>` : ""}
+        <button class="secondary-link" type="button" data-action="editar-disciplinary" data-id="${escapeHtml(item.id)}">Editar</button>
         <button class="danger-button" type="button" data-action="excluir-disciplinary" data-id="${escapeHtml(item.id)}">Deletar</button>
       </div>
     </article>
@@ -11547,16 +11551,16 @@ function deselectActiveDisciplinaryTab() {
   renderDisciplinaryRecords();
 }
 
-document.querySelectorAll("[data-disciplinary-doc]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const targetDoc = button.dataset.disciplinaryDoc;
-    document.querySelectorAll("[data-disciplinary-doc]").forEach((tab) => tab.classList.toggle("active", tab === button));
-    document.querySelectorAll(".disciplinary-view").forEach((view) => {
-      view.classList.toggle("active", view.id === `disciplinary-${targetDoc}`);
-    });
-
-    renderDisciplinaryRecords();
+function activateDisciplinaryTab(type) {
+  document.querySelectorAll("[data-disciplinary-doc]").forEach((tab) => tab.classList.toggle("active", tab.dataset.disciplinaryDoc === type));
+  document.querySelectorAll(".disciplinary-view").forEach((view) => {
+    view.classList.toggle("active", view.id === `disciplinary-${type}`);
   });
+  renderDisciplinaryRecords();
+}
+
+document.querySelectorAll("[data-disciplinary-doc]").forEach((button) => {
+  button.addEventListener("click", () => activateDisciplinaryTab(button.dataset.disciplinaryDoc));
 });
 
 function validateDisciplinaryAttachment(file) {
@@ -11605,6 +11609,13 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
         return;
       }
     }
+    const id = String(form.get("id") || "").trim();
+    if (id && !anexo) {
+      const existing = (data.disciplinaryRecords || []).find((item) => String(item.id) === id);
+      if (existing?.arquivoUrl) {
+        anexo = { name: existing.arquivoNome || "", size: existing.arquivoTamanho || 0, type: existing.arquivoTipo || "", url: existing.arquivoUrl };
+      }
+    }
     const values = {
       tipo,
       colaborador: String(form.get("colaborador") || "").trim(),
@@ -11615,13 +11626,17 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
       diasSuspensao: tipo === "suspensao" ? diasSuspensao : "",
       anexo,
     };
-    const success = await addItem("disciplinaryRecords", { ...values, createdBy: getCurrentUserName() });
+    const success = id
+      ? await updateItem("disciplinaryRecords", id, { ...values, updatedBy: getCurrentUserName() })
+      : await addItem("disciplinaryRecords", { ...values, createdBy: getCurrentUserName() });
     if (success) {
-      formElement.reset();
+      resetDisciplinaryForm(formElement);
       if (typeof populateUnitSelects === "function") populateUnitSelects();
-      showModal("Registro salvo", `${getDisciplinaryTypeLabel(tipo)} salva com sucesso.`, "info");
+      showModal(id ? "Registro atualizado" : "Registro salvo", `${getDisciplinaryTypeLabel(tipo)} ${id ? "atualizada" : "salva"} com sucesso.`, "info");
     }
   });
+
+  formElement.querySelector("[data-disciplinary-cancel-edit]")?.addEventListener("click", () => resetDisciplinaryForm(formElement));
 });
 
 document.getElementById("disciplinary-filter-name")?.addEventListener("input", renderDisciplinaryRecords);
@@ -13113,6 +13128,47 @@ function excluirDisciplinaryRecord(id) {
   });
 }
 
+function resetDisciplinaryForm(formElement) {
+  if (!formElement) return;
+  const tipo = formElement.dataset.disciplinaryForm;
+  formElement.reset();
+  if (formElement.elements.id) formElement.elements.id.value = "";
+  formElement.querySelector("[data-disciplinary-cancel-edit]")?.setAttribute("hidden", "");
+  const submitButton = formElement.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.textContent = tipo === "suspensao" ? "Salvar suspensao" : "Salvar advertencia";
+}
+
+function editarDisciplinaryRecord(id) {
+  const registro = (data.disciplinaryRecords || []).find((item) => String(item.id) === String(id));
+  if (!registro) return;
+
+  showPasswordActionModal({
+    title: "Editar registro",
+    text: `Informe a senha para editar a medida de "${registro.colaborador || "funcionario nao informado"}".`,
+    confirmText: "Editar",
+    validatePassword: async (password) => password.trim() === "1001",
+    onConfirm: () => {
+      const tipo = String(registro.tipo || "").toLowerCase() === "suspensao" ? "suspensao" : "advertencia";
+      activateDisciplinaryTab(tipo);
+      const formElement = document.querySelector(`[data-disciplinary-form="${tipo}"]`);
+      if (!formElement) return;
+      formElement.elements.id.value = registro.id;
+      formElement.elements.colaborador.value = registro.colaborador || "";
+      formElement.elements.data_medida.value = registro.dataMedida || "";
+      setFieldValue(formElement.elements.unidade, registro.unidade || "");
+      formElement.elements.local.value = registro.local || "";
+      formElement.elements.motivo.value = registro.motivo || "";
+      if (tipo === "suspensao" && formElement.elements.dias_suspensao) {
+        formElement.elements.dias_suspensao.value = registro.diasSuspensao || "";
+      }
+      formElement.querySelector("[data-disciplinary-cancel-edit]")?.removeAttribute("hidden");
+      const submitButton = formElement.querySelector('button[type="submit"]');
+      if (submitButton) submitButton.textContent = "Salvar alteracoes";
+      formElement.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+  });
+}
+
 async function excluirDocumentoContratado(id) {
   const registro = (data.documentosContratados || []).find((item) => String(item.id) === String(id));
   if (!registro) return;
@@ -13647,6 +13703,7 @@ document.addEventListener('click', (event) => {
     case 'editar-vt': editarVtRegistro(id); break;
     case 'excluir-vt': excluirVtRegistro(id); break;
     case 'gerar-relatorio-vt': gerarRelatorioVt(target.dataset.scope); break;
+    case 'editar-disciplinary': editarDisciplinaryRecord(id); break;
     case 'excluir-disciplinary': excluirDisciplinaryRecord(id); break;
     case 'gerar-documento-disciplinary': gerarDocumentoDisciplinary(id); break;
     case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary(target.dataset.scope); break;

@@ -1157,6 +1157,7 @@
               </div>
               <section class="doc-view disciplinary-view" id="disciplinary-advertencia">
                 <form class="panel doc-form disciplinary-form" data-disciplinary-form="advertencia" autocomplete="off">
+                  <input name="id" type="hidden" />
                   <div class="panel-header split-header">
                     <div>
                       <h2>Advertencia</h2>
@@ -1172,11 +1173,13 @@
                   <label>Motivo<textarea name="motivo" rows="4" required></textarea></label>
                   <label>Anexo (opcional)<input name="anexo" type="file" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" /></label>
                   <button class="primary-button" type="submit">Salvar advertencia</button>
+                  <button class="secondary-link full-width-action" data-disciplinary-cancel-edit type="button" hidden>Cancelar edição</button>
                 </form>
               </section>
 
               <section class="doc-view disciplinary-view" id="disciplinary-suspensao">
                 <form class="panel doc-form disciplinary-form" data-disciplinary-form="suspensao" autocomplete="off">
+                  <input name="id" type="hidden" />
                   <div class="panel-header split-header">
                     <div>
                       <h2>Suspensao</h2>
@@ -1193,6 +1196,7 @@
                   <label>Motivo<textarea name="motivo" rows="4" required></textarea></label>
                   <label>Anexo (opcional)<input name="anexo" type="file" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" /></label>
                   <button class="primary-button" type="submit">Salvar suspensao</button>
+                  <button class="secondary-link full-width-action" data-disciplinary-cancel-edit type="button" hidden>Cancelar edição</button>
                 </form>
               </section>
 
