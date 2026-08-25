@@ -35,6 +35,15 @@ const CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos";
 const ATESTADOS_BUCKET = "hub-atestados";
 
 const ATESTADO_MAX_SIZE_BYTES = 3 * 1024 * 1024;
+const DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES = 3 * 1024 * 1024;
+const DISCIPLINARY_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
 const CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES = 3 * 1024 * 1024;
 const RESUME_MAX_SIZE_BYTES = 3 * 1024 * 1024;
 const RESUME_ALLOWED_MIME_TYPES = new Set([
@@ -3614,6 +3623,10 @@ if (collection === "eventos") {
       local: row.local || "",
       motivo: row.motivo || "",
       diasSuspensao: row.dias_suspensao || "",
+      arquivoNome: row.arquivo_nome || "",
+      arquivoTamanho: row.arquivo_tamanho || 0,
+      arquivoTipo: row.arquivo_tipo || "",
+      arquivoUrl: row.arquivo_url || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
@@ -4233,6 +4246,10 @@ if (collection === "eventos") {
       local: values.local || "",
       motivo: values.motivo || "",
       dias_suspensao: values.diasSuspensao ? Number(values.diasSuspensao) : null,
+      arquivo_nome: values.anexo?.name || null,
+      arquivo_tamanho: values.anexo?.size || null,
+      arquivo_tipo: values.anexo?.type || null,
+      arquivo_url: values.anexo?.url || null,
       created_by: values.createdBy || getCurrentUserName(),
     };
   }
@@ -4512,6 +4529,11 @@ function withoutOptionalApplicationColumns(payload) {
 
 function withoutDiasSuspensaoColumn(payload) {
   const { dias_suspensao, ...rest } = payload;
+  return rest;
+}
+
+function withoutDisciplinaryAnexoColumns(payload) {
+  const { arquivo_nome, arquivo_tamanho, arquivo_tipo, arquivo_url, ...rest } = payload;
   return rest;
 }
 
@@ -5679,6 +5701,30 @@ async function addItem(collection, values) {
         setSyncStatus("PostgreSQL precisa migracao", false);
         renderAll();
         showModal("Banco precisa atualizar", "O registro foi salvo, mas rode a migration 20260819000100 no PostgreSQL para gravar os dias de suspensao.", "info");
+        return true;
+      }
+
+      if (collection === "disciplinaryRecords" && isMissingColumn(error, "arquivo_nome")) {
+        const { data: insertedLegacy, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutDisciplinaryAnexoColumns(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedLegacy])[0],
+          arquivoNome: values.anexo?.name || "",
+          arquivoTamanho: values.anexo?.size || 0,
+          arquivoTipo: values.anexo?.type || "",
+          arquivoUrl: values.anexo?.url || "",
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        renderAll();
+        showModal("Banco precisa atualizar", "O registro foi salvo, mas rode a migration 20260825000100 no PostgreSQL para gravar o anexo.", "info");
         return true;
       }
 
@@ -7279,6 +7325,7 @@ function renderDisciplinaryRecords() {
       <p class="item-meta">${escapeHtml(item.createdAt || "")} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</p>
       <div class="job-actions">
         <button class="secondary-link" type="button" data-action="gerar-documento-disciplinary" data-id="${escapeHtml(item.id)}">Gerar documento</button>
+        ${item.arquivoUrl ? `<button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-medidas-disciplinares" data-private-storage-path="${escapeHtml(item.arquivoUrl)}" data-private-storage-name="${escapeHtml(item.arquivoNome || "anexo")}">Ver anexo</button>` : ""}
         <button class="danger-button" type="button" data-action="excluir-disciplinary" data-id="${escapeHtml(item.id)}">Deletar</button>
       </div>
     </article>
@@ -11512,6 +11559,19 @@ document.querySelectorAll("[data-disciplinary-doc]").forEach((button) => {
   });
 });
 
+function validateDisciplinaryAttachment(file) {
+  if (!file || !file.name) return null;
+  if (file.size > DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES) return "O anexo deve ter ate 3 MB.";
+  if (!DISCIPLINARY_ATTACHMENT_ALLOWED_MIME_TYPES.has(file.type)) return "Anexe somente imagem, PDF ou arquivo Word.";
+  return null;
+}
+
+async function uploadDisciplinaryAttachment(file) {
+  const path = `medidas-disciplinares/${generateUUID()}/${safePublicFileName(file.name || "anexo")}`;
+  await uploadPublicFile(file, path);
+  return { name: file.name || "anexo", size: file.size || 0, type: file.type || "application/octet-stream", url: path };
+}
+
 document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
   const unitField = formElement.elements.unidade;
   const localField = formElement.elements.local;
@@ -11530,6 +11590,21 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
       showModal("Dias obrigatorios", "Informe a quantidade de dias de suspensao.", "error");
       return;
     }
+    const file = form.get("anexo");
+    const fileError = validateDisciplinaryAttachment(file);
+    if (fileError) {
+      showModal("Anexo invalido", fileError, "error");
+      return;
+    }
+    let anexo = null;
+    if (file && file.name) {
+      try {
+        anexo = await uploadDisciplinaryAttachment(file);
+      } catch (error) {
+        showModal("Erro no anexo", error?.message || "Nao foi possivel enviar o anexo.", "error");
+        return;
+      }
+    }
     const values = {
       tipo,
       colaborador: String(form.get("colaborador") || "").trim(),
@@ -11538,6 +11613,7 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
       local: String(form.get("local") || "").trim(),
       motivo: String(form.get("motivo") || "").trim(),
       diasSuspensao: tipo === "suspensao" ? diasSuspensao : "",
+      anexo,
     };
     const success = await addItem("disciplinaryRecords", { ...values, createdBy: getCurrentUserName() });
     if (success) {
