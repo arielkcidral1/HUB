@@ -12581,6 +12581,8 @@ function setupPresenceHeartbeat() {
     }).then((response) => {
       if (response.status !== 401) return;
 
+      // Nao adianta tentar restaurar do cache local: o servidor ja confirmou
+      // que a sessao foi encerrada (ex.: login em outra maquina).
       clearAuthenticatedUser();
       window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
     }).catch(() => {});

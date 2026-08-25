@@ -1,3 +1,6 @@
+// Compatibilidade com cache antigo: este arquivo nao faz mais nada alem de
+// espelhar o campo legado no campo atual. A renderizacao e os filtros reais ficam em script.js
+// (vaga-filter-candidato -> vaga-filter-nome).
 (function () {
   function bind() {
     const legacyName = document.getElementById("vaga-filter-candidato");

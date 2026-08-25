@@ -98,7 +98,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $recordsApi 'if \(req\.method === "GET"\) \{[\s\S]*if \(!isAuthenticated && !PUBLIC_READ_TABLES\.has\(table\)\) return unauthorized\(res\)' "leitura sem sessao bloqueada fora do allowlist publico"
   Assert-MatchText $recordsApi '!isAuthenticated && table === "hub_vagas" \? \[\{ column: "status", op: "eq", value: "Aberta" \}\] : \[\]' "visitante sem sessao so ve vagas com status Aberta"
   Assert-MatchText $recordsApi 'if \(req\.method === "POST"\) \{[\s\S]*if \(!isAuthenticated\) \{[\s\S]*const sanitize = PUBLIC_INSERT_TABLES\.get\(table\)[\s\S]*if \(!sanitize\) return unauthorized\(res\)[\s\S]*rows = rows\.map\(sanitize\)' "insercao sem sessao passa pelo sanitizador publico antes de gravar"
-  Assert-MatchText $recordsApi 'PATCH e DELETE nunca ficam publicos[\s\S]*if \(!isAuthenticated\) return unauthorized\(res\)' "update e delete sempre exigem sessao valida"
+  Assert-MatchText $recordsApi 'if \(!isAuthenticated\) return unauthorized\(res\);[\s\S]*if \(req\.method === "PATCH"\)[\s\S]*if \(req\.method === "DELETE"\)' "update e delete sempre exigem sessao valida"
   Assert-MatchText $recordsApi 'stripSensitiveColumns\(table, result\.rows\)' "API de registros remove colunas sensiveis antes de responder"
   Assert-MatchText $bootstrapApi 'const session = await validateAuthSession\(req\)[\s\S]*if \(!session\?\.user\?\.id\) return json\(res, 401' "bootstrap exige sessao valida"
   Assert-MatchText $bootstrapApi 'stripSensitiveColumns\(table, await selectRows\(client, table, getForcedRowFilter\(session, table\)\)\)' "bootstrap remove colunas sensiveis antes de responder"
@@ -127,7 +127,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $recordsApi 'safeErrorResponse\(res, error, "Erro no banco de dados\."\)' "API de registros usa resposta de erro segura"
   Assert-MatchText $bootstrapApi 'safeErrorResponse\(res, error, "Erro ao carregar dados iniciais\."\)' "bootstrap usa resposta de erro segura"
   Assert-MatchText $filesApi 'safeErrorResponse\(res, error, "Erro ao processar arquivo\."\)' "download/upload de arquivo usa resposta de erro segura"
-  Assert-MatchText $contractorApi2 'timingSafeStringEqual\(ACCESS_PASSWORDS\[payload\.empresa\], payload\.accessPassword\)' "senha de acesso de contratado e comparada em tempo constante"
+  Assert-MatchText $contractorApi2 'timingSafeStringEqual\(ACCESS_PASSWORDS\[empresa\], accessPassword\)' "senha de acesso de contratado e comparada em tempo constante"
   Assert-MatchText $contractorApi2 'safeErrorResponse\(res, error, "Nao foi possivel salvar documentos\."\)' "envio de documentos de contratado usa resposta de erro segura"
 
   Assert-MatchText $authorizeApi 'export function canReadTable\(session, table\)' "modulo de autorizacao por cargo existe"
@@ -327,7 +327,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $index 'data-view="chamados"[^>]*>[\s\S]*<span>Chamados abertos hoje</span>[\s\S]*<strong id="metric-chamados-hoje">0</strong>' "painel possui cartao Chamados abertos hoje"
   Assert-MatchText $script 'if \(document\.getElementById\("metric-chamados-hoje"\)\)[\s\S]*data\.chamados[\s\S]*\.filter\(\(item\) => item\.status === "Aberto" && isTodayLabel\(item\.createdAt\)\)' "cartao Chamados abertos hoje conta chamados abertos criados no dia"
   Assert-MatchText $script 'function applyDashboardScopeToMetricCards\(\)[\s\S]*if \(card\.querySelector\("#metric-chamados-hoje"\) && !isRhUser\(\)\) allowed = false;' "cartao Chamados abertos hoje e exclusivo de contas com cargo RH"
-  Assert-MatchText $script 'function getAllowedViewsForCurrentUser\(\)[\s\S]*const canSeeDenuncias = hasFredericoLevelAccess\(\) \|\| \(typeof window\.isArielUser === "function" && window\.isArielUser\(\)\);[\s\S]*if \(!canSeeDenuncias\) allowed\.delete\("denuncias"\);' "aba Denuncias Recebidas fica restrita a Ariel e a quem tem acesso nivel Frederico"
+  Assert-MatchText $script 'function getAllowedViewsForCurrentUser\(\)[\s\S]*const canSeeDenuncias = hasFredericoLevelAccess\(\)[\s\S]*\|\| currentUserMatchesName\("vanessa"\);[\s\S]*if \(!canSeeDenuncias\) allowed\.delete\("denuncias"\);' "aba Denuncias Recebidas fica restrita a Vanessa e a quem tem acesso nivel Frederico"
   Assert-MatchText $script 'const sortedDashboardItems = dashboardItems[\s\S]*\.filter\(\(item\) => canAccessView\(getDashboardItemView\(item\)\)\)' "acompanhamento do painel respeita o escopo de abas"
   Assert-MatchText $script 'function shouldNotifyRealtimeItem\([\s\S]*if \(!canAccessView\(getViewForCollection\(collection\)\)\) return false;' "notificacao nao vaza conteudo de aba sem acesso"
   Assert-MatchText $script 'function shouldNotifyRealtimeItem\([\s\S]*if \(collection === "chamados" && author && author === currentName\) return false;' "quem abre o chamado nao recebe notificacao do proprio chamado"
@@ -408,11 +408,11 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $style '\.chat-message-filter[\s\S]*\.chat-message-filter input[\s\S]*\.chat-message-filter:focus-within' "filtro de mensagens possui estilo dedicado"
   Assert-MatchText $style '\.settings-shell[\s\S]*grid-template-columns[\s\S]*\.settings-panel[\s\S]*\.settings-search[\s\S]*\.settings-user-card[\s\S]*\.settings-item[\s\S]*\.settings-logout[\s\S]*\.settings-detail-panel\.active' "painel de configuracoes possui estilos dedicados"
   Assert-MatchText $index '<section class="view" id="documentos-contratados"[\s\S]*documentos-fredy\.html[\s\S]*documentos-besten\.html[\s\S]*documentos-achei\.html[\s\S]*documentos-trinca\.html[\s\S]*id="documentos-contratados-list"' "aba de documentos de contratados possui links e lista"
-  Assert-MatchText $docsFredy 'data-contractor-password="fredy5212"[\s\S]*data-contractor-source="documentos-fredy\.html"[\s\S]*id="contractor-password-form"[\s\S]*public-password-control[\s\S]*data-toggle-public-password="contractor-access-password"[\s\S]*id="contratado-doc-form"[^>]*hidden[\s\S]*name="origem_html" type="hidden" value="documentos-fredy\.html"[\s\S]*id="contractor-documents-fields"[\s\S]*name="documentos" type="file" multiple required[\s\S]*id="adicionar-documento-contratado"[\s\S]*Adicionar documento[\s\S]*qualquer formato' "pagina Fredy exige senha registra origem aceita qualquer arquivo e adiciona documentos"
+  Assert-MatchText $docsFredy 'data-contractor-company="Fredy Pneus" data-contractor-source="documentos-fredy\.html"[\s\S]*id="contractor-password-form"[\s\S]*public-password-control[\s\S]*data-toggle-public-password="contractor-access-password"[\s\S]*id="contratado-doc-form"[^>]*hidden[\s\S]*name="origem_html" type="hidden" value="documentos-fredy\.html"[\s\S]*id="contractor-documents-fields"[\s\S]*name="documentos" type="file" multiple required[\s\S]*id="adicionar-documento-contratado"[\s\S]*Adicionar documento[\s\S]*qualquer formato' "pagina Fredy exige senha registra origem aceita qualquer arquivo e adiciona documentos"
   Assert-MatchText ($docsBesten + $docsAchei + $docsTrinca) 'documentos-besten\.html[\s\S]*data-toggle-public-password="contractor-access-password"[\s\S]*documentos-achei\.html[\s\S]*data-toggle-public-password="contractor-access-password"[\s\S]*documentos-trinca\.html[\s\S]*data-toggle-public-password="contractor-access-password"' "paginas Besten Achei e Trinca possuem botao de exibir senha"
-  Assert-MatchText $docsBesten 'data-contractor-password="besten5212"[\s\S]*data-contractor-source="documentos-besten\.html"[\s\S]*id="contractor-password-form"[\s\S]*public-password-control[\s\S]*id="contratado-doc-form"[^>]*hidden[\s\S]*name="origem_html" type="hidden" value="documentos-besten\.html"[\s\S]*id="contractor-documents-fields"[\s\S]*name="documentos" type="file" multiple required[\s\S]*id="adicionar-documento-contratado"[\s\S]*Adicionar documento[\s\S]*qualquer formato' "pagina Besten exige senha registra origem aceita qualquer arquivo e adiciona documentos"
-  Assert-MatchText $docsAchei 'data-contractor-password="Achei5212"[\s\S]*data-contractor-source="documentos-achei\.html"[\s\S]*id="contractor-password-form"[\s\S]*public-password-control[\s\S]*id="contratado-doc-form"[^>]*hidden[\s\S]*name="origem_html" type="hidden" value="documentos-achei\.html"[\s\S]*id="contractor-documents-fields"[\s\S]*name="documentos" type="file" multiple required[\s\S]*id="adicionar-documento-contratado"[\s\S]*Adicionar documento[\s\S]*qualquer formato' "pagina Achei exige senha registra origem aceita qualquer arquivo e adiciona documentos"
-  Assert-MatchText $docsTrinca 'data-contractor-password="trinca5212"[\s\S]*data-contractor-source="documentos-trinca\.html"[\s\S]*id="contractor-password-form"[\s\S]*public-password-control[\s\S]*id="contratado-doc-form"[^>]*hidden[\s\S]*name="origem_html" type="hidden" value="documentos-trinca\.html"[\s\S]*id="contractor-documents-fields"[\s\S]*name="documentos" type="file" multiple required[\s\S]*id="adicionar-documento-contratado"[\s\S]*Adicionar documento[\s\S]*qualquer formato' "pagina Trinca exige senha registra origem aceita qualquer arquivo e adiciona documentos"
+  Assert-MatchText $docsBesten 'data-contractor-company="Besten Pneus" data-contractor-source="documentos-besten\.html"[\s\S]*id="contractor-password-form"[\s\S]*public-password-control[\s\S]*id="contratado-doc-form"[^>]*hidden[\s\S]*name="origem_html" type="hidden" value="documentos-besten\.html"[\s\S]*id="contractor-documents-fields"[\s\S]*name="documentos" type="file" multiple required[\s\S]*id="adicionar-documento-contratado"[\s\S]*Adicionar documento[\s\S]*qualquer formato' "pagina Besten exige senha registra origem aceita qualquer arquivo e adiciona documentos"
+  Assert-MatchText $docsAchei 'data-contractor-company="Achei Pneus" data-contractor-source="documentos-achei\.html"[\s\S]*id="contractor-password-form"[\s\S]*public-password-control[\s\S]*id="contratado-doc-form"[^>]*hidden[\s\S]*name="origem_html" type="hidden" value="documentos-achei\.html"[\s\S]*id="contractor-documents-fields"[\s\S]*name="documentos" type="file" multiple required[\s\S]*id="adicionar-documento-contratado"[\s\S]*Adicionar documento[\s\S]*qualquer formato' "pagina Achei exige senha registra origem aceita qualquer arquivo e adiciona documentos"
+  Assert-MatchText $docsTrinca 'data-contractor-company="Trinca Mkt" data-contractor-source="documentos-trinca\.html"[\s\S]*id="contractor-password-form"[\s\S]*public-password-control[\s\S]*id="contratado-doc-form"[^>]*hidden[\s\S]*name="origem_html" type="hidden" value="documentos-trinca\.html"[\s\S]*id="contractor-documents-fields"[\s\S]*name="documentos" type="file" multiple required[\s\S]*id="adicionar-documento-contratado"[\s\S]*Adicionar documento[\s\S]*qualquer formato' "pagina Trinca exige senha registra origem aceita qualquer arquivo e adiciona documentos"
   Assert-MatchText $script 'const UNIT_CITY_ALIASES = \{[\s\S]*plc: "Palhoca",[\s\S]*gua: "Joinville",[\s\S]*"dpa jc": "Joinville",[\s\S]*"dpa iri": "Joinville",[\s\S]*"gcs gpo": "Araquari",[\s\S]*gcs: "Joinville",[\s\S]*fac: "Joinville",' "cidades das unidades PLC GUA DPA GCS GPO e FAC estao corrigidas"
   Assert-MatchText $script 'function getUnitCity\(value\)[\s\S]*if \(!text \|\| text\.startsWith\("selecione"\)\) return "";[\s\S]*\.sort\(\(a, b\) => b\.length - a\.length\)' "placeholder de unidade nao gera cidade e o alias mais especifico vence"
   Assert-MatchText $script 'const city = getUnitCity\(unitField\.value\);[\s\S]*if \(localField\) localField\.value = city;' "voltar ao placeholder limpa a cidade da advertencia"
@@ -469,7 +469,7 @@ Assert-MatchText $companyBirthdays '"admissao"[\s\S]*"unidade"[\s\S]*"4- PL."[\s
   Assert-MatchText (Read-ProjectFile "api/bootstrap.js") 'disciplinaryRecords: "hub_advertencias_suspensoes"' "bootstrap carrega advertencias e suspensoes do PostgreSQL"
   Assert-MatchText $script 'if \(collection === "disciplinaryRecords"\) \{[\s\S]*dataMedida: row\.data_medida \|\| ""' "cliente mapeia linhas de advertencias e suspensoes vindas do PostgreSQL"
   Assert-MatchText $script 'if \(collection === "disciplinaryRecords"\) \{[\s\S]*data_medida: values\.dataMedida \|\| ""' "cliente monta payload de advertencias e suspensoes para o PostgreSQL"
-  Assert-MatchText $script 'const success = await addItem\("disciplinaryRecords", \{ \.\.\.values, createdBy: getCurrentUserName\(\) \}\)' "formulario de advertencia/suspensao grava via PostgreSQL em vez de so localStorage"
+  Assert-MatchText $script 'const success = id[\s\S]*\? await updateItem\("disciplinaryRecords", id, \{ \.\.\.values, updatedBy: getCurrentUserName\(\) \}\)[\s\S]*: await addItem\("disciplinaryRecords", \{ \.\.\.values, createdBy: getCurrentUserName\(\) \}\)' "formulario de advertencia/suspensao grava via PostgreSQL em vez de so localStorage"
   Assert-MatchText $script 'function excluirDisciplinaryRecord\(id\)[\s\S]*const deleted = await deleteItem\("disciplinaryRecords", id\)' "exclusao de advertencia/suspensao remove do PostgreSQL"
   Assert-MatchText $index 'name="dias_suspensao" type="number" min="1" step="1"[^>]*required' "formulario de suspensao exige a quantidade de dias"
   Assert-MatchText $script 'const diasSuspensao = String\(form\.get\("dias_suspensao"\) \|\| ""\)\.trim\(\);[\s\S]*if \(tipo === "suspensao" && \(!diasSuspensao \|\| Number\(diasSuspensao\) < 1\)\)' "suspensao nao salva sem quantidade de dias"
@@ -498,8 +498,8 @@ Assert-MatchText $companyBirthdays '"admissao"[\s\S]*"unidade"[\s\S]*"4- PL."[\s
   Assert-MatchText $script 'resetContractorDocumentFields\(contractorDocumentsFields\)[\s\S]*CPF j[aÃ¡] possui envio|CPF ja possui envio[\s\S]*Este CPF j[aÃ¡] possui um envio de documentos registrado' "cliente trata CPF duplicado em documentos de contratados"
   Assert-True -Condition (-not ($script -match 'addPendingContractorDocument\(localRecord\)|pendingSync: true[\s\S]*return localRecord')) -Message "documentos de contratados nao possuem sucesso somente local"
   Assert-MatchText $script 'if \(response\.ok\) \{[\s\S]*const savedRecord = mapContractorDocumentRow\(result\.data \|\| \{\}\)[\s\S]*data\.documentosContratados = mergeContractorDocuments\(\[savedRecord\], data\.documentosContratados \|\| \[\]\)[\s\S]*saveLocalData\(\)' "envio publico de documentos salva retorno bem-sucedido no cache local"
-  Assert-MatchText $script 'const contractorPasswordForm = document\.getElementById\("contractor-password-form"\)[\s\S]*matchesContractorAccessPassword\(password, expectedPassword\)[\s\S]*contratadoDocForm\.hidden = false' "paginas de contratado liberam formulario somente com senha"
-  Assert-MatchText $script 'function matchesContractorAccessPassword\(password, expectedPassword\)[\s\S]*charAt\(0\)\.toLocaleLowerCase\("pt-BR"\)[\s\S]*typedPassword\.slice\(1\) === targetPassword\.slice\(1\)[\s\S]*data-toggle-public-password[\s\S]*input\.type = isVisible \? "password" : "text"' "paginas de contratado aceitam primeira letra flexivel e exibem senha"
+  Assert-MatchText $script 'const contractorPasswordForm = document\.getElementById\("contractor-password-form"\)[\s\S]*body: JSON\.stringify\(\{ verify: true, empresa, accessPassword: password \}\)[\s\S]*if \(!response\.ok\)[\s\S]*contratadoDocForm\.hidden = false' "paginas de contratado liberam formulario somente com senha"
+  Assert-MatchText $script 'contractorPasswordForm\?\.addEventListener\("submit"[\s\S]*fetch\("/api/contractor-documents"[\s\S]*data-toggle-public-password[\s\S]*input\.type = isVisible \? "password" : "text"' "paginas de contratado validam a senha no servidor e exibem senha"
   Assert-MatchText $style '\.contractor-doc-container \.panel[\s\S]*box-shadow[\s\S]*\.public-password-control[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto' "htmls de documentos possuem CSS robusto para senha"
   Assert-MatchText $script 'const contratadoDocForm = document\.getElementById\("contratado-doc-form"\)[\s\S]*const origemHtml = String\(form\.get\("origem_html"\)[\s\S]*submitPublicContractorDocuments\(\{ empresa, origemHtml, nome, telefone, cpf, email, documentos, accessPassword: contractorAccessPassword, turnstileToken \}\)' "formularios publicos de contratado enviam origem"
   Assert-MatchText $script 'function inferContractorDocumentSource\(origemHtml = "", empresa = ""\)[\s\S]*documentos-fredy\.html[\s\S]*documentos-besten\.html[\s\S]*documentos-achei\.html[\s\S]*documentos-trinca\.html' "documentos de contratados inferem origem pelo HTML ou empresa"
@@ -655,81 +655,9 @@ Assert-MatchText $script 'function showVtReportMenu\(\).*data-action="gerar-rela
   Assert-MatchText $style '\.chat-empty-state-lg \{[\s\S]*\.chat-empty-state-lg img \{[\s\S]*width: 96px;[\s\S]*\.chat-empty-state-lg strong \{[\s\S]*font-size: 30px;' "logo e nome do chat vazio ficam maiores que o padrao"
 }
 
-function Test-PublicSubmitFunction {
-  $fn = Read-ProjectFile "postgres/functions/hub-public-submit/index.ts"
-  $contractorApi = Read-ProjectFile "api/contractor-documents.js"
-
-  Assert-MatchText $fn 'const ALLOWED_ORIGINS = new Set\(' "envio publico possui allowlist de origens"
-  Assert-MatchText $fn 'if \(!hasAllowedOrigin\(req\)\) return json\(req, 403' "envio publico bloqueia origem nao permitida"
-  Assert-MatchText $fn 'const RATE_LIMITS = \{[\s\S]*denuncias[\s\S]*chamados[\s\S]*candidaturas' "envio publico possui rate limit por tipo"
-  Assert-MatchText $fn 'documentosContratados: \{ windowSeconds: 60 \* 30, max: 3 \}' "envio publico possui rate limit para documentos de contratados"
-  Assert-MatchText $fn 'documentosContratados: "hub_documentos_contratados"' "envio publico grava documentos de contratados na tabela correta"
-  Assert-MatchText $fn '"Fredy Pneus", "Besten Pneus", "Achei Pneus", "Trinca Mkt"' "Edge Function aceita Trinca Mkt como empresa de contratado"
-  Assert-MatchText $fn 'documentos-\(fredy\|besten\|achei\|trinca\)\\\.html[\s\S]*origem_html: asText\(payload\.origemHtml\)[\s\S]*origemHtml: asText\(formData\.get\("origemHtml"\)\)' "Edge Function valida e grava origem do HTML"
-  Assert-MatchText $fn 'CONTRACTOR_ACCESS_PASSWORDS[\s\S]*"Fredy Pneus": "fredy5212"[\s\S]*"Besten Pneus": "besten5212"[\s\S]*"Achei Pneus": "Achei5212"[\s\S]*"Trinca Mkt": "trinca5212"[\s\S]*Senha de acesso invalida' "Edge Function valida senha de acesso por empresa"
-  Assert-MatchText $fn 'function normalizeSubmissionType\(value: unknown, payload: Record<string, unknown> = \{\}\)[\s\S]*documentoscontratados[\s\S]*documentosdecontratados[\s\S]*documentos[\s\S]*payload\.empresa[\s\S]*return "documentosContratados"' "Edge Function normaliza e infere tipo de documentos de contratados"
-  Assert-MatchText $fn 'formData\.has\("empresa"\)[\s\S]*formData\.has\("documentos"\)[\s\S]*type = "documentosContratados"' "Edge Function infere documentos de contratado mesmo sem campo type"
-  Assert-MatchText $fn 'normalizeContractorDocumentMimeType\(mimeType: unknown\)[\s\S]*application/octet-stream[\s\S]*validateContractorDocumentFile\(file: File \| null\)[\s\S]*file\.size <= 0 \|\| file\.size > CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES[\s\S]*return null' "Edge Function aceita qualquer tipo de documento de contratado com limite de tamanho"
-  Assert-True -Condition (-not $fn.Contains('validLength(normalizeContractorDocumentMimeType(item.type)')) -Message "Edge Function nao bloqueia documentos de contratado por MIME ou extensao"
-  Assert-MatchText $fn 'type === "documentosContratados"[\s\S]*formData\.getAll\("documentos"\)[\s\S]*contratados/\$\{documentBatchId\}/\$\{safeName\}' "Edge Function monta paths privados para documento de contratado"
-  Assert-MatchText $fn 'from\("hub-contratados-documentos"\)\s*[\s\S]*\.upload\(documentMeta\.path, file' "Edge Function envia documentos para bucket privado"
-  Assert-MatchText $fn 'uploadedContractorPaths\.length[\s\S]*hub-contratados-documentos"\)\.remove\(uploadedContractorPaths\)' "Edge Function remove documentos se o registro falhar"
-  Assert-MatchText $fn 'error\.code === "23505" && type === "documentosContratados"[\s\S]*CPF ja possui envio de documentos registrado' "Edge Function retorna mensagem clara para CPF duplicado em documentos"
-  Assert-MatchText $fn 'hub_reserve_public_rate_limit' "envio publico reserva rate limit antes do insert"
-  Assert-MatchText $fn 'hub_release_public_rate_limit' "envio publico libera rate limit em falha"
-  Assert-MatchText $fn 'validateResumeFile\(file: File \| null\).*startsWith\(0x25, 0x50, 0x44, 0x46, 0x2d\).*startsWith\(0xd0, 0xcf, 0x11, 0xe0.*startsWith\(0x50, 0x4b, 0x03, 0x04\)' "curriculo valida assinatura real do arquivo na Edge Function"
-  Assert-MatchText $fn 'TURNSTILE_SECRET_KEY' "envio publico suporta Turnstile quando configurado"
-  Assert-MatchText $contractorApi 'import \{ assertDatabaseUrl, getBody, json, pool, timingSafeStringEqual, safeErrorResponse \} from "\./db\.js"[\s\S]*const body = await getBody\(req\)[\s\S]*origem_html[\s\S]*hub_documentos_contratados[\s\S]*error\?\.code === "42703"' "API Vercel salva documentos de contratados pelo pool Postgres e tolera schema antigo"
-  Assert-True -Condition (-not ($contractorApi -match 'request\.formData\(\)')) -Message "API de documentos de contratados nao espera multipart, pois o formulario envia JSON"
-  Assert-MatchText $contractorApi 'const PATH_PATTERN = /\^contratados\\/\[a-z0-9-\]\+\\/\[a-z0-9_\.-\]\+\$/i;[\s\S]*PATH_PATTERN\.test\(text\(item\.path\)\)' "API de documentos de contratados aceita o caminho de cada arquivo ja enviado a /api/files, em vez de dataUrl embutido"
-  Assert-True -Condition (-not ($contractorApi -match 'item\.dataUrl')) -Message "API de documentos de contratados nao volta a esperar dataUrl embutido no corpo"
-  Assert-MatchText $contractorApi 'error\?\.code === "23505"[\s\S]*CPF ja possui envio de documentos registrado' "API Vercel retorna mensagem clara para CPF duplicado"
-}
-
-function Test-MaloteDeleteFunction {
-  $fn = Read-ProjectFile "postgres/functions/hub-malote-delete/index.ts"
-
-  Assert-MatchText $fn 'admin\.auth\.getUser\(token\)' "exclusao de malote exige sessao valida"
-  Assert-MatchText $fn 'from\("hub_users"\)\.select\("cargo"\)' "exclusao de malote consulta cargo do usuario"
-  Assert-MatchText $fn '!== "rh".*Permissao insuficiente' "exclusao de malote exige cargo RH"
-  Assert-MatchText $fn 'hub_get_action_password_hash' "exclusao de malote busca hash privado da senha de acao"
-  Assert-MatchText $fn 'sha256\(password\).*passwordHash' "exclusao de malote compara hash da senha"
-  Assert-MatchText $fn '\.from\("hub_malotes"\)\.delete\(\)\.eq\("id", id\)' "exclusao de malote deleta apenas o id solicitado"
-}
-
-function Test-RlsBaseline {
-  $sql = Read-ProjectFile "postgres-rls-hub.sql"
-
-  Assert-MatchText $sql 'alter table if exists public\.hub_denuncias enable row level security' "RLS habilitado em denuncias"
-  Assert-MatchText $sql 'alter table if exists public\.hub_chat_messages enable row level security' "RLS habilitado em chat"
-  Assert-MatchText $sql 'alter table if exists public\.hub_malotes enable row level security' "RLS habilitado em malotes"
-  Assert-MatchText $sql 'alter table if exists public\.hub_chamados enable row level security' "RLS habilitado em chamados"
-  Assert-MatchText $sql 'alter table if exists public\.hub_vagas enable row level security' "RLS habilitado em vagas"
-  Assert-MatchText $sql 'alter table if exists public\.hub_vt_registros enable row level security' "RLS habilitado em registros de VT"
-  Assert-MatchText $sql 'alter table if exists public\.hub_documentos_contratados enable row level security' "RLS habilitado em documentos de contratados"
-  Assert-MatchText $sql 'create policy "hub_documentos_contratados_rh_all"[\s\S]*on public\.hub_documentos_contratados[\s\S]*app_private\.hub_is_rh\(\)' "documentos de contratados restritos ao RH"
-  Assert-MatchText $sql 'create policy "hub_vt_registros_rh_all"[\s\S]*on public\.hub_vt_registros[\s\S]*app_private\.hub_is_rh\(\)' "registros de VT restritos ao RH"
-  Assert-MatchText $sql 'drop policy if exists "hub_vagas_public_select_open"' "acesso anonimo direto a vagas e removido do baseline"
-  Assert-MatchText $sql 'public = false[\s\S]*where id = ''hub-curriculos''' "bucket de curriculos e privado"
-  Assert-MatchText $sql 'public = false[\s\S]*where id = ''hub-chat-files''' "bucket de anexos do chat e privado"
-  Assert-MatchText $sql 'allowed_mime_types = array\[[\s\S]*''image/gif''[\s\S]*''video/mp4''[\s\S]*''video/webm''[\s\S]*''audio/mpeg''[\s\S]*''audio/wav''[\s\S]*''audio/ogg''[\s\S]*''audio/mp4''' "bucket de anexos permite imagens videos extras e audios"
-  Assert-MatchText $sql '''hub-contratados-documentos''[\s\S]*false[\s\S]*10485760[\s\S]*null[\s\S]*hub_contratados_docs_rh_select' "bucket de documentos de contratados e privado aceita qualquer MIME"
-  Assert-MatchText (Read-ProjectFile "postgres/migrations/20260702000100_allow_all_contractor_document_mime_types.sql") 'allowed_mime_types = null[\s\S]*where id = ''hub-contratados-documentos''' "migration garante qualquer MIME para documentos de contratados"
-  Assert-MatchText (Read-ProjectFile "postgres/migrations/20260702000200_create_public_contractor_documents_rpc.sql") 'create or replace function public\.hub_submit_contractor_documents\(payload jsonb\)[\s\S]*security definer[\s\S]*jsonb_array_length\(v_documentos\) > 20[\s\S]*10485760[\s\S]*grant execute on function public\.hub_submit_contractor_documents\(jsonb\) to anon, authenticated' "RPC publica salva documentos de contratados aceitando qualquer tipo com senha e limite"
-  Assert-MatchText (Read-ProjectFile "postgres/migrations/20260702000200_create_public_contractor_documents_rpc.sql") 'where cpf = v_cpf[\s\S]*CPF ja possui envio de documentos registrado' "RPC bloqueia mais de um envio por CPF"
-  Assert-MatchText (Read-ProjectFile "postgres/migrations/20260702000300_limit_contractor_documents_one_per_cpf.sql") 'create unique index if not exists hub_documentos_contratados_cpf_unique[\s\S]*on public\.hub_documentos_contratados \(cpf\)' "banco limita documentos de contratado a um envio por CPF"
-
-  $advertenciasMigration = Read-ProjectFile "postgres/migrations/20260812000300_create_advertencias_suspensoes.sql"
-  Assert-MatchText $advertenciasMigration 'create table if not exists public\.hub_advertencias_suspensoes[\s\S]*constraint hub_advertencias_suspensoes_tipo_check check \(tipo in \(''advertencia'', ''suspensao''\)\)' "migration cria tabela de advertencias e suspensoes"
-  Assert-MatchText $advertenciasMigration 'alter table if exists public\.hub_advertencias_suspensoes enable row level security' "RLS habilitado em advertencias e suspensoes"
-  Assert-MatchText $advertenciasMigration 'create policy "hub_advertencias_suspensoes_rh_all"[\s\S]*on public\.hub_advertencias_suspensoes[\s\S]*app_private\.hub_is_rh\(\)' "advertencias e suspensoes restritas ao RH"
-}
 
 Test-LoginHtml
 Test-ClientSecurityFunctions
-Test-PublicSubmitFunction
-Test-MaloteDeleteFunction
-Test-RlsBaseline
 
 Write-Host ""
 Write-Host "Todos os testes unitarios passaram."

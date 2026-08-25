@@ -21,11 +21,11 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
   dela.
 - **Acesso ao banco**: `api/db.js` mantem um pool `pg` unico, conectado
   direto via `DATABASE_URL` (ou `AZURE_POSTGRES_URL`/`POSTGRES_URL`). Essa
-  conexao nao carrega JWT nem `auth.jwt()`, entao as policies de RLS
-  descritas em `postgres-rls-hub.sql` (que dependiam da role `authenticated`
-  do Supabase) nao sao avaliadas nessa conexao; elas ficam mantidas so pelos
-  testes automatizados (`tests/run-unit-tests.ps1`), nao como controle de
-  acesso real no banco de producao.
+  conexao nao carrega JWT nem `auth.jwt()`, entao as antigas policies de RLS
+  que dependiam da role `authenticated` do Supabase nunca foram avaliadas
+  nessa conexao; o arquivo `postgres-rls-hub.sql` e os testes que o validavam
+  foram removidos por nao refletirem controle de acesso real no banco de
+  producao.
 - **Controle de acesso real**: `/api/records` e `/api/bootstrap` exigem
   sessao valida para toda operacao, com poucas excecoes explicitas (leitura
   publica de vagas abertas; insercao publica sanitizada dos formularios do

@@ -116,6 +116,8 @@
   }
 
   async function reauthenticateOnReload() {
+    // O reload deve repetir a entrada normal (revalidar contra o banco) sem
+    // bloquear os demais scripts da pagina, que so aguardam essa promise.
     const authenticated = await reauthenticateInDatabase();
     if (authenticated) window.__hubReloadReauthenticated = true;
     return authenticated;
@@ -173,6 +175,8 @@
           renderAuthenticatedIdentity(result.session.user);
           return true;
         }
+        // Servidor respondeu com veredito explicito de sessao invalida: nao
+        // cai no cache local, vai direto para o login.
         redirectToLogin();
         return false;
       }
