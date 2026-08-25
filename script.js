@@ -790,7 +790,9 @@ function getAllowedViewsForCurrentUser() {
   const allowed = new Set(ALL_ALLOWED_VIEWS);
   if (hasFredericoLevelAccess()) allowed.add("feedbacks");
 
-  const canSeeDenuncias = hasFredericoLevelAccess() || (typeof window.isArielUser === "function" && window.isArielUser());
+  const canSeeDenuncias = hasFredericoLevelAccess()
+    || (typeof window.isArielUser === "function" && window.isArielUser())
+    || currentUserMatchesName("vanessa");
   if (!canSeeDenuncias) allowed.delete("denuncias");
   return allowed;
 }
@@ -11576,6 +11578,14 @@ async function uploadDisciplinaryAttachment(file) {
   return { name: file.name || "anexo", size: file.size || 0, type: file.type || "application/octet-stream", url: path };
 }
 
+function updateDisciplinaryFileLabel(input, overrideName) {
+  const field = input?.closest("[data-disciplinary-anexo-field]");
+  const label = field?.querySelector(".disciplinary-file-name");
+  if (!label) return;
+  const file = input.files?.[0];
+  label.textContent = file?.name || overrideName || label.dataset.emptyLabel || "Nenhum arquivo escolhido";
+}
+
 document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
   const unitField = formElement.elements.unidade;
   const localField = formElement.elements.local;
@@ -11583,6 +11593,10 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
     const city = getUnitCity(unitField.value);
 
     if (localField) localField.value = city;
+  });
+
+  formElement.querySelectorAll(".disciplinary-file-input").forEach((input) => {
+    input.addEventListener("change", () => updateDisciplinaryFileLabel(input));
   });
 
   formElement.addEventListener("submit", async (event) => {
@@ -13134,6 +13148,9 @@ function resetDisciplinaryForm(formElement) {
   formElement.reset();
   if (formElement.elements.id) formElement.elements.id.value = "";
   formElement.querySelector("[data-disciplinary-cancel-edit]")?.setAttribute("hidden", "");
+  formElement.querySelector("[data-disciplinary-anexo-field]")?.setAttribute("hidden", "");
+  const anexoInput = formElement.querySelector(".disciplinary-file-input");
+  if (anexoInput) updateDisciplinaryFileLabel(anexoInput);
   const submitButton = formElement.querySelector('button[type="submit"]');
   if (submitButton) submitButton.textContent = tipo === "suspensao" ? "Salvar suspensao" : "Salvar advertencia";
 }
@@ -13162,6 +13179,12 @@ function editarDisciplinaryRecord(id) {
         formElement.elements.dias_suspensao.value = registro.diasSuspensao || "";
       }
       formElement.querySelector("[data-disciplinary-cancel-edit]")?.removeAttribute("hidden");
+      formElement.querySelector("[data-disciplinary-anexo-field]")?.removeAttribute("hidden");
+      const anexoInput = formElement.querySelector(".disciplinary-file-input");
+      if (anexoInput) {
+        anexoInput.value = "";
+        updateDisciplinaryFileLabel(anexoInput, registro.arquivoNome);
+      }
       const submitButton = formElement.querySelector('button[type="submit"]');
       if (submitButton) submitButton.textContent = "Salvar alteracoes";
       formElement.scrollIntoView({ behavior: "smooth", block: "start" });
