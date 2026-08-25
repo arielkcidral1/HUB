@@ -791,7 +791,6 @@ function getAllowedViewsForCurrentUser() {
   if (hasFredericoLevelAccess()) allowed.add("feedbacks");
 
   const canSeeDenuncias = hasFredericoLevelAccess()
-    || (typeof window.isArielUser === "function" && window.isArielUser())
     || currentUserMatchesName("vanessa");
   if (!canSeeDenuncias) allowed.delete("denuncias");
   return allowed;
