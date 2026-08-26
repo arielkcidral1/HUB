@@ -4167,10 +4167,6 @@ function toDbPayload(collection, values) {
     return {
       cargo: values.cargo,
       unidade: values.unidade || "",
-      projeto: JSON.stringify({
-        descricao: values.descricao || "",
-        requisitos: values.requisitos || "",
-      }),
       descricao: values.descricao || "",
       requisitos: values.requisitos || "",
       status: values.status || "Aberta",
@@ -11325,7 +11321,6 @@ if (vagaForm) {
     const payload = {
       cargo: form.get("cargo"),
       unidade: form.get("unidade"),
-      projeto: "",
       descricao: form.get("descricao"),
       requisitos: form.get("requisitos"),
       status: form.get("status"),
