@@ -335,6 +335,7 @@ const UNIT_OPTIONS = [
   "23- ITJ 2",
   "26- BNU 2",
   "28- ARA",
+  "00- Brasil",
 ];
 UNIT_OPTIONS.splice(3, 1, "4- PL\u00C7");
 
@@ -362,6 +363,7 @@ function getCanonicalUnit(value) {
 }
 
 const UNIT_CITY_ALIASES = {
+  brasil: "Brasil",
   mtz: "Joinville",
   sbs: "Sao Bento do Sul",
   itj: "Itajai",
