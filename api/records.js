@@ -115,6 +115,10 @@ export default async function handler(req, res) {
     if (req.method === "GET") {
       if (!isAuthenticated && !PUBLIC_READ_TABLES.has(table)) return unauthorized(res);
       if (isAuthenticated && !canReadTable(session, table)) return forbidden(res);
+      if (!isAuthenticated) {
+        const allowedRead = await checkPublicRateLimit(req, "public_read");
+        if (!allowedRead) return json(res, 429, { error: "Muitas solicitacoes. Tente novamente mais tarde." });
+      }
 
       const filters = JSON.parse(url.searchParams.get("filters") || "[]");
       const order = JSON.parse(url.searchParams.get("order") || "[]");

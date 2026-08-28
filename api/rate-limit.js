@@ -40,6 +40,7 @@ const LIMITS = {
   file_upload: { max: 15, windowMinutes: 10 },
   login_attempt: { max: 8, windowMinutes: 10 },
   action_password_attempt: { max: 10, windowMinutes: 10 },
+  public_read: { max: 60, windowMinutes: 10 },
 };
 
 async function maybeCleanup() {
