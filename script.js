@@ -4683,9 +4683,17 @@ async function refreshFromPostgreSQL() {
 function setupAutoRefresh() {
   if (refreshTimer) return;
 
+  // O realtime (setupRealtime) e o canal principal de atualizacao; este poll
+  // e so uma rede de seguranca de reconciliacao, por isso o intervalo e mais
+  // longo e pausa quando a aba esta em segundo plano.
   refreshTimer = window.setInterval(() => {
+    if (document.visibilityState !== "visible") return;
     refreshFromPostgreSQL();
-  }, 5000);
+  }, 15000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refreshFromPostgreSQL();
+  });
 }
 
 function setupRealtime() {
@@ -12571,6 +12579,7 @@ function setupPresenceHeartbeat() {
 
   const sendHeartbeat = (online = true) => {
     if (!isAuthenticated()) return;
+    if (online && document.visibilityState !== "visible") return;
     fetch("/api/auth/heartbeat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -12590,13 +12599,13 @@ function setupPresenceHeartbeat() {
   });
 
   sendHeartbeat(true);
-  window.setInterval(() => sendHeartbeat(true), 2000);
+  window.setInterval(() => sendHeartbeat(true), 10000);
   setupPresencePolling();
 }
 
 function setupPresencePolling() {
   const poll = async () => {
-    if (!isAuthenticated() || !postgresClient) return;
+    if (!isAuthenticated() || !postgresClient || document.visibilityState !== "visible") return;
     try {
       const { data: rows, error } = await postgresClient
         .from(USERS_TABLE)
@@ -12613,7 +12622,10 @@ function setupPresencePolling() {
   };
 
   poll();
-  window.setInterval(poll, 3000);
+  window.setInterval(poll, 10000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") poll();
+  });
 }
 
 disableSensitiveFieldAutofill();
