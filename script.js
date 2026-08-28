@@ -4689,7 +4689,7 @@ function setupAutoRefresh() {
   refreshTimer = window.setInterval(() => {
     if (document.visibilityState !== "visible") return;
     refreshFromPostgreSQL();
-  }, 15000);
+  }, 60000);
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") refreshFromPostgreSQL();
@@ -12599,7 +12599,7 @@ function setupPresenceHeartbeat() {
   });
 
   sendHeartbeat(true);
-  window.setInterval(() => sendHeartbeat(true), 10000);
+  window.setInterval(() => sendHeartbeat(true), 30000);
   setupPresencePolling();
 }
 
@@ -12622,7 +12622,7 @@ function setupPresencePolling() {
   };
 
   poll();
-  window.setInterval(poll, 10000);
+  window.setInterval(poll, 30000);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") poll();
   });
