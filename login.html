@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://va.vercel-scripts.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://challenges.cloudflare.com https://vitals.vercel-insights.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
     <title>Login | HUB RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -36,6 +36,7 @@
     <script src="hub-postgres-client.js?v=db-load-v3"></script>
     <script src="login-submit.js?v=no-password-save-v5"></script>
     <script src="script.js?v=wait-for-dashboard-data-v100"></script>
+  <script type="module" src="speed-insights.js"></script>
   </body>
 </html>
 
