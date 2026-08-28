@@ -4685,7 +4685,7 @@ function setupAutoRefresh() {
 
   refreshTimer = window.setInterval(() => {
     refreshFromPostgreSQL();
-  }, 5000);
+  }, 60000);
 }
 
 function setupRealtime() {
@@ -12590,7 +12590,7 @@ function setupPresenceHeartbeat() {
   });
 
   sendHeartbeat(true);
-  window.setInterval(() => sendHeartbeat(true), 2000);
+  window.setInterval(() => sendHeartbeat(true), 30000);
   setupPresencePolling();
 }
 
@@ -12613,7 +12613,7 @@ function setupPresencePolling() {
   };
 
   poll();
-  window.setInterval(poll, 3000);
+  window.setInterval(poll, 30000);
 }
 
 disableSensitiveFieldAutofill();
