@@ -21,7 +21,9 @@ function isPublicUploadPath(path) {
   return PUBLIC_UPLOAD_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
+let filesTableReady = false;
 async function ensureFilesTable() {
+  if (filesTableReady) return;
   await pool.query(`
     create table if not exists public.hub_files (
       path text primary key,
@@ -32,6 +34,7 @@ async function ensureFilesTable() {
       created_at timestamptz default now()
     )
   `);
+  filesTableReady = true;
 }
 
 function dataUrlToBuffer(dataUrl) {

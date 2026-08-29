@@ -90,11 +90,14 @@ function getCookie(req, name) {
   return "";
 }
 
+let sessionVersionColumnReady = false;
 async function ensureSessionVersionColumn() {
+  if (sessionVersionColumnReady) return;
   await pool.query(`
     alter table public.hub_users
       add column if not exists session_version bigint not null default 0
   `);
+  sessionVersionColumnReady = true;
 }
 
 export async function validateAuthSession(req) {

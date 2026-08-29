@@ -5,12 +5,15 @@ function normalize(value) {
   return String(value || "").trim();
 }
 
+let presenceColumnsReady = false;
 async function ensurePresenceColumns() {
+  if (presenceColumnsReady) return;
   await pool.query(`
     alter table public.hub_users
       add column if not exists is_online boolean default false,
       add column if not exists last_seen timestamptz
   `);
+  presenceColumnsReady = true;
 }
 
 export default async function handler(req, res) {
