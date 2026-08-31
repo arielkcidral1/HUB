@@ -132,7 +132,8 @@ export default async function handler(req, res) {
       const where = buildWhere(effectiveFilters);
       const sql = `select ${select} from public.${quoteIdent(table)}${where.sql}${buildOrder(order)}${buildLimit(url.searchParams.get("limit"))}`;
       const result = await pool.query(sql, where.values);
-      return json(res, 200, { data: stripSensitiveColumns(table, result.rows) });
+      const cacheControl = !isAuthenticated ? "public, max-age=30, s-maxage=120, stale-while-revalidate=300" : "private, no-store";
+      return json(res, 200, { data: stripSensitiveColumns(table, result.rows) }, cacheControl);
     }
 
     const body = await getBody(req);

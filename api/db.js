@@ -154,14 +154,14 @@ export function stripSensitiveColumns(table, rows) {
   });
 }
 
-export function json(res, status, body) {
+export function json(res, status, body, cacheControl = "private, no-store") {
   if (typeof res.status === "function") {
     res.status(status);
   } else {
     res.statusCode = status;
   }
   res.setHeader("Content-Type", "application/json; charset=utf-8");
-  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("Cache-Control", cacheControl);
   res.end(JSON.stringify(body));
 }
 
