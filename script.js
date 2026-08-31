@@ -9509,7 +9509,7 @@ function renderChatChannels() {
 
       return `
         <button class="channel-item ${channel.isGroup ? "is-group" : ""} ${channel.id === activeChatChannel ? "active" : ""}" data-chat-channel="${escapeHtml(channel.id)}" type="button">
-          <div class="inline-flex-sm clip-text">
+          <div class="inline-flex-sm channel-item-body">
             ${avatarHtml}
             <span class="clip-text">${escapeHtml(channel.label)}</span>
           </div>

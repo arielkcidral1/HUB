@@ -2481,6 +2481,7 @@ textarea {
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid var(--teal-border);
+  flex-shrink: 0;
 }
 
 .chat-avatar-fallback {
@@ -2495,6 +2496,12 @@ textarea {
   font-weight: 700;
   font-size: 12px;
   border: 1px solid var(--teal-border);
+  flex-shrink: 0;
+}
+
+.channel-item-body {
+  min-width: 0;
+  flex: 1;
 }
 
 .selectable-card {
