@@ -594,26 +594,6 @@ html.auth-entry-pending .app-loading-overlay {
   color: var(--teal-dark);
 }
 
-.presence-dot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #2b2f33;
-  flex: 0 0 auto;
-}
-
-.presence-dot.is-online {
-  background: #2fbf6e;
-}
-
-.chat-avatar-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-
 .user-avatar {
   width: 22px;
   height: 22px;

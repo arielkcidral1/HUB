@@ -69,35 +69,6 @@
     };
   }
 
-  async function hasRecentActivity() {
-    const user = getStoredUser();
-    const conditions = [
-      user?.id ? { column: "id", op: "eq", value: user.id } : null,
-      user?.email ? { column: "email", op: "eq", value: user.email } : null,
-      user?.user_metadata?.nome ? { column: "nome", op: "eq", value: user.user_metadata.nome } : null,
-    ].filter(Boolean);
-    if (!conditions.length) return false;
-
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 2500);
-    try {
-      const filters = encodeURIComponent(JSON.stringify([{ op: "or", conditions }]));
-      const response = await fetch(`/api/records?table=hub_users&select=id,nome,email,is_online,last_seen&filters=${filters}&limit=1`, {
-        credentials: "same-origin",
-        signal: controller.signal,
-      });
-      const result = await response.json().catch(() => ({}));
-      const row = result?.data?.[0];
-      const lastSeen = Date.parse(row?.last_seen || "");
-      const age = Date.now() - lastSeen;
-      return Boolean(row?.is_online === true && age >= -3000 && age <= 3000);
-    } catch {
-      return false;
-    } finally {
-      window.clearTimeout(timeout);
-    }
-  }
-
   function unlockEntry() {
     document.documentElement.classList.remove("auth-entry-pending");
   }

@@ -3670,8 +3670,6 @@ if (collection === "eventos") {
       unidade: row.unidade || getDefaultUserUnit(row.nome),
       foto_perfil: row.foto_perfil || "",
       configuracoes: parseJsonObject(row.configuracoes),
-      isOnline: Boolean(row.is_online),
-      lastSeen: row.last_seen || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
@@ -9506,8 +9504,7 @@ function renderChatChannels() {
       if (channel.isGroup) {
         avatarHtml = `<div class="chat-avatar-fallback"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>`;
       } else if (channel.targetUser) {
-        const onlineClass = isUserOnline(channel.targetUser) ? "is-online" : "";
-        avatarHtml = `<span class="chat-avatar-wrap"><span class="presence-dot ${onlineClass}"></span>${getAuthorAvatar(channel.targetUser, channel.avatarPath)}</span>`;
+        avatarHtml = getAuthorAvatar(channel.targetUser, channel.avatarPath);
       }
 
       return `
@@ -9948,16 +9945,6 @@ function renderAll() {
       repairCoreCollectionsFromBootstrap();
     }, 0);
   }
-}
-
-const PRESENCE_ONLINE_THRESHOLD_MS = 45000;
-
-function isUserOnline(authorName) {
-  const normalized = normalizeLoginName(authorName);
-  if (normalized === normalizeLoginName(getCurrentUserName())) return true;
-  const user = (data.usuarios || []).find((u) => normalizeLoginName(u.nome) === normalized);
-  if (!user?.isOnline || !user.lastSeen) return false;
-  return Date.now() - new Date(user.lastSeen).getTime() < PRESENCE_ONLINE_THRESHOLD_MS;
 }
 
 function getAuthorAvatar(authorName, knownAvatarPath = "") {
@@ -12570,20 +12557,13 @@ function setupPresenceHeartbeat() {
   if (presenceHeartbeatStarted) return;
   presenceHeartbeatStarted = true;
 
-  const buildPayload = (online = true) => ({
-    online,
-    userId: currentAuthUser?.id || currentUserProfile?.id || "",
-    email: currentAuthUser?.email || currentUserProfile?.email || "",
-    nome: currentUserProfile?.nome || getCurrentUserName(),
-  });
-
-  const sendHeartbeat = (online = true) => {
+  const sendHeartbeat = () => {
     if (!isAuthenticated()) return;
-    if (online && document.visibilityState !== "visible") return;
+    if (document.visibilityState !== "visible") return;
     fetch("/api/auth/heartbeat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildPayload(online)),
+      body: JSON.stringify({}),
     }).then((response) => {
       if (response.status !== 401) return;
 
@@ -12595,37 +12575,11 @@ function setupPresenceHeartbeat() {
   };
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") sendHeartbeat(true);
+    if (document.visibilityState === "visible") sendHeartbeat();
   });
 
-  sendHeartbeat(true);
-  window.setInterval(() => sendHeartbeat(true), 30000);
-  setupPresencePolling();
-}
-
-function setupPresencePolling() {
-  const poll = async () => {
-    if (!isAuthenticated() || !postgresClient || document.visibilityState !== "visible") return;
-    try {
-      const { data: rows, error } = await postgresClient
-        .from(USERS_TABLE)
-        .select("*")
-        .order("nome", { ascending: true });
-      if (error) throw error;
-      data.usuarios = mergeUsersByName(data.usuarios || [], mapRows("usuarios", rows || []));
-      saveTeamUsersStore(data.usuarios);
-      renderChatChannels();
-      renderChat();
-    } catch (_) {
-
-    }
-  };
-
-  poll();
-  window.setInterval(poll, 30000);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") poll();
-  });
+  sendHeartbeat();
+  window.setInterval(sendHeartbeat, 30000);
 }
 
 disableSensitiveFieldAutofill();
