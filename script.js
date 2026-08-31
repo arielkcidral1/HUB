@@ -4687,7 +4687,7 @@ function setupAutoRefresh() {
   refreshTimer = window.setInterval(() => {
     if (document.visibilityState !== "visible") return;
     refreshFromPostgreSQL();
-  }, 60000);
+  }, 180000);
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") refreshFromPostgreSQL();
@@ -12579,7 +12579,7 @@ function setupPresenceHeartbeat() {
   });
 
   sendHeartbeat();
-  window.setInterval(sendHeartbeat, 30000);
+  window.setInterval(sendHeartbeat, 120000);
 }
 
 disableSensitiveFieldAutofill();

@@ -66,7 +66,7 @@ export default async function handler(req, res) {
 
       const buffer = dataUrlToBuffer(file.data_url);
       res.setHeader("Content-Type", file.type || "application/octet-stream");
-      res.setHeader("Cache-Control", "private, max-age=300");
+      res.setHeader("Cache-Control", "private, max-age=604800, immutable");
       if (file.name) res.setHeader("Content-Disposition", `inline; filename="${safeName(file.name)}"`);
       res.end(buffer);
       return;

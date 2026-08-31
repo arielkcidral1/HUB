@@ -20,16 +20,22 @@ const BOOTSTRAP_TABLES = {
   feedbacks: "hub_feedbacks",
 };
 
+const BOOTSTRAP_ROW_LIMITS = {
+  hub_chat_messages: 1500,
+};
+
 async function selectRows(client, table, forcedFilter) {
   const quotedTable = quoteIdent(table);
   const where = forcedFilter ? ` where ${quoteIdent(forcedFilter.column)} = $1` : "";
   const params = forcedFilter ? [forcedFilter.value] : [];
+  const limit = BOOTSTRAP_ROW_LIMITS[table];
+  const limitSql = limit ? ` limit ${Number(limit)}` : "";
   try {
-    const result = await client.query(`select * from public.${quotedTable}${where} order by "created_at" desc`, params);
+    const result = await client.query(`select * from public.${quotedTable}${where} order by "created_at" desc${limitSql}`, params);
     return result.rows;
   } catch (error) {
     if (error?.code !== "42703") throw error;
-    const result = await client.query(`select * from public.${quotedTable}${where}`, params);
+    const result = await client.query(`select * from public.${quotedTable}${where}${limitSql}`, params);
     return result.rows;
   }
 }
