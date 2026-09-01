@@ -4425,8 +4425,8 @@ textarea {
   border-color: var(--teal-light);
 }
 
-.clima-question legend {
-  padding: 0 4px;
+.clima-question-title {
+  margin: 0;
   font-weight: 600;
   font-size: 15px;
   line-height: 1.4;
@@ -4484,7 +4484,7 @@ textarea {
     padding: 12px;
   }
 
-  .clima-question legend {
+  .clima-question-title {
     font-size: 14px;
   }
 

@@ -15503,10 +15503,10 @@ document.addEventListener('DOMContentLoaded', () => {
       `).join("");
       return `
         ${sectionHeader}
-        <fieldset class="clima-question">
-          <legend>${escapeHtml(question.texto)}</legend>
+        <div class="clima-question" role="group" aria-label="${escapeHtml(question.texto)}">
+          <p class="clima-question-title">${escapeHtml(question.texto)}</p>
           <div class="clima-options">${optionsHtml}</div>
-        </fieldset>
+        </div>
       `;
     }).join("");
   }
