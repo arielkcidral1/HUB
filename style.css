@@ -3975,9 +3975,9 @@ textarea {
 
 .modal-card-large {
   width: calc(100vw - 36px);
-  max-width: 1100px;
+  max-width: 1680px;
   height: calc(100vh - 36px);
-  max-height: 860px;
+  max-height: 960px;
   display: flex;
   flex-direction: column;
 }
