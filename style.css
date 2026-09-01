@@ -4410,16 +4410,24 @@ textarea {
 }
 
 .clima-question {
-  border: 1px solid var(--line);
+  border: 1px solid var(--teal-border);
+  border-left: 3px solid var(--teal-light);
   border-radius: var(--radius-md, 10px);
+  background: var(--surface-soft);
   padding: 14px 16px;
   margin: 0 0 12px;
+  transition: var(--transition);
+}
+
+.clima-question:hover {
+  border-color: var(--teal-light);
 }
 
 .clima-question legend {
   padding: 0 4px;
   font-weight: 600;
   font-size: 14px;
+  color: var(--ink-secondary);
 }
 
 .clima-options {
