@@ -155,14 +155,21 @@ export default async function handler(req, res) {
       const ignoreConflict = url.searchParams.get("on_conflict") === "ignore";
       const conflictClause = ignoreConflict ? " on conflict do nothing" : "";
       const inserted = [];
-      for (const row of rows) {
-        const entries = Object.entries(row || {}).filter(([, value]) => value !== undefined);
-        const columns = entries.map(([key]) => quoteIdent(key));
-        const values = entries.map(([key, value]) => normalizeDbValue(table, key, value));
-        const placeholders = entries.map(([key], index) => placeholderFor(table, key, index + 1));
-        const sql = `insert into public.${quoteIdent(table)} (${columns.join(", ")}) values (${placeholders.join(", ")})${conflictClause} returning *`;
-        const result = await pool.query(sql, values);
-        if (result.rows[0]) inserted.push(result.rows[0]);
+      try {
+        for (const row of rows) {
+          const entries = Object.entries(row || {}).filter(([, value]) => value !== undefined);
+          const columns = entries.map(([key]) => quoteIdent(key));
+          const values = entries.map(([key, value]) => normalizeDbValue(table, key, value));
+          const placeholders = entries.map(([key], index) => placeholderFor(table, key, index + 1));
+          const sql = `insert into public.${quoteIdent(table)} (${columns.join(", ")}) values (${placeholders.join(", ")})${conflictClause} returning *`;
+          const result = await pool.query(sql, values);
+          if (result.rows[0]) inserted.push(result.rows[0]);
+        }
+      } catch (error) {
+        if (error?.code === "23505") {
+          return json(res, 409, { error: "Ja existe um registro com esses dados.", code: error.code });
+        }
+        throw error;
       }
       return json(res, 200, { data: stripSensitiveColumns(table, inserted) });
     }
