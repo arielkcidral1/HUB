@@ -15801,22 +15801,22 @@ document.addEventListener('DOMContentLoaded', () => {
     rows.forEach((row) => {
       if (row.secao !== currentSection) {
         currentSection = row.secao;
-        detailMarkup.push(`<li class="dashboard-detail-section"><strong>${escapeHtml(currentSection)}</strong></li>`);
+        detailMarkup.push(`<h3 class="clima-answers-section">${escapeHtml(currentSection)}</h3>`);
       }
-      detailMarkup.push(`<li>${escapeHtml(row.texto)}: <strong>${escapeHtml(row.resposta)}</strong></li>`);
+      detailMarkup.push(`<p class="clima-answers-row">${escapeHtml(row.texto)} <strong>${escapeHtml(row.resposta)}</strong></p>`);
     });
     if (item.sugestao) {
-      detailMarkup.push(`<li class="dashboard-detail-section"><strong>Sugestão</strong></li>`);
-      detailMarkup.push(`<li>${escapeHtml(item.sugestao)}</li>`);
+      detailMarkup.push(`<h3 class="clima-answers-section">Sugestão</h3>`);
+      detailMarkup.push(`<p class="clima-answers-row">${escapeHtml(item.sugestao)}</p>`);
     }
 
     const overlay = document.createElement("div");
     overlay.id = "custom-modal";
     overlay.className = "modal-overlay";
     overlay.innerHTML = `
-      <div class="modal-card">
+      <div class="modal-card modal-card-large">
         <div class="modal-header info">Resposta da pesquisa de clima</div>
-        <div class="modal-body"><ul class="dashboard-detail-list">${detailMarkup.join("")}</ul></div>
+        <div class="modal-body modal-body-large"><div class="clima-answers-list">${detailMarkup.join("")}</div></div>
         <div class="modal-footer"><button class="primary-button" data-action="close-modal">Fechar</button></div>
       </div>
     `;
