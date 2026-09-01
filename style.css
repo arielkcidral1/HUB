@@ -4428,24 +4428,41 @@ textarea {
 .clima-question legend {
   padding: 0 4px;
   font-weight: 600;
-  font-size: 14px;
-  color: var(--ink-secondary);
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--ink);
 }
 
 .clima-options {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 18px;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .clima-option {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
+  color: var(--ink-secondary);
   cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  transition: var(--transition);
+}
+
+.clima-option:has(input:checked) {
+  background: var(--teal-surface);
+  border-color: var(--teal);
+  color: var(--teal-dark);
+}
+
+.clima-option:hover {
+  border-color: var(--teal-light);
 }
 
 .clima-option input[type="radio"] {
@@ -4453,6 +4470,33 @@ textarea {
   height: 16px;
   accent-color: var(--teal);
   cursor: pointer;
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .clima-section-title {
+    margin: 24px 0 12px;
+    padding: 10px 14px;
+    font-size: 15px;
+  }
+
+  .clima-question {
+    padding: 12px;
+  }
+
+  .clima-question legend {
+    font-size: 14px;
+  }
+
+  .clima-options {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .clima-option {
+    width: 100%;
+  }
 }
 
 .public-header {
