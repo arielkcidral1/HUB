@@ -15513,6 +15513,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   window.buildClimaFormFieldsHtml = buildClimaFormFieldsHtml;
 
+  function enableClimaRadioToggle(container) {
+    container.querySelectorAll('input[type="radio"]').forEach((radio) => {
+      radio.addEventListener("click", function handleClimaRadioClick() {
+        if (this.dataset.wasChecked === "true") {
+          this.checked = false;
+          this.dataset.wasChecked = "false";
+        } else {
+          container.querySelectorAll(`input[name="${this.name}"]`).forEach((sibling) => {
+            sibling.dataset.wasChecked = "false";
+          });
+          this.dataset.wasChecked = "true";
+        }
+      });
+    });
+  }
+
   function getClimaAnswerRows(item) {
     const respostas = item?.respostas || {};
     return CLIMA_QUESTIONS.map((question) => ({
@@ -15535,6 +15551,7 @@ document.addEventListener('DOMContentLoaded', () => {
     form.dataset.climaReady = "true";
     ensurePublicCaptchaNotice?.(form);
     container.innerHTML = buildClimaFormFieldsHtml();
+    enableClimaRadioToggle(container);
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
