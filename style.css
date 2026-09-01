@@ -4499,6 +4499,156 @@ textarea {
   }
 }
 
+.clima-dashboard {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.clima-score-panel {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.clima-score-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 150px;
+  padding: 18px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+
+.clima-score-gauge strong {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.1;
+}
+
+.clima-score-gauge span {
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+}
+
+.clima-score-details {
+  flex: 1 1 220px;
+}
+
+.clima-score-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.clima-score-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clima-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.clima-dot-good { background: var(--success); }
+.clima-dot-warning { background: var(--gold); }
+.clima-dot-critical { background: var(--danger); }
+
+.clima-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .clima-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.clima-bars {
+  display: grid;
+  gap: 14px;
+}
+
+.clima-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(90px, 160px) 44px;
+  align-items: center;
+  gap: 12px;
+}
+
+.clima-bar-row-label {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-secondary);
+  line-height: 1.35;
+}
+
+.clima-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.clima-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: var(--transition);
+}
+
+.clima-bar-good { background: var(--success); }
+.clima-bar-warning { background: var(--gold); }
+.clima-bar-critical { background: var(--danger); }
+.clima-bar-neutral { background: var(--teal-light); }
+
+.clima-bar-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .clima-bar-row {
+    grid-template-columns: minmax(0, 1fr) 36px;
+    grid-template-areas:
+      "label value"
+      "track track";
+    row-gap: 6px;
+  }
+
+  .clima-bar-row-label { grid-area: label; }
+  .clima-bar-value { grid-area: value; }
+  .clima-bar-track { grid-area: track; }
+
+  .clima-score-panel {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .clima-score-legend {
+    justify-content: center;
+  }
+}
+
 .public-header {
   text-align: center;
 }

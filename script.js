@@ -15474,12 +15474,13 @@ document.addEventListener('DOMContentLoaded', () => {
               id: `q${counter}`,
               secao: secao.titulo,
               texto: `${pergunta.texto} — ${subitem}`,
+              tipo: pergunta.tipo,
               opcoes,
             });
           });
         } else {
           counter += 1;
-          flat.push({ id: `q${counter}`, secao: secao.titulo, texto: pergunta.texto, opcoes });
+          flat.push({ id: `q${counter}`, secao: secao.titulo, texto: pergunta.texto, tipo: pergunta.tipo, opcoes });
         }
       });
     });
@@ -15581,12 +15582,181 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const CLIMA_SCORE_MAP = {
+    "Sim": 1, "Não": 0, "Às vezes": 0.5,
+    "Verdadeiro": 1, "Falso": 0,
+    "Ótimo": 1, "Bom": 0.75, "Razoável": 0.5, "Ruim": 0.25, "Péssimo": 0,
+  };
+
+  function climaScoreBand(score) {
+    if (score >= 70) return "good";
+    if (score >= 40) return "warning";
+    return "critical";
+  }
+
+  function climaScoreColorVar(band) {
+    return { good: "var(--success)", warning: "var(--gold)", critical: "var(--danger)" }[band] || "var(--muted)";
+  }
+
+  function climaScoreStatusText(band) {
+    return {
+      good: "Clima favorável",
+      warning: "Clima neutro — atenção recomendada",
+      critical: "Clima desfavorável — requer atenção",
+    }[band] || "";
+  }
+
+  function renderClimaBarRow(label, percent, { neutral = false } = {}) {
+    const band = neutral ? "neutral" : climaScoreBand(percent);
+    return `
+      <div class="clima-bar-row">
+        <p class="clima-bar-row-label">${escapeHtml(label)}</p>
+        <div class="clima-bar-track"><div class="clima-bar-fill clima-bar-${band}" style="width:${Math.max(percent, 2)}%"></div></div>
+        <span class="clima-bar-value">${percent}%</span>
+      </div>
+    `;
+  }
+
+  function computeClimaDashboardData(items) {
+    const sectionTotals = new Map();
+    const questionTotals = new Map();
+    const canalCounts = new Map();
+    let overallSum = 0;
+    let overallCount = 0;
+    let canalTotal = 0;
+
+    items.forEach((item) => {
+      const respostas = item.respostas || {};
+      CLIMA_QUESTIONS.forEach((question) => {
+        const answer = respostas[question.id];
+        if (!answer) return;
+
+        if (question.tipo === "escolha") {
+          canalCounts.set(answer, (canalCounts.get(answer) || 0) + 1);
+          canalTotal += 1;
+          return;
+        }
+
+        const score = CLIMA_SCORE_MAP[answer];
+        if (score === undefined) return;
+
+        overallSum += score;
+        overallCount += 1;
+
+        const sectionEntry = sectionTotals.get(question.secao) || { sum: 0, count: 0 };
+        sectionEntry.sum += score;
+        sectionEntry.count += 1;
+        sectionTotals.set(question.secao, sectionEntry);
+
+        const questionEntry = questionTotals.get(question.id) || { texto: question.texto, sum: 0, count: 0 };
+        questionEntry.sum += score;
+        questionEntry.count += 1;
+        questionTotals.set(question.id, questionEntry);
+      });
+    });
+
+    const toPercent = (sum, count) => (count ? Math.round((sum / count) * 100) : 0);
+
+    const sections = Array.from(sectionTotals.entries())
+      .map(([secao, { sum, count }]) => ({ secao, score: toPercent(sum, count) }))
+      .sort((a, b) => b.score - a.score);
+
+    const questions = Array.from(questionTotals.values())
+      .filter((q) => q.count > 0)
+      .map((q) => ({ texto: q.texto, score: toPercent(q.sum, q.count) }));
+    const sortedQuestions = questions.slice().sort((a, b) => b.score - a.score);
+
+    const canal = Array.from(canalCounts.entries())
+      .map(([label, count]) => ({ label, percent: canalTotal ? Math.round((count / canalTotal) * 100) : 0 }))
+      .sort((a, b) => b.percent - a.percent);
+
+    return {
+      respondents: items.length,
+      overallScore: toPercent(overallSum, overallCount),
+      sections,
+      top: sortedQuestions.slice(0, 5),
+      bottom: sortedQuestions.slice(-5).reverse(),
+      canal,
+    };
+  }
+
+  function renderClimaDashboard(items) {
+    const dashboard = document.getElementById("clima-dashboard");
+    const emptyState = document.getElementById("clima-dashboard-empty");
+    if (!dashboard || !emptyState) return;
+
+    if (!items.length) {
+      dashboard.hidden = true;
+      emptyState.hidden = false;
+      return;
+    }
+    emptyState.hidden = true;
+    dashboard.hidden = false;
+
+    const summary = computeClimaDashboardData(items);
+    const band = climaScoreBand(summary.overallScore);
+
+    const scoreValueEl = document.getElementById("clima-score-value");
+    if (scoreValueEl) {
+      scoreValueEl.textContent = `${summary.overallScore}%`;
+      scoreValueEl.style.color = climaScoreColorVar(band);
+    }
+    const scoreLabelEl = document.getElementById("clima-score-label");
+    if (scoreLabelEl) scoreLabelEl.textContent = climaScoreStatusText(band);
+    const scoreSummaryEl = document.getElementById("clima-score-summary");
+    if (scoreSummaryEl) {
+      scoreSummaryEl.textContent = `Baseado em ${summary.respondents} ${summary.respondents === 1 ? "resposta anônima" : "respostas anônimas"}.`;
+    }
+
+    const emptyBars = '<p class="empty-state">Sem dados suficientes.</p>';
+
+    const sectionsChart = document.getElementById("clima-sections-chart");
+    if (sectionsChart) {
+      sectionsChart.innerHTML = summary.sections.map((s) => renderClimaBarRow(s.secao, s.score)).join("") || emptyBars;
+    }
+
+    const topEl = document.getElementById("clima-top-questions");
+    if (topEl) {
+      topEl.innerHTML = summary.top.map((q) => renderClimaBarRow(q.texto, q.score)).join("") || emptyBars;
+    }
+
+    const bottomEl = document.getElementById("clima-bottom-questions");
+    if (bottomEl) {
+      bottomEl.innerHTML = summary.bottom.map((q) => renderClimaBarRow(q.texto, q.score)).join("") || emptyBars;
+    }
+
+    const canalEl = document.getElementById("clima-canal-chart");
+    if (canalEl) {
+      canalEl.innerHTML = summary.canal.length
+        ? summary.canal.map((c) => renderClimaBarRow(c.label, c.percent, { neutral: true })).join("")
+        : emptyBars;
+    }
+
+    const sugestoesList = document.getElementById("clima-sugestoes-list");
+    if (sugestoesList) {
+      const sugestoes = items
+        .filter((item) => item.sugestao)
+        .slice()
+        .sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
+      sugestoesList.innerHTML = sugestoes.length
+        ? sugestoes.map((item) => `
+          <article class="item-card">
+            <p>${escapeHtml(item.sugestao)}</p>
+            <p class="item-meta">${escapeHtml(item.createdAt || "")}</p>
+          </article>
+        `).join("")
+        : '<p class="empty-state">Nenhuma sugestão enviada ainda.</p>';
+    }
+  }
+
   function renderClimaSection() {
     const listTarget = document.getElementById("clima-pesquisas-list");
     if (!listTarget) return;
     const items = (data.climaPesquisas || []).slice().sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
     const countEl = document.getElementById("clima-pesquisas-count");
     if (countEl) countEl.textContent = String(items.length);
+
+    renderClimaDashboard(items);
 
     renderCards("clima-pesquisas-list", items, (item) => `
       <article class="item-card">
