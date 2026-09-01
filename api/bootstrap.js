@@ -18,6 +18,7 @@ const BOOTSTRAP_TABLES = {
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
   feedbacks: "hub_feedbacks",
+  climaPesquisas: "hub_clima_pesquisas",
 };
 
 const BOOTSTRAP_ROW_LIMITS = {

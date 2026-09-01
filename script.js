@@ -154,6 +154,7 @@ const TABLES = {
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
+  climaPesquisas: "hub_clima_pesquisas",
   usuarios: USERS_TABLE,
   readReceipts: "hub_read_receipts",
 };
@@ -232,6 +233,7 @@ const defaultData = {
   documentosContratados: [],
   candidaturas: [],
   atestados: [],
+  climaPesquisas: [],
   usuarios: [],
   readReceipts: [],
 };
@@ -795,6 +797,8 @@ function getAllowedViewsForCurrentUser() {
   const canSeeDenuncias = hasFredericoLevelAccess()
     || currentUserMatchesName("vanessa");
   if (!canSeeDenuncias) allowed.delete("denuncias");
+
+  if (currentUserMatchesName("ariel")) allowed.add("teste-clima");
   return allowed;
 }
 
@@ -1206,7 +1210,8 @@ function isPublicPage() {
     document.querySelector("[data-public-feedbacks]") ||
     document.querySelector("[data-public-vagas]") ||
     document.querySelector("[data-public-contratados]") ||
-    document.querySelector("[data-public-atestados]")
+    document.querySelector("[data-public-atestados]") ||
+    document.querySelector("[data-public-clima]")
   );
 }
 
@@ -1217,7 +1222,8 @@ function isPublicSubmissionFormPage() {
     document.querySelector("[data-public-vagas]") ||
     document.querySelector("[data-public-chamados]") ||
     document.querySelector("[data-public-contratados]") ||
-    document.querySelector("[data-public-atestados]")
+    document.querySelector("[data-public-atestados]") ||
+    document.querySelector("[data-public-clima]")
   );
 }
 
@@ -1334,6 +1340,7 @@ function loadLocalData() {
       .map(mapContractorDocumentRow),
     candidaturas: parsed.candidaturas || [],
     atestados: (parsed.atestados || []).map(mapAtestadoRow),
+    climaPesquisas: parsed.climaPesquisas || [],
     usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
     readReceipts: parsed.readReceipts || [],
   };
@@ -3584,6 +3591,15 @@ if (collection === "malotes") {
       sortAt: row.created_at || "",
     }));
   }
+  if (collection === "climaPesquisas") {
+    return rows.map((row) => ({
+      id: row.id,
+      respostas: row.respostas && typeof row.respostas === "object" ? row.respostas : {},
+      sugestao: row.sugestao || "",
+      createdAt: formatDateTime(row.created_at),
+      sortAt: row.created_at || "",
+    }));
+  }
 if (collection === "eventos") {
     return rows.map((row) => ({
       id: row.id,
@@ -4404,6 +4420,7 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
       "documentosContratados",
       "candidaturas",
       "atestados",
+      "climaPesquisas",
       "readReceipts",
     ]
     : []);
@@ -5563,7 +5580,7 @@ async function submitPublicContractorDocuments({ empresa, origemHtml, nome, tele
 }
 
 function isPublicInsertOnlyCollection(collection) {
-  return isPublicSubmissionFormPage() && ["denuncias", "feedbacks", "chamados", "candidaturas", "documentosContratados"].includes(collection);
+  return isPublicSubmissionFormPage() && ["denuncias", "feedbacks", "chamados", "candidaturas", "documentosContratados", "climaPesquisas"].includes(collection);
 }
 
 function toPublicSubmissionPayload(collection, values) {
@@ -7756,6 +7773,7 @@ function getViewForCollection(collection) {
     vtRegistros: "gerenciamento-vt",
     disciplinaryRecords: "advertencias-suspensoes",
     usuarios: "equipe",
+    climaPesquisas: "teste-clima",
   };
   return views[String(collection || "")] || "dashboard";
 }
@@ -13698,6 +13716,8 @@ document.addEventListener('click', (event) => {
     case 'baixar-documento-rh': baixarDocumentoRH(id); break;
     case 'excluir-documento': excluirDocumento(id); break;
     case 'excluir-documento-contratado': excluirDocumentoContratado(id); break;
+    case 'ver-clima-pesquisa': verClimaPesquisa(id); break;
+    case 'excluir-clima-pesquisa': excluirClimaPesquisa(id); break;
     case 'excluir-usuario': excluirUsuario(id); break;
     case 'clear-chat-file':
       clearChatSelectedFile();
@@ -15348,5 +15368,303 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupPublicAtestadoForm();
   setupAtestadosInternalView();
+})();
+
+(function setupClimaModule() {
+  const CLIMA_OPTIONS = {
+    binario: ["Sim", "Não"],
+    ternario: ["Sim", "Não", "Às vezes"],
+    verdadeiro_falso: ["Verdadeiro", "Falso"],
+    escala5: ["Ótimo", "Bom", "Razoável", "Ruim", "Péssimo"],
+    escolha: ["Conversa nos corredores", "Quadros de aviso", "Colegas de trabalho", "Superior imediato", "Através do RH"],
+  };
+
+  const CLIMA_SECTIONS = [
+    { titulo: "Liderança e Gestão de Pessoas", perguntas: [
+      { texto: "As orientações que você recebe sobre o seu trabalho são claras e objetivas?", tipo: "binario" },
+      { texto: "Seu superior imediato é receptivo às sugestões de mudança?", tipo: "ternario" },
+      { texto: "Você tem uma ideia clara sobre o resultado que o seu superior imediato espera do seu trabalho?", tipo: "binario" },
+      { texto: "Você recebe do setor operacional as informações necessárias para a realização do seu trabalho?", tipo: "ternario" },
+      { texto: "Você é informado pelo seu superior imediato sobre o que ele acha do seu trabalho?", tipo: "binario" },
+      { texto: "Os gestores da empresa têm interesse no bem-estar dos funcionários?", tipo: "binario" },
+      { texto: "Você considera que seu trabalho é avaliado de forma justa pelo seu superior?", tipo: "binario" },
+      { texto: "Você se considera respeitado pelo seu superior imediato?", tipo: "binario" },
+      { texto: "Seu superior transmite a você e aos seus colegas as informações que vocês precisam conhecer?", tipo: "binario" },
+      { texto: "Você considera seu superior hierárquico um bom líder?", tipo: "binario" },
+      { texto: "Você considera o seu superior hierárquico bom profissionalmente?", tipo: "binario" },
+      { texto: "Avalie os seguintes setores:", tipo: "escala5", subitens: ["RH", "Regulação", "Direção", "Financeiro"] },
+      { texto: "Você se sente à vontade para falar abertamente a respeito de trabalho com o seu superior imediato?", tipo: "binario" },
+      { texto: "O seu superior imediato reconhece os bons resultados alcançados por você no seu trabalho?", tipo: "binario" },
+      { texto: "Você acha que os seus superiores são receptivos às críticas dos seus subordinados?", tipo: "ternario" },
+      { texto: "As decisões tomadas pelo seu chefe no dia-a-dia são corretas?", tipo: "ternario" },
+      { texto: "Seu chefe está sempre disponível quando você precisa dele?", tipo: "binario" },
+      { texto: "No seu setor de trabalho há algum funcionário \"protegido\" pelo seu chefe?", tipo: "binario" },
+    ]},
+    { titulo: "Treinamento e Desenvolvimento", perguntas: [
+      { texto: "A empresa oferece oportunidades para o seu desenvolvimento e crescimento profissional?", tipo: "binario" },
+      { texto: "Você considera suficiente o treinamento dado pela empresa?", tipo: "binario" },
+      { texto: "A empresa dá condições de treinamento/desenvolvimento para que você tenha um aprendizado contínuo?", tipo: "binario" },
+    ]},
+    { titulo: "Comunicação", perguntas: [
+      { texto: "A empresa explica adequadamente aos funcionários o motivo das decisões que ela toma?", tipo: "ternario" },
+      { texto: "Os funcionários se sentem adequadamente informados sobre as decisões que afetam o trabalho deles?", tipo: "binario" },
+      { texto: "Você se sente informado a respeito dos reajustes/aumentos salariais praticados pela empresa?", tipo: "binario" },
+      { texto: "Onde você encontra as informações que deseja saber sobre a empresa? Assinale a principal alternativa:", tipo: "escolha" },
+      { texto: "Você se sente bem informado sobre os benefícios da empresa?", tipo: "binario" },
+      { texto: "Você se considera bem informado sobre o que se passa na empresa?", tipo: "binario" },
+      { texto: "A comunicação entre colaboradores de diferentes setores flui adequadamente?", tipo: "binario" },
+      { texto: "As informações que recebo da empresa são confiáveis, a comunicação é transparente?", tipo: "binario" },
+    ]},
+    { titulo: "Relações Interpessoais", perguntas: [
+      { texto: "Existe um relacionamento de cooperação entre os diversos departamentos da empresa?", tipo: "binario" },
+      { texto: "O trabalho em equipe é presente na empresa?", tipo: "binario" },
+      { texto: "O clima de trabalho da minha equipe é bom?", tipo: "binario" },
+      { texto: "No meu setor existe elevado grau de abertura e confiança mútua entre o superior imediato e demais membros da equipe?", tipo: "binario" },
+      { texto: "Existe respeito, cooperação e ajuda mútua entre os colegas do meu setor, somos um grupo integrado?", tipo: "binario" },
+      { texto: "O relacionamento entre as pessoas da minha equipe é autêntico?", tipo: "binario" },
+      { texto: "Acredito que há um relacionamento profissional adequado entre pessoas de diferentes setores.", tipo: "verdadeiro_falso" },
+    ]},
+    { titulo: "Ética e Cidadania", perguntas: [
+      { texto: "A atuação da empresa é guiada por valores éticos?", tipo: "binario" },
+      { texto: "Você acha que a empresa age eticamente nas suas decisões?", tipo: "binario" },
+      { texto: "Você considera a empresa socialmente responsável?", tipo: "binario" },
+      { texto: "A empresa cumpre as promessas oficialmente feitas aos funcionários?", tipo: "ternario" },
+      { texto: "A empresa pratica ações éticas com os trabalhadores?", tipo: "binario" },
+    ]},
+    { titulo: "Sistemas de Remuneração", perguntas: [
+      { texto: "O seu salário satisfaz as suas necessidades básicas de vida?", tipo: "binario" },
+      { texto: "Você se sente satisfeito em relação ao seu salário?", tipo: "binario" },
+    ]},
+    { titulo: "Condições de Trabalho", perguntas: [
+      { texto: "Você se sente satisfeito em relação ao volume de trabalho que realiza?", tipo: "binario" },
+      { texto: "As condições do seu local de trabalho são satisfatórias?", tipo: "binario", subitens: ["Temperatura", "Espaço interno das ambulâncias", "Equipamentos", "Higiene", "Instalações Sanitárias"] },
+      { texto: "Você se sente satisfeito em relação ao volume de trabalho que realiza?", tipo: "binario" },
+    ]},
+    { titulo: "Qualidade e Produtividade", perguntas: [
+      { texto: "O compromisso da empresa com a qualidade dos seus produtos, serviços e processos está visível no trabalho diário?", tipo: "binario" },
+      { texto: "A qualidade do trabalho é considerada mais importante do que a sua quantidade?", tipo: "binario" },
+      { texto: "A empresa costuma melhorar os produtos e serviços prestados aos seus clientes?", tipo: "binario" },
+      { texto: "Seus colegas de setor de trabalho procuram formas de melhorar a qualidade e produtividade do trabalho?", tipo: "binario" },
+      { texto: "Conheço bem a Política de Qualidade da empresa e compreendo bem seus conceitos e objetivos?", tipo: "binario" },
+      { texto: "Considero que os serviços gerados pelo meu setor apresentam a qualidade esperada pelos nossos clientes?", tipo: "binario" },
+    ]},
+    { titulo: "Imagem e Adesão", perguntas: [
+      { texto: "Você indicaria um amigo para trabalhar na sua empresa?", tipo: "binario" },
+      { texto: "A empresa desfruta de boa imagem entre os funcionários?", tipo: "binario" },
+      { texto: "Considera a empresa um bom lugar para trabalhar?", tipo: "binario" },
+      { texto: "O seu trabalho lhe dá um sentimento de realização profissional?", tipo: "binario" },
+      { texto: "Você considera justas as decisões tomadas pela diretoria em relação aos funcionários da empresa?", tipo: "binario" },
+      { texto: "Você está satisfeito por trabalhar na empresa?", tipo: "binario" },
+      { texto: "Você gosta do trabalho que faz?", tipo: "binario" },
+      { texto: "Você acha que os funcionários se orgulham do desempenho da empresa?", tipo: "binario" },
+      { texto: "Você se sente satisfeito trabalhando nessa empresa?", tipo: "binario" },
+    ]},
+  ];
+
+  function buildClimaQuestionIndex() {
+    const flat = [];
+    let counter = 0;
+    CLIMA_SECTIONS.forEach((secao) => {
+      secao.perguntas.forEach((pergunta) => {
+        const opcoes = CLIMA_OPTIONS[pergunta.tipo] || [];
+        if (Array.isArray(pergunta.subitens) && pergunta.subitens.length) {
+          pergunta.subitens.forEach((subitem) => {
+            counter += 1;
+            flat.push({
+              id: `q${counter}`,
+              secao: secao.titulo,
+              texto: `${pergunta.texto} — ${subitem}`,
+              opcoes,
+            });
+          });
+        } else {
+          counter += 1;
+          flat.push({ id: `q${counter}`, secao: secao.titulo, texto: pergunta.texto, opcoes });
+        }
+      });
+    });
+    return flat;
+  }
+
+  const CLIMA_QUESTIONS = buildClimaQuestionIndex();
+  window.CLIMA_QUESTIONS = CLIMA_QUESTIONS;
+
+  function buildClimaFormFieldsHtml() {
+    let currentSection = "";
+    return CLIMA_QUESTIONS.map((question) => {
+      const sectionHeader = question.secao !== currentSection
+        ? (() => { currentSection = question.secao; return `<h2 class="clima-section-title">${escapeHtml(question.secao)}</h2>`; })()
+        : "";
+      const optionsHtml = question.opcoes.map((option, index) => `
+        <label class="clima-option">
+          <input type="radio" name="${question.id}" value="${escapeHtml(option)}" ${index === 0 ? "required" : ""} />
+          <span>${escapeHtml(option)}</span>
+        </label>
+      `).join("");
+      return `
+        ${sectionHeader}
+        <fieldset class="clima-question">
+          <legend>${escapeHtml(question.texto)}</legend>
+          <div class="clima-options">${optionsHtml}</div>
+        </fieldset>
+      `;
+    }).join("");
+  }
+  window.buildClimaFormFieldsHtml = buildClimaFormFieldsHtml;
+
+  function getClimaAnswerRows(item) {
+    const respostas = item?.respostas || {};
+    return CLIMA_QUESTIONS.map((question) => ({
+      secao: question.secao,
+      texto: question.texto,
+      resposta: respostas[question.id] || "Não respondido",
+    }));
+  }
+
+  async function submitClimaPesquisa({ respostas, sugestao }) {
+    if (!postgresClient) throw new Error("PostgreSQL indisponível. Verifique a configuração pública do HUB.");
+    const { error } = await postgresClient.from(TABLES.climaPesquisas).insert({ respostas, sugestao: sugestao || "" });
+    if (error) throw error;
+  }
+
+  function setupPublicClimaForm() {
+    const container = document.getElementById("clima-form-fields");
+    const form = document.getElementById("clima-form");
+    if (!form || !container || form.dataset.climaReady === "true") return;
+    form.dataset.climaReady = "true";
+    ensurePublicCaptchaNotice?.(form);
+    container.innerHTML = buildClimaFormFieldsHtml();
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formElement = event.currentTarget;
+      const publicFormError = validatePublicFormSubmission?.(formElement);
+      if (publicFormError) {
+        showModal?.("Envio bloqueado", publicFormError, "error");
+        return;
+      }
+
+      const formData = new FormData(formElement);
+      const respostas = {};
+      let missing = false;
+      CLIMA_QUESTIONS.forEach((question) => {
+        const value = String(formData.get(question.id) || "").trim();
+        if (!value) missing = true;
+        respostas[question.id] = value;
+      });
+      if (missing) {
+        showModal?.("Perguntas pendentes", "Responda todas as perguntas antes de enviar a pesquisa.", "error");
+        return;
+      }
+      const sugestao = String(formData.get("sugestao") || "").trim();
+
+      const submitButton = formElement.querySelector('button[type="submit"]');
+      const originalText = submitButton?.textContent || "Enviar pesquisa";
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Enviando...";
+      }
+
+      try {
+        await submitClimaPesquisa({ respostas, sugestao });
+        formElement.reset();
+        showModal?.("Pesquisa enviada", "Obrigado por participar da Pesquisa de Clima Organizacional! Sua resposta é anônima.", "success");
+      } catch (error) {
+        console.error("Erro ao enviar pesquisa de clima:", error);
+        showModal?.("Erro no envio", error.message || "Não foi possível enviar a pesquisa. Verifique sua conexão e tente novamente.", "error");
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = originalText;
+        }
+      }
+    });
+  }
+
+  function renderClimaSection() {
+    const listTarget = document.getElementById("clima-pesquisas-list");
+    if (!listTarget) return;
+    const items = (data.climaPesquisas || []).slice().sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
+    const countEl = document.getElementById("clima-pesquisas-count");
+    if (countEl) countEl.textContent = String(items.length);
+
+    renderCards("clima-pesquisas-list", items, (item) => `
+      <article class="item-card">
+        <div class="item-topline">
+          <p class="item-title">Resposta anônima</p>
+        </div>
+        <p class="item-meta">Recebida em ${escapeHtml(item.createdAt || "Não informado")}</p>
+        ${item.sugestao ? `<p><strong>Sugestão:</strong> ${escapeHtml(item.sugestao)}</p>` : ""}
+        <div class="job-actions">
+          <button class="secondary-link" type="button" data-action="ver-clima-pesquisa" data-id="${escapeHtml(item.id)}">Ver respostas</button>
+          <button class="danger-button" type="button" data-action="excluir-clima-pesquisa" data-id="${escapeHtml(item.id)}">Deletar</button>
+        </div>
+      </article>
+    `);
+  }
+  window.renderClimaSection = renderClimaSection;
+
+  window.verClimaPesquisa = function verClimaPesquisa(id) {
+    const item = (data.climaPesquisas || []).find((registro) => String(registro.id) === String(id));
+    if (!item) return;
+
+    const rows = getClimaAnswerRows(item);
+    let currentSection = "";
+    const detailMarkup = [];
+    rows.forEach((row) => {
+      if (row.secao !== currentSection) {
+        currentSection = row.secao;
+        detailMarkup.push(`<li class="dashboard-detail-section"><strong>${escapeHtml(currentSection)}</strong></li>`);
+      }
+      detailMarkup.push(`<li>${escapeHtml(row.texto)}: <strong>${escapeHtml(row.resposta)}</strong></li>`);
+    });
+    if (item.sugestao) {
+      detailMarkup.push(`<li class="dashboard-detail-section"><strong>Sugestão</strong></li>`);
+      detailMarkup.push(`<li>${escapeHtml(item.sugestao)}</li>`);
+    }
+
+    const overlay = document.createElement("div");
+    overlay.id = "custom-modal";
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal-card">
+        <div class="modal-header info">Resposta da pesquisa de clima</div>
+        <div class="modal-body"><ul class="dashboard-detail-list">${detailMarkup.join("")}</ul></div>
+        <div class="modal-footer"><button class="primary-button" data-action="close-modal">Fechar</button></div>
+      </div>
+    `;
+    overlay.querySelector('[data-action="close-modal"]')?.addEventListener("click", () => overlay.remove());
+    document.body.appendChild(overlay);
+  };
+
+  window.excluirClimaPesquisa = function excluirClimaPesquisa(id) {
+    const item = (data.climaPesquisas || []).find((registro) => String(registro.id) === String(id));
+    if (!item) return;
+
+    showPasswordActionModal({
+      title: "Deletar resposta",
+      text: "Confirme a senha de autorizacao para deletar esta resposta da pesquisa de clima.",
+      confirmText: "Deletar",
+      danger: true,
+      validatePassword: async (password) => verifyAuthorizationPassword(password),
+      onConfirm: async () => {
+        await deleteItem("climaPesquisas", id);
+      },
+    });
+  };
+
+  try {
+    const originalRenderAll = renderAll;
+    renderAll = function patchedRenderAllForClima() {
+      originalRenderAll?.();
+      renderClimaSection();
+    };
+  } catch (_) {}
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setupPublicClimaForm();
+  });
+
+  setupPublicClimaForm();
 })();
 

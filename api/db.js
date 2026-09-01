@@ -46,6 +46,7 @@ export const TABLES = new Set([
   "hub_candidaturas",
   "hub_chamados",
   "hub_chat_messages",
+  "hub_clima_pesquisas",
   "hub_denuncias",
   "hub_documentos",
   "hub_documentos_contratados",
@@ -116,6 +117,21 @@ export const PUBLIC_INSERT_TABLES = new Map([
       telefone: text(row.telefone).slice(0, 30),
       cpf: text(row.cpf).slice(0, 20),
       curriculo_url: text(row.curriculo_url),
+      created_by: "Publico",
+    };
+  }],
+  ["hub_clima_pesquisas", (row) => {
+    const source = row.respostas && typeof row.respostas === "object" ? row.respostas : {};
+    const entries = Object.entries(source).slice(0, 120);
+    const respostas = {};
+    for (const [key, value] of entries) {
+      const safeKey = text(key).slice(0, 40);
+      if (!safeKey) continue;
+      respostas[safeKey] = text(value).slice(0, 200);
+    }
+    return {
+      respostas,
+      sugestao: text(row.sugestao).slice(0, 4000),
       created_by: "Publico",
     };
   }],

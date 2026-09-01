@@ -58,6 +58,7 @@ const RECEPTIONIST_TABLES = BASE_RESTRICTED_TABLES;
 
 const FREDERICO_ONLY_TABLES = new Set(["hub_denuncias", "hub_feedbacks"]);
 const VANESSA_ONLY_TABLES = new Set(["hub_feedbacks"]);
+const ARIEL_ONLY_TABLES = new Set(["hub_clima_pesquisas"]);
 
 export function getReadableTables(session) {
   if (isManager(session)) return MANAGER_TABLES;
@@ -68,6 +69,7 @@ export function getReadableTables(session) {
 }
 
 export function canReadTable(session, table) {
+  if (ARIEL_ONLY_TABLES.has(table)) return isAriel(session);
   const readable = getReadableTables(session);
   if (readable === null) return true;
   if (readable instanceof Set) return readable.has(table);

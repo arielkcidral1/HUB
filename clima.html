@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
+    <title>Pesquisa de Clima Organizacional | HUB RH</title>
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="public-layout" data-public-clima="true">
+      <div class="public-container public-container-wide">
+        <div class="public-brand">
+          <img class="public-brand-logo" src="assets/logo.svg" alt="HUB RH" />
+          <strong>HUB</strong>
+        </div>
+
+        <header class="public-header">
+          <p class="eyebrow">Departamento Pessoal</p>
+          <h1>Pesquisa de Clima Organizacional</h1>
+          <p class="public-header-text">Sua opinião é muito importante. As respostas são anônimas e não identificam quem respondeu.</p>
+        </header>
+
+        <form class="panel" id="clima-form" data-public-clima="true">
+          <input class="hidden" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+
+          <div id="clima-form-fields"></div>
+
+          <h2 class="clima-section-title">Pergunta Aberta</h2>
+          <label>Que sugestões você daria para tornar a empresa um lugar melhor para trabalhar?
+            <textarea name="sugestao" rows="5" maxlength="4000" placeholder="Escreva aqui sua sugestão (opcional)"></textarea>
+          </label>
+
+          <button class="primary-button" type="submit">Enviar pesquisa</button>
+        </form>
+      </div>
+    </div>
+    <script src="hub-postgres-client.js"></script>
+    <script src="script.js?v=20260901-clima"></script>
+  </body>
+</html>

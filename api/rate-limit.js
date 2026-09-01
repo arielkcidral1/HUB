@@ -36,6 +36,7 @@ const LIMITS = {
   hub_chamados: { max: 5, windowMinutes: 10 },
   hub_candidaturas: { max: 10, windowMinutes: 10 },
   hub_atestados: { max: 5, windowMinutes: 10 },
+  hub_clima_pesquisas: { max: 3, windowMinutes: 10 },
   contractor_documents: { max: 3, windowMinutes: 10 },
   file_upload: { max: 15, windowMinutes: 10 },
   login_attempt: { max: 8, windowMinutes: 10 },
