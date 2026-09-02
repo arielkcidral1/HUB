@@ -9463,8 +9463,24 @@ function applyChatEditingShortcut(key) {
   return false;
 }
 
+function linkifyChatText(html = "") {
+  return html.replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi, (match) => {
+    let url = match;
+    let trail = "";
+    const trailMatch = url.match(/[.,!?;:)\]"'”’]+$/);
+    if (trailMatch) {
+      trail = trailMatch[0];
+      url = url.slice(0, -trail.length);
+    }
+    if (!url) return match;
+    const href = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer nofollow" class="chat-link">${url}</a>${trail}`;
+  });
+}
+
 function renderFormattedChatText(message = "") {
   let html = escapeHtml(message);
+  html = linkifyChatText(html);
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/_([^_]+)_/g, "<em>$1</em>");
   html = html.replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, "<u>$1</u>");
