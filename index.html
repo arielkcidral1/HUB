@@ -7,7 +7,7 @@
     <title>HUB | RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
     <script src="auth-entry.js?v=auth-entry-model-v23"></script>
-    <link rel="stylesheet" href="style.css?v=clima-modal-large-v27" />
+    <link rel="stylesheet" href="style.css?v=clima-charts-v28" />
        <link rel="stylesheet" href="message-size-enhancement.css" />
     <link rel="stylesheet" href="vagas-format.css" />
     <link rel="stylesheet" href="vagas-admin-enhance.css" />
@@ -1154,29 +1154,61 @@
             <p class="empty-state">Ainda não há respostas suficientes para gerar o dashboard.</p>
           </div>
           <div class="clima-dashboard" id="clima-dashboard" hidden>
-            <div class="panel clima-score-panel">
-              <div class="clima-score-gauge">
-                <strong id="clima-score-value">0%</strong>
-                <span id="clima-score-label">Clima organizacional</span>
+            <div class="clima-two-col">
+              <div class="panel clima-score-panel">
+                <div class="clima-score-gauge">
+                  <strong id="clima-score-value">0%</strong>
+                  <span id="clima-score-label">Clima organizacional</span>
+                </div>
+                <div class="clima-score-details">
+                  <p id="clima-score-summary" class="item-meta"></p>
+                  <div class="clima-score-legend">
+                    <span><i class="clima-dot clima-dot-good"></i> Favorável</span>
+                    <span><i class="clima-dot clima-dot-warning"></i> Neutro</span>
+                    <span><i class="clima-dot clima-dot-critical"></i> Desfavorável</span>
+                  </div>
+                </div>
               </div>
-              <div class="clima-score-details">
-                <p id="clima-score-summary" class="item-meta"></p>
-                <div class="clima-score-legend">
-                  <span><i class="clima-dot clima-dot-good"></i> Favorável</span>
-                  <span><i class="clima-dot clima-dot-warning"></i> Neutro</span>
-                  <span><i class="clima-dot clima-dot-critical"></i> Desfavorável</span>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Distribuição das respostas</h2>
+                    <p class="item-meta">Todas as respostas dadas, agrupadas por avaliação</p>
+                  </div>
+                </div>
+                <div class="clima-donut-wrap">
+                  <div class="clima-donut" id="clima-donut" role="img" aria-label="Gráfico de distribuição das respostas">
+                    <div class="clima-donut-center">
+                      <strong id="clima-donut-total">0</strong>
+                      <span>respostas</span>
+                    </div>
+                  </div>
+                  <div class="clima-donut-legend" id="clima-donut-legend"></div>
                 </div>
               </div>
             </div>
 
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <h2>Clima por área</h2>
-                  <p class="item-meta">Percentual de respostas favoráveis em cada bloco do questionário</p>
+            <div class="clima-two-col">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Clima por área</h2>
+                    <p class="item-meta">Percentual de respostas favoráveis em cada bloco do questionário</p>
+                  </div>
                 </div>
+                <div id="clima-sections-chart" class="clima-bars"></div>
               </div>
-              <div id="clima-sections-chart" class="clima-bars"></div>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Participação ao longo do tempo</h2>
+                    <p class="item-meta">Respostas recebidas por dia</p>
+                  </div>
+                </div>
+                <div id="clima-timeline-chart" class="clima-timeline"></div>
+              </div>
             </div>
 
             <div class="clima-two-col">
@@ -1634,7 +1666,7 @@
     </div>
     <script src="hub-postgres-client.js?v=db-load-v3"></script>
     <script src="assets/company-birthdays.js?v=2026-08-05"></script>
-    <script src="script.js?v=wait-for-dashboard-data-v101"></script>
+    <script src="script.js?v=wait-for-dashboard-data-v102"></script>
     <script src="auth-display-guard.js?v=preserve-session-v8"></script>
     <script src="vagas-admin-filters.js?v=vagas-admin-filters-v2"></script>
   </body>

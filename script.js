@@ -15697,6 +15697,103 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  function computeClimaAnswerDistribution(items) {
+    let favoravel = 0;
+    let neutro = 0;
+    let desfavoravel = 0;
+
+    items.forEach((item) => {
+      const respostas = item.respostas || {};
+      CLIMA_QUESTIONS.forEach((question) => {
+        if (question.tipo === "escolha") return;
+        const answer = respostas[question.id];
+        if (!answer) return;
+        const score = CLIMA_SCORE_MAP[answer];
+        if (score === undefined) return;
+        if (score >= 0.75) favoravel += 1;
+        else if (score === 0.5) neutro += 1;
+        else desfavoravel += 1;
+      });
+    });
+
+    return { favoravel, neutro, desfavoravel, total: favoravel + neutro + desfavoravel };
+  }
+
+  function formatClimaDayLabel(day) {
+    const parts = String(day || "").split("-");
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}` : day;
+  }
+
+  function computeClimaTimeline(items) {
+    const counts = new Map();
+    items.forEach((item) => {
+      const day = String(item.sortAt || "").slice(0, 10);
+      if (!day) return;
+      counts.set(day, (counts.get(day) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([day, count]) => ({ day, count }));
+  }
+
+  function renderClimaDonut(items) {
+    const donut = document.getElementById("clima-donut");
+    const totalEl = document.getElementById("clima-donut-total");
+    const legendEl = document.getElementById("clima-donut-legend");
+    if (!donut || !legendEl) return;
+
+    const dist = computeClimaAnswerDistribution(items);
+    if (totalEl) totalEl.textContent = String(dist.total);
+
+    if (!dist.total) {
+      donut.style.background = "var(--surface-soft)";
+      legendEl.innerHTML = '<p class="empty-state">Sem dados suficientes.</p>';
+      return;
+    }
+
+    const favPct = (dist.favoravel / dist.total) * 100;
+    const neuPct = (dist.neutro / dist.total) * 100;
+    const favEnd = favPct;
+    const neuEnd = favPct + neuPct;
+    donut.style.background = `conic-gradient(var(--success) 0% ${favEnd}%, var(--gold) ${favEnd}% ${neuEnd}%, var(--danger) ${neuEnd}% 100%)`;
+
+    const rows = [
+      { label: "Favorável", value: dist.favoravel, percent: Math.round(favPct), colorClass: "clima-dot-good" },
+      { label: "Neutro", value: dist.neutro, percent: Math.round(neuPct), colorClass: "clima-dot-warning" },
+      { label: "Desfavorável", value: dist.desfavoravel, percent: Math.round((dist.desfavoravel / dist.total) * 100), colorClass: "clima-dot-critical" },
+    ];
+    legendEl.innerHTML = rows.map((row) => `
+      <div class="clima-donut-legend-row">
+        <span><i class="clima-dot ${row.colorClass}"></i> ${escapeHtml(row.label)}</span>
+        <strong>${row.percent}% <span class="item-meta">(${row.value})</span></strong>
+      </div>
+    `).join("");
+  }
+
+  function renderClimaTimeline(items) {
+    const target = document.getElementById("clima-timeline-chart");
+    if (!target) return;
+
+    const timeline = computeClimaTimeline(items);
+    if (!timeline.length) {
+      target.innerHTML = '<p class="empty-state">Sem dados suficientes.</p>';
+      return;
+    }
+
+    const max = Math.max(...timeline.map((entry) => entry.count));
+    target.innerHTML = `
+      <div class="clima-timeline-bars">
+        ${timeline.map((entry) => `
+          <div class="clima-timeline-col" title="${escapeHtml(formatClimaDayLabel(entry.day))}: ${entry.count}">
+            <span class="clima-timeline-count">${entry.count}</span>
+            <div class="clima-timeline-bar" style="height:${Math.max((entry.count / max) * 100, 8)}%"></div>
+            <span class="clima-timeline-label">${escapeHtml(formatClimaDayLabel(entry.day))}</span>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
   function renderClimaDashboard(items) {
     const dashboard = document.getElementById("clima-dashboard");
     const emptyState = document.getElementById("clima-dashboard-empty");
@@ -15724,6 +15821,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (scoreSummaryEl) {
       scoreSummaryEl.textContent = `Baseado em ${summary.respondents} ${summary.respondents === 1 ? "resposta anônima" : "respostas anônimas"}.`;
     }
+
+    renderClimaDonut(items);
+    renderClimaTimeline(items);
 
     const emptyBars = '<p class="empty-state">Sem dados suficientes.</p>';
 
