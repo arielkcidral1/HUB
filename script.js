@@ -12358,18 +12358,25 @@ if (contratadoDocForm) {
       return;
     }
 
-    try {
-      await submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, email, documentos, accessPassword: contractorAccessPassword, turnstileToken });
-      formElement.reset();
-      resetContractorDocumentFields(contractorDocumentsFields);
-      showModal("Documentos enviados", "Os documentos foram enviados com sucesso para o RH.", "info");
-    } catch (error) {
-      console.error(error);
-      const message = /duplicate key|23505|CPF ja possui envio|CPF já possui envio/i.test(error.message || "")
-        ? "Este CPF já possui um envio de documentos registrado."
-        : error.message || "Não foi possível enviar os documentos. Tente novamente.";
-      showModal("Erro", message, "error");
-    }
+    showConfirmActionModal({
+      title: "Confirmar envio",
+      text: "Confira se todos os documentos solicitados foram anexados antes de continuar. O envio é único: depois de enviado, não será possível reenviar ou editar os documentos.",
+      confirmText: "Enviar documentos",
+      onConfirm: async () => {
+        try {
+          await submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, email, documentos, accessPassword: contractorAccessPassword, turnstileToken });
+          formElement.reset();
+          resetContractorDocumentFields(contractorDocumentsFields);
+          showModal("Documentos enviados", "Os documentos foram enviados com sucesso para o RH.", "info");
+        } catch (error) {
+          console.error(error);
+          const message = /duplicate key|23505|CPF ja possui envio|CPF já possui envio/i.test(error.message || "")
+            ? "Este CPF já possui um envio de documentos registrado."
+            : error.message || "Não foi possível enviar os documentos. Tente novamente.";
+          showModal("Erro", message, "error");
+        }
+      },
+    });
   });
 }
 
