@@ -421,7 +421,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $contractorApi 'email: text\(body\.email\)[\s\S]*\["email", payload\.email\]' "API grava o e-mail do contratado"
   Assert-MatchText $contractorApi 'const optionalColumns = new Set\(\["origem_html", "email"\]\)' "colunas opcionais somem do insert quando o banco ainda nao as tem"
   Assert-MatchText $docsFredy 'Checklist%20de%20Admissao%20-%20Empresas\.xlsx' "paginas de documentos possuem checklist para download"
-  Assert-MatchText $docsFredy 'script\.js\?v=20260818-payload-fix' "paginas de documentos quebram cache do script"
+  Assert-MatchText $docsFredy 'script\.js\?v=20260902-confirm-modal' "paginas de documentos quebram cache do script"
   Assert-MatchText $index '<section class="view" id="gerenciamento-vt"[\s\S]*<input name="id" type="hidden" />[\s\S]*id="vt-colaborador"[\s\S]*id="vt-mes"[\s\S]*id="vt-unidade"[\s\S]*id="vt-dias-uteis"[\s\S]*id="vt-valor-passagem"[\s\S]*id="vt-saldo-atual"[\s\S]*id="vt-valor-necessario"[\s\S]*id="cancelar-edicao-vt"[\s\S]*id="vt-registros-list"' "aba VT possui nome mes unidade e suporte a edicao"
   Assert-MatchText $index 'id="vt-colaborador"[^>]*pattern="\\S\+\\s\+\\S\+\.\*"[^>]*placeholder="Nome e sobrenome"[^>]*required' "VT exige nome e sobrenome do colaborador"
   Assert-MatchText $index 'id="vt-unidade"[^>]*required' "unidade do VT e obrigatoria"
