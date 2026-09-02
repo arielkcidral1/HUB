@@ -4695,19 +4695,28 @@ async function refreshFromPostgreSQL() {
   }
 }
 
+let lastAutoRefreshAt = 0;
+const AUTO_REFRESH_MIN_GAP_MS = 60000;
+
 function setupAutoRefresh() {
   if (refreshTimer) return;
 
   // O realtime (setupRealtime) e o canal principal de atualizacao; este poll
   // e so uma rede de seguranca de reconciliacao, por isso o intervalo e mais
-  // longo e pausa quando a aba esta em segundo plano.
+  // longo e pausa quando a aba esta em segundo plano. O throttle evita que
+  // trocar de aba repetidamente dispare varios refreshes em sequencia.
   refreshTimer = window.setInterval(() => {
     if (document.visibilityState !== "visible") return;
+    if (Date.now() - lastAutoRefreshAt < AUTO_REFRESH_MIN_GAP_MS) return;
+    lastAutoRefreshAt = Date.now();
     refreshFromPostgreSQL();
   }, 180000);
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") refreshFromPostgreSQL();
+    if (document.visibilityState !== "visible") return;
+    if (Date.now() - lastAutoRefreshAt < AUTO_REFRESH_MIN_GAP_MS) return;
+    lastAutoRefreshAt = Date.now();
+    refreshFromPostgreSQL();
   });
 }
 
@@ -12575,9 +12584,14 @@ function setupPresenceHeartbeat() {
   if (presenceHeartbeatStarted) return;
   presenceHeartbeatStarted = true;
 
+  let lastHeartbeatAt = 0;
+  const HEARTBEAT_MIN_GAP_MS = 60000;
+
   const sendHeartbeat = () => {
     if (!isAuthenticated()) return;
     if (document.visibilityState !== "visible") return;
+    if (Date.now() - lastHeartbeatAt < HEARTBEAT_MIN_GAP_MS) return;
+    lastHeartbeatAt = Date.now();
     fetch("/api/auth/heartbeat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
