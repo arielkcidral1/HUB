@@ -4564,10 +4564,14 @@ textarea {
   }
 }
 
+.clima-dashboard-empty {
+  margin-bottom: 24px;
+}
+
 .clima-dashboard {
   display: grid;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .clima-score-panel {
