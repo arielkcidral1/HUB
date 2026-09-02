@@ -25,7 +25,13 @@
           <p class="public-header-text">Sua opinião é muito importante. As respostas são anônimas e não identificam quem respondeu.</p>
         </header>
 
-        <form class="panel" id="clima-form" data-public-clima="true">
+        <div class="panel chat-empty-state chat-empty-state-lg" id="clima-closed-state" hidden>
+          <img src="assets/logo.svg" alt="HUB" />
+          <strong>Teste Encerrado</strong>
+          <p class="item-meta">A Pesquisa de Clima Organizacional não está disponível para respostas no momento.</p>
+        </div>
+
+        <form class="panel" id="clima-form" data-public-clima="true" hidden>
           <input class="hidden" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
 
           <div id="clima-form-fields"></div>
@@ -40,6 +46,6 @@
       </div>
     </div>
     <script src="hub-postgres-client.js"></script>
-    <script src="script.js?v=perf-optimizations-v103"></script>
+    <script src="script.js?v=clima-toggle-v1"></script>
   </body>
 </html>

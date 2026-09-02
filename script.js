@@ -155,6 +155,7 @@ const TABLES = {
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
   climaPesquisas: "hub_clima_pesquisas",
+  climaConfig: "hub_clima_config",
   usuarios: USERS_TABLE,
   readReceipts: "hub_read_receipts",
 };
@@ -234,6 +235,7 @@ const defaultData = {
   candidaturas: [],
   atestados: [],
   climaPesquisas: [],
+  climaConfig: [],
   usuarios: [],
   readReceipts: [],
 };
@@ -1341,6 +1343,7 @@ function loadLocalData() {
     candidaturas: parsed.candidaturas || [],
     atestados: (parsed.atestados || []).map(mapAtestadoRow),
     climaPesquisas: parsed.climaPesquisas || [],
+    climaConfig: parsed.climaConfig || [],
     usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
     readReceipts: parsed.readReceipts || [],
   };
@@ -3600,6 +3603,14 @@ if (collection === "malotes") {
       sortAt: row.created_at || "",
     }));
   }
+  if (collection === "climaConfig") {
+    return rows.map((row) => ({
+      id: row.id,
+      aberto: Boolean(row.aberto),
+      abertoEm: row.aberto_em || "",
+      encerradoEm: row.encerrado_em || "",
+    }));
+  }
 if (collection === "eventos") {
     return rows.map((row) => ({
       id: row.id,
@@ -4276,6 +4287,13 @@ if (collection === "eventos") {
       created_by: values.createdBy || getCurrentUserName(),
       updated_by: values.updatedBy || null,
     };
+  }
+
+  if (collection === "climaConfig") {
+    const payload = { aberto: Boolean(values.aberto) };
+    if ("abertoEm" in values) payload.aberto_em = values.abertoEm || null;
+    if ("encerradoEm" in values) payload.encerrado_em = values.encerradoEm || null;
+    return payload;
   }
 
   if (collection === "atestados") {
@@ -15903,8 +15921,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function renderClimaConfigControls() {
+    const button = document.getElementById("clima-toggle-button");
+    const statusTag = document.getElementById("clima-status-tag");
+    if (!button && !statusTag) return;
+    const aberto = Boolean((data.climaConfig || [])[0]?.aberto);
+    if (button) button.textContent = aberto ? "Encerrar teste" : "Liberar teste";
+    if (statusTag) {
+      statusTag.textContent = aberto ? "Teste liberado" : "Teste encerrado";
+      statusTag.classList.toggle("alert", !aberto);
+    }
+  }
+
+  async function toggleClimaAberto() {
+    const current = (data.climaConfig || [])[0];
+    const nextAberto = !current?.aberto;
+    const timestamp = new Date().toISOString();
+    const values = {
+      aberto: nextAberto,
+      abertoEm: nextAberto ? timestamp : (current?.abertoEm || ""),
+      encerradoEm: !nextAberto ? timestamp : "",
+    };
+    const success = current?.id
+      ? await updateItem("climaConfig", current.id, values)
+      : await addItem("climaConfig", values);
+    if (success) {
+      showModal(
+        nextAberto ? "Teste liberado" : "Teste encerrado",
+        nextAberto
+          ? "O formulário público de clima está liberado para respostas."
+          : "O formulário público de clima foi encerrado. Quem acessar o link verá o aviso de teste encerrado.",
+        "info",
+      );
+    }
+  }
+
+  document.getElementById("clima-toggle-button")?.addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      await toggleClimaAberto();
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   function renderClimaSection() {
     const listTarget = document.getElementById("clima-pesquisas-list");
+    renderClimaConfigControls();
     if (!listTarget) return;
     const items = (data.climaPesquisas || []).slice().sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
     const countEl = document.getElementById("clima-pesquisas-count");
@@ -15977,6 +16041,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  async function applyClimaOpenState() {
+    const form = document.getElementById("clima-form");
+    const closedState = document.getElementById("clima-closed-state");
+    if (!form || !closedState) return;
+    let aberto = false;
+    try {
+      const response = await fetch(`/api/records?table=${encodeURIComponent(TABLES.climaConfig)}&select=*`);
+      const result = await response.json().catch(() => ({}));
+      aberto = Boolean(result?.data?.[0]?.aberto);
+    } catch (error) {
+      console.error("Erro ao verificar status da pesquisa de clima:", error);
+    }
+    form.hidden = !aberto;
+    closedState.hidden = aberto;
+    if (aberto) setupPublicClimaForm();
+  }
+
   try {
     const originalRenderAll = renderAll;
     renderAll = function patchedRenderAllForClima() {
@@ -15986,9 +16067,17 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (_) {}
 
   document.addEventListener("DOMContentLoaded", () => {
-    setupPublicClimaForm();
+    if (document.getElementById("clima-closed-state")) {
+      applyClimaOpenState();
+    } else {
+      setupPublicClimaForm();
+    }
   });
 
-  setupPublicClimaForm();
+  if (document.getElementById("clima-closed-state")) {
+    applyClimaOpenState();
+  } else {
+    setupPublicClimaForm();
+  }
 })();
 

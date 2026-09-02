@@ -46,6 +46,7 @@ export const TABLES = new Set([
   "hub_candidaturas",
   "hub_chamados",
   "hub_chat_messages",
+  "hub_clima_config",
   "hub_clima_pesquisas",
   "hub_denuncias",
   "hub_documentos",
@@ -70,7 +71,7 @@ export function assertTable(table) {
   }
 }
 
-export const PUBLIC_READ_TABLES = new Set(["hub_vagas"]);
+export const PUBLIC_READ_TABLES = new Set(["hub_vagas", "hub_clima_config"]);
 
 function text(value) {
   return String(value ?? "").trim();
