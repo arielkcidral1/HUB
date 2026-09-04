@@ -801,7 +801,7 @@ function getAllowedViewsForCurrentUser() {
     || currentUserMatchesName("vanessa");
   if (!canSeeDenuncias) allowed.delete("denuncias");
 
-  if (currentUserMatchesName("ariel")) allowed.add("teste-clima");
+  if (currentUserMatchesName("ariel") || currentUserMatchesName("andre barbosa")) allowed.add("teste-clima");
   return allowed;
 }
 
@@ -14541,7 +14541,7 @@ document.addEventListener('DOMContentLoaded', () => {
       currentAuthUser?.user_metadata?.nome,
       currentAuthUser?.user_metadata?.name,
     ];
-    return candidates.some((candidate) => normalizeAccessName(candidate) === "ariel");
+    return candidates.some((candidate) => normalizeAccessName(candidate) === "ariel" || normalizeAccessName(candidate) === "andre barbosa");
   }
 
   window.isArielUser = isArielUser;
