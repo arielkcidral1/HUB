@@ -495,7 +495,15 @@ function hasFredericoLevelAccess() {
     || currentUserMatchesName("jucimara")
     || currentUserMatchesName("alex", "alexsandro")
     || currentUserMatchesName("alcione", "jose alcione")
-    || currentUserMatchesName("andre barbosa");
+    || currentUserMatchesName("andre barbosa")
+    || currentUserMatchesName("maria luisa", "maria luiza");
+}
+
+// Cargo cadastrado (Gerente/Recepcionista) so restringe quem NAO esta na
+// lista de acesso nivel Frederico; quem esta la mantem o titulo/cargo real
+// mas nao fica limitado pelas restricoes de Gerente/Recepcionista.
+function isRestrictedManagerUser() {
+  return isManagerUser() && !hasFredericoLevelAccess();
 }
 
 function loadTeamUsersStore() {
@@ -603,7 +611,7 @@ function isValidDirectChannel(channelId) {
 }
 
 function isCurrentUserInChannel(channelId) {
-  if (channelId === GENERAL_CHANNEL) return !isManagerUser() && !isCashierUser();
+  if (channelId === GENERAL_CHANNEL) return !isRestrictedManagerUser() && !isCashierUser();
   if (channelId === MANAGER_GENERAL_CHANNEL) return !isCashierUser();
   return isValidDirectChannel(channelId) && getDirectChannelUsers(channelId).includes(normalizeLoginName(getCurrentUserName()));
 }
@@ -630,7 +638,7 @@ function getChatChannels() {
 
   let channels = isCashierUser()
     ? [...directChannels]
-    : isManagerUser()
+    : isRestrictedManagerUser()
     ? [
         { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
         ...directChannels,
@@ -678,7 +686,7 @@ function normalizeChatChannel(canal) {
 function canAccessChatChannel(canal) {
   const channel = normalizeChatChannel(canal);
   return (
-    (channel === GENERAL_CHANNEL && !isManagerUser() && !isCashierUser()) ||
+    (channel === GENERAL_CHANNEL && !isRestrictedManagerUser() && !isCashierUser()) ||
     (channel === MANAGER_GENERAL_CHANNEL && !isCashierUser()) ||
     (isValidDirectChannel(channel) && isCurrentUserInChannel(channel))
   );
@@ -792,8 +800,8 @@ const ALL_ALLOWED_VIEWS = Object.freeze([
 ]);
 
 function getAllowedViewsForCurrentUser() {
-  if (isManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
-  if (isReceptionistUser()) return new Set(RECEPTIONIST_ALLOWED_VIEWS);
+  if (isRestrictedManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
+  if (isReceptionistUser() && !hasFredericoLevelAccess()) return new Set(RECEPTIONIST_ALLOWED_VIEWS);
   const allowed = new Set(ALL_ALLOWED_VIEWS);
   if (hasFredericoLevelAccess()) allowed.add("feedbacks");
 
@@ -801,7 +809,7 @@ function getAllowedViewsForCurrentUser() {
     || currentUserMatchesName("vanessa");
   if (!canSeeDenuncias) allowed.delete("denuncias");
 
-  if (currentUserMatchesName("ariel") || currentUserMatchesName("andre barbosa")) allowed.add("teste-clima");
+  if (currentUserMatchesName("ariel") || currentUserMatchesName("andre barbosa") || currentUserMatchesName("maria luisa", "maria luiza")) allowed.add("teste-clima");
   return allowed;
 }
 
@@ -7902,7 +7910,7 @@ function isDashboardActivityReadForOrdering(item = {}) {
 
 function applyDashboardScopeToMetricCards() {
   const allowedViews = getAllowedViewsForCurrentUser();
-  const isManager = isManagerUser();
+  const isManager = isRestrictedManagerUser();
   document.querySelectorAll(".metric-card-link[data-view]").forEach((card) => {
 
     let allowed = allowedViews.has(card.dataset.view);

@@ -42,7 +42,14 @@ function hasFredericoLevelAccess(session) {
     || matchesName(session, "jucimara")
     || matchesName(session, "alex", "alexsandro")
     || matchesName(session, "alcione", "jose alcione")
-    || matchesName(session, "andre barbosa");
+    || matchesName(session, "andre barbosa")
+    || matchesName(session, "maria luisa", "maria luiza");
+}
+
+// Cargo cadastrado (Gerente/Recepcionista) so restringe quem NAO esta na
+// lista de acesso nivel Frederico.
+function isRestrictedManager(session) {
+  return isManager(session) && !hasFredericoLevelAccess(session);
 }
 
 function isAriel(session) {
@@ -62,15 +69,15 @@ const VANESSA_ONLY_TABLES = new Set(["hub_feedbacks"]);
 const ARIEL_ONLY_TABLES = new Set(["hub_clima_pesquisas"]);
 
 export function getReadableTables(session) {
+  if (hasFredericoLevelAccess(session) || isAriel(session)) return null;
   if (isManager(session)) return MANAGER_TABLES;
   if (isReceptionist(session)) return RECEPTIONIST_TABLES;
-  if (hasFredericoLevelAccess(session) || isAriel(session)) return null;
   if (isVanessa(session)) return { exclude: VANESSA_ONLY_TABLES };
   return { exclude: FREDERICO_ONLY_TABLES };
 }
 
 export function canReadTable(session, table) {
-  if (ARIEL_ONLY_TABLES.has(table)) return isAriel(session);
+  if (ARIEL_ONLY_TABLES.has(table)) return isAriel(session) || hasFredericoLevelAccess(session);
   const readable = getReadableTables(session);
   if (readable === null) return true;
   if (readable instanceof Set) return readable.has(table);
@@ -97,7 +104,7 @@ export function authorizeWrite(session, table, context) {
 }
 
 export function getForcedRowFilter(session, table) {
-  if (table === "hub_documentos" && isManager(session)) {
+  if (table === "hub_documentos" && isRestrictedManager(session)) {
     const nome = String(session?.user?.user_metadata?.nome || "").trim();
     return { column: "created_by", op: "eq", value: nome || " sem-nome " };
   }
