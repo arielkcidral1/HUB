@@ -494,7 +494,8 @@ function hasFredericoLevelAccess() {
   return isFredericoUser()
     || currentUserMatchesName("jucimara")
     || currentUserMatchesName("alex", "alexsandro")
-    || currentUserMatchesName("alcione", "jose alcione");
+    || currentUserMatchesName("alcione", "jose alcione")
+    || currentUserMatchesName("andre barbosa");
 }
 
 function loadTeamUsersStore() {

@@ -41,7 +41,8 @@ function hasFredericoLevelAccess(session) {
   return matchesName(session, "frederico")
     || matchesName(session, "jucimara")
     || matchesName(session, "alex", "alexsandro")
-    || matchesName(session, "alcione", "jose alcione");
+    || matchesName(session, "alcione", "jose alcione")
+    || matchesName(session, "andre barbosa");
 }
 
 function isAriel(session) {
