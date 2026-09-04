@@ -19,6 +19,7 @@ const BOOTSTRAP_TABLES = {
   atestados: "hub_atestados",
   feedbacks: "hub_feedbacks",
   climaPesquisas: "hub_clima_pesquisas",
+  climaConfig: "hub_clima_config",
 };
 
 const BOOTSTRAP_ROW_LIMITS = {

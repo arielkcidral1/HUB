@@ -2645,6 +2645,17 @@ textarea {
   white-space: pre-wrap;
 }
 
+.chat-link {
+  color: #3b82f6;
+  text-decoration: underline;
+  word-break: break-word;
+}
+
+.chat-link:hover,
+.chat-link:focus-visible {
+  color: #2563eb;
+}
+
 .chat-message-group {
   display: grid;
   gap: 2px;

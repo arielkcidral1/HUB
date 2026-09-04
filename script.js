@@ -155,6 +155,7 @@ const TABLES = {
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
   climaPesquisas: "hub_clima_pesquisas",
+  climaConfig: "hub_clima_config",
   usuarios: USERS_TABLE,
   readReceipts: "hub_read_receipts",
 };
@@ -234,6 +235,7 @@ const defaultData = {
   candidaturas: [],
   atestados: [],
   climaPesquisas: [],
+  climaConfig: [],
   usuarios: [],
   readReceipts: [],
 };
@@ -492,7 +494,16 @@ function hasFredericoLevelAccess() {
   return isFredericoUser()
     || currentUserMatchesName("jucimara")
     || currentUserMatchesName("alex", "alexsandro")
-    || currentUserMatchesName("alcione", "jose alcione");
+    || currentUserMatchesName("alcione", "jose alcione")
+    || currentUserMatchesName("andre barbosa")
+    || currentUserMatchesName("maria luisa", "maria luiza");
+}
+
+// Cargo cadastrado (Gerente/Recepcionista) so restringe quem NAO esta na
+// lista de acesso nivel Frederico; quem esta la mantem o titulo/cargo real
+// mas nao fica limitado pelas restricoes de Gerente/Recepcionista.
+function isRestrictedManagerUser() {
+  return isManagerUser() && !hasFredericoLevelAccess();
 }
 
 function loadTeamUsersStore() {
@@ -600,7 +611,7 @@ function isValidDirectChannel(channelId) {
 }
 
 function isCurrentUserInChannel(channelId) {
-  if (channelId === GENERAL_CHANNEL) return !isManagerUser() && !isCashierUser();
+  if (channelId === GENERAL_CHANNEL) return !isRestrictedManagerUser() && !isCashierUser();
   if (channelId === MANAGER_GENERAL_CHANNEL) return !isCashierUser();
   return isValidDirectChannel(channelId) && getDirectChannelUsers(channelId).includes(normalizeLoginName(getCurrentUserName()));
 }
@@ -627,7 +638,7 @@ function getChatChannels() {
 
   let channels = isCashierUser()
     ? [...directChannels]
-    : isManagerUser()
+    : isRestrictedManagerUser()
     ? [
         { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
         ...directChannels,
@@ -675,7 +686,7 @@ function normalizeChatChannel(canal) {
 function canAccessChatChannel(canal) {
   const channel = normalizeChatChannel(canal);
   return (
-    (channel === GENERAL_CHANNEL && !isManagerUser() && !isCashierUser()) ||
+    (channel === GENERAL_CHANNEL && !isRestrictedManagerUser() && !isCashierUser()) ||
     (channel === MANAGER_GENERAL_CHANNEL && !isCashierUser()) ||
     (isValidDirectChannel(channel) && isCurrentUserInChannel(channel))
   );
@@ -789,11 +800,8 @@ const ALL_ALLOWED_VIEWS = Object.freeze([
 ]);
 
 function getAllowedViewsForCurrentUser() {
-  if (isManagerUser() && currentUserMatchesName("maria luisa")) {
-    return new Set([...MANAGER_ALLOWED_VIEWS, "chamados", "denuncias"]);
-  }
-  if (isManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
-  if (isReceptionistUser()) return new Set(RECEPTIONIST_ALLOWED_VIEWS);
+  if (isRestrictedManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
+  if (isReceptionistUser() && !hasFredericoLevelAccess()) return new Set(RECEPTIONIST_ALLOWED_VIEWS);
   const allowed = new Set(ALL_ALLOWED_VIEWS);
   if (hasFredericoLevelAccess()) allowed.add("feedbacks");
 
@@ -801,7 +809,7 @@ function getAllowedViewsForCurrentUser() {
     || currentUserMatchesName("vanessa");
   if (!canSeeDenuncias) allowed.delete("denuncias");
 
-  if (currentUserMatchesName("ariel")) allowed.add("teste-clima");
+  if (currentUserMatchesName("ariel") || currentUserMatchesName("andre barbosa") || currentUserMatchesName("maria luisa", "maria luiza")) allowed.add("teste-clima");
   return allowed;
 }
 
@@ -1344,6 +1352,7 @@ function loadLocalData() {
     candidaturas: parsed.candidaturas || [],
     atestados: (parsed.atestados || []).map(mapAtestadoRow),
     climaPesquisas: parsed.climaPesquisas || [],
+    climaConfig: parsed.climaConfig || [],
     usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
     readReceipts: parsed.readReceipts || [],
   };
@@ -3603,6 +3612,14 @@ if (collection === "malotes") {
       sortAt: row.created_at || "",
     }));
   }
+  if (collection === "climaConfig") {
+    return rows.map((row) => ({
+      id: row.id,
+      aberto: Boolean(row.aberto),
+      abertoEm: row.aberto_em || "",
+      encerradoEm: row.encerrado_em || "",
+    }));
+  }
 if (collection === "eventos") {
     return rows.map((row) => ({
       id: row.id,
@@ -4279,6 +4296,13 @@ if (collection === "eventos") {
       created_by: values.createdBy || getCurrentUserName(),
       updated_by: values.updatedBy || null,
     };
+  }
+
+  if (collection === "climaConfig") {
+    const payload = { aberto: Boolean(values.aberto) };
+    if ("abertoEm" in values) payload.aberto_em = values.abertoEm || null;
+    if ("encerradoEm" in values) payload.encerrado_em = values.encerradoEm || null;
+    return payload;
   }
 
   if (collection === "atestados") {
@@ -7887,7 +7911,7 @@ function isDashboardActivityReadForOrdering(item = {}) {
 
 function applyDashboardScopeToMetricCards() {
   const allowedViews = getAllowedViewsForCurrentUser();
-  const isManager = isManagerUser();
+  const isManager = isRestrictedManagerUser();
   document.querySelectorAll(".metric-card-link[data-view]").forEach((card) => {
 
     let allowed = allowedViews.has(card.dataset.view);
@@ -9467,8 +9491,24 @@ function applyChatEditingShortcut(key) {
   return false;
 }
 
+function linkifyChatText(html = "") {
+  return html.replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi, (match) => {
+    let url = match;
+    let trail = "";
+    const trailMatch = url.match(/[.,!?;:)\]"'”’]+$/);
+    if (trailMatch) {
+      trail = trailMatch[0];
+      url = url.slice(0, -trail.length);
+    }
+    if (!url) return match;
+    const href = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer nofollow" class="chat-link">${url}</a>${trail}`;
+  });
+}
+
 function renderFormattedChatText(message = "") {
   let html = escapeHtml(message);
+  html = linkifyChatText(html);
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/_([^_]+)_/g, "<em>$1</em>");
   html = html.replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, "<u>$1</u>");
@@ -12362,18 +12402,25 @@ if (contratadoDocForm) {
       return;
     }
 
-    try {
-      await submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, email, documentos, accessPassword: contractorAccessPassword, turnstileToken });
-      formElement.reset();
-      resetContractorDocumentFields(contractorDocumentsFields);
-      showModal("Documentos enviados", "Os documentos foram enviados com sucesso para o RH.", "info");
-    } catch (error) {
-      console.error(error);
-      const message = /duplicate key|23505|CPF ja possui envio|CPF já possui envio/i.test(error.message || "")
-        ? "Este CPF já possui um envio de documentos registrado."
-        : error.message || "Não foi possível enviar os documentos. Tente novamente.";
-      showModal("Erro", message, "error");
-    }
+    showConfirmActionModal({
+      title: "Confirmar envio",
+      text: "Confira se todos os documentos solicitados foram anexados antes de continuar. O envio é único: depois de enviado, não será possível reenviar ou editar os documentos.",
+      confirmText: "Enviar documentos",
+      onConfirm: async () => {
+        try {
+          await submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, email, documentos, accessPassword: contractorAccessPassword, turnstileToken });
+          formElement.reset();
+          resetContractorDocumentFields(contractorDocumentsFields);
+          showModal("Documentos enviados", "Os documentos foram enviados com sucesso para o RH.", "info");
+        } catch (error) {
+          console.error(error);
+          const message = /duplicate key|23505|CPF ja possui envio|CPF já possui envio/i.test(error.message || "")
+            ? "Este CPF já possui um envio de documentos registrado."
+            : error.message || "Não foi possível enviar os documentos. Tente novamente.";
+          showModal("Erro", message, "error");
+        }
+      },
+    });
   });
 }
 
@@ -14503,7 +14550,7 @@ document.addEventListener('DOMContentLoaded', () => {
       currentAuthUser?.user_metadata?.nome,
       currentAuthUser?.user_metadata?.name,
     ];
-    return candidates.some((candidate) => normalizeAccessName(candidate) === "ariel");
+    return candidates.some((candidate) => normalizeAccessName(candidate) === "ariel" || normalizeAccessName(candidate) === "andre barbosa");
   }
 
   window.isArielUser = isArielUser;
@@ -15884,8 +15931,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function renderClimaConfigControls() {
+    const button = document.getElementById("clima-toggle-button");
+    const statusTag = document.getElementById("clima-status-tag");
+    if (!button && !statusTag) return;
+    const aberto = Boolean((data.climaConfig || [])[0]?.aberto);
+    if (button) button.textContent = aberto ? "Encerrar teste" : "Liberar teste";
+    if (statusTag) {
+      statusTag.textContent = aberto ? "Teste liberado" : "Teste encerrado";
+      statusTag.classList.toggle("alert", !aberto);
+    }
+  }
+
+  async function toggleClimaAberto() {
+    const current = (data.climaConfig || [])[0];
+    const nextAberto = !current?.aberto;
+    const timestamp = new Date().toISOString();
+    const values = {
+      aberto: nextAberto,
+      abertoEm: nextAberto ? timestamp : (current?.abertoEm || ""),
+      encerradoEm: !nextAberto ? timestamp : "",
+    };
+    const success = current?.id
+      ? await updateItem("climaConfig", current.id, values)
+      : await addItem("climaConfig", values);
+    if (success) {
+      showModal(
+        nextAberto ? "Teste liberado" : "Teste encerrado",
+        nextAberto
+          ? "O formulário público de clima está liberado para respostas."
+          : "O formulário público de clima foi encerrado. Quem acessar o link verá o aviso de teste encerrado.",
+        "info",
+      );
+    }
+  }
+
+  document.getElementById("clima-toggle-button")?.addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      await toggleClimaAberto();
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   function renderClimaSection() {
     const listTarget = document.getElementById("clima-pesquisas-list");
+    renderClimaConfigControls();
     if (!listTarget) return;
     const items = (data.climaPesquisas || []).slice().sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
     const countEl = document.getElementById("clima-pesquisas-count");
@@ -15958,6 +16051,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  async function applyClimaOpenState() {
+    const form = document.getElementById("clima-form");
+    const closedState = document.getElementById("clima-closed-state");
+    if (!form || !closedState) return;
+    let aberto = false;
+    try {
+      const response = await fetch(`/api/records?table=${encodeURIComponent(TABLES.climaConfig)}&select=*`);
+      const result = await response.json().catch(() => ({}));
+      aberto = Boolean(result?.data?.[0]?.aberto);
+    } catch (error) {
+      console.error("Erro ao verificar status da pesquisa de clima:", error);
+    }
+    form.hidden = !aberto;
+    closedState.hidden = aberto;
+    if (aberto) setupPublicClimaForm();
+  }
+
   try {
     const originalRenderAll = renderAll;
     renderAll = function patchedRenderAllForClima() {
@@ -15967,9 +16077,17 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (_) {}
 
   document.addEventListener("DOMContentLoaded", () => {
-    setupPublicClimaForm();
+    if (document.getElementById("clima-closed-state")) {
+      applyClimaOpenState();
+    } else {
+      setupPublicClimaForm();
+    }
   });
 
-  setupPublicClimaForm();
+  if (document.getElementById("clima-closed-state")) {
+    applyClimaOpenState();
+  } else {
+    setupPublicClimaForm();
+  }
 })();
 
