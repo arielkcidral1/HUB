@@ -52,8 +52,13 @@ function isVanessa(session) {
   return matchesName(session, "vanessa");
 }
 
+function isMariaLuisa(session) {
+  return matchesName(session, "maria luisa");
+}
+
 const BASE_RESTRICTED_TABLES = new Set(["hub_chat_messages", "hub_quadros", "hub_eventos", "hub_users", "hub_read_receipts"]);
 const MANAGER_TABLES = new Set([...BASE_RESTRICTED_TABLES, "hub_documentos"]);
+const MARIA_LUISA_TABLES = new Set([...MANAGER_TABLES, "hub_chamados", "hub_denuncias"]);
 const RECEPTIONIST_TABLES = BASE_RESTRICTED_TABLES;
 
 const FREDERICO_ONLY_TABLES = new Set(["hub_denuncias", "hub_feedbacks"]);
@@ -61,7 +66,7 @@ const VANESSA_ONLY_TABLES = new Set(["hub_feedbacks"]);
 const ARIEL_ONLY_TABLES = new Set(["hub_clima_pesquisas"]);
 
 export function getReadableTables(session) {
-  if (isManager(session)) return MANAGER_TABLES;
+  if (isManager(session)) return isMariaLuisa(session) ? MARIA_LUISA_TABLES : MANAGER_TABLES;
   if (isReceptionist(session)) return RECEPTIONIST_TABLES;
   if (hasFredericoLevelAccess(session) || isAriel(session)) return null;
   if (isVanessa(session)) return { exclude: VANESSA_ONLY_TABLES };

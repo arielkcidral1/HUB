@@ -789,6 +789,9 @@ const ALL_ALLOWED_VIEWS = Object.freeze([
 ]);
 
 function getAllowedViewsForCurrentUser() {
+  if (isManagerUser() && currentUserMatchesName("maria luisa")) {
+    return new Set([...MANAGER_ALLOWED_VIEWS, "chamados", "denuncias"]);
+  }
   if (isManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
   if (isReceptionistUser()) return new Set(RECEPTIONIST_ALLOWED_VIEWS);
   const allowed = new Set(ALL_ALLOWED_VIEWS);
@@ -7748,6 +7751,7 @@ function applyRoleAccess() {
   const allowedExternalUrls = isCashierUser() || isManagerUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : new Set();
+  if (currentUserMatchesName("maria luisa")) allowedExternalUrls.clear();
 
   document.querySelectorAll(".nav-item").forEach((button) => {
     const allowed = button.dataset.externalUrl
