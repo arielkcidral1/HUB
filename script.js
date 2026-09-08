@@ -2581,6 +2581,7 @@ function getCurrentEventAccessNames() {
 function canCurrentUserAccessEventRecord(item = {}) {
   if (isRhUser() || isCeoUser() || hasFredericoLevelAccess()) return true;
   if (!isManagerUser()) return true;
+  if (isBirthdayEvent(item)) return true;
   const author = normalizeLoginName(item.createdBy || "");
   return Boolean(author && getCurrentEventAccessNames().includes(author));
 }
