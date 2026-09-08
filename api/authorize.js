@@ -61,7 +61,7 @@ function isVanessa(session) {
 }
 
 const BASE_RESTRICTED_TABLES = new Set(["hub_chat_messages", "hub_quadros", "hub_eventos", "hub_users", "hub_read_receipts"]);
-const MANAGER_TABLES = new Set([...BASE_RESTRICTED_TABLES, "hub_documentos"]);
+const MANAGER_TABLES = new Set([...BASE_RESTRICTED_TABLES, "hub_documentos", "hub_chamados"]);
 const RECEPTIONIST_TABLES = BASE_RESTRICTED_TABLES;
 
 const FREDERICO_ONLY_TABLES = new Set(["hub_denuncias", "hub_feedbacks"]);
