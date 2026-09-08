@@ -445,6 +445,10 @@ const ITEM_TYPE_OPTIONS = {
     label: "Uniforme",
     options: UNIFORM_OPTIONS,
   },
+  cracha: {
+    label: "Crachá",
+    options: [],
+  },
 };
 
 function isLoginMatch(value, expected) {
@@ -2106,7 +2110,9 @@ function isTodayDateTimeLabel(value) {
 function formatEpiItems(items) {
   return items
     .filter((item) => item.nome && item.quantidade)
-    .map((item) => `${item.nome} (${item.quantidade}${item.tamanho ? `, ${item.tamanho}` : ""})`)
+    .map((item) => item.tipo === "cracha"
+      ? `Crachá - ${item.nome} (Função: ${item.funcao || "Nao informado"}, CPF: ${item.cpf || "Nao informado"})`
+      : `${item.nome} (${item.quantidade}${item.tamanho ? `, ${item.tamanho}` : ""})`)
     .join(", ");
 }
 
@@ -2146,14 +2152,55 @@ function renderItemSizeOptions(type = "epi", selectedSize = "", itemName = "") {
     .join("");
 }
 
+function renderEpiRowFields(tipo = "epi", values = {}) {
+  const { nome = "", quantidade = "", tamanho = "Nao se aplica", funcao = "", cpf = "" } = values;
+  if (tipo === "cracha") {
+    return `
+      <label>Nome
+        <input name="epi_nome[]" type="text" minlength="3" maxlength="120" placeholder="Nome completo" value="${escapeHtml(nome)}" required />
+      </label>
+      <label>Função
+        <input name="cracha_funcao[]" type="text" maxlength="120" placeholder="Função" value="${escapeHtml(funcao)}" required />
+      </label>
+      <label>CPF
+        <input name="cracha_cpf[]" type="text" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" value="${escapeHtml(cpf)}" required />
+      </label>
+    `;
+  }
+  return `
+    <label>Nome
+      <select name="epi_nome[]" data-item-select data-epi-select required>${renderItemNameOptions(tipo, nome)}</select>
+    </label>
+    <label>Quantidade
+      <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" value="${escapeHtml(quantidade)}" required />
+    </label>
+    <label>Tamanho
+      <select name="epi_tamanho[]" required>${renderItemSizeOptions(tipo, tamanho, nome)}</select>
+    </label>
+  `;
+}
+
 function readEpiItems(formElement) {
   return [...formElement.querySelectorAll(".epi-row")]
-    .map((row) => ({
-      tipo: row.querySelector('[name="epi_tipo[]"]')?.value || guessItemType(row.querySelector('[name="epi_nome[]"]')?.value.trim() || ""),
-      nome: row.querySelector('[name="epi_nome[]"]')?.value.trim() || "",
-      quantidade: row.querySelector('[name="epi_quantidade[]"]')?.value.trim() || "",
-      tamanho: row.querySelector('[name="epi_tamanho[]"]')?.value.trim() || "",
-    }))
+    .map((row) => {
+      const tipo = row.querySelector('[name="epi_tipo[]"]')?.value || guessItemType(row.querySelector('[name="epi_nome[]"]')?.value.trim() || "");
+      if (tipo === "cracha") {
+        return {
+          tipo,
+          nome: row.querySelector('[name="epi_nome[]"]')?.value.trim() || "",
+          funcao: row.querySelector('[name="cracha_funcao[]"]')?.value.trim() || "",
+          cpf: row.querySelector('[name="cracha_cpf[]"]')?.value.trim() || "",
+          quantidade: "1",
+          tamanho: "",
+        };
+      }
+      return {
+        tipo,
+        nome: row.querySelector('[name="epi_nome[]"]')?.value.trim() || "",
+        quantidade: row.querySelector('[name="epi_quantidade[]"]')?.value.trim() || "",
+        tamanho: row.querySelector('[name="epi_tamanho[]"]')?.value.trim() || "",
+      };
+    })
     .filter((item) => item.nome && item.quantidade);
 }
 
@@ -2209,7 +2256,7 @@ function createEpiRow(nome = "", quantidade = "") {
 }
 
 function createMaloteItemRow(item = {}) {
-  return createChamadoEpiRow(item.nome || "", item.quantidade || "", item.tamanho || "Nao se aplica");
+  return createChamadoEpiRow(item.nome || "", item.quantidade || "", item.tamanho || "Nao se aplica", item.tipo || "", item.funcao || "", item.cpf || "");
 }
 
 function createMaloteCollaboratorBlock(group = {}) {
@@ -2248,24 +2295,16 @@ function createChamadoCollaboratorBlock(group = {}) {
   `;
 }
 
-function createChamadoEpiRow(nome = "", quantidade = "", tamanho = "Nao se aplica") {
-  const tipo = guessItemType(nome);
+function createChamadoEpiRow(nome = "", quantidade = "", tamanho = "Nao se aplica", tipoOverride = "", funcao = "", cpf = "") {
+  const tipo = tipoOverride || guessItemType(nome);
 
   return `
     <div class="epi-row">
       <label>Tipo
         <select name="epi_tipo[]" data-item-type-select required>${renderItemTypeOptions(tipo)}</select>
       </label>
-      <label>Nome
-        <select name="epi_nome[]" data-item-select data-epi-select required>${renderItemNameOptions(tipo, nome)}</select>
-      </label>
-      <label>Quantidade
-        <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" value="${escapeHtml(quantidade)}" required />
-      </label>
-      <label>Tamanho
-        <select name="epi_tamanho[]" required>${renderItemSizeOptions(tipo, tamanho, nome)}</select>
-      </label>
-      <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+      <span class="epi-row-fields" data-epi-row-fields>${renderEpiRowFields(tipo, { nome, quantidade, tamanho, funcao, cpf })}</span>
+      <button class="danger-button remove-epi" type="button" aria-label="Remover item">Remover</button>
     </div>
   `;
 }
@@ -11315,10 +11354,14 @@ if (maloteForm) {
     const typeSelect = event.target.closest("[data-item-type-select]");
     if (!typeSelect) return;
     const row = typeSelect.closest(".epi-row");
-    const nameSelect = row?.querySelector("[data-item-select], [data-epi-select]");
-    const sizeSelect = row?.querySelector('[name="epi_tamanho[]"]');
-    if (nameSelect) nameSelect.innerHTML = renderItemNameOptions(typeSelect.value, "");
-    if (sizeSelect) sizeSelect.innerHTML = renderItemSizeOptions(typeSelect.value, sizeSelect.value, nameSelect?.value || "");
+    const fieldsContainer = row?.querySelector("[data-epi-row-fields]");
+    if (fieldsContainer) fieldsContainer.innerHTML = renderEpiRowFields(typeSelect.value, {});
+  });
+
+  document.getElementById("epi-list")?.addEventListener("input", (event) => {
+    const cpfInput = event.target.closest('[name="cracha_cpf[]"]');
+    if (!cpfInput) return;
+    cpfInput.value = formatCpf(cpfInput.value);
   });
 
   document.getElementById("epi-list")?.addEventListener("change", (event) => {
@@ -12469,10 +12512,14 @@ if (chamadoForm) {
     const typeSelect = event.target.closest("[data-item-type-select]");
     if (!typeSelect) return;
     const row = typeSelect.closest(".epi-row");
-    const nameSelect = row?.querySelector("[data-item-select], [data-epi-select]");
-    const sizeSelect = row?.querySelector('[name="epi_tamanho[]"]');
-    if (nameSelect) nameSelect.innerHTML = renderItemNameOptions(typeSelect.value, "");
-    if (sizeSelect) sizeSelect.innerHTML = renderItemSizeOptions(typeSelect.value, sizeSelect.value);
+    const fieldsContainer = row?.querySelector("[data-epi-row-fields]");
+    if (fieldsContainer) fieldsContainer.innerHTML = renderEpiRowFields(typeSelect.value, {});
+  });
+
+  document.getElementById("epi-list")?.addEventListener("input", (event) => {
+    const cpfInput = event.target.closest('[name="cracha_cpf[]"]');
+    if (!cpfInput) return;
+    cpfInput.value = formatCpf(cpfInput.value);
   });
 
   chamadoForm.addEventListener("submit", async (event) => {

@@ -131,7 +131,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $contractorApi2 'safeErrorResponse\(res, error, "Nao foi possivel salvar documentos\."\)' "envio de documentos de contratado usa resposta de erro segura"
 
   Assert-MatchText $authorizeApi 'export function canReadTable\(session, table\)' "modulo de autorizacao por cargo existe"
-  Assert-MatchText $authorizeApi 'const MANAGER_TABLES = new Set\(\[\.\.\.BASE_RESTRICTED_TABLES, "hub_documentos"\]\)' "Gerente so le chat, quadros, calendario, conta e documentos"
+  Assert-MatchText $authorizeApi 'const MANAGER_TABLES = new Set\(\[\.\.\.BASE_RESTRICTED_TABLES, "hub_documentos", "hub_chamados"\]\)' "Gerente le chat, quadros, calendario, conta, documentos e abre chamados de EPI"
   Assert-MatchText $authorizeApi 'const RECEPTIONIST_TABLES = BASE_RESTRICTED_TABLES' "Recepcionista fica com o mesmo escopo restrito, sem Documentos de Uso Geral"
   Assert-MatchText $authorizeApi 'const FREDERICO_ONLY_TABLES = new Set\(\["hub_denuncias", "hub_feedbacks"\]\)' "denuncias e feedbacks ficam restritos a quem tem acesso nivel Frederico, mesmo autenticado"
   Assert-MatchText $authorizeApi 'export function authorizeUsersWrite\(session, \{ method, filters, columns \}\)[\s\S]*if \(isRh\(session\) \|\| isAriel\(session\) \|\| matchesName\(session, "andre barbosa"\)\) return true[\s\S]*if \(method === "POST"\) return false[\s\S]*const SAFE_SELF_COLUMNS = new Set\(\["nome", "foto_perfil", "configuracoes"\]\)' "RH, Ariel e Andre criam/editam outros usuarios; conta comum so edita os proprios campos seguros"
@@ -156,7 +156,7 @@ function Test-ClientSecurityFunctions {
   Assert-MatchText $bootstrapApi 'import \{ canReadTable, getForcedRowFilter \} from "\./authorize\.js"[\s\S]*selectRows\(client, table, getForcedRowFilter\(session, table\)\)' "bootstrap tambem aplica o filtro forcado por linha"
   Assert-True -Condition (-not (($script + $postgresClient) -match '<<<<<<<|>>>>>>>')) -Message "scripts nao possuem marcadores de conflito"
   Assert-True -Condition (-not (($docsFredy + $docsBesten + $docsAchei + $docsTrinca) -match 'Ã|�')) -Message "htmls de documentos nao possuem caracteres quebrados"
-  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=clima-spacing-v29[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=maria-luisa-access-v1[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
+  Assert-MatchText $index 'auth-entry\.js\?v=auth-entry-model-v23[\s\S]*style\.css\?v=clima-spacing-v29[\s\S]*hub-postgres-client\.js\?v=db-load-v3[\s\S]*assets/company-birthdays\.js\?v=2026-08-05[\s\S]*script\.js\?v=chamado-cracha-v1[\s\S]*auth-display-guard\.js\?v=preserve-session-v8' "HUB autentica sem exibir o painel antes da validacao"
   Assert-MatchText $index 'vagas-admin-filters\.js\?v=vagas-admin-filters-v2' "compatibilidade de filtros de vagas quebra cache antigo"
   Assert-MatchText (Read-ProjectFile "vagas-admin-filters.js") 'A renderizacao e os filtros reais ficam em script\.js[\s\S]*vaga-filter-candidato[\s\S]*vaga-filter-nome' "arquivo legado de vagas nao sobrescreve renderizacao principal"
   Assert-MatchText $index '<div class="app-shell" id="app-shell">' "HUB nao embute a tela de carregamento no painel"

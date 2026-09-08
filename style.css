@@ -5150,6 +5150,10 @@ form.panel[data-public-chamados="true"].panel {
   flex: 1 1 100%;
 }
 
+.epi-row-fields {
+  display: contents;
+}
+
 .remove-epi {
   min-height: 40px;
   flex: 1 1 100%;
