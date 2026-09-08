@@ -7771,10 +7771,12 @@ function applyRoleAccess() {
 
   const chamadosUrls = new Set(["chamados.html", "https://hub-opal-nine.vercel.app/chamados.html"]);
   const denunciaUrls = new Set(["denuncia.html", "https://hub-opal-nine.vercel.app/denuncia.html"]);
+  const feedbacksUrls = new Set(["feedbacks.html", "https://hub-opal-nine.vercel.app/feedbacks.html"]);
   const allowedViews = getAllowedViewsForCurrentUser();
   const allowedExternalUrls = isCashierUser() || isManagerUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : new Set();
+  if (isManagerUser()) feedbacksUrls.forEach((url) => allowedExternalUrls.add(url));
   if (currentUserMatchesName("maria luisa")) allowedExternalUrls.clear();
 
   document.querySelectorAll(".nav-item").forEach((button) => {
