@@ -53,3 +53,5 @@ Desktop.ini
 playwright-report/
 test-results/
 HUB/
+.vercel
+.env*
