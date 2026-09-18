@@ -7,7 +7,7 @@
     <title>HUB | RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
     <script src="auth-entry.js?v=auth-entry-model-v23"></script>
-    <link rel="stylesheet" href="style.css?v=visible-auth-loading-v24" />
+    <link rel="stylesheet" href="style.css?v=clima-spacing-v29" />
        <link rel="stylesheet" href="message-size-enhancement.css" />
     <link rel="stylesheet" href="vagas-format.css" />
     <link rel="stylesheet" href="vagas-admin-enhance.css" />
@@ -33,18 +33,20 @@
         <nav class="nav-list">
           <button class="nav-item active" data-view="dashboard" type="button">Painel</button>
           <button class="nav-item" data-view="denuncias" type="button">Denuncias recebidas</button>
-          <button class="nav-item" data-view="feedbacks" type="button">Feedbacks</button>
-          <button class="nav-item" data-view="comunicacao" type="button">Comunicacao RH</button>
+          <button class="nav-item" data-view="feedbacks" type="button">Feedbacks Diretoria</button>
+          <button class="nav-item" data-view="comunicacao" type="button">Comunicação</button>
           <button class="nav-item" data-view="malotes" type="button">Malotes de EPI</button>
           <button class="nav-item" data-view="chamados" type="button">Chamados</button>
           <button class="nav-item" data-view="quadros" type="button">Quadros</button>
           <button class="nav-item" data-view="vagas" type="button">Vagas e Projetos</button>
           <button class="nav-item" data-view="calendario" type="button">Calendario</button>
-          <button class="nav-item" data-view="documentos" type="button">Documentos RH</button>
+          <button class="nav-item" data-view="documentos" type="button">Documentos de Uso Geral</button>
           <button class="nav-item" data-view="advertencias-suspensoes" type="button">Advertencias e Suspensoes</button>
           <button class="nav-item" data-view="documentos-contratados" type="button">Documentos de Contratados</button>
+          <button class="nav-item" data-view="teste-clima" type="button">Teste de Clima</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/chamados.html" type="button">Solicitar EPIs</button>
           <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/denuncia.html" type="button">Canal de Denúncia</button>
+          <button class="nav-item" data-external-url="https://hub-opal-nine.vercel.app/feedbacks.html" type="button">Fale com a Diretoria</button>
           <button class="nav-item" data-view="equipe" type="button">Equipe</button>
         </nav>
       </aside>
@@ -176,7 +178,6 @@
             <ul class="activity-list" id="dashboard-list"></ul>
           </article>
 
-          <!-- Modal de Acompanhamento -->
           <div class="tracker-modal" id="tracker-modal" hidden aria-modal="true" aria-labelledby="tracker-modal-title">
             <div class="tracker-modal-overlay" id="tracker-modal-overlay"></div>
             <div class="tracker-modal-content">
@@ -409,30 +410,32 @@
                             <option value="uniforme">Uniforme</option>
                           </select>
                         </label>
-                        <label>Nome
-                          <select name="epi_nome[]" data-item-select data-epi-select required>
-                            <option value="">Selecione</option>
-                          </select>
-                        </label>
-                        <label>Quantidade
-                          <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
-                        </label>
-                        <label>Tamanho
-                          <select name="epi_tamanho[]" required>
-                            <option>Nao se aplica</option>
-                            <option>PP</option>
-                            <option>P</option>
-                            <option>M</option>
-                            <option>G</option>
-                            <option>GG</option>
-                            <option>XG</option>
-                            <option>EXG</option>
-                            <option>EXGG</option>
-                            <option>EXGGG</option>
-                            <option>EXGGGG</option>
-                          </select>
-                        </label>
-                        <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+                        <span class="epi-row-fields" data-epi-row-fields>
+                          <label>Nome
+                            <select name="epi_nome[]" data-item-select data-epi-select required>
+                              <option value="">Selecione</option>
+                            </select>
+                          </label>
+                          <label>Quantidade
+                            <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
+                          </label>
+                          <label>Tamanho
+                            <select name="epi_tamanho[]" required>
+                              <option>Nao se aplica</option>
+                              <option>PP</option>
+                              <option>P</option>
+                              <option>M</option>
+                              <option>G</option>
+                              <option>GG</option>
+                              <option>XG</option>
+                              <option>EXG</option>
+                              <option>EXGG</option>
+                              <option>EXGGG</option>
+                              <option>EXGGGG</option>
+                            </select>
+                          </label>
+                        </span>
+                        <button class="danger-button remove-epi" type="button" aria-label="Remover item">Remover</button>
                       </div>
                     </div>
                     <button class="secondary-link add-malote-item" type="button">Adicionar item para este colaborador</button>
@@ -605,8 +608,15 @@
                 <div class="chamados-filter-bar" aria-label="Filtros de vagas">
                   <div class="chamados-filter-fields vaga-filter-fields">
                     <input id="vaga-filter-nome" type="search" placeholder="Nome do candidato" autocomplete="off" aria-label="Filtrar vagas por nome do candidato" />
-                    <input id="vaga-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF do candidato" autocomplete="off" aria-label="Filtrar vagas por CPF do candidato" />
+                    <input id="vaga-filter-cpf" type="search" inputmode="numeric" maxlength="14" placeholder="CPF" autocomplete="off" aria-label="Filtrar vagas por CPF do candidato" />
+                    <select id="vaga-filter-cargo" aria-label="Filtrar vagas por cargo">
+                      <option value="">Cargo</option>
+                    </select>
                     <select id="vaga-filter-unidade" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar vagas por unidade"></select>
+                    <label class="vaga-filter-checkbox" for="vaga-filter-curriculo">
+                      <input type="checkbox" id="vaga-filter-curriculo" />
+                      <span>Somente com currículo</span>
+                    </label>
                   </div>
                   <button class="secondary-link compact-filter-button" id="limpar-filtros-vagas" type="button" hidden>Limpar</button>
                 </div>
@@ -689,7 +699,7 @@
                   <p class="item-meta">Formularios digitais</p>
                 </div>
               </div>
-              <button class="doc-tab active" data-doc="admissao" type="button">Checklist de Admissao</button>
+              <button class="doc-tab" data-doc="admissao" type="button">Checklist de Admissao</button>
               <button class="doc-tab" data-doc="ausencia" type="button">Entrevista ausencia</button>
               <button class="doc-tab" data-doc="desligamento" type="button">Entrevista desligamento</button>
               <button class="doc-tab" data-doc="beneficios" type="button">Plano saude e odonto</button>
@@ -702,7 +712,11 @@
             </aside>
 
             <div class="doc-content">
-              <section class="doc-view active" id="doc-admissao">
+              <div class="chat-empty-state" id="documentos-empty-state">
+                <img src="assets/logo.svg" alt="HUB" />
+                <strong>HUB</strong>
+              </div>
+              <section class="doc-view" id="doc-admissao">
                 <form class="panel doc-form" data-doc-form="admissao">
                   <div class="panel-header split-header">
                     <div>
@@ -1077,27 +1091,14 @@
                 </form>
               </section>
 
-              <div class="panel">
+              <div class="panel" id="documentos-registros-panel" hidden>
                 <div class="panel-header">
                   <h2>Registros salvos</h2>
                 </div>
-                <div class="vt-filter-bar" aria-label="Filtros de Documentos RH">
-                  <div class="vt-filter-fields">
+                <div class="vt-filter-bar" aria-label="Filtros de Documentos de Uso Geral">
+                  <div class="vt-filter-fields document-filter-fields">
                     <input id="document-filter-name" type="search" placeholder="Nome do colaborador" autocomplete="off" aria-label="Filtrar por nome do colaborador" />
-                  <input id="document-filter-cpf" type="search" placeholder="CPF" inputmode="numeric" maxlength="14" autocomplete="off" aria-label="Filtrar por CPF" />
-                  <select id="document-filter-type" aria-label="Filtrar por tipo de documento">
-                    <option value="">Todos os tipos</option>
-                      <option value="admissao">Checklist de Admissao</option>
-                      <option value="ausencia">Entrevista ausencia</option>
-                      <option value="desligamento">Entrevista desligamento</option>
-                      <option value="beneficios">Plano saude e odonto</option>
-                      <option value="feedback-operacional">Feedback operacional</option>
-                      <option value="feedback-fredy">Feedback Fredy Pneus</option>
-                      <option value="ferias">Solicitacao de Ferias</option>
-                      <option value="movimentacao-pessoal">MP - Movimentacao Pessoal</option>
-                      <option value="requisicao-pessoal">RP - Requisicao Pessoal</option>
-                      <option value="solicitacao-desligamento">SD - Solicitacao de Desligamento</option>
-                    </select>
+                    <input id="document-filter-cpf" type="search" placeholder="CPF" inputmode="numeric" maxlength="14" autocomplete="off" aria-label="Filtrar por CPF" />
                   </div>
                   <button class="secondary-link compact-filter-button" id="clear-document-filters" type="button" hidden>Limpar</button>
                 </div>
@@ -1140,6 +1141,132 @@
             <div class="card-list" id="documentos-contratados-list"></div>
           </div>
         </section>
+        <section class="view" id="teste-clima">
+          <div class="panel panel-spaced">
+            <div class="panel-header split-header">
+              <div>
+                <h2>Teste de Clima Organizacional</h2>
+                <p class="item-meta">Respostas anônimas recebidas (<span id="clima-pesquisas-count">0</span>)</p>
+              </div>
+              <div class="job-actions flush-top">
+                <span class="tag" id="clima-status-tag">Teste encerrado</span>
+                <button class="secondary-link" type="button" id="clima-toggle-button">Liberar teste</button>
+                <a class="secondary-link" href="clima.html" target="_blank" rel="noreferrer">Abrir formulario publico</a>
+              </div>
+            </div>
+          </div>
+          <div class="panel clima-dashboard-empty" id="clima-dashboard-empty">
+            <p class="empty-state">Ainda não há respostas suficientes para gerar o dashboard.</p>
+          </div>
+          <div class="clima-dashboard" id="clima-dashboard" hidden>
+            <div class="clima-two-col">
+              <div class="panel clima-score-panel">
+                <div class="clima-score-gauge">
+                  <strong id="clima-score-value">0%</strong>
+                  <span id="clima-score-label">Clima organizacional</span>
+                </div>
+                <div class="clima-score-details">
+                  <p id="clima-score-summary" class="item-meta"></p>
+                  <div class="clima-score-legend">
+                    <span><i class="clima-dot clima-dot-good"></i> Favorável</span>
+                    <span><i class="clima-dot clima-dot-warning"></i> Neutro</span>
+                    <span><i class="clima-dot clima-dot-critical"></i> Desfavorável</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Distribuição das respostas</h2>
+                    <p class="item-meta">Todas as respostas dadas, agrupadas por avaliação</p>
+                  </div>
+                </div>
+                <div class="clima-donut-wrap">
+                  <div class="clima-donut" id="clima-donut" role="img" aria-label="Gráfico de distribuição das respostas">
+                    <div class="clima-donut-center">
+                      <strong id="clima-donut-total">0</strong>
+                      <span>respostas</span>
+                    </div>
+                  </div>
+                  <div class="clima-donut-legend" id="clima-donut-legend"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="clima-two-col">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Clima por área</h2>
+                    <p class="item-meta">Percentual de respostas favoráveis em cada bloco do questionário</p>
+                  </div>
+                </div>
+                <div id="clima-sections-chart" class="clima-bars"></div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Participação ao longo do tempo</h2>
+                    <p class="item-meta">Respostas recebidas por dia</p>
+                  </div>
+                </div>
+                <div id="clima-timeline-chart" class="clima-timeline"></div>
+              </div>
+            </div>
+
+            <div class="clima-two-col">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Pontos fortes</h2>
+                    <p class="item-meta">Perguntas com melhor avaliação</p>
+                  </div>
+                </div>
+                <div id="clima-top-questions" class="clima-bars"></div>
+              </div>
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Pontos de atenção</h2>
+                    <p class="item-meta">Perguntas com pior avaliação</p>
+                  </div>
+                </div>
+                <div id="clima-bottom-questions" class="clima-bars"></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Como os colaboradores se informam</h2>
+                  <p class="item-meta">Principal canal de informação sobre a empresa</p>
+                </div>
+              </div>
+              <div id="clima-canal-chart" class="clima-bars"></div>
+            </div>
+
+            <div class="panel" id="clima-sugestoes-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Sugestões dos colaboradores</h2>
+                  <p class="item-meta">Respostas à pergunta aberta</p>
+                </div>
+              </div>
+              <div class="card-list" id="clima-sugestoes-list"></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Respostas recebidas</h2>
+                <p class="item-meta">Visível apenas para você</p>
+              </div>
+            </div>
+            <div class="card-list" id="clima-pesquisas-list"></div>
+          </div>
+        </section>
         <section class="view" id="advertencias-suspensoes">
           <div class="document-workspace">
             <aside class="panel doc-menu">
@@ -1149,13 +1276,18 @@
                   <p class="item-meta">Advertencias e suspensoes</p>
                 </div>
               </div>
-              <button class="doc-tab disciplinary-tab active" data-disciplinary-doc="advertencia" type="button">Advertencia</button>
+              <button class="doc-tab disciplinary-tab" data-disciplinary-doc="advertencia" type="button">Advertencia</button>
               <button class="doc-tab disciplinary-tab" data-disciplinary-doc="suspensao" type="button">Suspensao</button>
             </aside>
 
             <div class="doc-content">
-              <section class="doc-view disciplinary-view active" id="disciplinary-advertencia">
+              <div class="chat-empty-state" id="disciplinary-empty-state">
+                <img src="assets/logo.svg" alt="HUB" />
+                <strong>HUB</strong>
+              </div>
+              <section class="doc-view disciplinary-view" id="disciplinary-advertencia">
                 <form class="panel doc-form disciplinary-form" data-disciplinary-form="advertencia" autocomplete="off">
+                  <input name="id" type="hidden" />
                   <div class="panel-header split-header">
                     <div>
                       <h2>Advertencia</h2>
@@ -1169,12 +1301,21 @@
                     <label>Local<input name="local" placeholder="Cidade" autocomplete="off" required /></label>
                   </div>
                   <label>Motivo<textarea name="motivo" rows="4" required></textarea></label>
+                  <label class="disciplinary-file-field" data-disciplinary-anexo-field hidden>Anexo
+                    <span class="disciplinary-file-control">
+                      <span class="disciplinary-file-button">Anexar arquivo</span>
+                      <span class="disciplinary-file-name" data-empty-label="Nenhum arquivo escolhido">Nenhum arquivo escolhido</span>
+                    </span>
+                    <input class="disciplinary-file-input" name="anexo" type="file" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+                  </label>
                   <button class="primary-button" type="submit">Salvar advertencia</button>
+                  <button class="secondary-link full-width-action" data-disciplinary-cancel-edit type="button" hidden>Cancelar edição</button>
                 </form>
               </section>
 
               <section class="doc-view disciplinary-view" id="disciplinary-suspensao">
                 <form class="panel doc-form disciplinary-form" data-disciplinary-form="suspensao" autocomplete="off">
+                  <input name="id" type="hidden" />
                   <div class="panel-header split-header">
                     <div>
                       <h2>Suspensao</h2>
@@ -1187,12 +1328,21 @@
                     <label>Unidade do funcionario<select name="unidade" data-unit-select required></select></label>
                     <label>Local<input name="local" placeholder="Cidade" autocomplete="off" required /></label>
                   </div>
+                  <label>Dias de suspensao<input name="dias_suspensao" type="number" min="1" step="1" placeholder="Ex: 3" required /></label>
                   <label>Motivo<textarea name="motivo" rows="4" required></textarea></label>
+                  <label class="disciplinary-file-field" data-disciplinary-anexo-field hidden>Anexo
+                    <span class="disciplinary-file-control">
+                      <span class="disciplinary-file-button">Anexar arquivo</span>
+                      <span class="disciplinary-file-name" data-empty-label="Nenhum arquivo escolhido">Nenhum arquivo escolhido</span>
+                    </span>
+                    <input class="disciplinary-file-input" name="anexo" type="file" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+                  </label>
                   <button class="primary-button" type="submit">Salvar suspensao</button>
+                  <button class="secondary-link full-width-action" data-disciplinary-cancel-edit type="button" hidden>Cancelar edição</button>
                 </form>
               </section>
 
-              <div class="panel">
+              <div class="panel" id="disciplinary-registros-panel" hidden>
                 <div class="panel-header">
                   <h2>Registros salvos</h2>
                 </div>
@@ -1200,7 +1350,7 @@
                   <button class="secondary-link vt-report-button" id="abrir-relatorio-disciplinary" type="button">Relatorio</button>
                   <div class="vt-filter-fields disciplinary-filter-fields">
                     <input id="disciplinary-filter-name" type="search" placeholder="Nome" autocomplete="off" aria-label="Filtrar por nome" />
-                    <input id="disciplinary-filter-observations" type="search" placeholder="Observacoes" autocomplete="off" aria-label="Filtrar por observacoes" />
+                    <input id="disciplinary-filter-observations" type="search" placeholder="Motivo" autocomplete="off" aria-label="Filtrar por motivo" />
                     <select id="disciplinary-filter-date" aria-label="Filtrar por mes">
                       <option value="">Mes</option>
                       <option value="01">Janeiro</option>
@@ -1521,7 +1671,7 @@
     </div>
     <script src="hub-postgres-client.js?v=db-load-v3"></script>
     <script src="assets/company-birthdays.js?v=2026-08-05"></script>
-    <script src="script.js?v=wait-for-dashboard-data-v93"></script>
+    <script src="script.js?v=chamado-cracha-v1"></script>
     <script src="auth-display-guard.js?v=preserve-session-v8"></script>
     <script src="vagas-admin-filters.js?v=vagas-admin-filters-v2"></script>
   </body>

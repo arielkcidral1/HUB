@@ -3,6 +3,8 @@ import { validateAuthSession } from "./auth.js";
 
 export const config = { api: { bodyParser: { sizeLimit: "15mb" } } };
 
+const PUBLIC_UPLOAD_PREFIXES = ["candidaturas/", "atestados/", "contratados/"];
+
 function safeName(name) {
   return String(name || "arquivo").replace(/[^a-z0-9_.-]/gi, "-");
 }
@@ -14,7 +16,13 @@ function isValidStoragePath(path) {
   return /^[a-z0-9][a-z0-9_.\/-]*$/i.test(value);
 }
 
+function isPublicUploadPath(path) {
+  return PUBLIC_UPLOAD_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
+let filesTableReady = false;
 async function ensureFilesTable() {
+  if (filesTableReady) return;
   await pool.query(`
     create table if not exists public.hub_files (
       path text primary key,
@@ -25,6 +33,7 @@ async function ensureFilesTable() {
       created_at timestamptz default now()
     )
   `);
+  filesTableReady = true;
 }
 
 function dataUrlToBuffer(dataUrl) {
@@ -43,6 +52,9 @@ export default async function handler(req, res) {
     if (!session) return json(res, 401, { error: "Sessao invalida ou expirada." });
 
     if (req.method === "GET") {
+      const session = await validateAuthSession(req);
+      if (!session?.user?.id) return json(res, 401, { error: "Sessao invalida ou expirada." });
+
       const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
       const path = url.searchParams.get("path") || "";
       if (!path) return json(res, 400, { error: "Arquivo nao informado." });
@@ -56,7 +68,7 @@ export default async function handler(req, res) {
 
       const buffer = dataUrlToBuffer(file.data_url);
       res.setHeader("Content-Type", file.type || "application/octet-stream");
-      res.setHeader("Cache-Control", "private, max-age=300");
+      res.setHeader("Cache-Control", "private, max-age=604800, immutable");
       if (file.name) res.setHeader("Content-Disposition", `inline; filename="${safeName(file.name)}"`);
       res.end(buffer);
       return;
@@ -71,16 +83,34 @@ export default async function handler(req, res) {
     if (!path || !dataUrl) return json(res, 400, { error: "Arquivo invalido." });
     if (!isValidStoragePath(path)) return json(res, 400, { error: "Caminho do arquivo invalido." });
 
-    await pool.query(
-      `insert into public.hub_files (path, name, size, type, data_url)
-       values ($1, $2, $3, $4, $5)
-       on conflict (path) do update set
+    const session = await validateAuthSession(req);
+    const isAuthenticated = Boolean(session?.user?.id);
+
+    if (!isAuthenticated) {
+      if (!isPublicUploadPath(path)) return json(res, 401, { error: "Sessao invalida ou expirada." });
+      const allowed = await checkPublicRateLimit(req, "file_upload");
+      if (!allowed) return json(res, 429, { error: "Muitos envios em pouco tempo. Tente novamente mais tarde." });
+    }
+
+    const conflictClause = isAuthenticated
+      ? `on conflict (path) do update set
          name = excluded.name,
          size = excluded.size,
          type = excluded.type,
-         data_url = excluded.data_url`,
+         data_url = excluded.data_url`
+      : "on conflict (path) do nothing";
+
+    const result = await pool.query(
+      `insert into public.hub_files (path, name, size, type, data_url)
+       values ($1, $2, $3, $4, $5)
+       ${conflictClause}
+       returning path`,
       [path, name, body.size || 0, body.type || "application/octet-stream", dataUrl]
     );
+
+    if (!isAuthenticated && !result.rows.length) {
+      return json(res, 409, { error: "Ja existe um arquivo nesse caminho." });
+    }
 
     return json(res, 200, {
       path,
@@ -89,6 +119,6 @@ export default async function handler(req, res) {
       type: body.type || "application/octet-stream",
     });
   } catch (error) {
-    return json(res, error.statusCode || 500, { error: error.message || "Erro ao processar arquivo." });
+    return safeErrorResponse(res, error, "Erro ao processar arquivo.");
   }
 }

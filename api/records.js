@@ -9,7 +9,9 @@ const OPERATORS = {
 };
 
 const JSON_COLUMNS = new Map([
+  ["hub_clima_pesquisas", new Set(["respostas"])],
   ["hub_documentos_contratados", new Set(["documentos"])],
+  ["hub_documentos", new Set(["dados"])],
   ["hub_malotes", new Set(["colaboradores"])],
   ["hub_quadros", new Set(["listas"])],
   ["hub_users", new Set(["configuracoes"])],
@@ -93,6 +95,14 @@ function buildLimit(limit) {
   return Number.isInteger(value) && value > 0 ? ` limit ${value}` : "";
 }
 
+function unauthorized(res) {
+  return json(res, 401, { error: "Sessao invalida ou expirada." });
+}
+
+function forbidden(res) {
+  return json(res, 403, { error: "Sem permissao para esta operacao." });
+}
+
 export default async function handler(req, res) {
   try {
     assertDatabaseUrl();
@@ -108,52 +118,91 @@ export default async function handler(req, res) {
     if (!session) return json(res, 401, { error: "Sessao invalida ou expirada." });
 
     if (req.method === "GET") {
+      if (!isAuthenticated && !PUBLIC_READ_TABLES.has(table)) return unauthorized(res);
+      if (isAuthenticated && !canReadTable(session, table)) return forbidden(res);
+      if (!isAuthenticated) {
+        const allowedRead = await checkPublicRateLimit(req, "public_read");
+        if (!allowedRead) return json(res, 429, { error: "Muitas solicitacoes. Tente novamente mais tarde." });
+      }
+
       const filters = JSON.parse(url.searchParams.get("filters") || "[]");
       const order = JSON.parse(url.searchParams.get("order") || "[]");
       const select = normalizeColumns(url.searchParams.get("select") || "*");
-      const where = buildWhere(filters);
+      const forcedFilter = isAuthenticated ? getForcedRowFilter(session, table) : null;
+      const effectiveFilters = [
+        ...filters,
+        ...(!isAuthenticated && table === "hub_vagas" ? [{ column: "status", op: "eq", value: "Aberta" }] : []),
+        ...(forcedFilter ? [forcedFilter] : []),
+      ];
+      const where = buildWhere(effectiveFilters);
       const sql = `select ${select} from public.${quoteIdent(table)}${where.sql}${buildOrder(order)}${buildLimit(url.searchParams.get("limit"))}`;
       const result = await pool.query(sql, where.values);
-      return json(res, 200, { data: result.rows });
+      const cacheControl = !isAuthenticated ? "public, max-age=30, s-maxage=120, stale-while-revalidate=300" : "private, no-store";
+      return json(res, 200, { data: stripSensitiveColumns(table, result.rows) }, cacheControl);
     }
 
     const body = await getBody(req);
 
     if (req.method === "POST") {
-      const rows = Array.isArray(body.rows) ? body.rows : [body.row || body];
-      // Recibos de leitura sao reenviados a cada sessao; sem isso a primeira
-      // linha repetida viola a chave primaria e derruba o lote inteiro.
+      let rows = Array.isArray(body.rows) ? body.rows : [body.row || body];
+      if (!isAuthenticated) {
+        const sanitize = PUBLIC_INSERT_TABLES.get(table);
+        if (!sanitize) return unauthorized(res);
+        const allowed = await checkPublicRateLimit(req, table);
+        if (!allowed) return json(res, 429, { error: "Muitos envios em pouco tempo. Tente novamente mais tarde." });
+        rows = rows.map(sanitize);
+      } else {
+        const columns = [...new Set(rows.flatMap((row) => Object.keys(row || {})))];
+        if (!authorizeWrite(session, table, { method: "POST", filters: [], columns })) return forbidden(res);
+        const forcedFilter = getForcedRowFilter(session, table);
+        if (forcedFilter) rows = rows.map((row) => ({ ...row, [forcedFilter.column]: forcedFilter.value }));
+      }
       const ignoreConflict = url.searchParams.get("on_conflict") === "ignore";
       const conflictClause = ignoreConflict ? " on conflict do nothing" : "";
       const inserted = [];
-      for (const row of rows) {
-        const entries = Object.entries(row || {}).filter(([, value]) => value !== undefined);
-        const columns = entries.map(([key]) => quoteIdent(key));
-        const values = entries.map(([key, value]) => normalizeDbValue(table, key, value));
-        const placeholders = entries.map(([key], index) => placeholderFor(table, key, index + 1));
-        const sql = `insert into public.${quoteIdent(table)} (${columns.join(", ")}) values (${placeholders.join(", ")})${conflictClause} returning *`;
-        const result = await pool.query(sql, values);
-        if (result.rows[0]) inserted.push(result.rows[0]);
+      try {
+        for (const row of rows) {
+          const entries = Object.entries(row || {}).filter(([, value]) => value !== undefined);
+          const columns = entries.map(([key]) => quoteIdent(key));
+          const values = entries.map(([key, value]) => normalizeDbValue(table, key, value));
+          const placeholders = entries.map(([key], index) => placeholderFor(table, key, index + 1));
+          const sql = `insert into public.${quoteIdent(table)} (${columns.join(", ")}) values (${placeholders.join(", ")})${conflictClause} returning *`;
+          const result = await pool.query(sql, values);
+          if (result.rows[0]) inserted.push(result.rows[0]);
+        }
+      } catch (error) {
+        if (error?.code === "23505") {
+          return json(res, 409, { error: "Ja existe um registro com esses dados.", code: error.code });
+        }
+        throw error;
       }
-      return json(res, 200, { data: inserted });
+      return json(res, 200, { data: stripSensitiveColumns(table, inserted) });
     }
+
+    if (!isAuthenticated) return unauthorized(res);
 
     if (req.method === "PATCH") {
       const filters = Array.isArray(body.filters) ? body.filters : [];
       const row = body.row || {};
       const entries = Object.entries(row).filter(([, value]) => value !== undefined);
+      if (!authorizeWrite(session, table, { method: "PATCH", filters, columns: entries.map(([key]) => key) })) return forbidden(res);
+      const forcedFilter = getForcedRowFilter(session, table);
+      const effectiveFilters = forcedFilter ? [...filters, forcedFilter] : filters;
       const values = entries.map(([key, value]) => normalizeDbValue(table, key, value));
       const sets = entries.map(([key], index) => `${quoteIdent(key)} = ${placeholderFor(table, key, index + 1)}`);
-      const where = buildWhere(filters);
+      const where = buildWhere(effectiveFilters);
       const shiftedWhereSql = where.sql.replace(/\$(\d+)/g, (_, number) => `$${Number(number) + values.length}`);
       const sql = `update public.${quoteIdent(table)} set ${sets.join(", ")}${shiftedWhereSql} returning *`;
       const result = await pool.query(sql, values.concat(where.values));
-      return json(res, 200, { data: result.rows });
+      return json(res, 200, { data: stripSensitiveColumns(table, result.rows) });
     }
 
     if (req.method === "DELETE") {
       const filters = Array.isArray(body.filters) ? body.filters : [];
-      const where = buildWhere(filters);
+      if (!authorizeWrite(session, table, { method: "DELETE", filters, columns: [] })) return forbidden(res);
+      const forcedFilter = getForcedRowFilter(session, table);
+      const effectiveFilters = forcedFilter ? [...filters, forcedFilter] : filters;
+      const where = buildWhere(effectiveFilters);
       const sql = `delete from public.${quoteIdent(table)}${where.sql} returning *`;
       const result = await pool.query(sql, where.values);
       return json(res, 200, { data: result.rows });
@@ -161,6 +210,6 @@ export default async function handler(req, res) {
 
     return json(res, 405, { error: "Metodo nao permitido." });
   } catch (error) {
-    return json(res, error.statusCode || 500, { error: error.message || "Erro no banco de dados." });
+    return safeErrorResponse(res, error, "Erro no banco de dados.");
   }
 }

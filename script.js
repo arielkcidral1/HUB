@@ -14,9 +14,7 @@ const READ_RH_MESSAGES_KEY = "hub-rh-read-message-ids";
 const READ_NOTIFICATIONS_KEY = "hub-rh-read-notification-ids";
 const SHOWN_NOTIFICATIONS_KEY = "hub-rh-shown-notification-ids";
 const DISMISSED_NOTIFICATIONS_KEY = "hub-rh-dismissed-notification-ids";
-// IMPORTANTE: os IDs lidos não entram no cache sensível.
-// Assim, ao fechar/abrir o site ou perder a sessão, as notificações já visualizadas
-// não voltam como não lidas.
+
 const SENSITIVE_CLIENT_CACHE_KEYS = [
   STORAGE_KEY,
   DOCUMENT_RECORDS_KEY,
@@ -27,7 +25,6 @@ const RH_CHANNEL = "rh";
 const USERS_TABLE = "hub_users";
 const GENERAL_CHANNEL = "geral";
 const MANAGER_GENERAL_CHANNEL = "geral-gerentes";
-const CASHIER_GENERAL_CHANNEL = "geral-caixa";
 const CHAT_POLL_PREFIX = "__HUB_POLL__:";
 const CHAT_EDIT_PREFIX = "__HUB_EDIT__:";
 const CHAT_EDIT_WINDOW_MS = 15 * 60 * 1000;
@@ -36,16 +33,26 @@ const RESUME_BUCKET = "hub-curriculos";
 const RESUME_PUBLIC_PREFIX = "candidaturas";
 const CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos";
 const ATESTADOS_BUCKET = "hub-atestados";
-const ATESTADO_MAX_SIZE_BYTES = 10 * 1024 * 1024;
-const CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
-const RESUME_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+
+const ATESTADO_MAX_SIZE_BYTES = 3 * 1024 * 1024;
+const DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES = 3 * 1024 * 1024;
+const DISCIPLINARY_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+const CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES = 3 * 1024 * 1024;
+const RESUME_MAX_SIZE_BYTES = 3 * 1024 * 1024;
 const RESUME_ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
 const RESUME_ALLOWED_EXTENSIONS = new Set(["pdf", "doc", "docx"]);
-const CHAT_FILE_MAX_SIZE_BYTES = 10 * 1024 * 1024;
+const CHAT_FILE_MAX_SIZE_BYTES = 3 * 1024 * 1024;
 const CHAT_FILE_ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -85,11 +92,7 @@ const CHAT_FILE_EXTENSION_MIME_TYPES = new Map([
   ["mp4", "video/mp4"],
   ["mov", "video/quicktime"],
 ]);
-// Lista de emojis do seletor do chat. Escrita com escapes \u{...} de proposito:
-// a versao anterior guardava os emojis literais e foi destruida por um
-// salvamento com codificacao lossy, virando "??" em todas as entradas.
-// Nada de Emoji 12.0 ou mais novo (2019 em diante): o Segoe UI Emoji do
-// Windows 10 nao desenha esses, e eles aparecem quebrados para a equipe.
+
 const CHAT_EMOJIS = [
   "\u{1F600}", "\u{1F603}", "\u{1F604}", "\u{1F601}", "\u{1F606}", "\u{1F605}", "\u{1F602}", "\u{1F923}",
   "\u{1F60A}", "\u{1F607}", "\u{1F642}", "\u{1F643}", "\u{1F609}", "\u{1F60C}", "\u{1F60D}", "\u{1F970}",
@@ -147,9 +150,12 @@ const TABLES = {
   eventos: "hub_eventos",
   vtRegistros: "hub_vt_registros",
   disciplinaryRecords: "hub_advertencias_suspensoes",
+  documentos: "hub_documentos",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
+  climaPesquisas: "hub_clima_pesquisas",
+  climaConfig: "hub_clima_config",
   usuarios: USERS_TABLE,
   readReceipts: "hub_read_receipts",
 };
@@ -224,15 +230,16 @@ const defaultData = {
   eventos: [],
   vtRegistros: [],
   disciplinaryRecords: [],
+  documentos: [],
   documentosContratados: [],
   candidaturas: [],
   atestados: [],
+  climaPesquisas: [],
+  climaConfig: [],
   usuarios: [],
   readReceipts: [],
 };
 
-// O cache local nunca pode derrubar o carregamento do painel: se estiver
-// corrompido, seguimos com o estado padrao e deixamos o PostgreSQL repovoar.
 let data = (() => {
   try {
     return loadLocalData();
@@ -247,7 +254,6 @@ let activeChatChannel = "";
 let refreshTimer = null;
 let refreshInProgress = false;
 let coreCollectionsRepairInProgress = false;
-let documentRecords = loadDocumentRecords();
 let currentAuthUser = null;
 let currentUserProfile = null;
 let appInitializationPromise = null;
@@ -333,10 +339,10 @@ const UNIT_OPTIONS = [
   "23- ITJ 2",
   "26- BNU 2",
   "28- ARA",
+  "00- Brasil",
 ];
 UNIT_OPTIONS.splice(3, 1, "4- PL\u00C7");
 
-// Normaliza texto para comparação: remove acentos, caixa e espaços extras.
 function normalizeUnitText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -345,15 +351,11 @@ function normalizeUnitText(value) {
     .trim();
 }
 
-// Vagas antigas podem ter sido gravadas com texto livre (ex: "JRG", "JGR").
-// Aqui mapeamos esses valores legados para a opção oficial correspondente.
 const UNIT_ALIASES = {
   jrg: "13- JRG 1",
   jgr: "13- JRG 1",
 };
 
-// Retorna o valor oficial da unidade (UNIT_OPTIONS) a partir de um valor
-// gravado, mesmo que tenha sido salvo com grafia diferente ou sem o prefixo.
 function getCanonicalUnit(value) {
   const raw = String(value || "").trim();
   if (!raw) return raw;
@@ -365,20 +367,22 @@ function getCanonicalUnit(value) {
 }
 
 const UNIT_CITY_ALIASES = {
+  brasil: "Brasil",
   mtz: "Joinville",
   sbs: "Sao Bento do Sul",
   itj: "Itajai",
-  plc: "Balneario Picarras",
-  gua: "Guaramirim",
-  "dpa jc": "Jaragua do Sul",
-  "dpa iri": "Irineopolis",
+  plc: "Palhoca",
+  gua: "Joinville",
+  "dpa jc": "Joinville",
+  "dpa iri": "Joinville",
   jpl: "Joinville",
   bc: "Balneario Camboriu",
+  "gcs gpo": "Araquari",
   gcs: "Joinville",
   jrg: "Jaragua do Sul",
   brq: "Brusque",
   fln: "Florianopolis",
-  fac: "Florianopolis",
+  fac: "Joinville",
   rng: "Rio Negrinho",
   bnu: "Blumenau",
   trinca: "Joinville",
@@ -388,7 +392,11 @@ const UNIT_CITY_ALIASES = {
 function getUnitCity(value) {
   const unit = getCanonicalUnit(value);
   const text = normalizeUnitText(unit).replace(/^\d+\s*-\s*/, "");
-  const key = Object.keys(UNIT_CITY_ALIASES).find((alias) => text.includes(alias));
+  if (!text || text.startsWith("selecione")) return "";
+
+  const key = Object.keys(UNIT_CITY_ALIASES)
+    .sort((a, b) => b.length - a.length)
+    .find((alias) => text.includes(alias));
   return key ? UNIT_CITY_ALIASES[key] : "";
 }
 
@@ -437,6 +445,10 @@ const ITEM_TYPE_OPTIONS = {
     label: "Uniforme",
     options: UNIFORM_OPTIONS,
   },
+  cracha: {
+    label: "Crachá",
+    options: [],
+  },
 };
 
 function isLoginMatch(value, expected) {
@@ -452,9 +464,13 @@ function getLoginDisplayName(value) {
   return findLocalTeamUser(value)?.nome || String(value || "").trim();
 }
 
-function isFredericoUser() {
+function stripAccents(value) {
+  return normalizeLoginName(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function getCurrentUserNameCandidates() {
   const user = getCurrentUserRecord?.() || {};
-  const candidates = [
+  return [
     getCurrentUserName?.(),
     user.nome,
     user.email,
@@ -464,10 +480,34 @@ function isFredericoUser() {
     currentAuthUser?.user_metadata?.nome,
     currentAuthUser?.user_metadata?.name,
   ];
-  return candidates.some((candidate) => {
-    const normalized = normalizeLoginName(candidate).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return normalized === "frederico" || normalized.startsWith("frederico");
+}
+
+function currentUserMatchesName(...targets) {
+  const normalizedTargets = targets.map(stripAccents);
+  return getCurrentUserNameCandidates().some((candidate) => {
+    const normalized = stripAccents(candidate);
+    return normalizedTargets.some((target) => normalized === target || normalized.startsWith(target));
   });
+}
+
+function isFredericoUser() {
+  return currentUserMatchesName("frederico");
+}
+
+function hasFredericoLevelAccess() {
+  return isFredericoUser()
+    || currentUserMatchesName("jucimara")
+    || currentUserMatchesName("alex", "alexsandro")
+    || currentUserMatchesName("alcione", "jose alcione")
+    || currentUserMatchesName("andre barbosa")
+    || currentUserMatchesName("maria luisa", "maria luiza");
+}
+
+// Cargo cadastrado (Gerente/Recepcionista) so restringe quem NAO esta na
+// lista de acesso nivel Frederico; quem esta la mantem o titulo/cargo real
+// mas nao fica limitado pelas restricoes de Gerente/Recepcionista.
+function isRestrictedManagerUser() {
+  return isManagerUser() && !hasFredericoLevelAccess();
 }
 
 function loadTeamUsersStore() {
@@ -575,14 +615,13 @@ function isValidDirectChannel(channelId) {
 }
 
 function isCurrentUserInChannel(channelId) {
-  if (channelId === GENERAL_CHANNEL) return !isManagerUser() && !isCashierUser();
+  if (channelId === GENERAL_CHANNEL) return !isRestrictedManagerUser() && !isCashierUser();
   if (channelId === MANAGER_GENERAL_CHANNEL) return !isCashierUser();
-  if (channelId === CASHIER_GENERAL_CHANNEL) return !isManagerUser();
   return isValidDirectChannel(channelId) && getDirectChannelUsers(channelId).includes(normalizeLoginName(getCurrentUserName()));
 }
 
 function isGeneralChatChannel(channelId) {
-  return [GENERAL_CHANNEL, MANAGER_GENERAL_CHANNEL, CASHIER_GENERAL_CHANNEL].includes(channelId);
+  return [GENERAL_CHANNEL, MANAGER_GENERAL_CHANNEL].includes(channelId);
 }
 
 function getTeamUsers() {
@@ -602,11 +641,8 @@ function getChatChannels() {
     }));
 
   let channels = isCashierUser()
-    ? [
-        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunicação geral entre caixas/crediaristas e equipe de RH", isGroup: true },
-        ...directChannels,
-      ]
-    : isManagerUser()
+    ? [...directChannels]
+    : isRestrictedManagerUser()
     ? [
         { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
         ...directChannels,
@@ -614,11 +650,12 @@ function getChatChannels() {
     : [
         { id: GENERAL_CHANNEL, label: "Chat geral RH", subtitle: "Mensagens compartilhadas apenas pela equipe de RH", isGroup: true },
         { id: MANAGER_GENERAL_CHANNEL, label: "RH + Gerentes", subtitle: "Comunicação geral entre gerentes e equipe de RH", isGroup: true },
-        { id: CASHIER_GENERAL_CHANNEL, label: "RH + Caixa", subtitle: "Comunicação geral entre caixas/crediaristas e equipe de RH", isGroup: true },
         ...directChannels,
       ];
 
   channels.sort((a, b) => {
+
+    if (a.isGroup !== b.isGroup) return a.isGroup ? -1 : 1;
     const msgA = data.comunicados.find(m => normalizeChatChannel(m.canal) === a.id);
     const msgB = data.comunicados.find(m => normalizeChatChannel(m.canal) === b.id);
     if (!msgA && !msgB) return 0;
@@ -642,7 +679,6 @@ function getAllowedChatChannelIds() {
 function normalizeChatChannel(canal) {
   if (!canal || canal === GENERAL_CHANNEL) return GENERAL_CHANNEL;
   if (canal === MANAGER_GENERAL_CHANNEL) return MANAGER_GENERAL_CHANNEL;
-  if (canal === CASHIER_GENERAL_CHANNEL) return CASHIER_GENERAL_CHANNEL;
   if (isDirectChannel(canal)) return canal;
   if (canal === RH_CHANNEL) return getDirectChannel(getCurrentUserName(), "Ariel");
   if (String(canal).startsWith("usuario:")) {
@@ -654,9 +690,8 @@ function normalizeChatChannel(canal) {
 function canAccessChatChannel(canal) {
   const channel = normalizeChatChannel(canal);
   return (
-    (channel === GENERAL_CHANNEL && !isManagerUser() && !isCashierUser()) ||
+    (channel === GENERAL_CHANNEL && !isRestrictedManagerUser() && !isCashierUser()) ||
     (channel === MANAGER_GENERAL_CHANNEL && !isCashierUser()) ||
-    (channel === CASHIER_GENERAL_CHANNEL && !isManagerUser()) ||
     (isValidDirectChannel(channel) && isCurrentUserInChannel(channel))
   );
 }
@@ -692,11 +727,6 @@ function getCurrentUserName() {
   return [profileName, authName, storedName].find((name) => name && !isGenericAuthName(name)) || "Voce";
 }
 
-/**
- * [ALERTA DE SEGURANÇA] A verificação de permissão real DEVE ser feita no backend
- * com Row Level Security (RLS) do PostgreSQL. Estas funções são apenas para controle de UI.
- * A 'role' é lida do token JWT para maior segurança no frontend, mas a RLS é indispensável.
- */
 const AuthHelper = {
   _getClaim(claim) {
     return currentAuthUser?.app_metadata?.[claim] || "";
@@ -726,16 +756,10 @@ function getCurrentUserRole() {
 
 function getCurrentUserNormalizedRole() {
   const user = getCurrentUserRecord?.() || {};
-  // O cargo do cookie de sessao e congelado no login e vale 30 dias. Uma
-  // mudanca de cargo no banco so valeria no proximo login se confiassemos
-  // nele, entao a linha de hub_users tem prioridade quando ja foi carregada.
+
   return normalizeLoginName(user.cargo || AuthHelper.getRole() || currentUserProfile?.cargo || "");
 }
 
-/**
- * Controle de UI baseado no usuario autenticado carregado do PostgreSQL.
- * A verificacao de permissao real continua sendo feita no backend por RLS.
- */
 function isManagerUser() {
   return getCurrentUserNormalizedRole() === "gerente";
 }
@@ -748,17 +772,14 @@ function isCeoUser() {
   return getCurrentUserNormalizedRole() === "ceo";
 }
 
-/**
- * Controle de UI baseado no usuario autenticado carregado do PostgreSQL.
- * A verificacao de permissao real continua sendo feita no backend por RLS.
- */
+function isReceptionistUser() {
+  return getCurrentUserNormalizedRole() === "recepcionista";
+}
+
 function isCashierUser() {
   return AuthHelper.isCashier();
 }
 
-// Gerente enxerga apenas Painel, Comunicacao RH, Quadros, Calendario e
-// Documentos RH. Chamados fica de fora da aba interna: o gerente so tem o
-// formulario publico de solicitacao (chamados.html).
 const MANAGER_ALLOWED_VIEWS = Object.freeze([
   "dashboard",
   "comunicacao",
@@ -768,21 +789,31 @@ const MANAGER_ALLOWED_VIEWS = Object.freeze([
   "conta",
 ]);
 
+const RECEPTIONIST_ALLOWED_VIEWS = Object.freeze([
+  "dashboard",
+  "comunicacao",
+  "quadros",
+  "calendario",
+  "conta",
+]);
+
 const ALL_ALLOWED_VIEWS = Object.freeze([
   "dashboard", "denuncias", "comunicacao", "malotes", "chamados", "quadros",
   "vagas", "calendario", "documentos", "advertencias-suspensoes",
   "documentos-contratados", "gerenciamento-vt", "equipe", "conta",
 ]);
 
-// Fonte unica de verdade do escopo de telas. O painel se apoia nela para nao
-// exibir numero, pendencia ou aviso de uma aba que o usuario nao acessa.
 function getAllowedViewsForCurrentUser() {
-  if (isManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
+  if (isRestrictedManagerUser()) return new Set(MANAGER_ALLOWED_VIEWS);
+  if (isReceptionistUser() && !hasFredericoLevelAccess()) return new Set(RECEPTIONIST_ALLOWED_VIEWS);
   const allowed = new Set(ALL_ALLOWED_VIEWS);
-  if (isFredericoUser()) allowed.add("feedbacks");
-  // Denuncias Recebidas fica restrita a Ariel e Frederico.
-  const canSeeDenuncias = isFredericoUser() || (typeof window.isArielUser === "function" && window.isArielUser());
+  if (hasFredericoLevelAccess()) allowed.add("feedbacks");
+
+  const canSeeDenuncias = hasFredericoLevelAccess()
+    || currentUserMatchesName("vanessa");
   if (!canSeeDenuncias) allowed.delete("denuncias");
+
+  if (currentUserMatchesName("ariel") || currentUserMatchesName("andre barbosa") || currentUserMatchesName("maria luisa", "maria luiza")) allowed.add("teste-clima");
   return allowed;
 }
 
@@ -1170,9 +1201,6 @@ async function validateLogin(identifier, password) {
 async function verifyCurrentPassword(password) {
   if (!password) return false;
 
-  // Verifica a senha via endpoint REST sem substituir a sessao ativa.
-  // signInWithPassword sobrescreve o token em memoria e pode causar
-  // redirecionamentos antes do onConfirm ser chamado.
   const authUser = await getCurrentAuthUser();
   const email = authUser?.email || "";
   if (!email) return false;
@@ -1197,7 +1225,8 @@ function isPublicPage() {
     document.querySelector("[data-public-feedbacks]") ||
     document.querySelector("[data-public-vagas]") ||
     document.querySelector("[data-public-contratados]") ||
-    document.querySelector("[data-public-atestados]")
+    document.querySelector("[data-public-atestados]") ||
+    document.querySelector("[data-public-clima]")
   );
 }
 
@@ -1208,7 +1237,8 @@ function isPublicSubmissionFormPage() {
     document.querySelector("[data-public-vagas]") ||
     document.querySelector("[data-public-chamados]") ||
     document.querySelector("[data-public-contratados]") ||
-    document.querySelector("[data-public-atestados]")
+    document.querySelector("[data-public-atestados]") ||
+    document.querySelector("[data-public-clima]")
   );
 }
 
@@ -1247,8 +1277,7 @@ async function setupLogin() {
     if (!entryAuthenticated) return false;
   }
   postgresClient = postgresClient || getPostgreSQLClient();
-  // A login page never restores an existing session automatically.
-  // After reload, the user must submit the credentials again.
+
   const hasAuthSession = isLoginPage() ? false : await restoreAuthenticatedSession();
   const hasValidDisplayIdentity = hasAuthSession && !isGenericAuthName(getCurrentUserName());
 
@@ -1260,7 +1289,6 @@ async function setupLogin() {
     }
   }
 
-  // Redirecionamentos Inteligentes
   if (hasAuthSession && hasValidDisplayIdentity) {
     if (isLoginPage()) {
       window.location.replace(getLoginRedirectTarget());
@@ -1321,18 +1349,17 @@ function loadLocalData() {
     eventos: parsed.eventos || [],
     vtRegistros: parsed.vtRegistros || [],
     disciplinaryRecords: parsed.disciplinaryRecords || [],
+    documentos: parsed.documentos || [],
     documentosContratados: (parsed.documentosContratados || [])
       .filter((item) => !String(item.id || "").startsWith("local-") && !item.pendingSync)
       .map(mapContractorDocumentRow),
     candidaturas: parsed.candidaturas || [],
     atestados: (parsed.atestados || []).map(mapAtestadoRow),
+    climaPesquisas: parsed.climaPesquisas || [],
+    climaConfig: parsed.climaConfig || [],
     usuarios: mergeUsersByName(parsed.usuarios || defaultData.usuarios, loadTeamUsersStore()).map(sanitizeUserRecord),
     readReceipts: parsed.readReceipts || [],
   };
-}
-
-function loadDocumentRecords() {
-  return storageService.getSessionItem(DOCUMENT_RECORDS_KEY, storageService.getLocalItem(DOCUMENT_RECORDS_KEY, []));
 }
 
 function disableSensitiveFieldAutofill() {
@@ -1356,11 +1383,6 @@ function getPublicClientId() {
     sessionStorage.setItem(PUBLIC_CLIENT_ID_KEY, clientId);
   }
   return clientId;
-}
-
-function saveDocumentRecords() {
-  storageService.setSessionItem(DOCUMENT_RECORDS_KEY, documentRecords);
-  storageService.setLocalItem(DOCUMENT_RECORDS_KEY, documentRecords);
 }
 
 function saveLocalData() {
@@ -1396,7 +1418,6 @@ function hasMeaningfulDashboardData(state = data) {
     "usuarios",
   ].some((collection) => Array.isArray(state[collection]) && state[collection].length > 0);
 }
-
 
 function ensureRequiredTeamUsers() {
   if (!data.usuarios) data.usuarios = [];
@@ -1530,9 +1551,7 @@ function mergeReadReceiptRows(rows = []) {
 
 async function loadReadReceiptsFromPostgreSQL() {
   if (!postgresClient || !TABLES.readReceipts) return;
-  // hub_read_receipts.user_id e uuid (FK para hub_users). Misturar aliases
-  // (e-mail/cpf/nome) no filtro "in" derruba a query inteira com "invalid
-  // input syntax for type uuid", entao nenhum recibo carrega - nem os validos.
+
   const userKeys = getReadReceiptUserIds();
   if (!userKeys.length) return;
   try {
@@ -1550,8 +1569,6 @@ async function loadReadReceiptsFromPostgreSQL() {
   }
 }
 
-// hub_read_receipts.user_id tem FK para hub_users(id): aliases como e-mail, CPF
-// ou nome sao recusados pelo banco e derrubam o lote inteiro. So gravamos o UUID.
 function getReadReceiptUserIds() {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return [currentUserProfile?.id, currentAuthUser?.id]
@@ -1655,8 +1672,6 @@ function markNotificationsRead(notificationIds = [], messageIds = []) {
   return true;
 }
 
-// Apagar uma notificacao vale para a conta inteira, em qualquer maquina: alem do
-// cache local, gravamos um recibo "dismissed" no PostgreSQL, lido na entrada.
 function dismissNotifications(dismissKeys = []) {
   const cleanKeys = (Array.isArray(dismissKeys) ? dismissKeys : [dismissKeys])
     .filter((key) => key !== undefined && key !== null && String(key).trim())
@@ -1701,11 +1716,11 @@ function markRhMessagesRead() {
 function checkAndMarkChatAsRead() {
   const communicationView = document.getElementById("comunicacao");
   if (!communicationView?.classList.contains("active") || !canAccessChatChannel(activeChatChannel)) return;
-  
+
   const currentChannel = activeChatChannel;
   const unread = getUnreadRhMessages().filter((item) => normalizeChatChannel(item.canal) === currentChannel);
   if (!unread.length) return;
-  
+
   markRhMessagesRead();
   renderDashboard();
   renderChatChannels();
@@ -1856,9 +1871,6 @@ function renderMaloteReport() {
   `;
 }
 
-// Valores ja formatados (ex.: "12/08/2026 15:56") voltam do cache local e nao
-// sao aceitos por new Date(); nesse caso devolvemos o texto original em vez de
-// deixar o Intl lancar RangeError e derrubar o carregamento do painel.
 function toValidDate(value) {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -2009,7 +2021,6 @@ function formatMaskedDate(value) {
   return `${day}/${month}/${year}`;
 }
 
-// aliases para compatibilidade com chamadas existentes
 const formatDocumentDate = formatMaskedDate;
 const formatEventoDate   = formatMaskedDate;
 
@@ -2019,6 +2030,11 @@ function eventoDateToIso(value) {
   return `${match[3]}-${match[2]}-${match[1]}`;
 }
 
+function normalizeEventDateKey(value) {
+  const match = String(value || "").match(/^\d{4}-\d{2}-\d{2}/);
+  return match ? match[0] : String(value || "");
+}
+
 function applyDateMask(input) {
   if (input.dataset.dateMaskApplied === "true") return;
   input.type = "text";
@@ -2026,15 +2042,15 @@ function applyDateMask(input) {
   input.maxLength = 10;
   input.placeholder = "dd/mm/aaaa";
   input.dataset.dateMask = "true";
-  input.dataset.docDate = "true"; // mantém compatibilidade
+  input.dataset.docDate = "true";
   input.dataset.dateMaskApplied = "true";
   input.value = formatMaskedDate(input.value);
 }
 
 function normalizeDocumentDateInputs(root = document) {
-  // cobre doc-forms e o campo de data do evento-form
+
   root.querySelectorAll('[data-doc-form] input[type="date"], #evento-form input[type="date"]').forEach(applyDateMask);
-  // reinicializa campos que já foram convertidos mas podem ter recebido valor ISO novo
+
   root.querySelectorAll('[data-date-mask="true"]').forEach((input) => {
     input.value = formatMaskedDate(input.value);
   });
@@ -2083,8 +2099,6 @@ function isTodayLabel(value) {
   return value === todayLabel() || value === "Hoje";
 }
 
-// Registros que guardam data e hora ("14/08/2026, 10:22") nunca batem com o
-// rotulo de data pura; aqui a comparacao usa so a parte da data.
 function isTodayDateTimeLabel(value) {
   const text = String(value || "").trim();
   if (!text) return false;
@@ -2096,7 +2110,9 @@ function isTodayDateTimeLabel(value) {
 function formatEpiItems(items) {
   return items
     .filter((item) => item.nome && item.quantidade)
-    .map((item) => `${item.nome} (${item.quantidade}${item.tamanho ? `, ${item.tamanho}` : ""})`)
+    .map((item) => item.tipo === "cracha"
+      ? `Crachá - ${item.nome} (Função: ${item.funcao || "Nao informado"}, CPF: ${item.cpf || "Nao informado"})`
+      : `${item.nome} (${item.quantidade}${item.tamanho ? `, ${item.tamanho}` : ""})`)
     .join(", ");
 }
 
@@ -2136,14 +2152,55 @@ function renderItemSizeOptions(type = "epi", selectedSize = "", itemName = "") {
     .join("");
 }
 
+function renderEpiRowFields(tipo = "epi", values = {}) {
+  const { nome = "", quantidade = "", tamanho = "Nao se aplica", funcao = "", cpf = "" } = values;
+  if (tipo === "cracha") {
+    return `
+      <label>Nome
+        <input name="epi_nome[]" type="text" minlength="3" maxlength="120" placeholder="Nome completo" value="${escapeHtml(nome)}" required />
+      </label>
+      <label>Função
+        <input name="cracha_funcao[]" type="text" maxlength="120" placeholder="Função" value="${escapeHtml(funcao)}" required />
+      </label>
+      <label>CPF
+        <input name="cracha_cpf[]" type="text" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" value="${escapeHtml(cpf)}" required />
+      </label>
+    `;
+  }
+  return `
+    <label>Nome
+      <select name="epi_nome[]" data-item-select data-epi-select required>${renderItemNameOptions(tipo, nome)}</select>
+    </label>
+    <label>Quantidade
+      <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" value="${escapeHtml(quantidade)}" required />
+    </label>
+    <label>Tamanho
+      <select name="epi_tamanho[]" required>${renderItemSizeOptions(tipo, tamanho, nome)}</select>
+    </label>
+  `;
+}
+
 function readEpiItems(formElement) {
   return [...formElement.querySelectorAll(".epi-row")]
-    .map((row) => ({
-      tipo: row.querySelector('[name="epi_tipo[]"]')?.value || guessItemType(row.querySelector('[name="epi_nome[]"]')?.value.trim() || ""),
-      nome: row.querySelector('[name="epi_nome[]"]')?.value.trim() || "",
-      quantidade: row.querySelector('[name="epi_quantidade[]"]')?.value.trim() || "",
-      tamanho: row.querySelector('[name="epi_tamanho[]"]')?.value.trim() || "",
-    }))
+    .map((row) => {
+      const tipo = row.querySelector('[name="epi_tipo[]"]')?.value || guessItemType(row.querySelector('[name="epi_nome[]"]')?.value.trim() || "");
+      if (tipo === "cracha") {
+        return {
+          tipo,
+          nome: row.querySelector('[name="epi_nome[]"]')?.value.trim() || "",
+          funcao: row.querySelector('[name="cracha_funcao[]"]')?.value.trim() || "",
+          cpf: row.querySelector('[name="cracha_cpf[]"]')?.value.trim() || "",
+          quantidade: "1",
+          tamanho: "",
+        };
+      }
+      return {
+        tipo,
+        nome: row.querySelector('[name="epi_nome[]"]')?.value.trim() || "",
+        quantidade: row.querySelector('[name="epi_quantidade[]"]')?.value.trim() || "",
+        tamanho: row.querySelector('[name="epi_tamanho[]"]')?.value.trim() || "",
+      };
+    })
     .filter((item) => item.nome && item.quantidade);
 }
 
@@ -2199,7 +2256,7 @@ function createEpiRow(nome = "", quantidade = "") {
 }
 
 function createMaloteItemRow(item = {}) {
-  return createChamadoEpiRow(item.nome || "", item.quantidade || "", item.tamanho || "Nao se aplica");
+  return createChamadoEpiRow(item.nome || "", item.quantidade || "", item.tamanho || "Nao se aplica", item.tipo || "", item.funcao || "", item.cpf || "");
 }
 
 function createMaloteCollaboratorBlock(group = {}) {
@@ -2238,24 +2295,16 @@ function createChamadoCollaboratorBlock(group = {}) {
   `;
 }
 
-function createChamadoEpiRow(nome = "", quantidade = "", tamanho = "Nao se aplica") {
-  const tipo = guessItemType(nome);
+function createChamadoEpiRow(nome = "", quantidade = "", tamanho = "Nao se aplica", tipoOverride = "", funcao = "", cpf = "") {
+  const tipo = tipoOverride || guessItemType(nome);
 
   return `
     <div class="epi-row">
       <label>Tipo
         <select name="epi_tipo[]" data-item-type-select required>${renderItemTypeOptions(tipo)}</select>
       </label>
-      <label>Nome
-        <select name="epi_nome[]" data-item-select data-epi-select required>${renderItemNameOptions(tipo, nome)}</select>
-      </label>
-      <label>Quantidade
-        <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" value="${escapeHtml(quantidade)}" required />
-      </label>
-      <label>Tamanho
-        <select name="epi_tamanho[]" required>${renderItemSizeOptions(tipo, tamanho, nome)}</select>
-      </label>
-      <button class="danger-button remove-epi" type="button" aria-label="Remover EPI">Remover</button>
+      <span class="epi-row-fields" data-epi-row-fields>${renderEpiRowFields(tipo, { nome, quantidade, tamanho, funcao, cpf })}</span>
+      <button class="danger-button remove-epi" type="button" aria-label="Remover item">Remover</button>
     </div>
   `;
 }
@@ -2553,10 +2602,6 @@ function getEventDisplayTitle(item = {}) {
   return item.titulo || "Evento";
 }
 
-// Cada gerente enxerga apenas os eventos que ele mesmo criou. Aniversarios
-// (gerados a partir da planilha) tambem sao eventos e nao pertencem a
-// nenhum gerente, entao ficam fora da agenda dele. RH e CEO enxergam a
-// agenda inteira, de todos os gerentes e os aniversarios.
 function getCurrentEventAccessNames() {
   const user = getCurrentUserRecord?.() || {};
   return [
@@ -2573,8 +2618,9 @@ function getCurrentEventAccessNames() {
 }
 
 function canCurrentUserAccessEventRecord(item = {}) {
-  if (isRhUser() || isCeoUser()) return true;
+  if (isRhUser() || isCeoUser() || hasFredericoLevelAccess()) return true;
   if (!isManagerUser()) return true;
+  if (isBirthdayEvent(item)) return true;
   const author = normalizeLoginName(item.createdBy || "");
   return Boolean(author && getCurrentEventAccessNames().includes(author));
 }
@@ -2713,7 +2759,7 @@ function getUpcomingEvents() {
   const today = getLocalDateKey();
   const weekDates = getCurrentWeekDates();
   const maxDateKey = weekDates[weekDates.length - 1];
-  return getSortedEvents().filter((item) => !isArchivedRecord(item) && item.data && item.data >= today && item.data <= maxDateKey);
+  return getSortedEvents().filter((item) => !isArchivedRecord(item) && !isBirthdayEvent(item) && item.data && item.data >= today && item.data <= maxDateKey);
 }
 
 function getCompactAgendaItems(events = []) {
@@ -3456,7 +3502,6 @@ function renderChatPoll(item, poll) {
   `;
 }
 
-
 function mapAtestadoRow(row = {}) {
   return {
     id: row.id || generateUUID(),
@@ -3494,7 +3539,7 @@ function mapRows(collection, rows) {
       identificacao: row.identificacao,
       categoria: row.categoria,
       descricao: row.descricao,
-      status: row.status || "Aberta", // Garante o mapeamento do status
+      status: row.status || "Aberta",
       createdBy: row.created_by || "Sistema",
       createdAt: formatDateTime(row.created_at),
       sortAt: row.created_at || "",
@@ -3594,15 +3639,32 @@ if (collection === "malotes") {
       cpf: row.cpf,
       curriculo_url: row.curriculo_url,
       createdBy: row.created_by || row.nome,
-      createdAt: formatDate(row.created_at),
+      createdAt: formatDateTime(row.created_at),
       sortAt: row.created_at || "",
+    }));
+  }
+  if (collection === "climaPesquisas") {
+    return rows.map((row) => ({
+      id: row.id,
+      respostas: row.respostas && typeof row.respostas === "object" ? row.respostas : {},
+      sugestao: row.sugestao || "",
+      createdAt: formatDateTime(row.created_at),
+      sortAt: row.created_at || "",
+    }));
+  }
+  if (collection === "climaConfig") {
+    return rows.map((row) => ({
+      id: row.id,
+      aberto: Boolean(row.aberto),
+      abertoEm: row.aberto_em || "",
+      encerradoEm: row.encerrado_em || "",
     }));
   }
 if (collection === "eventos") {
     return rows.map((row) => ({
       id: row.id,
       titulo: row.titulo,
-      data: row.data,
+      data: normalizeEventDateKey(row.data),
       horario: row.horario,
       responsavel: row.responsavel,
       tipo: row.tipo || "Evento",
@@ -3639,9 +3701,30 @@ if (collection === "eventos") {
       unidade: row.unidade || "",
       local: row.local || "",
       motivo: row.motivo || "",
+      diasSuspensao: row.dias_suspensao || "",
+      arquivoNome: row.arquivo_nome || "",
+      arquivoTamanho: row.arquivo_tamanho || 0,
+      arquivoTipo: row.arquivo_tipo || "",
+      arquivoUrl: row.arquivo_url || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
+    }));
+  }
+
+  if (collection === "documentos") {
+    return rows.map((row) => ({
+      id: row.id,
+      type: row.tipo || "",
+      summary: row.resumo || "",
+      details: row.detalhes || "",
+      formData: row.dados && typeof row.dados === "object" ? row.dados : {},
+      createdBy: row.created_by || getSystemFallbackAuthor(),
+      createdAt: formatDateTime(row.created_at),
+      sortAt: row.created_at || "",
+      updatedBy: row.updated_by || "",
+      updatedAt: row.updated_at ? formatDateTime(row.updated_at) : "",
+      updatedSortAt: row.updated_at || "",
     }));
   }
 
@@ -3663,8 +3746,6 @@ if (collection === "eventos") {
       unidade: row.unidade || getDefaultUserUnit(row.nome),
       foto_perfil: row.foto_perfil || "",
       configuracoes: parseJsonObject(row.configuracoes),
-      isOnline: Boolean(row.is_online),
-      lastSeen: row.last_seen || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
@@ -3729,6 +3810,7 @@ function mapContractorDocumentRow(row = {}) {
     nome: row.nome || "",
     cpf: row.cpf || "",
     telefone: row.telefone || "",
+    email: row.email || "",
     documentos: parseContractorDocumentsValue(row.documentos),
     createdBy: row.created_by || row.createdBy || "Publico",
     createdAt: formatDateTime(row.created_at || row.createdAt),
@@ -4092,6 +4174,11 @@ function renderRealtimeUpdate(collection) {
     return;
   }
 
+  if (collection === "documentos") {
+    renderDocumentRecords();
+    return;
+  }
+
   renderAll();
 }
 
@@ -4154,10 +4241,6 @@ function toDbPayload(collection, values) {
     return {
       cargo: values.cargo,
       unidade: values.unidade || "",
-      projeto: JSON.stringify({
-        descricao: values.descricao || "",
-        requisitos: values.requisitos || "",
-      }),
       descricao: values.descricao || "",
       requisitos: values.requisitos || "",
       status: values.status || "Aberta",
@@ -4235,8 +4318,31 @@ if (collection === "eventos") {
       unidade: values.unidade || "",
       local: values.local || "",
       motivo: values.motivo || "",
+      dias_suspensao: values.diasSuspensao ? Number(values.diasSuspensao) : null,
+      arquivo_nome: values.anexo?.name || null,
+      arquivo_tamanho: values.anexo?.size || null,
+      arquivo_tipo: values.anexo?.type || null,
+      arquivo_url: values.anexo?.url || null,
       created_by: values.createdBy || getCurrentUserName(),
     };
+  }
+
+  if (collection === "documentos") {
+    return {
+      tipo: values.type || "",
+      resumo: values.summary || "",
+      detalhes: values.details || "",
+      dados: values.formData || {},
+      created_by: values.createdBy || getCurrentUserName(),
+      updated_by: values.updatedBy || null,
+    };
+  }
+
+  if (collection === "climaConfig") {
+    const payload = { aberto: Boolean(values.aberto) };
+    if ("abertoEm" in values) payload.aberto_em = values.abertoEm || null;
+    if ("encerradoEm" in values) payload.encerrado_em = values.encerradoEm || null;
+    return payload;
   }
 
   if (collection === "atestados") {
@@ -4261,6 +4367,7 @@ if (collection === "eventos") {
       nome: values.nome,
       cpf: values.cpf,
       telefone: values.telefone || "",
+      email: values.email || "",
       documentos: values.documentos || [],
       created_by: values.createdBy || "Publico",
     };
@@ -4376,9 +4483,11 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
       "eventos",
       "vtRegistros",
       "disciplinaryRecords",
+      "documentos",
       "documentosContratados",
       "candidaturas",
       "atestados",
+      "climaPesquisas",
       "readReceipts",
     ]
     : []);
@@ -4499,6 +4608,16 @@ function withoutOptionalApplicationColumns(payload) {
   return rest;
 }
 
+function withoutDiasSuspensaoColumn(payload) {
+  const { dias_suspensao, ...rest } = payload;
+  return rest;
+}
+
+function withoutDisciplinaryAnexoColumns(payload) {
+  const { arquivo_nome, arquivo_tamanho, arquivo_tipo, arquivo_url, ...rest } = payload;
+  return rest;
+}
+
 async function loadFromPostgreSQL(options = {}) {
   const { setupLive = true } = options;
   const chatLoadMutationVersion = chatMutationVersion;
@@ -4515,9 +4634,7 @@ async function loadFromPostgreSQL(options = {}) {
     if (bootstrapRows) {
       const loaded = applyBootstrapRowsToState(bootstrapRows, { forceCore: true, overwriteEmpty: true });
       ensureRequiredTeamUsers();
-      // O bootstrap nao traz hub_read_receipts (e por conta, nao global), entao o
-      // estado de lidas/apagadas precisa ser buscado aqui tambem. Sem isso ele
-      // ficava so no localStorage e nao acompanhava a conta entre maquinas.
+
       await loadReadReceiptsFromPostgreSQL();
       publishHubDataCounts();
       if (setupLive) {
@@ -4645,13 +4762,20 @@ async function refreshFromPostgreSQL() {
   }
 }
 
+let lastAutoRefreshAt = 0;
+const AUTO_REFRESH_MIN_GAP_MS = 60000;
+
 function setupAutoRefresh() {
   if (refreshTimer) return;
 
-  // Atualiza mesmo com a aba em segundo plano/minimizada, para que notificacoes
-  // de novas mensagens continuem chegando. O navegador pode limitar a frequencia
-  // de setInterval em abas ocultas, mas o timer continua rodando.
+  // O realtime (setupRealtime) e o canal principal de atualizacao; este poll
+  // e so uma rede de seguranca de reconciliacao, por isso o intervalo e mais
+  // longo e pausa quando a aba esta em segundo plano. O throttle evita que
+  // trocar de aba repetidamente dispare varios refreshes em sequencia.
   refreshTimer = window.setInterval(() => {
+    if (document.visibilityState !== "visible") return;
+    if (Date.now() - lastAutoRefreshAt < AUTO_REFRESH_MIN_GAP_MS) return;
+    lastAutoRefreshAt = Date.now();
     refreshFromPostgreSQL();
   }, 60000);
 }
@@ -4702,7 +4826,7 @@ function setupRealtime() {
       realtimeBroadcastReady = false;
       console.warn("HUB realtime desconectado:", status);
       setSyncStatus("Reconectando...", false);
-      // Remove canal atual e agenda reconexão
+
       try { realtimeChannel.unsubscribe(); } catch (_) {}
       realtimeChannel = null;
       setTimeout(() => {
@@ -4767,7 +4891,7 @@ function validateChatFile(file) {
   }
 
   if (file.size > CHAT_FILE_MAX_SIZE_BYTES) {
-    return "O arquivo do chat deve ter no maximo 10 MB.";
+    return "O arquivo do chat deve ter no maximo 3 MB.";
   }
 
   return null;
@@ -5287,7 +5411,7 @@ function validateResumeFile(file) {
   }
 
   if (file.size > RESUME_MAX_SIZE_BYTES) {
-    return "O curriculo deve ter no maximo 5 MB.";
+    return "O curriculo deve ter no maximo 3 MB.";
   }
 
   if (file.size <= 0) {
@@ -5300,7 +5424,7 @@ function validateResumeFile(file) {
 function validateContractorDocumentFile(file) {
   if (!file || !file.name) return "Anexe pelo menos um documento.";
   if (file.size <= 0) return "Um dos arquivos enviados parece estar vazio.";
-  if (file.size > CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES) return "Cada documento deve ter no máximo 10 MB.";
+  if (file.size > CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES) return "Cada documento deve ter no máximo 3 MB.";
   return null;
 }
 
@@ -5339,18 +5463,21 @@ function resetContractorDocumentFields(container) {
   container.innerHTML = createContractorDocumentField(true);
 }
 
-async function buildContractorDocumentPayload(documentos) {
+async function buildContractorDocumentPayload(documentos, batchId) {
   const files = Array.from(documentos || []);
-  const embeddedDocuments = [];
+  const uploadedDocuments = [];
   for (const file of files) {
-    embeddedDocuments.push({
+    const safeName = safePublicFileName(file.name || "documento");
+    const path = `contratados/${batchId}/${Date.now()}-${safeName}`;
+    const upload = await uploadPublicFile(file, path);
+    uploadedDocuments.push({
       name: String(file.name || "documento"),
       size: Number(file.size || 0),
       type: String(file.type || "application/octet-stream"),
-      dataUrl: await readFileAsDataUrl(file),
+      path: upload?.path || path,
     });
   }
-  return embeddedDocuments;
+  return uploadedDocuments;
 }
 
 async function uploadPublicFile(file, path = "") {
@@ -5385,18 +5512,6 @@ function isValidCpf(value) {
     return remainder === 10 ? 0 : remainder;
   };
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
-}
-
-function matchesContractorAccessPassword(password, expectedPassword) {
-  const typedPassword = String(password || "").trim();
-  const targetPassword = String(expectedPassword || "").trim();
-
-  if (typedPassword === targetPassword) return true;
-  if (!typedPassword || !targetPassword) return false;
-  if (typedPassword.length !== targetPassword.length) return false;
-
-  return typedPassword.charAt(0).toLocaleLowerCase("pt-BR") === targetPassword.charAt(0).toLocaleLowerCase("pt-BR")
-    && typedPassword.slice(1) === targetPassword.slice(1);
 }
 
 function validatePublicFormSubmission(formElement) {
@@ -5489,8 +5604,8 @@ async function submitPublicApplicationWithFile({ vaga_id, nome, telefone, cpf, c
   return Array.isArray(result.data) ? result.data[0] : result.data;
 }
 
-async function submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, documentos, accessPassword, turnstileToken }) {
-  const embeddedDocuments = await buildContractorDocumentPayload(documentos);
+async function submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, email, documentos, accessPassword, turnstileToken }) {
+  const uploadedDocuments = await buildContractorDocumentPayload(documentos, generateUUID());
 
   const attempts = [{ url: "/api/contractor-documents", type: "documentosContratados", localApi: true }];
 
@@ -5505,8 +5620,9 @@ async function submitPublicContractorDocuments({ empresa, origemHtml, nome, tele
         nome: String(nome || ""),
         telefone: String(telefone || ""),
         cpf: String(cpf || ""),
+        email: String(email || ""),
         accessPassword: String(accessPassword || ""),
-        documentos: embeddedDocuments,
+        documentos: uploadedDocuments,
         turnstileToken: String(turnstileToken || ""),
       }),
     });
@@ -5533,7 +5649,7 @@ async function submitPublicContractorDocuments({ empresa, origemHtml, nome, tele
 }
 
 function isPublicInsertOnlyCollection(collection) {
-  return isPublicSubmissionFormPage() && ["denuncias", "feedbacks", "chamados", "candidaturas", "documentosContratados"].includes(collection);
+  return isPublicSubmissionFormPage() && ["denuncias", "feedbacks", "chamados", "candidaturas", "documentosContratados", "climaPesquisas"].includes(collection);
 }
 
 function toPublicSubmissionPayload(collection, values) {
@@ -5658,6 +5774,51 @@ async function addItem(collection, values) {
         return true;
       }
 
+      if (collection === "disciplinaryRecords" && isMissingColumn(error, "dias_suspensao")) {
+        const { data: insertedLegacy, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutDiasSuspensaoColumn(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedLegacy])[0],
+          diasSuspensao: values.diasSuspensao || "",
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        renderAll();
+        showModal("Banco precisa atualizar", "O registro foi salvo, mas rode a migration 20260819000100 no PostgreSQL para gravar os dias de suspensao.", "info");
+        return true;
+      }
+
+      if (collection === "disciplinaryRecords" && isMissingColumn(error, "arquivo_nome")) {
+        const { data: insertedLegacy, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutDisciplinaryAnexoColumns(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedLegacy])[0],
+          arquivoNome: values.anexo?.name || "",
+          arquivoTamanho: values.anexo?.size || 0,
+          arquivoTipo: values.anexo?.type || "",
+          arquivoUrl: values.anexo?.url || "",
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        renderAll();
+        showModal("Banco precisa atualizar", "O registro foi salvo, mas rode a migration 20260825000100 no PostgreSQL para gravar o anexo.", "info");
+        return true;
+      }
+
       if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos") || isMissingColumn(error, "unidade"))) {
         const { data: insertedLegacy, error: retryError } = await postgresClient
           .from(TABLES[collection])
@@ -5736,7 +5897,11 @@ if (collection === "eventos") {
           ? "Sem permissao para salvar a vaga. Verifique se seu usuario tem cargo 'RH' na tabela hub_users e se o e-mail do perfil coincide com o e-mail do login. Rode o hub-vagas-fix.sql para corrigir."
           : collection === "vagas"
             ? `Nao foi possivel salvar a vaga. ${error?.message || "Confira se as colunas descricao, requisitos e created_by existem em hub_vagas (rode hub-vagas-fix.sql)."}`
-            : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
+            : collection === "disciplinaryRecords"
+              ? `Nao foi possivel salvar a advertencia/suspensao. ${error?.message || "Confira se a tabela hub_advertencias_suspensoes existe."} Rode o arquivo postgres/migrations/20260812000300_create_advertencias_suspensoes.sql no PostgreSQL para criar a tabela.`
+              : collection === "documentos"
+                ? `Nao foi possivel salvar o documento. ${error?.message || "Confira as colunas da tabela hub_documentos (tipo, resumo, detalhes, dados, created_by)."}`
+                : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
     showModal("Erro ao Salvar", message, "error");
     return false;
   }
@@ -5827,13 +5992,6 @@ async function deleteChatMessageRecord(id) {
   }
 }
 
-/**
- * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente.
- * Sem uma política de Row Level Security (RLS) no PostgreSQL, um usuário autenticado
- * poderia, teoricamente, alterar este 'id' para modificar ou deletar um registro
- * que não lhe pertence.
- * SOLUÇÃO: Implemente políticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuário só possa operar nos registros que ele tem permissão (ex: que ele mesmo criou).
- */
 async function updateItem(collection, id, values) {
   if (!id) return false;
 
@@ -5860,6 +6018,14 @@ if (collection === "eventos") {
       delete payload.created_by;
     }
     if (collection === "vagas") {
+      delete payload.created_by;
+    }
+    if (collection === "documentos") {
+      delete payload.created_by;
+      payload.updated_by = values.updatedBy || getCurrentUserName();
+      payload.updated_at = new Date().toISOString();
+    }
+    if (collection === "disciplinaryRecords") {
       delete payload.created_by;
     }
     const { data: updated, error } = await postgresClient
@@ -5960,13 +6126,6 @@ if (collection === "eventos") {
   }
 }
 
-/**
- * [ALERTA DE SEGURANÇA - IDOR] Esta função recebe um 'id' diretamente do cliente para exclusão.
- * Sem uma política de Row Level Security (RLS) no PostgreSQL, um usuário autenticado
- * poderia, teoricamente, alterar este 'id' para deletar um registro
- * que não lhe pertence.
- * SOLUÇÃO: Implemente políticas de RLS na tabela correspondente no PostgreSQL para garantir que um usuário só possa deletar os registros que ele tem permissão.
- */
 async function deleteItem(collection, id) {
   if (!id) return false;
 
@@ -6232,8 +6391,6 @@ async function updateCurrentAccount(currentPassword, newName, newPassword, newFo
     const persistedUser = { ...updatedUser, ...saved };
     upsertLocalUser(persistedUser);
 
-    // Rendering prioritizes this in-memory profile over the local user list.
-    // Keep it in sync so a newly uploaded avatar is shown immediately.
     currentUserProfile = { ...(currentUserProfile || {}), ...persistedUser };
     if (newName) storageService.setSessionItem(`${SESSION_KEY}-user`, getLoginDisplayName(updatedUser.nome));
     setSyncStatus("PostgreSQL EIXO online", true);
@@ -6711,8 +6868,7 @@ function renderCards(targetId, items, template) {
 }
 
 function activateView(viewId) {
-  // Barra qualquer caminho alternativo para uma aba fora do escopo: atalho de
-  // teclado, cartao do painel, link interno ou chamada direta pelo console.
+
   if (isAuthenticated() && !isPublicPage() && !canAccessView(viewId)) {
     if (viewId !== "dashboard" && canAccessView("dashboard")) activateView("dashboard");
     return;
@@ -7072,13 +7228,13 @@ function appendBytes(target, bytes) {
   bytes.forEach((byte) => target.push(byte));
 }
 
-function createZipBlob(files) {
+function createZipBlob(files, mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
   const encoder = new TextEncoder();
   const output = [];
   const central = [];
   files.forEach((file) => {
     const nameBytes = encoder.encode(file.name);
-    const contentBytes = encoder.encode(file.content);
+    const contentBytes = typeof file.content === "string" ? encoder.encode(file.content) : file.content;
     const crc = crc32(contentBytes);
     const offset = output.length;
     writeUint32(output, 0x04034b50);
@@ -7124,7 +7280,7 @@ function createZipBlob(files) {
   writeUint32(output, central.length);
   writeUint32(output, centralOffset);
   writeUint16(output, 0);
-  return new Blob([new Uint8Array(output)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  return new Blob([new Uint8Array(output)], { type: mimeType });
 }
 
 function createVtReportXlsxBlob(rows) {
@@ -7207,13 +7363,19 @@ function getDisciplinaryTypeLabel(type) {
   return String(type || "").toLowerCase() === "suspensao" ? "Suspensao" : "Advertencia";
 }
 
+function getActiveDisciplinaryTab() {
+  return document.querySelector("[data-disciplinary-doc].active")?.dataset.disciplinaryDoc || "";
+}
+
 function getFilteredDisciplinaryRecords() {
+  const tipoFilter = getActiveDisciplinaryTab();
   const nameFilter = String(document.getElementById("disciplinary-filter-name")?.value || "").trim().toLowerCase();
   const observationsFilter = String(document.getElementById("disciplinary-filter-observations")?.value || "").trim().toLowerCase();
   const monthFilter = document.getElementById("disciplinary-filter-date")?.value || "";
   const unitFilter = document.getElementById("disciplinary-filter-unit")?.value || "";
 
   return (data.disciplinaryRecords || []).filter((item) => {
+    if (String(item.tipo || "advertencia").toLowerCase() !== tipoFilter) return false;
     if (nameFilter && !String(item.colaborador || "").toLowerCase().includes(nameFilter)) return false;
     if (observationsFilter && !String(item.motivo || "").toLowerCase().includes(observationsFilter)) return false;
     if (monthFilter && String(item.dataMedida || "").slice(5, 7) !== monthFilter) return false;
@@ -7235,7 +7397,15 @@ function updateDisciplinaryFilterClearButton() {
 
 function renderDisciplinaryRecords() {
   updateDisciplinaryFilterClearButton();
-  renderCards("disciplinary-records", getFilteredDisciplinaryRecords(), (item) => `
+  const records = getFilteredDisciplinaryRecords();
+  const emptyState = document.getElementById("disciplinary-empty-state");
+  const registrosPanel = document.getElementById("disciplinary-registros-panel");
+  const hasActiveTab = Boolean(getActiveDisciplinaryTab());
+  if (emptyState) emptyState.hidden = hasActiveTab;
+
+  if (registrosPanel) registrosPanel.hidden = !hasActiveTab || !records.length;
+
+  renderCards("disciplinary-records", records, (item) => `
     <article class="item-card">
       <div class="item-topline">
         <p class="item-title">${escapeHtml(item.colaborador || "Funcionario nao informado")}</p>
@@ -7244,9 +7414,13 @@ function renderDisciplinaryRecords() {
       <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Nao informada")}</p>
       <p><strong>Data:</strong> ${escapeHtml(formatEventDate(item.dataMedida || ""))}</p>
       <p><strong>Local:</strong> ${escapeHtml(item.local || "Nao informado")}</p>
+      ${String(item.tipo || "").toLowerCase() === "suspensao" ? `<p><strong>Dias de suspensao:</strong> ${escapeHtml(item.diasSuspensao || "Nao informado")}</p>` : ""}
       <p><strong>Motivo:</strong> ${escapeHtml(item.motivo || "Nao informado")}</p>
       <p class="item-meta">${escapeHtml(item.createdAt || "")} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</p>
       <div class="job-actions">
+        <button class="secondary-link" type="button" data-action="gerar-documento-disciplinary" data-id="${escapeHtml(item.id)}">Gerar documento</button>
+        ${item.arquivoUrl ? `<button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-medidas-disciplinares" data-private-storage-path="${escapeHtml(item.arquivoUrl)}" data-private-storage-name="${escapeHtml(item.arquivoNome || "anexo")}">Ver anexo</button>` : ""}
+        <button class="secondary-link" type="button" data-action="editar-disciplinary" data-id="${escapeHtml(item.id)}">Editar</button>
         <button class="danger-button" type="button" data-action="excluir-disciplinary" data-id="${escapeHtml(item.id)}">Deletar</button>
       </div>
     </article>
@@ -7310,6 +7484,159 @@ function createDisciplinaryReportXlsxBlob(rows) {
     { name: "xl/styles.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2F7D6D"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` },
     { name: "xl/worksheets/sheet1.xml", content: worksheet },
   ]);
+}
+
+function readZipEntries(buffer) {
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+  let eocdOffset = -1;
+  for (let index = bytes.length - 22; index >= 0; index -= 1) {
+    if (view.getUint32(index, true) === 0x06054b50) {
+      eocdOffset = index;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error("Modelo de documento invalido.");
+
+  const totalEntries = view.getUint16(eocdOffset + 10, true);
+  let centralOffset = view.getUint32(eocdOffset + 16, true);
+  const decoder = new TextDecoder();
+  const entries = [];
+  for (let index = 0; index < totalEntries; index += 1) {
+    if (view.getUint32(centralOffset, true) !== 0x02014b50) throw new Error("Modelo de documento invalido.");
+    const method = view.getUint16(centralOffset + 10, true);
+    const compressedSize = view.getUint32(centralOffset + 20, true);
+    const nameLength = view.getUint16(centralOffset + 28, true);
+    const extraLength = view.getUint16(centralOffset + 30, true);
+    const commentLength = view.getUint16(centralOffset + 32, true);
+    const localHeaderOffset = view.getUint32(centralOffset + 42, true);
+    const name = decoder.decode(bytes.subarray(centralOffset + 46, centralOffset + 46 + nameLength));
+    entries.push({ name, method, compressedSize, localHeaderOffset });
+    centralOffset += 46 + nameLength + extraLength + commentLength;
+  }
+
+  return entries.map((entry) => {
+    const localNameLength = view.getUint16(entry.localHeaderOffset + 26, true);
+    const localExtraLength = view.getUint16(entry.localHeaderOffset + 28, true);
+    const dataStart = entry.localHeaderOffset + 30 + localNameLength + localExtraLength;
+    return {
+      name: entry.name,
+      method: entry.method,
+      bytes: bytes.slice(dataStart, dataStart + entry.compressedSize),
+    };
+  });
+}
+
+async function inflateZipEntry(entry) {
+  if (entry.method === 0) return entry.bytes;
+  if (entry.method !== 8) throw new Error(`Metodo de compactacao do modelo nao suportado (${entry.method}).`);
+  if (typeof DecompressionStream === "undefined") {
+    throw new Error("Atualize o navegador (Chrome, Edge ou Firefox recentes) para gerar este documento.");
+  }
+  const stream = new Blob([entry.bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+function escapeDocumentXmlText(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+const DISCIPLINARY_TEMPLATE_FILES = [
+  "01_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0001_17.docx",
+  "02_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0003_89.docx",
+  "03_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0004_60.docx",
+  "04_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0011_99.docx",
+  "05_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0013_50.docx",
+  "06_Advertencia_DPA_COMERCIO_DE_PNEUS_LTDA_CNPJ_10_432_113_0001_10.docx",
+  "07_Advertencia_DPA_COMERCIO_DE_PNEUS_LTDA_CNPJ_10_432_113_0002_09.docx",
+  "08_Advertencia_JPL_COMERCIO_DE_AUTOPECAS_LTDA_BESTEN_CNPJ_05_218_575_0001_07.docx",
+  "09_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0005_40.docx",
+  "10_Advertencia_GCS_COMERCIO_DE_PNEUS_LTDA_ACHEI_CNPJ_05_326_792_0001_02.docx",
+  "11_Advertencia_GCS_COMERCIO_DE_PNEUS_LTDA_ACHEI_CNPJ_05_326_792_0007_06.docx",
+  "12_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0009_74.docx",
+  "13_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0008_93.docx",
+  "14_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0007_02.docx",
+  "15_Advertencia_FAC_CNPJ_31_708_683_0001_58.docx",
+  "16_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0012_70.docx",
+  "17_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0014_31.docx",
+  "18_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0015_12.docx",
+  "19_Advertencia_TRINCA_CNPJ_56_067_067_0001_06.docx",
+  "20_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0016_01.docx",
+  "21_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0019_46.docx",
+  "22_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0017_84.docx",
+];
+
+function getDisciplinaryTemplateFile(unidade) {
+  const index = UNIT_OPTIONS.indexOf(getCanonicalUnit(unidade));
+  return index >= 0 ? DISCIPLINARY_TEMPLATE_FILES[index] : null;
+}
+
+function buildMotivoRunsXml(motivo) {
+  const lines = String(motivo || "").split(/\r\n|\r|\n/).map((line) => escapeDocumentXmlText(line));
+  return lines
+    .map((line) => `<w:t xml:space="preserve">${line}</w:t>`)
+    .join("<w:br/></w:r><w:r>");
+}
+
+function buildDisciplinaryDocumentXml(xml, record) {
+  const isSuspensao = String(record.tipo || "").toLowerCase() === "suspensao";
+  const nome = escapeDocumentXmlText(record.colaborador);
+  const motivoRuns = buildMotivoRunsXml(record.motivo);
+  const local = escapeDocumentXmlText(record.local);
+  const [year, month, day] = String(record.dataMedida || "").split("-");
+  const dia = day ? String(Number(day)) : "____";
+  const mesExtenso = month ? (VT_MONTH_NAMES[Number(month) - 1] || "").toLowerCase() : "__________";
+  const ano = year || "______";
+
+  const motivoBlankLines = /MOTIVO: <\/w:t><\/w:r><w:r><w:t>_+<\/w:t><w:br\/><\/w:r><w:r><w:t>_+<\/w:t><w:br\/><\/w:r><w:r><w:t>_+<\/w:t><\/w:r>/;
+  let filled = xml
+    .replace(/NOME DO EMPREGADO: _+/, `NOME DO EMPREGADO: ${nome}`)
+    .replace(motivoBlankLines, `MOTIVO: </w:t></w:r><w:r>${motivoRuns}</w:r>`)
+    .replace(/MOTIVO: <\/w:t><\/w:r><w:r><w:t>_+/, `MOTIVO: </w:t></w:r><w:r>${motivoRuns}`)
+    .replace(/Local e data: _+, _+ de _+ de _+\./, `Local e data: ${local}, ${dia} de ${mesExtenso} de ${ano}.`);
+
+  if (isSuspensao) {
+    const dias = escapeDocumentXmlText(String(record.diasSuspensao || "").replace(/\D/g, "") || "___");
+    filled = filled
+      .replace(/AVISO DE ADVERT[ÊE]NCIA AO EMPREGADO/, "AVISO DE SUSPENSÃO AO EMPREGADO")
+      .replace(/identificado\(a\) ADVERTIDO\(A\) pelo/, `identificado(a) SUSPENSO(A) POR ${dias} DIA(S) pelo`);
+  }
+
+  return filled;
+}
+
+async function gerarDocumentoDisciplinary(id) {
+  const record = (data.disciplinaryRecords || []).find((item) => String(item.id) === String(id));
+  if (!record) return;
+
+  const templateFile = getDisciplinaryTemplateFile(record.unidade);
+  if (!templateFile) {
+    showModal("Sem modelo cadastrado", "Nao ha modelo de documento para a unidade deste registro.", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(`assets/modelos-advertencia/${templateFile}`);
+    if (!response.ok) throw new Error("Nao foi possivel carregar o modelo do documento.");
+    const templateBuffer = await response.arrayBuffer();
+    const entries = readZipEntries(templateBuffer);
+
+    const files = await Promise.all(entries.map(async (entry) => {
+      const inflated = await inflateZipEntry(entry);
+      if (entry.name !== "word/document.xml") return { name: entry.name, content: inflated };
+      const xml = new TextDecoder().decode(inflated);
+      return { name: entry.name, content: new TextEncoder().encode(buildDisciplinaryDocumentXml(xml, record)) };
+    }));
+
+    const blob = createZipBlob(files, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    downloadBlob(blob, safeDownloadName(`${record.tipo}-${record.colaborador}`, "docx"));
+  } catch (error) {
+    console.error("Erro ao gerar documento disciplinar:", error);
+    showModal("Erro ao gerar documento", error.message || "Nao foi possivel gerar o documento.", "error");
+  }
 }
 
 function gerarRelatorioDisciplinary(scope = "filtered") {
@@ -7448,8 +7775,9 @@ function renderDocumentosContratados() {
       </div>
       <p><strong>CPF:</strong> ${escapeHtml(formatCpf(item.cpf || ""))}</p>
       <p><strong>Telefone:</strong> ${escapeHtml(formatPhone(item.telefone || "") || "Não informado")}</p>
+      <p><strong>E-mail:</strong> ${escapeHtml(item.email || "Não informado")}</p>
       <p><strong>Origem:</strong> ${escapeHtml(getContractorSourceLabel(item.origemHtml, item.empresa) || "Não informada")}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Enviado por ${escapeHtml(item.nome || "Contratado não informado")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())}</p>
       <div class="contractor-file-list">
         ${formatContractorDocumentList(item.documentos || [])}
       </div>
@@ -7470,24 +7798,19 @@ function resetVtForm() {
   updateVtCalculation();
 }
 
-/**
- * [ALERTA DE SEGURANÇA] Esta função controla a visibilidade dos elementos da UI
- * com base na role do usuário armazenada no sessionStorage. Um usuário mal-intencionado
- * pode facilmente alterar essa role no console do navegador para obter acesso visual
- * a seções restritas.
- * A segurança real da aplicação NÃO PODE depender desta função. Ela deve ser garantida
- * por políticas de Row Level Security (RLS) no PostgreSQL, que filtram os dados no servidor.
- */
 function applyRoleAccess() {
   if (!isAuthenticated() || isPublicPage() || !document.querySelector(".nav-list")) return;
   refreshCurrentUserRoleFromData();
 
   const chamadosUrls = new Set(["chamados.html", "https://hub-opal-nine.vercel.app/chamados.html"]);
   const denunciaUrls = new Set(["denuncia.html", "https://hub-opal-nine.vercel.app/denuncia.html"]);
+  const feedbacksUrls = new Set(["feedbacks.html", "https://hub-opal-nine.vercel.app/feedbacks.html"]);
   const allowedViews = getAllowedViewsForCurrentUser();
   const allowedExternalUrls = isCashierUser() || isManagerUser()
     ? new Set([...chamadosUrls, ...denunciaUrls])
     : new Set();
+  if (isManagerUser()) feedbacksUrls.forEach((url) => allowedExternalUrls.add(url));
+  if (currentUserMatchesName("maria luisa")) allowedExternalUrls.clear();
 
   document.querySelectorAll(".nav-item").forEach((button) => {
     const allowed = button.dataset.externalUrl
@@ -7506,7 +7829,6 @@ function applyRoleAccess() {
   if (!activeView || !allowedViews.has(activeView.id)) activateView("dashboard");
 }
 
-// Traduz a colecao de dados para a aba correspondente.
 function getViewForCollection(collection) {
   const views = {
     comunicados: "comunicacao",
@@ -7523,11 +7845,11 @@ function getViewForCollection(collection) {
     vtRegistros: "gerenciamento-vt",
     disciplinaryRecords: "advertencias-suspensoes",
     usuarios: "equipe",
+    climaPesquisas: "teste-clima",
   };
   return views[String(collection || "")] || "dashboard";
 }
 
-// Traduz o tipo de item do acompanhamento para a aba correspondente.
 function getDashboardItemView(item = {}) {
   if (item.view) return item.view;
   const kind = String(item.kind || "");
@@ -7622,16 +7944,14 @@ function isDashboardActivityReadForOrdering(item = {}) {
   return isDashboardNotificationRead(item);
 }
 
-// Esconde do painel os cartoes que levam a abas fora do escopo do usuario.
 function applyDashboardScopeToMetricCards() {
   const allowedViews = getAllowedViewsForCurrentUser();
-  const isManager = isManagerUser();
+  const isManager = isRestrictedManagerUser();
   document.querySelectorAll(".metric-card-link[data-view]").forEach((card) => {
-    // Gerente acessa a aba Documentos RH, mas o cartao "Documentos enviados
-    // hoje" nao aparece no painel dele.
+
     let allowed = allowedViews.has(card.dataset.view);
     if (isManager && card.querySelector("#metric-documentos")) allowed = false;
-    // "Chamados abertos hoje" e exclusivo das contas com cargo RH.
+
     if (card.querySelector("#metric-chamados-hoje") && !isRhUser()) allowed = false;
     card.hidden = !allowed;
     card.style.display = allowed ? "" : "none";
@@ -7649,15 +7969,14 @@ function renderDashboard() {
     document.getElementById("metric-comunicados").textContent = unreadRhMessages.length;
   }
   if (document.getElementById("metric-vagas")) {
-    document.getElementById("metric-vagas").textContent = (data.candidaturas || []).filter((item) => isTodayLabel(item.createdAt)).length;
+    document.getElementById("metric-vagas").textContent = (data.candidaturas || []).filter((item) => isTodayDateTimeLabel(item.createdAt)).length;
   }
   const upcomingEvents = getUpcomingEvents();
   if (document.getElementById("metric-eventos")) {
     document.getElementById("metric-eventos").textContent = upcomingEvents.length;
   }
   if (document.getElementById("metric-documentos")) {
-    // O cartao conta apenas os envios do formulario publico de contratados;
-    // documentos internos do RH nao entram nesse numero.
+
     const documentosContratados = canAccessView("documentos-contratados")
       ? (data.documentosContratados || []).filter((item) => !isArchivedRecord(item) && isTodayDateTimeLabel(item.createdAt)).length
       : 0;
@@ -7669,8 +7988,6 @@ function renderDashboard() {
       .length;
   }
 
-  // Mensagens do RH aparecem como um único bloco no acompanhamento.
-  // Quando ficam lidas, não mudam de cor; apenas perdem prioridade para itens novos.
   const accessibleRhMessages = typeof getAccessibleRhMessages === "function" ? getAccessibleRhMessages() : [];
   const sortedRhMessagesNewestFirst = [...accessibleRhMessages]
     .sort((a, b) => getDashboardRecordSortValue(b) - getDashboardRecordSortValue(a));
@@ -7686,6 +8003,8 @@ function renderDashboard() {
     groupedMessages.push({
       kind: "notificacao",
       notificationId: "mensagens-rh",
+
+      dismissKey: `mensagens-rh:${latestMessage.id || messageIds[0] || "vazio"}`,
       messageIds,
       chatMessages: sortedRhMessagesOldestFirst,
       title: "Mensagens do RH",
@@ -7696,7 +8015,7 @@ function renderDashboard() {
         .slice(-20)
         .map((msg) => `${msg.createdAt || "Sem data"} - ${msg.autor || "Equipe"}: ${msg.mensagem || "Nova notificação recebida."}`)
         .join("\n\n"),
-      detailsHeader: "Comunicação RH",
+      detailsHeader: "Comunicação",
       tag: hasUnread ? "Nova" : "Lida",
       date: latestMessage.createdAt,
       dateTime: latestMessage.sortAt || latestMessage.createdAt,
@@ -7772,12 +8091,9 @@ function renderDashboard() {
         };
       })  ];
 
-  // Notificacoes apagadas pela conta somem do acompanhamento em qualquer maquina.
-  // O acompanhamento tambem nao pode revelar pendencia de aba sem acesso: um
-  // gerente nao ve denuncia, chamado nem curriculo aqui.
   const sortedDashboardItems = dashboardItems
     .filter((item) => canAccessView(getDashboardItemView(item)))
-    .filter((item) => !isNotificationDismissed(item.notificationId))
+    .filter((item) => !isNotificationDismissed(item.dismissKey || item.notificationId))
     .map((item, index) => ({ ...item, _sortIndex: index }));
   sortedDashboardItems.sort((a, b) => {
     const aRead = isDashboardActivityReadForOrdering(a);
@@ -7789,8 +8105,6 @@ function renderDashboard() {
   const dashboardPageSize = 3;
   dashboardNotificationOffset = 0;
 
-  // Acompanhamento da tela principal deve exibir somente notificações não lidas.
-  // Quando todas estiverem lidas, a lista fica vazia.
   const unreadDashboardItems = sortedDashboardItems.filter((item) => !isDashboardActivityReadForOrdering(item));
   const visibleDashboardItems = unreadDashboardItems.slice(0, dashboardPageSize);
   allDashboardActivityItems = sortedDashboardItems;
@@ -7951,19 +8265,16 @@ function renderCalendar() {
   renderCards("eventos-list", visibleEvents, (item) => renderCalendarEventCard(item, "article", "calendar-event-manage-block"));
 }
 
-// Logica de abertura de denuncia para leitura e transicao de estado automatica
 async function lerDenuncia(id) {
   const denuncia = data.denuncias.find(item => String(item.id) === String(id));
   if (!denuncia) return;
 
-  // Mostra o relato em formato de modal customizado
   showModal(
     "Visualizacao da Denuncia",
     `Categoria: ${denuncia.categoria}\nRecebida em: ${denuncia.createdAt}\nStatus Atual: ${denuncia.status}\n\nRelato:\n"${denuncia.descricao}"`,
     "info"
   );
 
-  // Se a denúncia ainda constar como Não lida ("Aberta"), movemos para "Lida"
   if (denuncia.status === "Aberta") {
     if (!postgresClient) {
       denuncia.status = "Lida";
@@ -7977,9 +8288,9 @@ async function lerDenuncia(id) {
           .eq("id", id)
           .select()
           .single();
-        
+
         if (error || !updated) throw error || new Error("Nenhuma linha alterada.");
-        
+
         denuncia.status = "Lida";
         saveLocalData();
         renderAll();
@@ -7995,14 +8306,12 @@ async function lerFeedback(id) {
   const feedback = (data.feedbacks || []).find((item) => String(item.id) === String(id));
   if (!feedback) return;
 
-  // Mostra o feedback em formato de modal customizado
   showModal(
     "Visualização do Feedback",
     `Tipo: ${feedback.tipo || "Feedback"}\nIdentificação: ${feedback.autorNome || "Não informado"}\nRecebido em: ${feedback.createdAt || "Hoje"}\n\nMensagem:\n"${feedback.mensagem || ""}"`,
     "info"
   );
 
-  // Se o feedback ainda constar como Não lido ("Novo"), movemos para "Lido"
   if ((feedback.status || "Novo") === "Novo") {
     const success = await updateItem("feedbacks", id, { status: "Lido" });
     if (!success) {
@@ -8278,7 +8587,7 @@ function migrateUserSettingsToCurrentKey(settings) {
       localStorage.setItem(currentKey, JSON.stringify(normalizeUserSettings(settings)));
     }
   } catch {
-    // Mantem o fallback global se o navegador bloquear escrita na chave por usuario.
+
   }
 }
 
@@ -8342,7 +8651,7 @@ function reloadUserSettingsForCurrentUser() {
   try {
     localStorage.setItem(getUserSettingsStorageKey(), JSON.stringify(currentUserSettings));
   } catch {
-    // Mantem as preferências em memoria se o navegador bloquear localStorage.
+
   }
   applyUserSettings();
   renderAccountSettings();
@@ -8627,10 +8936,9 @@ function playUserNotificationSound() {
       try { audioContext.close?.(); } catch (_) {}
     }, 1700);
   } catch {
-    // Sem som quando o navegador bloquear autoplay/audio context.
+
   }
 }
-
 
 const HUB_NOTIFICATION_POPOUT_CONTAINER_ID = "hub-notification-popout-container";
 
@@ -8860,7 +9168,6 @@ function flashHubDocumentTitle(title = "Nova notificação") {
   } catch (_) {}
 }
 
-
 function updateHubAppBadge(count = 0) {
   try {
     if (navigator.setAppBadge && count > 0) {
@@ -8905,10 +9212,10 @@ function showHubCrossPageNotification(title, message, options = {}) {
 
 function getRealtimeNotificationText(collection, item = {}) {
   if (collection === "comunicados") {
-    const author = item.autor || "Comunicação RH";
+    const author = item.autor || "Comunicação";
     const text = getChatMessageText(item.mensagem) || "Nova mensagem recebida.";
     return {
-      title: `Comunicação RH - ${author}`,
+      title: `Comunicação - ${author}`,
       message: text.length > 110 ? `${text.slice(0, 107)}...` : text,
       icon: "\u{1F4AC}",
       type: "mensagem",
@@ -8966,8 +9273,7 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
   if (["usuarios", "eventos", "vtRegistros", "disciplinaryRecords", "malotes", "vagas", "atestados", "quadros"].includes(collection)) return false;
-  // Sem aviso de aba fora do escopo: um gerente nao pode receber o conteudo de
-  // uma denuncia por popup ou notificacao do sistema.
+
   if (!canAccessView(getViewForCollection(collection))) return false;
 
   const signature = [collection, action, item.id || "", item.updatedAt || item.updated_at || item.createdAt || item.created_at || ""].join("|");
@@ -8977,7 +9283,7 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   const author = normalizeLoginName(item.autor || item.createdBy || item.updatedBy || item.solicitante || "");
   const pageIsVisible = document.visibilityState === "visible" && document.hasFocus?.();
   if (collection === "comunicados" && author && author === currentName && pageIsVisible) return false;
-  // Quem abre o chamado nao precisa ser avisado do proprio chamado.
+
   if (collection === "chamados" && author && author === currentName) return false;
 
   lastRealtimeNotificationSignature = signature;
@@ -9105,7 +9411,7 @@ function notifyUnreadRhMessages(count) {
   newUnreadIds.forEach((id) => wasNotificationAlreadyShown(`mensagem-rh-${id}`));
   playUserNotificationSound();
   if (currentUserSettings.desktopNotifications && isBrowserNotificationSupported() && Notification.permission === "granted") {
-    const notification = new Notification("Comunicacao RH", {
+    const notification = new Notification("Comunicação", {
       body: messageText,
       icon: "assets/logo.svg",
       badge: "assets/logo.svg",
@@ -9120,7 +9426,7 @@ function notifyUnreadRhMessages(count) {
     };
   }
 
-  showHubCrossPageNotification("Comunicacao RH", messageText, {
+  showHubCrossPageNotification("Comunicação", messageText, {
     type: "mensagem",
     icon: "\u{1F4AC}",
     tag: "hub-rh-comunicacao",
@@ -9220,8 +9526,24 @@ function applyChatEditingShortcut(key) {
   return false;
 }
 
+function linkifyChatText(html = "") {
+  return html.replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi, (match) => {
+    let url = match;
+    let trail = "";
+    const trailMatch = url.match(/[.,!?;:)\]"'”’]+$/);
+    if (trailMatch) {
+      trail = trailMatch[0];
+      url = url.slice(0, -trail.length);
+    }
+    if (!url) return match;
+    const href = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer nofollow" class="chat-link">${url}</a>${trail}`;
+  });
+}
+
 function renderFormattedChatText(message = "") {
   let html = escapeHtml(message);
+  html = linkifyChatText(html);
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/_([^_]+)_/g, "<em>$1</em>");
   html = html.replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, "<u>$1</u>");
@@ -9283,18 +9605,17 @@ function renderChatChannels() {
     .map((channel) => {
       const unreadCount = getUnreadRhMessages().filter(item => normalizeChatChannel(item.canal) === channel.id).length;
       const badge = unreadCount > 0 ? `<span class="chat-badge">${unreadCount}</span>` : "";
-      
+
       let avatarHtml = "";
       if (channel.isGroup) {
         avatarHtml = `<div class="chat-avatar-fallback"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>`;
       } else if (channel.targetUser) {
-        const onlineClass = isUserOnline(channel.targetUser) ? "is-online" : "";
-        avatarHtml = `<span class="chat-avatar-wrap"><span class="presence-dot ${onlineClass}"></span>${getAuthorAvatar(channel.targetUser, channel.avatarPath)}</span>`;
+        avatarHtml = getAuthorAvatar(channel.targetUser, channel.avatarPath);
       }
 
       return `
-        <button class="channel-item ${channel.id === activeChatChannel ? "active" : ""}" data-chat-channel="${escapeHtml(channel.id)}" type="button">
-          <div class="inline-flex-sm clip-text">
+        <button class="channel-item ${channel.isGroup ? "is-group" : ""} ${channel.id === activeChatChannel ? "active" : ""}" data-chat-channel="${escapeHtml(channel.id)}" type="button">
+          <div class="inline-flex-sm channel-item-body">
             ${avatarHtml}
             <span class="clip-text">${escapeHtml(channel.label)}</span>
           </div>
@@ -9304,7 +9625,6 @@ function renderChatChannels() {
     })
     .join("");
 }
-
 
 function formatChamadoFilterCode(value = "") {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 5);
@@ -9352,9 +9672,27 @@ function getVagasFilterValues() {
   const unidade = String(document.getElementById("vaga-filter-unidade")?.value || "").trim();
   return {
     unidade: normalizeUnitText(unidade) === normalizeUnitText("Unidade") ? "" : unidade,
+    cargo: String(document.getElementById("vaga-filter-cargo")?.value || "").trim(),
     nome: String(document.getElementById("vaga-filter-nome")?.value || "").trim().toLowerCase(),
     cpf: String(document.getElementById("vaga-filter-cpf")?.value || "").replace(/\D/g, ""),
+    comCurriculo: Boolean(document.getElementById("vaga-filter-curriculo")?.checked),
   };
+}
+
+function populateVagaCargoFilterOptions() {
+  const select = document.getElementById("vaga-filter-cargo");
+  if (!select) return;
+  const currentValue = select.value;
+  const cargos = [...new Set((data.vagas || []).map((item) => String(item.cargo || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  select.innerHTML = `<option value="">Cargo</option>` + cargos
+    .map((cargo) => `<option value="${escapeHtml(cargo)}">${escapeHtml(cargo)}</option>`)
+    .join("");
+  if (currentValue && cargos.includes(currentValue)) select.value = currentValue;
+}
+
+function vagaTemCandidaturas(vagaId) {
+  return (data.candidaturas || []).some((c) => String(c.vaga_id || c.vagaId) === String(vagaId));
 }
 
 function getVagaCandidaturas(vagaId, filters = null) {
@@ -9372,7 +9710,9 @@ function filterVagasByCurrentFilters(items = []) {
   const filters = getVagasFilterValues();
   return items.filter((item) => {
     if (filters.unidade && getCanonicalUnit(item.unidade) !== filters.unidade) return false;
+    if (filters.cargo && String(item.cargo || "").trim() !== filters.cargo) return false;
     if ((filters.nome || filters.cpf) && !getVagaCandidaturas(item.id, filters).length) return false;
+    if (filters.comCurriculo && !vagaTemCandidaturas(item.id)) return false;
     return true;
   });
 }
@@ -9381,14 +9721,16 @@ function updateVagasFilterClearButton() {
   const clearButton = document.getElementById("limpar-filtros-vagas");
   if (!clearButton) return;
   const filters = getVagasFilterValues();
-  clearButton.hidden = !Boolean(filters.unidade || filters.nome || filters.cpf);
+  clearButton.hidden = !Boolean(filters.unidade || filters.cargo || filters.nome || filters.cpf || filters.comCurriculo);
 }
 
 function clearVagasFilters() {
-  ["vaga-filter-unidade", "vaga-filter-nome", "vaga-filter-cpf"].forEach((id) => {
+  ["vaga-filter-unidade", "vaga-filter-cargo", "vaga-filter-nome", "vaga-filter-cpf"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
+  const curriculoCheckbox = document.getElementById("vaga-filter-curriculo");
+  if (curriculoCheckbox) curriculoCheckbox.checked = false;
   updateVagasFilterClearButton();
   renderAll();
 }
@@ -9416,6 +9758,7 @@ function safeRenderSection(section, renderFn) {
 }
 
 function renderVagasSection() {
+  populateVagaCargoFilterOptions();
   updateVagasFilterClearButton();
   const vagasFilters = getVagasFilterValues();
   renderCards("vagas-list", filterVagasByCurrentFilters(data.vagas), (item) => {
@@ -9428,12 +9771,13 @@ function renderVagasSection() {
 
     if (candidaturas.length > 0) {
       candidaturasHtml = candidaturas.map(c => `
-        <div class="candidate-row">
+        <div class="candidate-row" data-candidatura-context="curriculo" data-id="${escapeHtml(c.id)}" title="Clique com o botao direito para excluir o curriculo">
           <p>
             <strong>${escapeHtml(c.nome)}</strong>
             <span class="candidate-meta-line">
               <span class="meta-line">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
-              <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
+              <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span><br />
+              <span class="meta-line">Recebido em: ${escapeHtml(c.createdAt || "Nao informado")}</span>
           </p>
           <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver Curriculo</button>
         </div>
@@ -9545,7 +9889,7 @@ function renderDenunciasSection() {
         <span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span>
       </div>
       <p>${escapeHtml(item.descricao.substring(0, 80))}${item.descricao.length > 80 ? '...' : ''}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || "Sistema")}</p>
+      <p class="item-meta">${escapeHtml(item.createdAt)}</p>
       ${archived ? `<div class="job-actions section-top"><button class="secondary-link" type="button" data-action="reabrir-denuncia" data-id="${escapeHtml(item.id)}">Reabrir</button></div>` : ""}
     </article>
   `;
@@ -9571,7 +9915,7 @@ function renderFeedbacksSection() {
 
   const toggleButton = document.getElementById("toggle-archived-feedbacks");
 
-  if (!isFredericoUser()) {
+  if (!hasFredericoLevelAccess()) {
     naoLidosTarget.innerHTML = '<p class="empty-state">Acesso restrito.</p>';
     const lidosTarget = document.getElementById("feedbacks-lidos");
     if (lidosTarget) lidosTarget.innerHTML = "";
@@ -9671,7 +10015,8 @@ function renderAll() {
             <strong>${escapeHtml(c.nome)}</strong>
             <span class="candidate-meta-line">
               <span class="meta-line">CPF: ${escapeHtml(formatCpf(c.cpf))}</span><br />
-              <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span>
+              <span class="meta-line">Telefone: ${escapeHtml(formatPhone(c.telefone) || "Nao informado")}</span><br />
+              <span class="meta-line">Recebido em: ${escapeHtml(c.createdAt || "Nao informado")}</span>
           </p>
           <button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-curriculos" data-private-storage-path="${escapeHtml(c.curriculo_url)}">Ver Currículo</button>
         </div>
@@ -9708,16 +10053,6 @@ function renderAll() {
   }
 }
 
-const PRESENCE_ONLINE_THRESHOLD_MS = 45000;
-
-function isUserOnline(authorName) {
-  const normalized = normalizeLoginName(authorName);
-  if (normalized === normalizeLoginName(getCurrentUserName())) return true;
-  const user = (data.usuarios || []).find((u) => normalizeLoginName(u.nome) === normalized);
-  if (!user?.isOnline || !user.lastSeen) return false;
-  return Date.now() - new Date(user.lastSeen).getTime() < PRESENCE_ONLINE_THRESHOLD_MS;
-}
-
 function getAuthorAvatar(authorName, knownAvatarPath = "") {
   const normalizedAuthor = normalizeLoginName(authorName);
   const user = (data.usuarios || []).find((u) => normalizeLoginName(u.nome) === normalizedAuthor)
@@ -9741,7 +10076,6 @@ function getAuthorAvatar(authorName, knownAvatarPath = "") {
   const initial = String(authorName || "?").charAt(0).toUpperCase();
   return `<div class="chat-avatar-fallback">${initial}</div>`;
 }
-
 
 function renderNotificationChatThread(messages = [], options = {}) {
   const normalizedMessages = Array.isArray(messages) ? [...messages] : [];
@@ -9800,8 +10134,6 @@ function openDashboardActivity(index) {
 
   const hasChatMessages = Array.isArray(item.chatMessages) && item.chatMessages.length;
 
-  // Mensagens abertas pelo acompanhamento principal devem usar exatamente
-  // o mesmo modal/detalhe do painel completo de notificações.
   if (hasChatMessages && window.notificationTracker && typeof window.notificationTracker.openModal === "function") {
     const tracker = window.notificationTracker;
     tracker.openModal();
@@ -9914,10 +10246,14 @@ document.getElementById("dashboard-notifications-prev")?.addEventListener("click
   renderDashboard();
 });
 
+function getActiveDocumentTab() {
+  return document.querySelector("#documentos .doc-tab.active")?.dataset.doc || "";
+}
+
 function getDocumentFilterValues() {
   return {
     nome: String(document.getElementById("document-filter-name")?.value || "").trim().toLowerCase(),
-    tipo: String(document.getElementById("document-filter-type")?.value || "").trim(),
+    tipo: getActiveDocumentTab(),
     cpf: String(document.getElementById("document-filter-cpf")?.value || "").replace(/\D/g, ""),
   };
 }
@@ -9926,7 +10262,7 @@ function updateDocumentFilterClearButton() {
   const clearButton = document.getElementById("clear-document-filters");
   if (!clearButton) return;
   const filters = getDocumentFilterValues();
-  clearButton.hidden = !Boolean(filters.nome || filters.tipo || filters.cpf);
+  clearButton.hidden = !Boolean(filters.nome || filters.cpf);
 }
 
 function getDocumentRecordCpf(item = {}) {
@@ -9948,8 +10284,12 @@ function getCurrentDocumentAccessNames() {
     .filter(Boolean);
 }
 
+function hasFullDocumentAccess() {
+  return isRhUser() || hasFredericoLevelAccess();
+}
+
 function canCurrentUserAccessDocumentRecord(item = {}) {
-  if (isRhUser()) return true;
+  if (hasFullDocumentAccess()) return true;
   if (!isManagerUser()) return true;
   const author = normalizeLoginName(item.createdBy || item.ownerName || item.autor || "");
   return Boolean(author && getCurrentDocumentAccessNames().includes(author));
@@ -9965,7 +10305,7 @@ function filterDocumentRecords(items = []) {
       if (!collaboratorName.includes(filters.nome)) return false;
     }
 
-    if (filters.tipo && item.type !== filters.tipo) return false;
+    if (item.type !== filters.tipo) return false;
 
     if (filters.cpf) {
       const cpf = getDocumentRecordCpf(item);
@@ -9980,10 +10320,16 @@ function renderDocumentRecords() {
   const target = document.getElementById("document-records");
   if (!target) return;
 
-  const records = filterDocumentRecords(documentRecords);
+  const records = filterDocumentRecords(data.documentos || []);
+  const emptyState = document.getElementById("documentos-empty-state");
+  const registrosPanel = document.getElementById("documentos-registros-panel");
+  const hasActiveTab = Boolean(getActiveDocumentTab());
+  if (emptyState) emptyState.hidden = hasActiveTab;
+
+  if (registrosPanel) registrosPanel.hidden = !hasActiveTab || !records.length;
 
   if (!records.length) {
-    target.innerHTML = '<p class="empty-state">Nenhum registro salvo ainda.</p>';
+    target.innerHTML = "";
     return;
   }
 
@@ -9993,22 +10339,21 @@ function renderDocumentRecords() {
         <div class="item-topline">
           <p class="item-title">${escapeHtml(documentLabels[item.type] || item.type)}</p>
           <div>
-            <span class="tag">${escapeHtml(item.createdAt)}</span>
             <button type="button" class="tag tag-button teal-tag-button" data-action="baixar-documento-rh" data-id="${item.id}">Gerar documento</button>
             <button type="button" class="tag tag-button teal-tag-button" data-action="editar-documento" data-id="${item.id}">Editar</button>
             <button type="button" class="tag alert tag-button" data-action="excluir-documento" data-id="${item.id}">Excluir</button>
           </div>
         </div>
         <p>${escapeHtml(item.summary)}</p>
-        <p class="item-meta">${escapeHtml(item.details)}</p>
-        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}${item.updatedAt ? ` em ${escapeHtml(item.updatedAt)}` : ""}</p>
+        <p class="item-meta">${escapeHtml(item.updatedAt || item.createdAt)}</p>
+        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}</p>
       </article>
     `)
     .join("");
 }
 
 function getAccessibleDocumentRecord(id) {
-  const doc = documentRecords.find((item) => String(item.id) === String(id));
+  const doc = (data.documentos || []).find((item) => String(item.id) === String(id));
   if (!doc || !canCurrentUserAccessDocumentRecord(doc)) return null;
   return doc;
 }
@@ -10031,6 +10376,7 @@ function renderChat(options = {}) {
   const pollButton = document.getElementById("create-poll-button");
   const filterInput = document.getElementById("chat-message-filter");
   const pollMenuOption = document.querySelector('[data-attach-type="poll"]');
+  const chatForm = document.getElementById("chat-form");
   if (!activeChannel) {
     clearChatMessageFilter();
     if (title) title.textContent = "Comunicação interna";
@@ -10053,14 +10399,21 @@ function renderChat(options = {}) {
       fileButton.disabled = true;
       fileButton.classList.add("disabled");
     }
+    if (chatForm) chatForm.hidden = true;
     closeChatAttachMenu();
     closeChatEmojiMenu();
-    target.innerHTML = '<p class="empty-state">Selecione um canal de comunicação para visualizar as mensagens.</p>';
+    target.innerHTML = `
+      <div class="chat-empty-state chat-empty-state-lg">
+        <img src="assets/logo.svg" alt="HUB" />
+        <strong>HUB</strong>
+      </div>
+    `;
     return;
   }
 
   if (title) title.textContent = activeChannel.label;
   if (subtitle) subtitle.textContent = activeChannel.subtitle;
+  if (chatForm) chatForm.hidden = false;
   if (messageInput) {
     messageInput.placeholder = isGeneralChatChannel(activeChannel.id) ? `Escreva em ${activeChannel.label}` : `Mensagem para ${activeChannel.label}`;
     messageInput.disabled = false;
@@ -10081,7 +10434,6 @@ function renderChat(options = {}) {
     fileButton.disabled = false;
     fileButton.classList.remove("disabled");
   }
-
 
   const normalizedFilter = normalizeSettingsText(chatMessageFilterQuery);
   const messages = mergeLocalChatMessages(data.comunicados || [], data.comunicados || []).filter((item) => {
@@ -10422,7 +10774,15 @@ document.querySelectorAll(".nav-item, [data-view]").forEach((button) => {
 document.getElementById("mobile-menu-toggle")?.addEventListener("click", toggleMobileMenu);
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeMobileMenu();
+  if (event.key === "Escape") {
+    closeMobileMenu();
+    if (document.getElementById("documentos")?.classList.contains("active") && getActiveDocumentTab()) {
+      deselectActiveDocumentTab();
+    }
+    if (document.getElementById("advertencias-suspensoes")?.classList.contains("active") && getActiveDisciplinaryTab()) {
+      deselectActiveDisciplinaryTab();
+    }
+  }
 });
 
 window.addEventListener("resize", () => {
@@ -10483,21 +10843,19 @@ document.getElementById("limpar-filtros-chamados")?.addEventListener("click", ()
 });
 
 document.getElementById("vaga-filter-unidade")?.addEventListener("change", renderAll);
+document.getElementById("vaga-filter-cargo")?.addEventListener("change", renderAll);
 document.getElementById("vaga-filter-nome")?.addEventListener("input", renderAll);
 document.getElementById("vaga-filter-cpf")?.addEventListener("input", (event) => {
   event.currentTarget.value = formatCpf(event.currentTarget.value);
   renderAll();
 });
+document.getElementById("vaga-filter-curriculo")?.addEventListener("change", renderAll);
 document.getElementById("limpar-filtros-vagas")?.addEventListener("click", () => {
   clearVagasFilters();
   renderAll();
 });
 
 document.getElementById("document-filter-name")?.addEventListener("input", () => {
-  renderDocumentRecords();
-  updateDocumentFilterClearButton();
-});
-document.getElementById("document-filter-type")?.addEventListener("change", () => {
   renderDocumentRecords();
   updateDocumentFilterClearButton();
 });
@@ -10508,7 +10866,7 @@ document.getElementById("document-filter-cpf")?.addEventListener("input", (event
   updateDocumentFilterClearButton();
 });
 document.getElementById("clear-document-filters")?.addEventListener("click", () => {
-  ["document-filter-name", "document-filter-type", "document-filter-cpf"].forEach((id) => {
+  ["document-filter-name", "document-filter-cpf"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
@@ -10549,12 +10907,10 @@ document.getElementById("clear-public-vaga-filters")?.addEventListener("click", 
   renderPublicVagas();
 });
 
-
 document.getElementById("toggle-archived-chamados")?.addEventListener("click", () => {
   showArchivedChamados = !showArchivedChamados;
   renderAll();
 });
-
 
 document.getElementById("toggle-archived-denuncias")?.addEventListener("click", () => {
   showArchivedDenuncias = !showArchivedDenuncias;
@@ -10578,22 +10934,37 @@ document.getElementById("excluir-arquivados-feedbacks")?.addEventListener("click
   excluirFeedbacksArquivados();
 });
 
-document.querySelectorAll(".doc-tab").forEach((button) => {
+function cancelActiveDocumentEditing() {
+  if (!window.editingDocId) return;
+  window.editingDocId = null;
+  document.querySelectorAll("[data-doc-form]").forEach(form => {
+    form.reset();
+    const btn = form.querySelector("button[type='submit']");
+    if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+  });
+}
+
+function deselectActiveDocumentTab() {
+  document.querySelectorAll("#documentos .doc-tab").forEach((item) => item.classList.remove("active"));
+  document.querySelectorAll("#documentos .doc-view").forEach((view) => view.classList.remove("active"));
+  cancelActiveDocumentEditing();
+  renderDocumentRecords();
+  updateDocumentFilterClearButton();
+}
+
+document.querySelectorAll("#documentos .doc-tab").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
-    document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
+    document.querySelectorAll("#documentos .doc-tab").forEach((item) => item.classList.remove("active"));
+    document.querySelectorAll("#documentos .doc-view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
     document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
 
-    // Cancela a edição se o usuário trocar de aba de documento
-    if (window.editingDocId) {
-      window.editingDocId = null;
-      document.querySelectorAll("[data-doc-form]").forEach(form => {
-        form.reset();
-        const btn = form.querySelector("button[type='submit']");
-        if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
-      });
+    if (button.dataset.doc) {
+      renderDocumentRecords();
+      updateDocumentFilterClearButton();
     }
+
+    cancelActiveDocumentEditing();
   });
 });
 
@@ -10629,7 +11000,7 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
     }
   });
 
-  formElement.addEventListener("submit", (event) => {
+  formElement.addEventListener("submit", async (event) => {
     event.preventDefault();
     normalizeDocumentDateInputs(event.currentTarget);
     const form = new FormData(event.currentTarget);
@@ -10641,45 +11012,31 @@ document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
       .map(([key, value]) => `${key}: ${value}`)
       .join(" | ");
 
-    let savedDocId;
+    let success;
 
     if (window.editingDocId) {
-      savedDocId = window.editingDocId;
-      // Atualiza o documento existente
-      const index = documentRecords.findIndex(d => d.id === window.editingDocId);
-      if (index > -1) {
-        documentRecords[index] = {
-          ...documentRecords[index],
-          summary: String(collaborator),
-          details: details || "Registro salvo",
-          formData: Object.fromEntries(entries),
-          updatedBy: getCurrentUserName(),
-          updatedAt: todayLabel(),
-          updatedSortAt: new Date().toISOString(),
-        };
+      success = await updateItem("documentos", window.editingDocId, {
+        summary: String(collaborator),
+        details: details || "Registro salvo",
+        formData: Object.fromEntries(entries),
+        updatedBy: getCurrentUserName(),
+      });
+      if (success) {
+        window.editingDocId = null;
+        const btn = event.currentTarget.querySelector("button[type='submit']");
+        if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
       }
-      window.editingDocId = null;
-      const btn = event.currentTarget.querySelector("button[type='submit']");
-      if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
     } else {
-      savedDocId = generateUUID();
-      // Cria um novo documento
-      documentRecords.unshift({
-        id: savedDocId,
+      success = await addItem("documentos", {
         type: event.currentTarget.dataset.docForm,
         summary: String(collaborator),
         details: details || "Registro salvo",
         formData: Object.fromEntries(entries),
         createdBy: getCurrentUserName(),
-        createdAt: todayLabel(),
-        sortAt: new Date().toISOString(),
       });
     }
 
-    saveDocumentRecords();
-    renderDocumentRecords();
-
-    event.currentTarget.reset();
+    if (success) event.currentTarget.reset();
   });
 });
 
@@ -10800,12 +11157,11 @@ if (chatForm) {
     chatForm.requestSubmit();
   });
 
-  // Garante que Enter em qualquer elemento do formulario tambem envia.
   chatForm.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (!currentUserSettings.enterToSend && !event.ctrlKey) return;
-    if (event.target === chatMessageInput) return; // já tratado acima
-    if (event.target.tagName === "BUTTON") return; // Deixa botoes funcionarem normalmente.
+    if (event.target === chatMessageInput) return;
+    if (event.target.tagName === "BUTTON") return;
     event.preventDefault();
     chatForm.requestSubmit();
   });
@@ -10842,7 +11198,6 @@ if (chatForm) {
     const clientMutationId = generateUUID();
     beginChatMutation();
 
-    // -- OTIMISMO: mostra a mensagem imediatamente --------------------------
     const pendingMessages = files.length
       ? files.map((file, index) => {
         const attachmentType = getChatFileMimeType(file);
@@ -10874,7 +11229,7 @@ if (chatForm) {
     pendingMessages.forEach((item) => markChatMessageAsLocalEcho(item));
     data.comunicados = mergeLocalChatMessages([...pendingMessages, ...(data.comunicados || [])], data.comunicados);
     renderChat({ skipPostRender: true });
-    // Limpa o formulário imediatamente
+
     formElement.reset();
     clearChatSelectedFile();
     window.setTimeout(() => {
@@ -10884,7 +11239,7 @@ if (chatForm) {
 
     window.setTimeout(async () => {
     try {
-    // -- UPLOAD de arquivos em background ----------------------------------
+
     const uploadedFiles = [];
     try {
       for (const file of files) {
@@ -10894,7 +11249,7 @@ if (chatForm) {
       }
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
-      // Remove mensagens otimistas em caso de falha
+
       pendingMessages.forEach((item) => {
         sendChatRealtimeBroadcast("chat", { action: "delete", id: item.id });
       });
@@ -10992,10 +11347,14 @@ if (maloteForm) {
     const typeSelect = event.target.closest("[data-item-type-select]");
     if (!typeSelect) return;
     const row = typeSelect.closest(".epi-row");
-    const nameSelect = row?.querySelector("[data-item-select], [data-epi-select]");
-    const sizeSelect = row?.querySelector('[name="epi_tamanho[]"]');
-    if (nameSelect) nameSelect.innerHTML = renderItemNameOptions(typeSelect.value, "");
-    if (sizeSelect) sizeSelect.innerHTML = renderItemSizeOptions(typeSelect.value, sizeSelect.value, nameSelect?.value || "");
+    const fieldsContainer = row?.querySelector("[data-epi-row-fields]");
+    if (fieldsContainer) fieldsContainer.innerHTML = renderEpiRowFields(typeSelect.value, {});
+  });
+
+  document.getElementById("epi-list")?.addEventListener("input", (event) => {
+    const cpfInput = event.target.closest('[name="cracha_cpf[]"]');
+    if (!cpfInput) return;
+    cpfInput.value = formatCpf(cpfInput.value);
   });
 
   document.getElementById("epi-list")?.addEventListener("change", (event) => {
@@ -11067,7 +11426,6 @@ if (vagaForm) {
     const payload = {
       cargo: form.get("cargo"),
       unidade: form.get("unidade"),
-      projeto: "",
       descricao: form.get("descricao"),
       requisitos: form.get("requisitos"),
       status: form.get("status"),
@@ -11115,7 +11473,6 @@ if (eventoForm) {
     });
   };
 
-  // inicializa o campo de data com màscara (caso tenha valor default)
   const eventoDataInput = eventoForm.elements.data;
   if (eventoDataInput) {
     eventoDataInput.value = formatEventoDate(eventoDataInput.value);
@@ -11125,7 +11482,7 @@ if (eventoForm) {
       const prev = input.value;
       const next = formatEventoDate(prev);
       input.value = next;
-      // reposiciona cursor de forma inteligente
+
       const diff = next.length - prev.length;
       if (diff !== 0) input.setSelectionRange(pos + diff, pos + diff);
       input.setCustomValidity("");
@@ -11138,7 +11495,6 @@ if (eventoForm) {
     const form = new FormData(formElement);
     const id = form.get("id") || formElement.dataset.editEventId || "";
 
-    // converte dd/mm/aaaa ? yyyy-mm-dd para salvar
     const dataDisplay = String(form.get("data") || "");
     const dataIso = eventoDateToIso(dataDisplay);
     if (!dataIso) {
@@ -11292,28 +11648,89 @@ document.getElementById("limpar-filtros-vt")?.addEventListener("click", () => {
   renderVtRegistros();
 });
 
-document.querySelectorAll("[data-disciplinary-doc]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const targetDoc = button.dataset.disciplinaryDoc;
-    document.querySelectorAll("[data-disciplinary-doc]").forEach((tab) => tab.classList.toggle("active", tab === button));
-    document.querySelectorAll(".disciplinary-view").forEach((view) => {
-      view.classList.toggle("active", view.id === `disciplinary-${targetDoc}`);
-    });
+function deselectActiveDisciplinaryTab() {
+  document.querySelectorAll("[data-disciplinary-doc]").forEach((tab) => tab.classList.remove("active"));
+  document.querySelectorAll(".disciplinary-view").forEach((view) => view.classList.remove("active"));
+  renderDisciplinaryRecords();
+}
+
+function activateDisciplinaryTab(type) {
+  document.querySelectorAll("[data-disciplinary-doc]").forEach((tab) => tab.classList.toggle("active", tab.dataset.disciplinaryDoc === type));
+  document.querySelectorAll(".disciplinary-view").forEach((view) => {
+    view.classList.toggle("active", view.id === `disciplinary-${type}`);
   });
+  renderDisciplinaryRecords();
+}
+
+document.querySelectorAll("[data-disciplinary-doc]").forEach((button) => {
+  button.addEventListener("click", () => activateDisciplinaryTab(button.dataset.disciplinaryDoc));
 });
+
+function validateDisciplinaryAttachment(file) {
+  if (!file || !file.name) return null;
+  if (file.size > DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES) return "O anexo deve ter ate 3 MB.";
+  if (!DISCIPLINARY_ATTACHMENT_ALLOWED_MIME_TYPES.has(file.type)) return "Anexe somente imagem, PDF ou arquivo Word.";
+  return null;
+}
+
+async function uploadDisciplinaryAttachment(file) {
+  const path = `medidas-disciplinares/${generateUUID()}/${safePublicFileName(file.name || "anexo")}`;
+  await uploadPublicFile(file, path);
+  return { name: file.name || "anexo", size: file.size || 0, type: file.type || "application/octet-stream", url: path };
+}
+
+function updateDisciplinaryFileLabel(input, overrideName) {
+  const field = input?.closest("[data-disciplinary-anexo-field]");
+  const label = field?.querySelector(".disciplinary-file-name");
+  if (!label) return;
+  const file = input.files?.[0];
+  label.textContent = file?.name || overrideName || label.dataset.emptyLabel || "Nenhum arquivo escolhido";
+}
 
 document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
   const unitField = formElement.elements.unidade;
   const localField = formElement.elements.local;
   unitField?.addEventListener("change", () => {
     const city = getUnitCity(unitField.value);
-    if (localField && city) localField.value = city;
+
+    if (localField) localField.value = city;
+  });
+
+  formElement.querySelectorAll(".disciplinary-file-input").forEach((input) => {
+    input.addEventListener("change", () => updateDisciplinaryFileLabel(input));
   });
 
   formElement.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(formElement);
     const tipo = formElement.dataset.disciplinaryForm || "advertencia";
+    const diasSuspensao = String(form.get("dias_suspensao") || "").trim();
+    if (tipo === "suspensao" && (!diasSuspensao || Number(diasSuspensao) < 1)) {
+      showModal("Dias obrigatorios", "Informe a quantidade de dias de suspensao.", "error");
+      return;
+    }
+    const file = form.get("anexo");
+    const fileError = validateDisciplinaryAttachment(file);
+    if (fileError) {
+      showModal("Anexo invalido", fileError, "error");
+      return;
+    }
+    let anexo = null;
+    if (file && file.name) {
+      try {
+        anexo = await uploadDisciplinaryAttachment(file);
+      } catch (error) {
+        showModal("Erro no anexo", error?.message || "Nao foi possivel enviar o anexo.", "error");
+        return;
+      }
+    }
+    const id = String(form.get("id") || "").trim();
+    if (id && !anexo) {
+      const existing = (data.disciplinaryRecords || []).find((item) => String(item.id) === id);
+      if (existing?.arquivoUrl) {
+        anexo = { name: existing.arquivoNome || "", size: existing.arquivoTamanho || 0, type: existing.arquivoTipo || "", url: existing.arquivoUrl };
+      }
+    }
     const values = {
       tipo,
       colaborador: String(form.get("colaborador") || "").trim(),
@@ -11321,14 +11738,20 @@ document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
       unidade: String(form.get("unidade") || ""),
       local: String(form.get("local") || "").trim(),
       motivo: String(form.get("motivo") || "").trim(),
+      diasSuspensao: tipo === "suspensao" ? diasSuspensao : "",
+      anexo,
     };
-    const success = await addItem("disciplinaryRecords", { ...values, createdBy: getCurrentUserName() });
+    const success = id
+      ? await updateItem("disciplinaryRecords", id, { ...values, updatedBy: getCurrentUserName() })
+      : await addItem("disciplinaryRecords", { ...values, createdBy: getCurrentUserName() });
     if (success) {
-      formElement.reset();
+      resetDisciplinaryForm(formElement);
       if (typeof populateUnitSelects === "function") populateUnitSelects();
-      showModal("Registro salvo", `${getDisciplinaryTypeLabel(tipo)} salva com sucesso.`, "info");
+      showModal(id ? "Registro atualizado" : "Registro salvo", `${getDisciplinaryTypeLabel(tipo)} ${id ? "atualizada" : "salva"} com sucesso.`, "info");
     }
   });
+
+  formElement.querySelector("[data-disciplinary-cancel-edit]")?.addEventListener("click", () => resetDisciplinaryForm(formElement));
 });
 
 document.getElementById("disciplinary-filter-name")?.addEventListener("input", renderDisciplinaryRecords);
@@ -11551,6 +11974,7 @@ document.addEventListener("click", (event) => {
   if (!event.target.closest("#record-context-menu")) document.getElementById("record-context-menu")?.remove();
   if (!event.target.closest("#chat-message-context-menu")) document.getElementById("chat-message-context-menu")?.remove();
   if (!event.target.closest("#event-context-menu")) document.getElementById("event-context-menu")?.remove();
+  if (!event.target.closest("#candidatura-context-menu")) document.getElementById("candidatura-context-menu")?.remove();
   const addListButton = event.target.closest("[data-action='add-board-list']");
   if (addListButton) {
     const board = getActiveBoard();
@@ -11585,6 +12009,12 @@ document.addEventListener("contextmenu", (event) => {
   if (chatMessage) {
     event.preventDefault();
     openChatMessageContextMenu(event, chatMessage.dataset.chatMessageId);
+    return;
+  }
+  const candidaturaRow = event.target.closest("[data-candidatura-context]");
+  if (candidaturaRow && candidaturaRow.dataset.id) {
+    event.preventDefault();
+    openCandidaturaContextMenu(event, candidaturaRow.dataset.id);
     return;
   }
   const recordCard = event.target.closest("[data-record-context]");
@@ -11722,13 +12152,11 @@ document.addEventListener("drop", async (event) => {
 
 document.addEventListener("keydown", handleSettingsKeyboardShortcut);
 
-// Function to initialize account settings form
 function initializeAccountSettingsForm() {
   currentUserSettings = loadUserSettings();
   applyUserSettings();
   renderAccountSettings();
-  
-  // Handle file input changes
+
   const fotoInput = document.getElementById("foto-perfil-input");
   if (fotoInput) {
     fotoInput.addEventListener("change", (e) => {
@@ -11743,38 +12171,36 @@ function initializeAccountSettingsForm() {
   }
 }
 
-// Function to validate account update
 function validateAccountUpdate(newName, fotoFile) {
   const errors = [];
-  
+
   if (newName && newName.length < 2) {
     errors.push("Nome deve ter pelo menos 2 caracteres.");
   }
-  
+
   if (newName && newName.length > 100) {
     errors.push("Nome nao pode ter mais de 100 caracteres.");
   }
-  
+
   if (fotoFile && fotoFile.name) {
     const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
     if (!allowedTypes.has(fotoFile.type)) {
       errors.push("Use uma imagem em formato JPG, PNG ou WEBP.");
     }
-    
+
     const maxSizeMB = 5;
     if (fotoFile.size > maxSizeMB * 1024 * 1024) {
       errors.push(`Imagem nao pode exceder ${maxSizeMB} MB.`);
     }
-    
+
     if (fotoFile.size < 1) {
       errors.push("Arquivo de imagem invalido.");
     }
   }
-  
+
   return { isValid: errors.length === 0, errors };
 }
 
-// Function to set form loading state
 function setAccountFormLoading(isLoading) {
   const submitBtn = document.querySelector("#conta-form .primary-button");
   if (submitBtn) {
@@ -11793,14 +12219,12 @@ if (contaForm) {
     const newName = String(form.get("novo_nome") || "").trim();
     const fotoFile = form.get("foto_perfil");
 
-    // Validate form
     const validation = validateAccountUpdate(newName, fotoFile);
     if (!validation.isValid) {
       showModal("Erro de validacao", validation.errors.join("\n"), "error");
       return;
     }
 
-    // Show loading state
     setAccountFormLoading(true);
 
     let fotoUrl = null;
@@ -11824,7 +12248,7 @@ if (contaForm) {
 
     const success = await updateCurrentAccount("", newName || null, "", fotoUrl);
     setAccountFormLoading(false);
-    
+
     if (success) {
       formElement.reset();
       const filenameLabel = document.getElementById("foto-perfil-filename");
@@ -11836,7 +12260,6 @@ if (contaForm) {
   });
 }
 
-// Initialize account settings when section is visible
 document.querySelectorAll("[data-settings-target]").forEach((button) => {
   if (button.dataset.settingsTarget === "settings-account-panel") {
     button.addEventListener("click", () => {
@@ -11845,7 +12268,6 @@ document.querySelectorAll("[data-settings-target]").forEach((button) => {
   }
 });
 
-// Initialize on page load
 initializeAccountSettingsForm();
 
 const candidaturaForm = document.getElementById("candidatura-form");
@@ -11931,16 +12353,31 @@ if (contratadoDocForm) {
     button.closest(".contractor-document-field")?.remove();
   });
 
-  contractorPasswordForm?.addEventListener("submit", (event) => {
+  contractorPasswordForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const password = String(form.get("senha_acesso") || "");
-    const expectedPassword = String(contractorLayout?.dataset.contractorPassword || "");
-    if (!matchesContractorAccessPassword(password, expectedPassword)) {
-      showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
+    const password = String(form.get("senha_acesso") || "").trim();
+    const empresa = String(contractorLayout?.dataset.contractorCompany || "");
+    const submitButton = contractorPasswordForm.querySelector("button[type='submit']");
+    if (submitButton) submitButton.disabled = true;
+    try {
+      const response = await fetch("/api/contractor-documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verify: true, empresa, accessPassword: password }),
+      });
+      if (!response.ok) {
+        showModal("Senha incorreta", "A senha informada não libera esta página.", "error");
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+      showModal("Erro", "Não foi possível verificar a senha. Verifique sua conexão e tente novamente.", "error");
       return;
+    } finally {
+      if (submitButton) submitButton.disabled = false;
     }
-    contractorAccessPassword = expectedPassword;
+    contractorAccessPassword = password;
     contractorPasswordForm.hidden = true;
     contratadoDocForm.hidden = false;
   });
@@ -11979,10 +12416,11 @@ if (contratadoDocForm) {
     const nome = String(form.get("nome") || "").trim();
     const telefone = String(form.get("telefone") || "").trim();
     const cpf = String(form.get("cpf") || "").trim();
+    const email = String(form.get("email") || "").trim();
     const documentos = form.getAll("documentos").filter((file) => file && file.name);
     const turnstileToken = getPublicChallengeToken(formElement);
 
-    if (!empresa || !nome || !telefone || !cpf || !documentos.length) {
+    if (!empresa || !nome || !telefone || !cpf || !email || !documentos.length) {
       showModal("Dados obrigatórios", "Preencha todos os dados e anexe pelo menos um documento.", "error");
       return;
     }
@@ -11992,24 +12430,36 @@ if (contratadoDocForm) {
       return;
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      showModal("E-mail inválido", "Informe um e-mail válido para contato.", "error");
+      return;
+    }
+
     const fileError = documentos.map(validateContractorDocumentFile).find(Boolean);
     if (fileError) {
       showModal("Documento inválido", fileError, "error");
       return;
     }
 
-    try {
-      await submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, documentos, accessPassword: contractorAccessPassword, turnstileToken });
-      formElement.reset();
-      resetContractorDocumentFields(contractorDocumentsFields);
-      showModal("Documentos enviados", "Os documentos foram enviados com sucesso para o RH.", "info");
-    } catch (error) {
-      console.error(error);
-      const message = /duplicate key|23505|CPF ja possui envio|CPF já possui envio/i.test(error.message || "")
-        ? "Este CPF já possui um envio de documentos registrado."
-        : error.message || "Não foi possível enviar os documentos. Tente novamente.";
-      showModal("Erro", message, "error");
-    }
+    showConfirmActionModal({
+      title: "Confirmar envio",
+      text: "Confira se todos os documentos solicitados foram anexados antes de continuar. O envio é único: depois de enviado, não será possível reenviar ou editar os documentos.",
+      confirmText: "Enviar documentos",
+      onConfirm: async () => {
+        try {
+          await submitPublicContractorDocuments({ empresa, origemHtml, nome, telefone, cpf, email, documentos, accessPassword: contractorAccessPassword, turnstileToken });
+          formElement.reset();
+          resetContractorDocumentFields(contractorDocumentsFields);
+          showModal("Documentos enviados", "Os documentos foram enviados com sucesso para o RH.", "info");
+        } catch (error) {
+          console.error(error);
+          const message = /duplicate key|23505|CPF ja possui envio|CPF já possui envio/i.test(error.message || "")
+            ? "Este CPF já possui um envio de documentos registrado."
+            : error.message || "Não foi possível enviar os documentos. Tente novamente.";
+          showModal("Erro", message, "error");
+        }
+      },
+    });
   });
 }
 
@@ -12055,10 +12505,14 @@ if (chamadoForm) {
     const typeSelect = event.target.closest("[data-item-type-select]");
     if (!typeSelect) return;
     const row = typeSelect.closest(".epi-row");
-    const nameSelect = row?.querySelector("[data-item-select], [data-epi-select]");
-    const sizeSelect = row?.querySelector('[name="epi_tamanho[]"]');
-    if (nameSelect) nameSelect.innerHTML = renderItemNameOptions(typeSelect.value, "");
-    if (sizeSelect) sizeSelect.innerHTML = renderItemSizeOptions(typeSelect.value, sizeSelect.value);
+    const fieldsContainer = row?.querySelector("[data-epi-row-fields]");
+    if (fieldsContainer) fieldsContainer.innerHTML = renderEpiRowFields(typeSelect.value, {});
+  });
+
+  document.getElementById("epi-list")?.addEventListener("input", (event) => {
+    const cpfInput = event.target.closest('[name="cracha_cpf[]"]');
+    if (!cpfInput) return;
+    cpfInput.value = formatCpf(cpfInput.value);
   });
 
   chamadoForm.addEventListener("submit", async (event) => {
@@ -12154,8 +12608,7 @@ async function initializeAppData() {
     loadIndexVagasData({ render: true });
   }, 0);
   setupPresenceHeartbeat();
-  // The static HTML must never be exposed as an authenticated dashboard.
-  // Release it only after the profile and the initial database read finish.
+
   window.__hubAuthReady = true;
   document.documentElement.classList.remove("auth-entry-pending");
 }
@@ -12225,32 +12678,30 @@ function setupPresenceHeartbeat() {
   if (presenceHeartbeatStarted) return;
   presenceHeartbeatStarted = true;
 
-  const buildPayload = (online = true) => ({
-    online,
-    userId: currentAuthUser?.id || currentUserProfile?.id || "",
-    email: currentAuthUser?.email || currentUserProfile?.email || "",
-    nome: currentUserProfile?.nome || getCurrentUserName(),
-  });
+  let lastHeartbeatAt = 0;
+  const HEARTBEAT_MIN_GAP_MS = 60000;
 
-  const sendHeartbeat = (online = true) => {
+  const sendHeartbeat = () => {
     if (!isAuthenticated()) return;
+    if (document.visibilityState !== "visible") return;
+    if (Date.now() - lastHeartbeatAt < HEARTBEAT_MIN_GAP_MS) return;
+    lastHeartbeatAt = Date.now();
     fetch("/api/auth/heartbeat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildPayload(online)),
+      body: JSON.stringify({}),
     }).then((response) => {
       if (response.status !== 401) return;
-      // O servidor confirmou que essa sessao foi encerrada por outro login
-      // (session_version divergente). Nao adianta tentar "restaurar" pelo
-      // cache local: isso so reabriria a mesma conta na maquina que deveria
-      // ser desconectada. Encerra de verdade e manda para o login.
+
+      // Nao adianta tentar restaurar do cache local: o servidor ja confirmou
+      // que a sessao foi encerrada (ex.: login em outra maquina).
       clearAuthenticatedUser();
       window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
     }).catch(() => {});
   };
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") sendHeartbeat(true);
+    if (document.visibilityState === "visible") sendHeartbeat();
   });
 
   sendHeartbeat(true);
@@ -12534,8 +12985,7 @@ function openRecordContextMenu(event, type, id) {
   menu.style.top = `${event.clientY}px`;
 
   if (isArchivedRecord(item)) {
-    // Registro ja arquivado: o menu de contexto passa a oferecer exclusao
-    // definitiva em vez de arquivar de novo.
+
     const collectionsByType = { denuncia: "denuncias", chamado: "chamados", feedback: "feedbacks" };
     const tablesByType = { denuncia: TABLES.denuncias, chamado: TABLES.chamados, feedback: TABLES.feedbacks };
     const deleteLabels = { denuncia: "Excluir denúncia", chamado: "Excluir chamado", feedback: "Excluir feedback" };
@@ -12565,6 +13015,41 @@ function openRecordContextMenu(event, type, id) {
     if (type === "feedback") await arquivarFeedbackPorContexto(id);
   });
   document.body.appendChild(menu);
+}
+
+function openCandidaturaContextMenu(event, id) {
+  document.getElementById("candidatura-context-menu")?.remove();
+  const item = (data.candidaturas || []).find((c) => String(c.id) === String(id));
+  if (!item) return;
+
+  const menu = document.createElement("div");
+  menu.id = "candidatura-context-menu";
+  menu.className = "board-context-menu record-context-menu";
+  menu.style.left = `${event.clientX}px`;
+  menu.style.top = `${event.clientY}px`;
+  menu.innerHTML = `<button type="button" class="danger" data-candidatura-menu-action="delete">Excluir currículo</button>`;
+  menu.addEventListener("click", (clickEvent) => {
+    const actionButton = clickEvent.target.closest("[data-candidatura-menu-action]");
+    if (actionButton?.dataset.candidaturaMenuAction !== "delete") return;
+    menu.remove();
+    excluirCandidatura(id);
+  });
+  document.body.appendChild(menu);
+}
+
+function excluirCandidatura(id) {
+  const item = (data.candidaturas || []).find((c) => String(c.id) === String(id));
+  if (!item) return;
+  showPasswordActionModal({
+    title: "Excluir currículo",
+    text: `Confirme a senha de autorizacao para excluir o curriculo de "${item.nome || "candidato nao informado"}".`,
+    confirmText: "Excluir",
+    danger: true,
+    validatePassword: async (password) => verifyAuthorizationPassword(password),
+    onConfirm: async () => {
+      await deleteItem("candidaturas", id);
+    },
+  });
 }
 
 function openEventContextMenu(event, id) {
@@ -12601,12 +13086,12 @@ function editarDocumento(id) {
 
   window.editingDocId = id;
 
-  document.querySelectorAll(".doc-tab").forEach((item) => item.classList.remove("active"));
-  document.querySelectorAll(".doc-view").forEach((view) => view.classList.remove("active"));
-  
-  const tabButton = document.querySelector(`.doc-tab[data-doc="${doc.type}"]`);
+  document.querySelectorAll("#documentos .doc-tab").forEach((item) => item.classList.remove("active"));
+  document.querySelectorAll("#documentos .doc-view").forEach((view) => view.classList.remove("active"));
+
+  const tabButton = document.querySelector(`#documentos .doc-tab[data-doc="${doc.type}"]`);
   if (tabButton) tabButton.classList.add("active");
-  
+
   const viewElement = document.getElementById(`doc-${doc.type}`);
   if (viewElement) viewElement.classList.add("active");
 
@@ -12637,10 +13122,8 @@ function excluirDocumento(id) {
     confirmText: "Excluir",
     danger: true,
     validatePassword: async (password) => verifyAuthorizationPassword(password),
-    onConfirm: () => {
-      documentRecords = documentRecords.filter(d => d.id !== id);
-      saveDocumentRecords();
-      renderDocumentRecords();
+    onConfirm: async () => {
+      await deleteItem("documentos", id);
     },
   });
 };
@@ -12701,7 +13184,7 @@ function editarEvento(id) {
   form.elements.id.value = evento.systemBirthday ? "" : evento.id;
   form.dataset.editEventId = String(evento.id || "");
   form.elements.titulo.value = evento.titulo || "";
-  // converte ISO yyyy-mm-dd para dd/mm/aaaa na màscara
+
   form.elements.data.value = formatEventoDate(evento.data || "");
   form.elements.horario.value = evento.horario || "";
   form.elements.responsavel.value = evento.responsavel || "";
@@ -12757,16 +13240,67 @@ function excluirDisciplinaryRecord(id) {
   const registro = (data.disciplinaryRecords || []).find((item) => String(item.id) === String(id));
   if (!registro) return;
 
-  showConfirmActionModal({
+  showPasswordActionModal({
     title: "Deletar registro",
-    text: `Tem certeza que deseja deletar a medida de "${registro.colaborador || "funcionario nao informado"}"?`,
+    text: `Confirme a senha de exclusao para deletar a medida de "${registro.colaborador || "funcionario nao informado"}".`,
     confirmText: "Deletar",
     danger: true,
+    validatePassword: async (password) => verifyAuthorizationPassword(password),
     onConfirm: async () => {
       const deleted = await deleteItem("disciplinaryRecords", id);
       if (deleted) {
         showModal("Registro deletado", "A medida disciplinar foi removida.", "info");
       }
+    },
+  });
+}
+
+function resetDisciplinaryForm(formElement) {
+  if (!formElement) return;
+  const tipo = formElement.dataset.disciplinaryForm;
+  formElement.reset();
+  if (formElement.elements.id) formElement.elements.id.value = "";
+  formElement.querySelector("[data-disciplinary-cancel-edit]")?.setAttribute("hidden", "");
+  formElement.querySelector("[data-disciplinary-anexo-field]")?.setAttribute("hidden", "");
+  const anexoInput = formElement.querySelector(".disciplinary-file-input");
+  if (anexoInput) updateDisciplinaryFileLabel(anexoInput);
+  const submitButton = formElement.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.textContent = tipo === "suspensao" ? "Salvar suspensao" : "Salvar advertencia";
+}
+
+function editarDisciplinaryRecord(id) {
+  const registro = (data.disciplinaryRecords || []).find((item) => String(item.id) === String(id));
+  if (!registro) return;
+
+  showPasswordActionModal({
+    title: "Editar registro",
+    text: `Informe a senha para editar a medida de "${registro.colaborador || "funcionario nao informado"}".`,
+    confirmText: "Editar",
+    validatePassword: async (password) => password.trim() === "1001",
+    onConfirm: () => {
+      const tipo = String(registro.tipo || "").toLowerCase() === "suspensao" ? "suspensao" : "advertencia";
+      activateDisciplinaryTab(tipo);
+      const formElement = document.querySelector(`[data-disciplinary-form="${tipo}"]`);
+      if (!formElement) return;
+      formElement.elements.id.value = registro.id;
+      formElement.elements.colaborador.value = registro.colaborador || "";
+      formElement.elements.data_medida.value = registro.dataMedida || "";
+      setFieldValue(formElement.elements.unidade, registro.unidade || "");
+      formElement.elements.local.value = registro.local || "";
+      formElement.elements.motivo.value = registro.motivo || "";
+      if (tipo === "suspensao" && formElement.elements.dias_suspensao) {
+        formElement.elements.dias_suspensao.value = registro.diasSuspensao || "";
+      }
+      formElement.querySelector("[data-disciplinary-cancel-edit]")?.removeAttribute("hidden");
+      formElement.querySelector("[data-disciplinary-anexo-field]")?.removeAttribute("hidden");
+      const anexoInput = formElement.querySelector(".disciplinary-file-input");
+      if (anexoInput) {
+        anexoInput.value = "";
+        updateDisciplinaryFileLabel(anexoInput, registro.arquivoNome);
+      }
+      const submitButton = formElement.querySelector('button[type="submit"]');
+      if (submitButton) submitButton.textContent = "Salvar alteracoes";
+      formElement.scrollIntoView({ behavior: "smooth", block: "start" });
     },
   });
 }
@@ -12780,7 +13314,7 @@ async function excluirDocumentoContratado(id) {
     text: `Confirme a senha de exclusao para apagar os documentos de "${registro.nome || "contratado não informado"}".`,
     confirmText: "Excluir",
     danger: true,
-    validatePassword: async (password) => verifyAuthorizationPassword(password),
+    validatePassword: async (password) => password.trim() === "1001",
     onConfirm: async () => {
       const isLocalRecord = String(id).startsWith("local-") || registro.pendingSync;
       if (isLocalRecord) {
@@ -12999,9 +13533,9 @@ async function verifyAuthorizationPassword(password) {
   });
   if (response.ok) return true;
   const result = await response.json().catch(() => ({}));
-  // Se a Edge Function nao suporta validateOnly, tenta id invalido para checar apenas a senha
+
   if (result.error === "Senha de autorizacao invalida.") return false;
-  // Qualquer outro erro (ex: id invalido) significa que a senha foi aceita
+
   return response.status !== 401 && response.status !== 403;
 }
 
@@ -13173,7 +13707,6 @@ function downloadStyledRhDocument(doc, title) {
 
           .document { width: 100%; }
 
-          /* Letterhead */
           .letterhead { display: table; width: 100%; padding-bottom: 12px; border-bottom: 3px solid #1f3a3a; }
           .letterhead-brand, .letterhead-meta { display: table-cell; vertical-align: bottom; }
           .letterhead-brand h1 { margin: 0; font-size: 20px; font-weight: 700; color: #1f3a3a; letter-spacing: 2px; }
@@ -13181,34 +13714,28 @@ function downloadStyledRhDocument(doc, title) {
           .letterhead-meta { text-align: right; font-size: 9px; color: #4b5b5b; line-height: 1.6; }
           .letterhead-meta strong { color: #1f3a3a; }
 
-          /* Title block */
           .doc-title { margin-top: 18px; margin-bottom: 4px; }
           .doc-title .doc-kicker { margin: 0; font-size: 9px; font-weight: 700; color: #1f7a6f; text-transform: uppercase; letter-spacing: 2px; }
           .doc-title h2 { margin: 4px 0 0; font-size: 17px; font-weight: 700; color: #1f2933; }
           .doc-title p { margin: 5px 0 0; font-size: 10.5px; color: #6b7c7c; font-style: italic; }
           .doc-title-rule { height: 1px; background: #d8e0e0; margin: 12px 0 18px; }
 
-          /* Section heading */
           .section-heading { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; margin: 0 0 10px; border-bottom: 1px solid #1f3a3a; }
 
-          /* Data table */
           .data-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
           .data-table td { border: 1px solid #d8e0e0; padding: 7px 10px; vertical-align: top; }
           .data-table td.label-cell { width: 32%; background: #f4f7f7; font-size: 9px; font-weight: 700; color: #4b5b5b; text-transform: uppercase; letter-spacing: .5px; }
           .data-table td.value-cell { font-size: 11px; color: #1f2933; font-weight: 500; }
 
-          /* Long-form notes */
           .note-section { margin-top: 16px; }
           .note-section h3 { margin: 0 0 6px; font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; border-bottom: 1px solid #1f3a3a; }
           .note-section p { margin: 0; padding: 10px 12px; border: 1px solid #d8e0e0; border-radius: 2px; min-height: 46px; line-height: 1.65; white-space: normal; color: #344048; background: #fafcfc; }
 
-          /* Signatures */
           .signature-box { display: table; width: 100%; margin-top: 56px; table-layout: fixed; }
           .signature-col { display: table-cell; width: 50%; padding: 0 24px; text-align: center; }
           .signature-line { border-top: 1px solid #1f2933; margin: 0 0 6px; }
           .signature-col span { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: .8px; }
 
-          /* Footer */
           .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #d8e0e0; color: #9aa8a8; font-size: 8.5px; text-align: center; letter-spacing: .5px; text-transform: uppercase; }
         </style>
       </head>
@@ -13272,13 +13799,11 @@ document.addEventListener('click', (event) => {
 
   const { action, id } = target.dataset;
 
-  // Acao especial para nao fazer nada, util para checkboxes dentro de elementos clicaveis.
   if (action === 'no-op') {
     event.stopPropagation();
     return;
   }
 
-  // Acoes que precisam de stopPropagation.
   if (['reabrir-denuncia', 'reabrir-chamado', 'reabrir-feedback', 'editar-evento', 'excluir-evento'].includes(action)) {
     event.stopPropagation();
   }
@@ -13314,12 +13839,16 @@ document.addEventListener('click', (event) => {
     case 'editar-vt': editarVtRegistro(id); break;
     case 'excluir-vt': excluirVtRegistro(id); break;
     case 'gerar-relatorio-vt': gerarRelatorioVt(target.dataset.scope); break;
+    case 'editar-disciplinary': editarDisciplinaryRecord(id); break;
     case 'excluir-disciplinary': excluirDisciplinaryRecord(id); break;
+    case 'gerar-documento-disciplinary': gerarDocumentoDisciplinary(id); break;
     case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary(target.dataset.scope); break;
     case 'editar-documento': editarDocumento(id); break;
     case 'baixar-documento-rh': baixarDocumentoRH(id); break;
     case 'excluir-documento': excluirDocumento(id); break;
     case 'excluir-documento-contratado': excluirDocumentoContratado(id); break;
+    case 'ver-clima-pesquisa': verClimaPesquisa(id); break;
+    case 'excluir-clima-pesquisa': excluirClimaPesquisa(id); break;
     case 'excluir-usuario': excluirUsuario(id); break;
     case 'clear-chat-file':
       clearChatSelectedFile();
@@ -13366,9 +13895,7 @@ document.addEventListener('click', (event) => {
       break;
   }
 });
-/* ==================== TRACKER MODAL ==================== */
 
-// Classe para gerenciar o modal de acompanhamento
 class NotificationTracker {
   constructor() {
     this.modal = document.getElementById("tracker-modal");
@@ -13451,11 +13978,10 @@ class NotificationTracker {
       const time = item.time || item.date || item.createdAt || "Recentemente";
       const rawDateTime = item.sortAt || item.updatedSortAt || item.updatedAt || item.createdSortAt || item.createdAt || item.dateTime || item.date || time;
       const id = String(item.id || `${type}-${notifications.length}-${Date.now()}`);
-      // A chave de exclusao pode diferir do id: o card agregado de mensagens usa
-      // a ultima mensagem, para que uma mensagem nova volte a aparecer.
+
       const dismissKey = String(item.dismissKey || id);
       if (isNotificationDismissed(dismissKey)) return;
-      // O acompanhamento completo respeita o mesmo escopo de abas do painel.
+
       const targetView = item.view || this.getViewForType(type);
       if (typeof canAccessView === "function" && !canAccessView(targetView)) return;
       const hasBeenRead = readNotificationIds.has(id);
@@ -13493,6 +14019,7 @@ class NotificationTracker {
         const originalStatus = isRead ? "pending" : (isUrgent ? "urgent" : "unread");
         pushNotification({
           id: item.notificationId || `${type}-${item.id || item._sortIndex || notifications.length}`,
+          dismissKey: item.dismissKey || item.notificationId,
           type,
           title: item.title || "Notificacao",
           description: item.text || "",
@@ -13934,7 +14461,6 @@ class NotificationTracker {
   }
 }
 
-// Inicializar quando o DOM estiver pronto
 function maybeOpenNotificationTrackerFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -14043,20 +14569,14 @@ window.addEventListener("storage", (event) => {
   try { window.notificationTracker?.loadNotifications?.(); } catch (_) {}
 });
 
-// Manter compatibilidade com botoes antigos.
 document.addEventListener('DOMContentLoaded', () => {
   const prevBtn = document.getElementById('dashboard-notifications-prev');
   const nextBtn = document.getElementById('dashboard-notifications-next');
-  
+
   if (prevBtn) prevBtn.style.display = 'none';
   if (nextBtn) nextBtn.style.display = 'none';
 });
-/* ==========================================================================
-   PERMISSÃO ARIEL + FEEDBACKS/RECLAMAÇÕES/SUGESTÕES
-   - Equipe visível somente para o usuário Ariel
-   - Nova aba em Conta > Configurações para envio de feedbacks
-   - Ariel visualiza todos os envios
-   ========================================================================== */
+
 (function setupArielAccessAndFeedbackModule() {
   const FEEDBACK_TABLE = "hub_feedbacks";
   const FEEDBACK_LOCAL_KEY = "hub-feedbacks-local-v1";
@@ -14096,7 +14616,7 @@ document.addEventListener('DOMContentLoaded', () => {
       currentAuthUser?.user_metadata?.nome,
       currentAuthUser?.user_metadata?.name,
     ];
-    return candidates.some((candidate) => normalizeAccessName(candidate) === "ariel");
+    return candidates.some((candidate) => normalizeAccessName(candidate) === "ariel" || normalizeAccessName(candidate) === "andre barbosa");
   }
 
   window.isArielUser = isArielUser;
@@ -14268,8 +14788,6 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       event.stopPropagation();
 
-      // Quando o botão vem do menu do usuário, precisa abrir a aba Conta antes.
-      // de selecionar o painel interno de Feedbacks.
       activateView?.("conta");
       ensureFeedbackSettingsUi();
       showSettingsPanel?.(FEEDBACK_PANEL_ID);
@@ -14476,7 +14994,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtered = filter === "todos" ? items : items.filter((item) => item.tipo === filter);
 
     if (isArielUser()) {
-      // Ariel somente visualiza os envios recebidos. Ele não envia por esta aba.
+
       renderFeedbackItems(document.getElementById("hub-feedback-admin-list"), filtered, { admin: true });
     } else {
       renderFeedbackItems(document.getElementById("hub-feedback-user-list"), items, { canDelete: true });
@@ -14594,10 +15112,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 })();
 
-
-/* ========================================================================
-   ATESTADOS PUBLICOS + ABA INTERNA DE VISUALIZAÇÃO
-   ======================================================================== */
 (function setupAtestadosModule() {
   const ATESTADOS_TABLE = "hub_atestados";
   const ATESTADOS_LOCAL_KEY = "hub-atestados-local-v1";
@@ -14616,7 +15130,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function getAtestadoMaxSize() {
-    return typeof ATESTADO_MAX_SIZE_BYTES !== "undefined" ? ATESTADO_MAX_SIZE_BYTES : 10 * 1024 * 1024;
+    return typeof ATESTADO_MAX_SIZE_BYTES !== "undefined" ? ATESTADO_MAX_SIZE_BYTES : 3 * 1024 * 1024;
   }
 
   function getFileExtension(fileName = "") {
@@ -14626,7 +15140,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function validateAtestadoFile(file) {
     if (!file || !file.name) return "Anexe o atestado antes de enviar.";
-    if (file.size > getAtestadoMaxSize()) return "O arquivo deve ter no máximo 10 MB.";
+    if (file.size > getAtestadoMaxSize()) return "O arquivo deve ter no máximo 3 MB.";
 
     const extension = getFileExtension(file.name);
     const mime = String(file.type || "").toLowerCase();
@@ -14845,11 +15359,6 @@ document.addEventListener('DOMContentLoaded', () => {
       created_by: "Publico",
     };
 
-    // IMPORTANTE:
-    // Não usar .select().single() no envio público.
-    // O visitante/anon tem permissão apenas para INSERIR, não para LER a tabela.
-    // Quando o INSERT pede retorno com .select(), o PostgreSQL tenta aplicar SELECT
-    // e pode retornar erro de RLS mesmo com a policy de INSERT correta.
     const { error: insertError } = await postgresClient
       .from(ATESTADOS_TABLE)
       .insert(payload);
@@ -14992,4 +15501,659 @@ document.addEventListener('DOMContentLoaded', () => {
   setupAtestadosInternalView();
 })();
 
+(function setupClimaModule() {
+  const CLIMA_OPTIONS = {
+    binario: ["Sim", "Não"],
+    ternario: ["Sim", "Não", "Às vezes"],
+    verdadeiro_falso: ["Verdadeiro", "Falso"],
+    escala5: ["Ótimo", "Bom", "Razoável", "Ruim", "Péssimo"],
+    escolha: ["Conversa nos corredores", "Quadros de aviso", "Colegas de trabalho", "Superior imediato", "Através do RH"],
+  };
+
+  const CLIMA_SECTIONS = [
+    { titulo: "Liderança e Gestão de Pessoas", perguntas: [
+      { texto: "As orientações que você recebe sobre o seu trabalho são claras e objetivas?", tipo: "binario" },
+      { texto: "Seu superior imediato é receptivo às sugestões de mudança?", tipo: "ternario" },
+      { texto: "Você tem uma ideia clara sobre o resultado que o seu superior imediato espera do seu trabalho?", tipo: "binario" },
+      { texto: "Você recebe do setor operacional as informações necessárias para a realização do seu trabalho?", tipo: "ternario" },
+      { texto: "Você é informado pelo seu superior imediato sobre o que ele acha do seu trabalho?", tipo: "binario" },
+      { texto: "Os gestores da empresa têm interesse no bem-estar dos funcionários?", tipo: "binario" },
+      { texto: "Você considera que seu trabalho é avaliado de forma justa pelo seu superior?", tipo: "binario" },
+      { texto: "Você se considera respeitado pelo seu superior imediato?", tipo: "binario" },
+      { texto: "Seu superior transmite a você e aos seus colegas as informações que vocês precisam conhecer?", tipo: "binario" },
+      { texto: "Você considera seu superior hierárquico um bom líder?", tipo: "binario" },
+      { texto: "Você considera o seu superior hierárquico bom profissionalmente?", tipo: "binario" },
+      { texto: "Avalie os seguintes setores:", tipo: "escala5", subitens: ["RH", "Regulação", "Direção", "Financeiro"] },
+      { texto: "Você se sente à vontade para falar abertamente a respeito de trabalho com o seu superior imediato?", tipo: "binario" },
+      { texto: "O seu superior imediato reconhece os bons resultados alcançados por você no seu trabalho?", tipo: "binario" },
+      { texto: "Você acha que os seus superiores são receptivos às críticas dos seus subordinados?", tipo: "ternario" },
+      { texto: "As decisões tomadas pelo seu chefe no dia-a-dia são corretas?", tipo: "ternario" },
+      { texto: "Seu chefe está sempre disponível quando você precisa dele?", tipo: "binario" },
+      { texto: "No seu setor de trabalho há algum funcionário \"protegido\" pelo seu chefe?", tipo: "binario" },
+    ]},
+    { titulo: "Treinamento e Desenvolvimento", perguntas: [
+      { texto: "A empresa oferece oportunidades para o seu desenvolvimento e crescimento profissional?", tipo: "binario" },
+      { texto: "Você considera suficiente o treinamento dado pela empresa?", tipo: "binario" },
+      { texto: "A empresa dá condições de treinamento/desenvolvimento para que você tenha um aprendizado contínuo?", tipo: "binario" },
+    ]},
+    { titulo: "Comunicação", perguntas: [
+      { texto: "A empresa explica adequadamente aos funcionários o motivo das decisões que ela toma?", tipo: "ternario" },
+      { texto: "Os funcionários se sentem adequadamente informados sobre as decisões que afetam o trabalho deles?", tipo: "binario" },
+      { texto: "Você se sente informado a respeito dos reajustes/aumentos salariais praticados pela empresa?", tipo: "binario" },
+      { texto: "Onde você encontra as informações que deseja saber sobre a empresa? Assinale a principal alternativa:", tipo: "escolha" },
+      { texto: "Você se sente bem informado sobre os benefícios da empresa?", tipo: "binario" },
+      { texto: "Você se considera bem informado sobre o que se passa na empresa?", tipo: "binario" },
+      { texto: "A comunicação entre colaboradores de diferentes setores flui adequadamente?", tipo: "binario" },
+      { texto: "As informações que recebo da empresa são confiáveis, a comunicação é transparente?", tipo: "binario" },
+    ]},
+    { titulo: "Relações Interpessoais", perguntas: [
+      { texto: "Existe um relacionamento de cooperação entre os diversos departamentos da empresa?", tipo: "binario" },
+      { texto: "O trabalho em equipe é presente na empresa?", tipo: "binario" },
+      { texto: "O clima de trabalho da minha equipe é bom?", tipo: "binario" },
+      { texto: "No meu setor existe elevado grau de abertura e confiança mútua entre o superior imediato e demais membros da equipe?", tipo: "binario" },
+      { texto: "Existe respeito, cooperação e ajuda mútua entre os colegas do meu setor, somos um grupo integrado?", tipo: "binario" },
+      { texto: "O relacionamento entre as pessoas da minha equipe é autêntico?", tipo: "binario" },
+      { texto: "Acredito que há um relacionamento profissional adequado entre pessoas de diferentes setores.", tipo: "verdadeiro_falso" },
+    ]},
+    { titulo: "Ética e Cidadania", perguntas: [
+      { texto: "A atuação da empresa é guiada por valores éticos?", tipo: "binario" },
+      { texto: "Você acha que a empresa age eticamente nas suas decisões?", tipo: "binario" },
+      { texto: "Você considera a empresa socialmente responsável?", tipo: "binario" },
+      { texto: "A empresa cumpre as promessas oficialmente feitas aos funcionários?", tipo: "ternario" },
+      { texto: "A empresa pratica ações éticas com os trabalhadores?", tipo: "binario" },
+    ]},
+    { titulo: "Sistemas de Remuneração", perguntas: [
+      { texto: "O seu salário satisfaz as suas necessidades básicas de vida?", tipo: "binario" },
+      { texto: "Você se sente satisfeito em relação ao seu salário?", tipo: "binario" },
+    ]},
+    { titulo: "Condições de Trabalho", perguntas: [
+      { texto: "Você se sente satisfeito em relação ao volume de trabalho que realiza?", tipo: "binario" },
+      { texto: "As condições do seu local de trabalho são satisfatórias?", tipo: "binario", subitens: ["Temperatura", "Espaço interno das ambulâncias", "Equipamentos", "Higiene", "Instalações Sanitárias"] },
+      { texto: "Você se sente satisfeito em relação ao volume de trabalho que realiza?", tipo: "binario" },
+    ]},
+    { titulo: "Qualidade e Produtividade", perguntas: [
+      { texto: "O compromisso da empresa com a qualidade dos seus produtos, serviços e processos está visível no trabalho diário?", tipo: "binario" },
+      { texto: "A qualidade do trabalho é considerada mais importante do que a sua quantidade?", tipo: "binario" },
+      { texto: "A empresa costuma melhorar os produtos e serviços prestados aos seus clientes?", tipo: "binario" },
+      { texto: "Seus colegas de setor de trabalho procuram formas de melhorar a qualidade e produtividade do trabalho?", tipo: "binario" },
+      { texto: "Conheço bem a Política de Qualidade da empresa e compreendo bem seus conceitos e objetivos?", tipo: "binario" },
+      { texto: "Considero que os serviços gerados pelo meu setor apresentam a qualidade esperada pelos nossos clientes?", tipo: "binario" },
+    ]},
+    { titulo: "Imagem e Adesão", perguntas: [
+      { texto: "Você indicaria um amigo para trabalhar na sua empresa?", tipo: "binario" },
+      { texto: "A empresa desfruta de boa imagem entre os funcionários?", tipo: "binario" },
+      { texto: "Considera a empresa um bom lugar para trabalhar?", tipo: "binario" },
+      { texto: "O seu trabalho lhe dá um sentimento de realização profissional?", tipo: "binario" },
+      { texto: "Você considera justas as decisões tomadas pela diretoria em relação aos funcionários da empresa?", tipo: "binario" },
+      { texto: "Você está satisfeito por trabalhar na empresa?", tipo: "binario" },
+      { texto: "Você gosta do trabalho que faz?", tipo: "binario" },
+      { texto: "Você acha que os funcionários se orgulham do desempenho da empresa?", tipo: "binario" },
+      { texto: "Você se sente satisfeito trabalhando nessa empresa?", tipo: "binario" },
+    ]},
+  ];
+
+  function buildClimaQuestionIndex() {
+    const flat = [];
+    let counter = 0;
+    CLIMA_SECTIONS.forEach((secao) => {
+      secao.perguntas.forEach((pergunta) => {
+        const opcoes = CLIMA_OPTIONS[pergunta.tipo] || [];
+        if (Array.isArray(pergunta.subitens) && pergunta.subitens.length) {
+          pergunta.subitens.forEach((subitem) => {
+            counter += 1;
+            flat.push({
+              id: `q${counter}`,
+              secao: secao.titulo,
+              texto: `${pergunta.texto} — ${subitem}`,
+              tipo: pergunta.tipo,
+              opcoes,
+            });
+          });
+        } else {
+          counter += 1;
+          flat.push({ id: `q${counter}`, secao: secao.titulo, texto: pergunta.texto, tipo: pergunta.tipo, opcoes });
+        }
+      });
+    });
+    return flat;
+  }
+
+  const CLIMA_QUESTIONS = buildClimaQuestionIndex();
+  window.CLIMA_QUESTIONS = CLIMA_QUESTIONS;
+
+  function buildClimaFormFieldsHtml() {
+    let currentSection = "";
+    return CLIMA_QUESTIONS.map((question) => {
+      const sectionHeader = question.secao !== currentSection
+        ? (() => { currentSection = question.secao; return `<h2 class="clima-section-title">${escapeHtml(question.secao)}</h2>`; })()
+        : "";
+      const optionsHtml = question.opcoes.map((option, index) => `
+        <label class="clima-option">
+          <input type="radio" name="${question.id}" value="${escapeHtml(option)}" ${index === 0 ? "required" : ""} />
+          <span>${escapeHtml(option)}</span>
+        </label>
+      `).join("");
+      return `
+        ${sectionHeader}
+        <div class="clima-question" role="group" aria-label="${escapeHtml(question.texto)}">
+          <p class="clima-question-title">${escapeHtml(question.texto)}</p>
+          <div class="clima-options">${optionsHtml}</div>
+        </div>
+      `;
+    }).join("");
+  }
+  window.buildClimaFormFieldsHtml = buildClimaFormFieldsHtml;
+
+  function enableClimaRadioToggle(container) {
+    container.querySelectorAll('input[type="radio"]').forEach((radio) => {
+      radio.addEventListener("click", function handleClimaRadioClick() {
+        if (this.dataset.wasChecked === "true") {
+          this.checked = false;
+          this.dataset.wasChecked = "false";
+        } else {
+          container.querySelectorAll(`input[name="${this.name}"]`).forEach((sibling) => {
+            sibling.dataset.wasChecked = "false";
+          });
+          this.dataset.wasChecked = "true";
+        }
+      });
+    });
+  }
+
+  function getClimaAnswerRows(item) {
+    const respostas = item?.respostas || {};
+    return CLIMA_QUESTIONS.map((question) => ({
+      secao: question.secao,
+      texto: question.texto,
+      resposta: respostas[question.id] || "Não respondido",
+    }));
+  }
+
+  async function submitClimaPesquisa({ respostas, sugestao }) {
+    if (!postgresClient) throw new Error("PostgreSQL indisponível. Verifique a configuração pública do HUB.");
+    const { error } = await postgresClient.from(TABLES.climaPesquisas).insert({ respostas, sugestao: sugestao || "" });
+    if (error) throw error;
+  }
+
+  function setupPublicClimaForm() {
+    const container = document.getElementById("clima-form-fields");
+    const form = document.getElementById("clima-form");
+    if (!form || !container || form.dataset.climaReady === "true") return;
+    form.dataset.climaReady = "true";
+    ensurePublicCaptchaNotice?.(form);
+    container.innerHTML = buildClimaFormFieldsHtml();
+    enableClimaRadioToggle(container);
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formElement = event.currentTarget;
+      const publicFormError = validatePublicFormSubmission?.(formElement);
+      if (publicFormError) {
+        showModal?.("Envio bloqueado", publicFormError, "error");
+        return;
+      }
+
+      const formData = new FormData(formElement);
+      const respostas = {};
+      let missing = false;
+      CLIMA_QUESTIONS.forEach((question) => {
+        const value = String(formData.get(question.id) || "").trim();
+        if (!value) missing = true;
+        respostas[question.id] = value;
+      });
+      if (missing) {
+        showModal?.("Perguntas pendentes", "Responda todas as perguntas antes de enviar a pesquisa.", "error");
+        return;
+      }
+      const sugestao = String(formData.get("sugestao") || "").trim();
+
+      const submitButton = formElement.querySelector('button[type="submit"]');
+      const originalText = submitButton?.textContent || "Enviar pesquisa";
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Enviando...";
+      }
+
+      try {
+        await submitClimaPesquisa({ respostas, sugestao });
+        formElement.reset();
+        showModal?.("Pesquisa enviada", "Obrigado por participar da Pesquisa de Clima Organizacional! Sua resposta é anônima.", "success");
+      } catch (error) {
+        console.error("Erro ao enviar pesquisa de clima:", error);
+        showModal?.("Erro no envio", error.message || "Não foi possível enviar a pesquisa. Verifique sua conexão e tente novamente.", "error");
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = originalText;
+        }
+      }
+    });
+  }
+
+  const CLIMA_SCORE_MAP = {
+    "Sim": 1, "Não": 0, "Às vezes": 0.5,
+    "Verdadeiro": 1, "Falso": 0,
+    "Ótimo": 1, "Bom": 0.75, "Razoável": 0.5, "Ruim": 0.25, "Péssimo": 0,
+  };
+
+  function climaScoreBand(score) {
+    if (score >= 70) return "good";
+    if (score >= 40) return "warning";
+    return "critical";
+  }
+
+  function climaScoreColorVar(band) {
+    return { good: "var(--success)", warning: "var(--gold)", critical: "var(--danger)" }[band] || "var(--muted)";
+  }
+
+  function climaScoreStatusText(band) {
+    return {
+      good: "Clima favorável",
+      warning: "Clima neutro — atenção recomendada",
+      critical: "Clima desfavorável — requer atenção",
+    }[band] || "";
+  }
+
+  function renderClimaBarRow(label, percent, { neutral = false } = {}) {
+    const band = neutral ? "neutral" : climaScoreBand(percent);
+    return `
+      <div class="clima-bar-row">
+        <p class="clima-bar-row-label">${escapeHtml(label)}</p>
+        <div class="clima-bar-track"><div class="clima-bar-fill clima-bar-${band}" style="width:${Math.max(percent, 2)}%"></div></div>
+        <span class="clima-bar-value">${percent}%</span>
+      </div>
+    `;
+  }
+
+  function computeClimaDashboardData(items) {
+    const sectionTotals = new Map();
+    const questionTotals = new Map();
+    const canalCounts = new Map();
+    let overallSum = 0;
+    let overallCount = 0;
+    let canalTotal = 0;
+
+    items.forEach((item) => {
+      const respostas = item.respostas || {};
+      CLIMA_QUESTIONS.forEach((question) => {
+        const answer = respostas[question.id];
+        if (!answer) return;
+
+        if (question.tipo === "escolha") {
+          canalCounts.set(answer, (canalCounts.get(answer) || 0) + 1);
+          canalTotal += 1;
+          return;
+        }
+
+        const score = CLIMA_SCORE_MAP[answer];
+        if (score === undefined) return;
+
+        overallSum += score;
+        overallCount += 1;
+
+        const sectionEntry = sectionTotals.get(question.secao) || { sum: 0, count: 0 };
+        sectionEntry.sum += score;
+        sectionEntry.count += 1;
+        sectionTotals.set(question.secao, sectionEntry);
+
+        const questionEntry = questionTotals.get(question.id) || { texto: question.texto, sum: 0, count: 0 };
+        questionEntry.sum += score;
+        questionEntry.count += 1;
+        questionTotals.set(question.id, questionEntry);
+      });
+    });
+
+    const toPercent = (sum, count) => (count ? Math.round((sum / count) * 100) : 0);
+
+    const sections = Array.from(sectionTotals.entries())
+      .map(([secao, { sum, count }]) => ({ secao, score: toPercent(sum, count) }))
+      .sort((a, b) => b.score - a.score);
+
+    const questions = Array.from(questionTotals.values())
+      .filter((q) => q.count > 0)
+      .map((q) => ({ texto: q.texto, score: toPercent(q.sum, q.count) }));
+    const sortedQuestions = questions.slice().sort((a, b) => b.score - a.score);
+
+    const canal = Array.from(canalCounts.entries())
+      .map(([label, count]) => ({ label, percent: canalTotal ? Math.round((count / canalTotal) * 100) : 0 }))
+      .sort((a, b) => b.percent - a.percent);
+
+    return {
+      respondents: items.length,
+      overallScore: toPercent(overallSum, overallCount),
+      sections,
+      top: sortedQuestions.slice(0, 5),
+      bottom: sortedQuestions.slice(-5).reverse(),
+      canal,
+    };
+  }
+
+  function computeClimaAnswerDistribution(items) {
+    let favoravel = 0;
+    let neutro = 0;
+    let desfavoravel = 0;
+
+    items.forEach((item) => {
+      const respostas = item.respostas || {};
+      CLIMA_QUESTIONS.forEach((question) => {
+        if (question.tipo === "escolha") return;
+        const answer = respostas[question.id];
+        if (!answer) return;
+        const score = CLIMA_SCORE_MAP[answer];
+        if (score === undefined) return;
+        if (score >= 0.75) favoravel += 1;
+        else if (score === 0.5) neutro += 1;
+        else desfavoravel += 1;
+      });
+    });
+
+    return { favoravel, neutro, desfavoravel, total: favoravel + neutro + desfavoravel };
+  }
+
+  function formatClimaDayLabel(day) {
+    const parts = String(day || "").split("-");
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}` : day;
+  }
+
+  function computeClimaTimeline(items) {
+    const counts = new Map();
+    items.forEach((item) => {
+      const day = String(item.sortAt || "").slice(0, 10);
+      if (!day) return;
+      counts.set(day, (counts.get(day) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([day, count]) => ({ day, count }));
+  }
+
+  function renderClimaDonut(items) {
+    const donut = document.getElementById("clima-donut");
+    const totalEl = document.getElementById("clima-donut-total");
+    const legendEl = document.getElementById("clima-donut-legend");
+    if (!donut || !legendEl) return;
+
+    const dist = computeClimaAnswerDistribution(items);
+    if (totalEl) totalEl.textContent = String(dist.total);
+
+    if (!dist.total) {
+      donut.style.background = "var(--surface-soft)";
+      legendEl.innerHTML = '<p class="empty-state">Sem dados suficientes.</p>';
+      return;
+    }
+
+    const favPct = (dist.favoravel / dist.total) * 100;
+    const neuPct = (dist.neutro / dist.total) * 100;
+    const favEnd = favPct;
+    const neuEnd = favPct + neuPct;
+    donut.style.background = `conic-gradient(var(--success) 0% ${favEnd}%, var(--gold) ${favEnd}% ${neuEnd}%, var(--danger) ${neuEnd}% 100%)`;
+
+    const rows = [
+      { label: "Favorável", value: dist.favoravel, percent: Math.round(favPct), colorClass: "clima-dot-good" },
+      { label: "Neutro", value: dist.neutro, percent: Math.round(neuPct), colorClass: "clima-dot-warning" },
+      { label: "Desfavorável", value: dist.desfavoravel, percent: Math.round((dist.desfavoravel / dist.total) * 100), colorClass: "clima-dot-critical" },
+    ];
+    legendEl.innerHTML = rows.map((row) => `
+      <div class="clima-donut-legend-row">
+        <span><i class="clima-dot ${row.colorClass}"></i> ${escapeHtml(row.label)}</span>
+        <strong>${row.percent}% <span class="item-meta">(${row.value})</span></strong>
+      </div>
+    `).join("");
+  }
+
+  function renderClimaTimeline(items) {
+    const target = document.getElementById("clima-timeline-chart");
+    if (!target) return;
+
+    const timeline = computeClimaTimeline(items);
+    if (!timeline.length) {
+      target.innerHTML = '<p class="empty-state">Sem dados suficientes.</p>';
+      return;
+    }
+
+    const max = Math.max(...timeline.map((entry) => entry.count));
+    target.innerHTML = `
+      <div class="clima-timeline-bars">
+        ${timeline.map((entry) => `
+          <div class="clima-timeline-col" title="${escapeHtml(formatClimaDayLabel(entry.day))}: ${entry.count}">
+            <span class="clima-timeline-count">${entry.count}</span>
+            <div class="clima-timeline-bar" style="height:${Math.max((entry.count / max) * 100, 8)}%"></div>
+            <span class="clima-timeline-label">${escapeHtml(formatClimaDayLabel(entry.day))}</span>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderClimaDashboard(items) {
+    const dashboard = document.getElementById("clima-dashboard");
+    const emptyState = document.getElementById("clima-dashboard-empty");
+    if (!dashboard || !emptyState) return;
+
+    if (!items.length) {
+      dashboard.hidden = true;
+      emptyState.hidden = false;
+      return;
+    }
+    emptyState.hidden = true;
+    dashboard.hidden = false;
+
+    const summary = computeClimaDashboardData(items);
+    const band = climaScoreBand(summary.overallScore);
+
+    const scoreValueEl = document.getElementById("clima-score-value");
+    if (scoreValueEl) {
+      scoreValueEl.textContent = `${summary.overallScore}%`;
+      scoreValueEl.style.color = climaScoreColorVar(band);
+    }
+    const scoreLabelEl = document.getElementById("clima-score-label");
+    if (scoreLabelEl) scoreLabelEl.textContent = climaScoreStatusText(band);
+    const scoreSummaryEl = document.getElementById("clima-score-summary");
+    if (scoreSummaryEl) {
+      scoreSummaryEl.textContent = `Baseado em ${summary.respondents} ${summary.respondents === 1 ? "resposta anônima" : "respostas anônimas"}.`;
+    }
+
+    renderClimaDonut(items);
+    renderClimaTimeline(items);
+
+    const emptyBars = '<p class="empty-state">Sem dados suficientes.</p>';
+
+    const sectionsChart = document.getElementById("clima-sections-chart");
+    if (sectionsChart) {
+      sectionsChart.innerHTML = summary.sections.map((s) => renderClimaBarRow(s.secao, s.score)).join("") || emptyBars;
+    }
+
+    const topEl = document.getElementById("clima-top-questions");
+    if (topEl) {
+      topEl.innerHTML = summary.top.map((q) => renderClimaBarRow(q.texto, q.score)).join("") || emptyBars;
+    }
+
+    const bottomEl = document.getElementById("clima-bottom-questions");
+    if (bottomEl) {
+      bottomEl.innerHTML = summary.bottom.map((q) => renderClimaBarRow(q.texto, q.score)).join("") || emptyBars;
+    }
+
+    const canalEl = document.getElementById("clima-canal-chart");
+    if (canalEl) {
+      canalEl.innerHTML = summary.canal.length
+        ? summary.canal.map((c) => renderClimaBarRow(c.label, c.percent, { neutral: true })).join("")
+        : emptyBars;
+    }
+
+    const sugestoesList = document.getElementById("clima-sugestoes-list");
+    if (sugestoesList) {
+      const sugestoes = items
+        .filter((item) => item.sugestao)
+        .slice()
+        .sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
+      sugestoesList.innerHTML = sugestoes.length
+        ? sugestoes.map((item) => `
+          <article class="item-card">
+            <p>${escapeHtml(item.sugestao)}</p>
+            <p class="item-meta">${escapeHtml(item.createdAt || "")}</p>
+          </article>
+        `).join("")
+        : '<p class="empty-state">Nenhuma sugestão enviada ainda.</p>';
+    }
+  }
+
+  function renderClimaConfigControls() {
+    const button = document.getElementById("clima-toggle-button");
+    const statusTag = document.getElementById("clima-status-tag");
+    if (!button && !statusTag) return;
+    const aberto = Boolean((data.climaConfig || [])[0]?.aberto);
+    if (button) button.textContent = aberto ? "Encerrar teste" : "Liberar teste";
+    if (statusTag) {
+      statusTag.textContent = aberto ? "Teste liberado" : "Teste encerrado";
+      statusTag.classList.toggle("alert", !aberto);
+    }
+  }
+
+  async function toggleClimaAberto() {
+    const current = (data.climaConfig || [])[0];
+    const nextAberto = !current?.aberto;
+    const timestamp = new Date().toISOString();
+    const values = {
+      aberto: nextAberto,
+      abertoEm: nextAberto ? timestamp : (current?.abertoEm || ""),
+      encerradoEm: !nextAberto ? timestamp : "",
+    };
+    const success = current?.id
+      ? await updateItem("climaConfig", current.id, values)
+      : await addItem("climaConfig", values);
+    if (success) {
+      showModal(
+        nextAberto ? "Teste liberado" : "Teste encerrado",
+        nextAberto
+          ? "O formulário público de clima está liberado para respostas."
+          : "O formulário público de clima foi encerrado. Quem acessar o link verá o aviso de teste encerrado.",
+        "info",
+      );
+    }
+  }
+
+  document.getElementById("clima-toggle-button")?.addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      await toggleClimaAberto();
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  function renderClimaSection() {
+    const listTarget = document.getElementById("clima-pesquisas-list");
+    renderClimaConfigControls();
+    if (!listTarget) return;
+    const items = (data.climaPesquisas || []).slice().sort((a, b) => String(b.sortAt || "").localeCompare(String(a.sortAt || "")));
+    const countEl = document.getElementById("clima-pesquisas-count");
+    if (countEl) countEl.textContent = String(items.length);
+
+    renderClimaDashboard(items);
+
+    renderCards("clima-pesquisas-list", items, (item) => `
+      <article class="item-card">
+        <div class="item-topline">
+          <p class="item-title">Resposta anônima</p>
+        </div>
+        <p class="item-meta">Recebida em ${escapeHtml(item.createdAt || "Não informado")}</p>
+        ${item.sugestao ? `<p><strong>Sugestão:</strong> ${escapeHtml(item.sugestao)}</p>` : ""}
+        <div class="job-actions">
+          <button class="secondary-link" type="button" data-action="ver-clima-pesquisa" data-id="${escapeHtml(item.id)}">Ver respostas</button>
+          <button class="danger-button" type="button" data-action="excluir-clima-pesquisa" data-id="${escapeHtml(item.id)}">Deletar</button>
+        </div>
+      </article>
+    `);
+  }
+  window.renderClimaSection = renderClimaSection;
+
+  window.verClimaPesquisa = function verClimaPesquisa(id) {
+    const item = (data.climaPesquisas || []).find((registro) => String(registro.id) === String(id));
+    if (!item) return;
+
+    const rows = getClimaAnswerRows(item);
+    let currentSection = "";
+    const detailMarkup = [];
+    rows.forEach((row) => {
+      if (row.secao !== currentSection) {
+        currentSection = row.secao;
+        detailMarkup.push(`<h3 class="clima-answers-section">${escapeHtml(currentSection)}</h3>`);
+      }
+      detailMarkup.push(`<p class="clima-answers-row">${escapeHtml(row.texto)} <strong>${escapeHtml(row.resposta)}</strong></p>`);
+    });
+    if (item.sugestao) {
+      detailMarkup.push(`<h3 class="clima-answers-section">Sugestão</h3>`);
+      detailMarkup.push(`<p class="clima-answers-row">${escapeHtml(item.sugestao)}</p>`);
+    }
+
+    const overlay = document.createElement("div");
+    overlay.id = "custom-modal";
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal-card modal-card-large">
+        <div class="modal-header info">Resposta da pesquisa de clima</div>
+        <div class="modal-body modal-body-large"><div class="clima-answers-list">${detailMarkup.join("")}</div></div>
+        <div class="modal-footer"><button class="primary-button" data-action="close-modal">Fechar</button></div>
+      </div>
+    `;
+    overlay.querySelector('[data-action="close-modal"]')?.addEventListener("click", () => overlay.remove());
+    document.body.appendChild(overlay);
+  };
+
+  window.excluirClimaPesquisa = function excluirClimaPesquisa(id) {
+    const item = (data.climaPesquisas || []).find((registro) => String(registro.id) === String(id));
+    if (!item) return;
+
+    showPasswordActionModal({
+      title: "Deletar resposta",
+      text: "Confirme a senha de autorizacao para deletar esta resposta da pesquisa de clima.",
+      confirmText: "Deletar",
+      danger: true,
+      validatePassword: async (password) => verifyAuthorizationPassword(password),
+      onConfirm: async () => {
+        await deleteItem("climaPesquisas", id);
+      },
+    });
+  };
+
+  async function applyClimaOpenState() {
+    const form = document.getElementById("clima-form");
+    const closedState = document.getElementById("clima-closed-state");
+    if (!form || !closedState) return;
+    let aberto = false;
+    try {
+      const response = await fetch(`/api/records?table=${encodeURIComponent(TABLES.climaConfig)}&select=*`);
+      const result = await response.json().catch(() => ({}));
+      aberto = Boolean(result?.data?.[0]?.aberto);
+    } catch (error) {
+      console.error("Erro ao verificar status da pesquisa de clima:", error);
+    }
+    form.hidden = !aberto;
+    closedState.hidden = aberto;
+    if (aberto) setupPublicClimaForm();
+  }
+
+  try {
+    const originalRenderAll = renderAll;
+    renderAll = function patchedRenderAllForClima() {
+      originalRenderAll?.();
+      renderClimaSection();
+    };
+  } catch (_) {}
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if (document.getElementById("clima-closed-state")) {
+      applyClimaOpenState();
+    } else {
+      setupPublicClimaForm();
+    }
+  });
+
+  if (document.getElementById("clima-closed-state")) {
+    applyClimaOpenState();
+  } else {
+    setupPublicClimaForm();
+  }
+})();
 

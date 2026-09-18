@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import { assertDatabaseUrl, getBody, json, pool } from "./db.js";
+import { assertDatabaseUrl, getBody, json, pool, SESSION_SECRET, safeErrorResponse } from "./db.js";
+import { checkPublicRateLimit } from "./rate-limit.js";
 
 function normalize(value) {
   return String(value || "").trim();
@@ -73,6 +74,18 @@ function encodeCookiePayload(value) {
 }
 
 function decodeCookiePayload(value) {
+  if (!SESSION_SECRET) return null;
+  const raw = String(value || "");
+  const separatorIndex = raw.lastIndexOf(".");
+  if (separatorIndex < 1) return null;
+  const payloadB64 = raw.slice(0, separatorIndex);
+  const signature = raw.slice(separatorIndex + 1);
+  const expectedSignature = signPayload(payloadB64);
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+  if (signatureBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
+    return null;
+  }
   try {
     const raw = String(value || "");
     const separatorIndex = raw.lastIndexOf(".");
@@ -100,11 +113,14 @@ function getCookie(req, name) {
   return "";
 }
 
+let sessionVersionColumnReady = false;
 async function ensureSessionVersionColumn() {
+  if (sessionVersionColumnReady) return;
   await pool.query(`
     alter table public.hub_users
       add column if not exists session_version bigint not null default 0
   `);
+  sessionVersionColumnReady = true;
 }
 
 export async function validateAuthSession(req) {
@@ -149,6 +165,10 @@ export default async function handler(req, res) {
       return json(res, 200, { session: session?.user ? session : null });
     }
 
+    const attemptedIdentifier = normalize(body.identifier || body.email || body.cpf || body.nome).toLowerCase();
+    const allowedAttempt = await checkPublicRateLimit(req, "login_attempt", attemptedIdentifier);
+    if (!allowedAttempt) return json(res, 429, { error: "Muitas tentativas de login. Aguarde alguns minutos." });
+
     const user = await findUser(body.identifier || body.email || body.cpf || body.nome);
     if (!user || !isPasswordValid(body.password || body.senha, user.password_hash)) {
       return json(res, 401, { error: "Credenciais invalidas." });
@@ -181,6 +201,6 @@ export default async function handler(req, res) {
       session,
     });
   } catch (error) {
-    return json(res, error.statusCode || 500, { error: error.message || "Erro de autenticacao." });
+    return safeErrorResponse(res, error, "Erro de autenticacao.");
   }
 }

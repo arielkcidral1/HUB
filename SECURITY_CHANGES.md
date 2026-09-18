@@ -11,28 +11,73 @@ Este arquivo deve ser atualizado a cada alteracao de seguranca, permissao, RLS, 
 
 ## Estado atual
 
-- Login migrado para PostgreSQL Auth.
-- RLS ativo nas tabelas `hub_*`.
-- Regras por cargo aplicadas no banco:
-  - `RH`: acesso interno amplo conforme policies.
-  - `Gerente`: chat `geral-gerentes` e DMs proprias.
-  - `Caixa`/`Crediarista`: chat `geral-caixa` e DMs proprias.
-- Fluxos publicos limitados:
-  - `denuncias`: envio via Edge Function `hub-public-submit`.
-  - `chamados`: envio via Edge Function `hub-public-submit`.
-  - `candidaturas`: envio via Edge Function `hub-public-submit`.
-  - `vagas`: leitura publica via Edge Function `hub-public-submit`.
-- Bucket `hub-curriculos` privado, com upload publico feito somente via Edge Function.
-- Bucket `hub-chat-files` privado, limitado a 10 MB, MIME restrito e acesso por cargo/canal para leitura e upload; update/delete seguem RH-only.
+## Estado atual (pos-migracao para Azure Postgres)
+
+- **Autenticacao**: login proprio em `api/auth.js`. Senha comparada por hash
+  bcrypt (com fallback a sha256/texto puro para contas antigas ainda nao
+  migradas) contra `hub_users.password_hash`. A sessao fica num cookie
+  `HttpOnly` **assinado com HMAC** (`hub_auth_session`, ver `SESSION_SECRET`
+  em `api/db.js`) com `session_version`, que e incrementado no banco a cada
+  login para invalidar sessoes antigas. Sem assinatura valida, o cookie e
+  rejeitado — nao da mais pra forjar sessao de outra conta so sabendo o id
+  dela.
+- **Acesso ao banco**: `api/db.js` mantem um pool `pg` unico, conectado
+  direto via `DATABASE_URL` (ou `AZURE_POSTGRES_URL`/`POSTGRES_URL`). Essa
+  conexao nao carrega JWT nem `auth.jwt()`, entao as antigas policies de RLS
+  que dependiam da role `authenticated` do Supabase nunca foram avaliadas
+  nessa conexao; o arquivo `postgres-rls-hub.sql` e os testes que o validavam
+  foram removidos por nao refletirem controle de acesso real no banco de
+  producao.
+- **Controle de acesso real**: `/api/records` e `/api/bootstrap` exigem
+  sessao valida para toda operacao, com poucas excecoes explicitas (leitura
+  publica de vagas abertas; insercao publica sanitizada dos formularios do
+  site — ver `PUBLIC_READ_TABLES`/`PUBLIC_INSERT_TABLES` em `api/db.js`).
+  Alem disso, `api/authorize.js` aplica o mesmo escopo por cargo que a UI ja
+  usa (`getAllowedViewsForCurrentUser` em `script.js`): Gerente e
+  Recepcionista so tocam um punhado de tabelas (chat, quadros, calendario,
+  conta, e Documentos de Uso Geral no caso do Gerente); `hub_denuncias` e
+  `hub_feedbacks` ficam restritos a quem tem "nivel Frederico"; qualquer
+  conta so pode editar os proprios campos seguros (`nome`, `foto_perfil`,
+  `configuracoes`) em `hub_users` — trocar o proprio `cargo` ou editar outra
+  conta exige RH. Gerente tambem so le/edita/apaga os documentos que ele
+  mesmo criou em `hub_documentos` (`getForcedRowFilter`), tanto via
+  `/api/records` quanto no `/api/bootstrap`. `password_hash` nunca sai de
+  nenhuma resposta dessas APIs (`stripSensitiveColumns`).
+- **Rate limit**: `api/rate-limit.js` limita por IP (hash, nunca guarda o IP
+  puro) os formularios publicos, o upload de arquivo publico, o login e a
+  senha de acao compartilhada (`api/malote-delete.js`, usada por varias
+  exclusoes do app). O IP e lido do ultimo valor da cadeia
+  `x-forwarded-for` (o que a borda da Vercel acrescenta, mais dificil de
+  forjar do que o primeiro). Login combina IP + identificador tentado, pra
+  nao travar um escritorio inteiro por um erro de senha de uma pessoa so.
+- **Arquivos/anexos**: nao ha bucket de Storage; uploads (curriculos, atestados,
+  documentos de contratados, anexos de chat, avatares) ficam como `data_url`
+  (base64) em `public.hub_files`, criada sob demanda por `api/files.js`.
+  `GET /api/files` exige sessao valida. `POST` (upload) sem sessao so aceita
+  os prefixos usados pelos formularios publicos (`candidaturas/`,
+  `atestados/`, `contratados/`) e nunca sobrescreve um arquivo ja existente
+  nesse caminho; upload autenticado continua podendo substituir o proprio
+  arquivo (ex: trocar avatar).
+- **Mensagens de erro**: `safeErrorResponse` (em `api/db.js`) so deixa passar
+  pro cliente uma mensagem de erro quando o proprio codigo jogou o erro de
+  proposito (com `statusCode`); qualquer excecao inesperada do Postgres
+  volta como mensagem generica, evitando vazar nome de coluna/tabela/
+  constraint. Comparacoes de senha curta (senha de acao dos contratados) usam
+  `timingSafeStringEqual`.
+- **Formularios publicos** (`denuncias`, `feedbacks`, `chamados`,
+  `candidaturas`, `atestados`, documentos de contratados): passam por
+  `/api/records.js`, `/api/files.js` e `/api/contractor-documents.js`, sem
+  Edge Function. O campo Turnstile continua no front (`turnstileSiteKey` em
+  `script.js`), mas hoje esta vazio (nao configurado) e o token, quando
+  enviado, **nao e validado em nenhum lugar do servidor** — a validacao
+  server-side existia so na Edge Function antiga, que foi removida; o rate
+  limit por IP cobre a lacuna de spam/flood enquanto isso.
+- Senhas de acesso do formulario de contratados vem de variavel de ambiente
+  (`CONTRACTOR_ACCESS_PASSWORD_*`), com fallback ao valor historico se a
+  variavel nao estiver configurada.
 - `.env`, `*.env` e arquivos locais sensiveis estao no `.gitignore`.
-- O app nao depende mais de `postgres-config.js`; a configuracao publica padrao fica centralizada em `script.js`.
-- Historico antigo do Git foi reescrito para reduzir risco de senhas antigas em commits.
-- Coluna legada `hub_users.senha` removida do banco.
-- PostgreSQL JS usa SRI nos HTMLs.
-- CSP nao usa mais `unsafe-inline`.
-- Sem Turnstile configurado, denuncias publicas usam rate limit no servidor; chamados e candidaturas seguem bloqueados.
-- Usuarios autenticados nao possuem mais `UPDATE` direto em `hub_users`.
-- Dados internos do HUB usam `sessionStorage` e sao apagados no logout; caches legados em `localStorage` tambem sao removidos.
+- Historico antigo do Git foi reescrito uma vez (era ainda) para reduzir
+  risco de senhas antigas em commits.
 
 ## Pendencias conhecidas
 

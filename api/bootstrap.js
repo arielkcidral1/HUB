@@ -12,20 +12,31 @@ const BOOTSTRAP_TABLES = {
   eventos: "hub_eventos",
   vtRegistros: "hub_vt_registros",
   disciplinaryRecords: "hub_advertencias_suspensoes",
+  documentos: "hub_documentos",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
   feedbacks: "hub_feedbacks",
+  climaPesquisas: "hub_clima_pesquisas",
+  climaConfig: "hub_clima_config",
 };
 
-async function selectRows(client, table) {
+const BOOTSTRAP_ROW_LIMITS = {
+  hub_chat_messages: 1500,
+};
+
+async function selectRows(client, table, forcedFilter) {
   const quotedTable = quoteIdent(table);
+  const where = forcedFilter ? ` where ${quoteIdent(forcedFilter.column)} = $1` : "";
+  const params = forcedFilter ? [forcedFilter.value] : [];
+  const limit = BOOTSTRAP_ROW_LIMITS[table];
+  const limitSql = limit ? ` limit ${Number(limit)}` : "";
   try {
-    const result = await client.query(`select * from public.${quotedTable} order by "created_at" desc`);
+    const result = await client.query(`select * from public.${quotedTable}${where} order by "created_at" desc${limitSql}`, params);
     return result.rows;
   } catch (error) {
     if (error?.code !== "42703") throw error;
-    const result = await client.query(`select * from public.${quotedTable}`);
+    const result = await client.query(`select * from public.${quotedTable}${where}${limitSql}`, params);
     return result.rows;
   }
 }
@@ -44,11 +55,16 @@ export default async function handler(req, res) {
     const errors = {};
 
     await Promise.all(Object.entries(BOOTSTRAP_TABLES).map(async ([collection, table]) => {
+      if (!canReadTable(session, table)) {
+        data[collection] = [];
+        return;
+      }
       try {
-        data[collection] = await selectRows(client, table);
+        data[collection] = stripSensitiveColumns(table, await selectRows(client, table, getForcedRowFilter(session, table)));
       } catch (error) {
         data[collection] = [];
-        errors[collection] = error.message || "Erro ao carregar tabela.";
+        console.error(`Erro ao carregar ${table} no bootstrap:`, error);
+        errors[collection] = "Erro ao carregar tabela.";
       }
     }));
 
@@ -58,7 +74,7 @@ export default async function handler(req, res) {
 
     return json(res, 200, { data, errors });
   } catch (error) {
-    return json(res, error.statusCode || 500, { error: error.message || "Erro ao carregar dados iniciais." });
+    return safeErrorResponse(res, error, "Erro ao carregar dados iniciais.");
   } finally {
     client?.release();
   }

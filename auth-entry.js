@@ -69,35 +69,6 @@
     };
   }
 
-  async function hasRecentActivity() {
-    const user = getStoredUser();
-    const conditions = [
-      user?.id ? { column: "id", op: "eq", value: user.id } : null,
-      user?.email ? { column: "email", op: "eq", value: user.email } : null,
-      user?.user_metadata?.nome ? { column: "nome", op: "eq", value: user.user_metadata.nome } : null,
-    ].filter(Boolean);
-    if (!conditions.length) return false;
-
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 2500);
-    try {
-      const filters = encodeURIComponent(JSON.stringify([{ op: "or", conditions }]));
-      const response = await fetch(`/api/records?table=hub_users&select=id,nome,email,is_online,last_seen&filters=${filters}&limit=1`, {
-        credentials: "same-origin",
-        signal: controller.signal,
-      });
-      const result = await response.json().catch(() => ({}));
-      const row = result?.data?.[0];
-      const lastSeen = Date.parse(row?.last_seen || "");
-      const age = Date.now() - lastSeen;
-      return Boolean(row?.is_online === true && age >= -3000 && age <= 3000);
-    } catch {
-      return false;
-    } finally {
-      window.clearTimeout(timeout);
-    }
-  }
-
   function unlockEntry() {
     document.documentElement.classList.remove("auth-entry-pending");
   }
@@ -116,7 +87,8 @@
   }
 
   async function reauthenticateOnReload() {
-    // O reload deve repetir a entrada normal sem limpar a sessao ou os dados.
+    // O reload deve repetir a entrada normal (revalidar contra o banco) sem
+    // bloquear os demais scripts da pagina, que so aguardam essa promise.
     const authenticated = await reauthenticateInDatabase();
     if (authenticated) window.__hubReloadReauthenticated = true;
     return authenticated;
@@ -174,10 +146,8 @@
           renderAuthenticatedIdentity(result.session.user);
           return true;
         }
-        // O servidor respondeu com sucesso e disse que nao ha sessao valida
-        // (ex: sessao encerrada por outro login). Isso e um veredito
-        // definitivo do backend: nao cair para o cache local aqui, senao a
-        // maquina que deveria ser desconectada volta a entrar sozinha.
+        // Servidor respondeu com veredito explicito de sessao invalida: nao
+        // cai no cache local, vai direto para o login.
         redirectToLogin();
         return false;
       }
