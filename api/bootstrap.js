@@ -1,5 +1,6 @@
-import { assertDatabaseUrl, json, pool, quoteIdent } from "./db.js";
+import { assertDatabaseUrl, json, pool, quoteIdent, stripSensitiveColumns, safeErrorResponse } from "./db.js";
 import { validateAuthSession } from "./auth.js";
+import { canReadTable, getForcedRowFilter } from "./authorize.js";
 
 const BOOTSTRAP_TABLES = {
   usuarios: "hub_users",
@@ -48,7 +49,7 @@ export default async function handler(req, res) {
   try {
     assertDatabaseUrl();
     const session = await validateAuthSession(req);
-    if (!session) return json(res, 401, { error: "Sessao invalida ou expirada." });
+    if (!session?.user?.id) return json(res, 401, { error: "Sessao invalida ou expirada." });
 
     client = await pool.connect();
     const data = {};
@@ -67,10 +68,6 @@ export default async function handler(req, res) {
         errors[collection] = "Erro ao carregar tabela.";
       }
     }));
-
-    if (Array.isArray(data.usuarios)) {
-      data.usuarios = data.usuarios.map(({ password_hash, ...rest }) => rest);
-    }
 
     return json(res, 200, { data, errors });
   } catch (error) {

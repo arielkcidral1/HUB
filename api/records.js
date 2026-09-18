@@ -1,7 +1,7 @@
-import { assertDatabaseUrl, assertTable, getBody, json, pool, quoteIdent } from "./db.js";
+import { assertDatabaseUrl, assertTable, getBody, json, pool, quoteIdent, PUBLIC_READ_TABLES, PUBLIC_INSERT_TABLES, stripSensitiveColumns, safeErrorResponse } from "./db.js";
 import { validateAuthSession } from "./auth.js";
-
-const RESTRICTED_TABLES = new Set(["hub_users", "hub_sessions"]);
+import { checkPublicRateLimit } from "./rate-limit.js";
+import { canReadTable, authorizeWrite, getForcedRowFilter } from "./authorize.js";
 
 const OPERATORS = {
   eq: "=",
@@ -110,12 +110,8 @@ export default async function handler(req, res) {
     const table = url.searchParams.get("table") || "";
     assertTable(table);
 
-    if (RESTRICTED_TABLES.has(table)) {
-      return json(res, 403, { error: "Tabela nao acessivel por esta API." });
-    }
-
     const session = await validateAuthSession(req);
-    if (!session) return json(res, 401, { error: "Sessao invalida ou expirada." });
+    const isAuthenticated = Boolean(session?.user?.id);
 
     if (req.method === "GET") {
       if (!isAuthenticated && !PUBLIC_READ_TABLES.has(table)) return unauthorized(res);
