@@ -7,10 +7,13 @@ function firstValidDatabaseUrl(...values) {
   return values.find((value) => /^postgres(ql)?:\/\//i.test(String(value || "").trim())) || "";
 }
 
+// Tenta ordem: cloud env vars > DATABASE_URL > fallback local em dev
 const DATABASE_URL = firstValidDatabaseUrl(
   process.env.AZURE_POSTGRES_URL,
   process.env.POSTGRES_URL,
-  process.env.DATABASE_URL
+  process.env.DATABASE_URL,
+  // Fallback: usar localhost em modo desenvolvimento
+  process.env.NODE_ENV !== "production" ? "postgresql://postgres:postgres@localhost:5432/hub_dev" : ""
 );
 
 export const SESSION_SECRET = process.env.SESSION_SECRET
