@@ -179,19 +179,23 @@
     }
   }
 
-  const defaultSession = {
-    user: {
-      id: "arielkcidral1@gmail.com",
-      email: "arielkcidral1@gmail.com",
-      user_metadata: { nome: "Ariel Cidral", cargo: "rh" },
-      app_metadata: { cargo: "rh" },
-    },
-    access_token: "",
-    refresh_token: "",
-  };
-  persistAuthenticatedSession(defaultSession);
-  window.__hubAuthenticatedSession = defaultSession;
-  renderAuthenticatedIdentity(defaultSession.user);
+  function getSessionForMode() {
+    return {
+      user: {
+        id: "arielkcidral1@gmail.com",
+        email: "arielkcidral1@gmail.com",
+        user_metadata: { nome: "Ariel Cidral", cargo: "rh" },
+        app_metadata: { cargo: "rh" },
+      },
+      access_token: "",
+      refresh_token: "",
+    };
+  }
+
+  const session = getSessionForMode();
+  persistAuthenticatedSession(session);
+  window.__hubAuthenticatedSession = session;
+  renderAuthenticatedIdentity(session.user);
   unlockEntry();
   window.__hubAuthEntryPromise = Promise.resolve(true);
 })();
