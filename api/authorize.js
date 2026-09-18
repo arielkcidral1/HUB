@@ -52,6 +52,10 @@ function isRestrictedManager(session) {
   return isManager(session) && !hasFredericoLevelAccess(session);
 }
 
+function isAriel(session) {
+  return matchesName(session, "ariel");
+}
+
 function isVanessa(session) {
   return matchesName(session, "vanessa");
 }
@@ -79,7 +83,7 @@ export function canReadTable(session, table) {
 }
 
 export function authorizeUsersWrite(session, { method, filters, columns }) {
-  if (isRh(session) || matchesName(session, "andre barbosa")) return true;
+  if (isRh(session) || isAriel(session) || matchesName(session, "andre barbosa")) return true;
   if (method === "POST") return false;
 
   const idFilters = (Array.isArray(filters) ? filters : []).filter((filter) => filter?.column === "id" && filter?.op === "eq");
