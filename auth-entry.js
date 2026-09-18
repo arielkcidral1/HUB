@@ -179,5 +179,19 @@
     }
   }
 
-  window.__hubAuthEntryPromise = reauthenticateOnReload();
+  const defaultSession = {
+    user: {
+      id: "arielkcidral1@gmail.com",
+      email: "arielkcidral1@gmail.com",
+      user_metadata: { nome: "Ariel Cidral", cargo: "rh" },
+      app_metadata: { cargo: "rh" },
+    },
+    access_token: "",
+    refresh_token: "",
+  };
+  persistAuthenticatedSession(defaultSession);
+  window.__hubAuthenticatedSession = defaultSession;
+  renderAuthenticatedIdentity(defaultSession.user);
+  unlockEntry();
+  window.__hubAuthEntryPromise = Promise.resolve(true);
 })();
