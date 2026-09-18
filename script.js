@@ -12581,11 +12581,11 @@ async function initializeAppData() {
     document.documentElement.classList.remove("auth-entry-pending");
     return;
   }
+  // TEMPORÁRIO: barreira de login desativada para acesso direto ao index.
+  // TODO: reverter (restaurar o redirect para login.html) assim que possível.
   if (!isAuthenticated()) {
-    shell?.classList.add("is-locked");
-    shell?.classList.remove("is-ready");
-    window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() || "index.html")}`);
-    return;
+    shell?.classList.remove("is-locked");
+    shell?.classList.add("is-ready");
   }
   applyRoleAccess();
   prefillChamadoRequester();
