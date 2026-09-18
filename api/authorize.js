@@ -43,7 +43,8 @@ function hasFredericoLevelAccess(session) {
     || matchesName(session, "alex", "alexsandro")
     || matchesName(session, "alcione", "jose alcione")
     || matchesName(session, "andre barbosa")
-    || matchesName(session, "maria luisa", "maria luiza");
+    || matchesName(session, "maria luisa", "maria luiza")
+    || matchesName(session, "ariel cidral", "ariel");
 }
 
 // Cargo cadastrado (Gerente/Recepcionista) so restringe quem NAO esta na
