@@ -1,0 +1,104 @@
+{
+  "id": "advertencias-suspensoes",
+  "name": "Advertências e Suspensões",
+  "version": "1.0.0",
+  "description": "Módulo de gerenciamento de medidas disciplinares (advertências e suspensões) de colaboradores",
+  "author": "HUB RH",
+  "created": "2026-09-21",
+  "files": {
+    "html": "index.html",
+    "css": "style.css",
+    "js": "script.js"
+  },
+  "database": {
+    "table": "hub_advertencias_suspensoes",
+    "dataKey": "disciplinaryRecords"
+  },
+  "navigation": {
+    "view": "advertencias-suspensoes",
+    "label": "Advertências e Suspensões",
+    "icon": "⚖️"
+  },
+  "dependencies": [
+    "data.disciplinaryRecords",
+    "escapeHtml",
+    "showModal",
+    "showPasswordActionModal",
+    "addItem",
+    "updateItem",
+    "deleteItem",
+    "renderCards",
+    "exportToXlsx",
+    "getCurrentUserName",
+    "getSystemFallbackAuthor",
+    "getCityFromUnit",
+    "verifyAuthorizationPassword",
+    "populateUnitSelects"
+  ],
+  "permissions": {
+    "view": ["admin", "rh"],
+    "edit": ["admin", "rh"],
+    "delete": ["admin"]
+  },
+  "features": {
+    "advertencias": {
+      "name": "Advertências",
+      "description": "Registro de advertências disciplinares",
+      "enabled": true
+    },
+    "suspensoes": {
+      "name": "Suspensões",
+      "description": "Registro de suspensões disciplinares",
+      "enabled": true
+    },
+    "anexos": {
+      "name": "Anexação de Arquivos",
+      "description": "Permite anexar documentos às medidas",
+      "enabled": true,
+      "storage": "hub-medidas-disciplinares"
+    },
+    "relatorios": {
+      "name": "Relatórios",
+      "description": "Exportação em Excel",
+      "enabled": true,
+      "formats": ["xlsx"]
+    }
+  },
+  "filters": {
+    "name": {
+      "type": "text",
+      "placeholder": "Nome",
+      "id": "disciplinary-filter-name"
+    },
+    "observations": {
+      "type": "text",
+      "placeholder": "Motivo",
+      "id": "disciplinary-filter-observations"
+    },
+    "date": {
+      "type": "select",
+      "label": "Mês",
+      "id": "disciplinary-filter-date",
+      "options": [
+        { "value": "01", "label": "Janeiro" },
+        { "value": "02", "label": "Fevereiro" },
+        { "value": "03", "label": "Março" },
+        { "value": "04", "label": "Abril" },
+        { "value": "05", "label": "Maio" },
+        { "value": "06", "label": "Junho" },
+        { "value": "07", "label": "Julho" },
+        { "value": "08", "label": "Agosto" },
+        { "value": "09", "label": "Setembro" },
+        { "value": "10", "label": "Outubro" },
+        { "value": "11", "label": "Novembro" },
+        { "value": "12", "label": "Dezembro" }
+      ]
+    },
+    "unit": {
+      "type": "select",
+      "label": "Unidade",
+      "id": "disciplinary-filter-unit",
+      "dataUnitSelect": true
+    }
+  }
+}

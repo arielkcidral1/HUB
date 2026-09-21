@@ -1,0 +1,93 @@
+/* Advertências e Suspensões - Estilos do Módulo */
+
+.disciplinary-file-field,
+.file-upload-field {
+  position: relative;
+  cursor: pointer;
+}
+
+.disciplinary-file-input,
+.file-upload-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.disciplinary-file-control,
+.file-upload-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background-color: var(--color-bg-secondary);
+  transition: background-color 0.2s ease;
+}
+
+.disciplinary-file-field:hover .disciplinary-file-control,
+.disciplinary-file-field:focus-within .disciplinary-file-control,
+.file-upload-field:hover .file-upload-control,
+.file-upload-field:focus-within .file-upload-control {
+  background-color: var(--color-bg-tertiary);
+}
+
+.disciplinary-file-button,
+.file-upload-button {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-link);
+  white-space: nowrap;
+  text-decoration: underline;
+}
+
+.disciplinary-file-name,
+.file-upload-name {
+  min-width: 0;
+  flex: 1;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.disciplinary-card-attachment {
+  margin-top: 14px;
+}
+
+.disciplinary-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.disciplinary-filter-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.disciplinary-filter-fields input,
+.disciplinary-filter-fields select {
+  width: 150px;
+}
+
+.disciplinary-filter-fields #disciplinary-filter-name {
+  width: 110px;
+}
+
+.disciplinary-filter-fields #disciplinary-filter-unit {
+  width: 120px;
+}
+
+.disciplinary-filter-bar + #disciplinary-records {
+  margin-top: 18px;
+}
