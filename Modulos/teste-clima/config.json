@@ -1,0 +1,21 @@
+﻿{
+    "id":  "teste-clima",
+    "version":  "1.0.0",
+    "description":  "Pesquisa de clima",
+    "author":  "HUB RH",
+    "created":  "2026-09-21",
+    "name":  "Teste de Clima",
+    "files":  {
+                  "html":  "index.html",
+                  "css":  "style.css",
+                  "js":  "script.js"
+              },
+    "navigation":  {
+                       "view":  "teste-clima",
+                       "label":  "Teste de Clima"
+                   },
+    "database":  {
+                     "table":  "hub_clima_pesquisas",
+                     "dataKey":  "climaPesquisas"
+                 }
+}

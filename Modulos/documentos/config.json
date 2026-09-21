@@ -1,0 +1,21 @@
+﻿{
+    "id":  "documentos",
+    "version":  "1.0.0",
+    "description":  "Formularios padrao",
+    "author":  "HUB RH",
+    "created":  "2026-09-21",
+    "name":  "Documentos",
+    "files":  {
+                  "html":  "index.html",
+                  "css":  "style.css",
+                  "js":  "script.js"
+              },
+    "navigation":  {
+                       "view":  "documentos",
+                       "label":  "Documentos"
+                   },
+    "database":  {
+                     "table":  "hub_documentos",
+                     "dataKey":  "documentos"
+                 }
+}

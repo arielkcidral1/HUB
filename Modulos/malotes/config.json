@@ -1,0 +1,21 @@
+﻿{
+    "id":  "malotes",
+    "version":  "1.0.0",
+    "description":  "Gerenciamento de malotes",
+    "author":  "HUB RH",
+    "created":  "2026-09-21",
+    "name":  "Malotes de EPI",
+    "files":  {
+                  "html":  "index.html",
+                  "css":  "style.css",
+                  "js":  "script.js"
+              },
+    "navigation":  {
+                       "view":  "malotes",
+                       "label":  "Malotes de EPI"
+                   },
+    "database":  {
+                     "table":  "hub_malotes",
+                     "dataKey":  "malotes"
+                 }
+}

@@ -1,0 +1,21 @@
+﻿{
+    "id":  "vagas",
+    "version":  "1.0.0",
+    "description":  "Gerenciamento de vagas",
+    "author":  "HUB RH",
+    "created":  "2026-09-21",
+    "name":  "Vagas e Projetos",
+    "files":  {
+                  "html":  "index.html",
+                  "css":  "style.css",
+                  "js":  "script.js"
+              },
+    "navigation":  {
+                       "view":  "vagas",
+                       "label":  "Vagas e Projetos"
+                   },
+    "database":  {
+                     "table":  "hub_vagas",
+                     "dataKey":  "vagas"
+                 }
+}

@@ -1,0 +1,21 @@
+﻿{
+    "id":  "feedbacks",
+    "version":  "1.0.0",
+    "description":  "Mensagens de feedback",
+    "author":  "HUB RH",
+    "created":  "2026-09-21",
+    "name":  "Feedbacks Diretoria",
+    "files":  {
+                  "html":  "index.html",
+                  "css":  "style.css",
+                  "js":  "script.js"
+              },
+    "navigation":  {
+                       "view":  "feedbacks",
+                       "label":  "Feedbacks Diretoria"
+                   },
+    "database":  {
+                     "table":  "hub_feedbacks",
+                     "dataKey":  "feedbacks"
+                 }
+}

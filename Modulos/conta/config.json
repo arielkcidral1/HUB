@@ -1,0 +1,21 @@
+﻿{
+    "id":  "conta",
+    "version":  "1.0.0",
+    "description":  "Configuracoes de conta",
+    "author":  "HUB RH",
+    "created":  "2026-09-21",
+    "name":  "Configuracoes",
+    "files":  {
+                  "html":  "index.html",
+                  "css":  "style.css",
+                  "js":  "script.js"
+              },
+    "navigation":  {
+                       "view":  "conta",
+                       "label":  "Configuracoes"
+                   },
+    "database":  {
+                     "table":  "N/A",
+                     "dataKey":  "N/A"
+                 }
+}

@@ -1,0 +1,21 @@
+﻿{
+    "id":  "comunicacao",
+    "version":  "1.0.0",
+    "description":  "Chat e mensagens",
+    "author":  "HUB RH",
+    "created":  "2026-09-21",
+    "name":  "Comunicacao",
+    "files":  {
+                  "html":  "index.html",
+                  "css":  "style.css",
+                  "js":  "script.js"
+              },
+    "navigation":  {
+                       "view":  "comunicacao",
+                       "label":  "Comunicacao"
+                   },
+    "database":  {
+                     "table":  "hub_chat_mensagens",
+                     "dataKey":  "chatMensagens"
+                 }
+}

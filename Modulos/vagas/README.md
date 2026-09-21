@@ -1,0 +1,11 @@
+﻿# Vagas e Projetos
+
+## Descricao
+Gerenciamento de vagas
+
+## Status
+Modulo criado e pronto para integracao
+
+---
+Versao: 1.0
+Data: 2026-09-21
