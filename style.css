@@ -3813,13 +3813,11 @@ textarea {
   display: grid;
 }
 
-.disciplinary-file-field,
 .file-upload-field {
   position: relative;
   gap: 8px;
 }
 
-.disciplinary-file-input,
 .file-upload-input {
   position: absolute;
   inset: auto;
@@ -3829,7 +3827,6 @@ textarea {
   pointer-events: none;
 }
 
-.disciplinary-file-control,
 .file-upload-control {
   display: flex;
   align-items: center;
@@ -3843,15 +3840,12 @@ textarea {
   transition: var(--transition);
 }
 
-.disciplinary-file-field:hover .disciplinary-file-control,
-.disciplinary-file-field:focus-within .disciplinary-file-control,
 .file-upload-field:hover .file-upload-control,
 .file-upload-field:focus-within .file-upload-control {
   border-color: var(--teal-border);
   box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
 }
 
-.disciplinary-file-button,
 .file-upload-button {
   flex: 0 0 auto;
   border-radius: 8px;
@@ -3862,7 +3856,6 @@ textarea {
   font-weight: 700;
 }
 
-.disciplinary-file-name,
 .file-upload-name {
   min-width: 0;
   color: var(--muted);
@@ -3871,10 +3864,6 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.disciplinary-card-attachment {
-  margin-top: 14px;
 }
 
 .document-card {
@@ -5238,40 +5227,6 @@ form.panel[data-public-chamados="true"].panel {
 
 .vt-filter-bar:has(.document-filter-fields) + #document-records {
   margin-top: 20px;
-}
-
-.disciplinary-filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: end;
-  gap: 8px;
-  width: 100%;
-}
-
-.disciplinary-filter-fields {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: end;
-  width: max-content;
-  max-width: 100%;
-}
-
-.disciplinary-filter-fields input,
-.disciplinary-filter-fields select {
-  width: 150px;
-}
-
-.disciplinary-filter-fields #disciplinary-filter-name {
-  width: 110px;
-}
-
-.disciplinary-filter-fields #disciplinary-filter-unit {
-  width: 120px;
-}
-
-.disciplinary-filter-bar + #disciplinary-records {
-  margin-top: 18px;
 }
 
 .vt-filter-fields input,

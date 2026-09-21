@@ -45,15 +45,15 @@ function Test-LoginHtml {
 }
 
 function Test-ClientSecurityFunctions {
-  $script = Read-ProjectFile "script.js"
-  $index = Read-ProjectFile "index.html"
+  $script = (Read-ProjectFile "script.js") + (Read-ProjectFile "app/core/domain/AdvertenciasSuspensoes/index.js") + (Read-ProjectFile "app/adapters/repositories/AdvertenciasSuspensoes/index.js") + (Read-ProjectFile "app/core/usecases/AdvertenciasSuspensoes/index.js") + (Read-ProjectFile "app/adapters/www/pages/AdvertenciasSuspensoes/page.js")
+  $index = (Read-ProjectFile "index.html") + (Read-ProjectFile "app/adapters/www/pages/AdvertenciasSuspensoes/page.html")
   $vagas = Read-ProjectFile "vagas.html"
   $chamados = Read-ProjectFile "chamados.html"
   $docsFredy = Read-ProjectFile "documentos-fredy.html"
   $docsBesten = Read-ProjectFile "documentos-besten.html"
   $docsAchei = Read-ProjectFile "documentos-achei.html"
   $docsTrinca = Read-ProjectFile "documentos-trinca.html"
-  $style = Read-ProjectFile "style.css"
+  $style = (Read-ProjectFile "style.css") + (Read-ProjectFile "app/adapters/www/pages/AdvertenciasSuspensoes/style.css")
   $companyBirthdays = Read-ProjectFile "assets/company-birthdays.js"
   $accountLoadingGuard = Read-ProjectFile "account-loading-guard.js"
   $postgresClient = Read-ProjectFile "hub-postgres-client.js"
@@ -463,11 +463,11 @@ Assert-MatchText $companyBirthdays '"admissao"[\s\S]*"unidade"[\s\S]*"4- PL."[\s
   Assert-MatchText $script 'const VT_MONTH_NAMES = \["Janeiro"[\s\S]*"Dezembro"\][\s\S]*VT_MONTH_NAMES\.includes\(values\.mes\)' "VT valida o mes pelo nome sem ano"
   Assert-MatchText $script 'if \(!hasFullName\(values\.colaborador\)\)' "VT valida nome e sobrenome no script"
   Assert-MatchText $script 'vtRegistros: "hub_vt_registros"' "VT possui tabela PostgreSQL configurada"
-  Assert-MatchText $script 'disciplinaryRecords: "hub_advertencias_suspensoes"' "advertencias e suspensoes possuem tabela PostgreSQL configurada"
+  Assert-MatchText $script 'collection: "disciplinaryRecords",\s*table: "hub_advertencias_suspensoes"' "advertencias e suspensoes possuem tabela PostgreSQL configurada"
   Assert-MatchText (Read-ProjectFile "api/db.js") '"hub_advertencias_suspensoes"' "API de registros permite a tabela de advertencias e suspensoes"
   Assert-MatchText (Read-ProjectFile "api/bootstrap.js") 'disciplinaryRecords: "hub_advertencias_suspensoes"' "bootstrap carrega advertencias e suspensoes do PostgreSQL"
-  Assert-MatchText $script 'if \(collection === "disciplinaryRecords"\) \{[\s\S]*dataMedida: row\.data_medida \|\| ""' "cliente mapeia linhas de advertencias e suspensoes vindas do PostgreSQL"
-  Assert-MatchText $script 'if \(collection === "disciplinaryRecords"\) \{[\s\S]*data_medida: values\.dataMedida \|\| ""' "cliente monta payload de advertencias e suspensoes para o PostgreSQL"
+  Assert-MatchText $script 'mapRow: \(row\) => \(\{[\s\S]*dataMedida: row\.data_medida \|\| ""' "cliente mapeia linhas de advertencias e suspensoes vindas do PostgreSQL"
+  Assert-MatchText $script 'toPayload: \(values\) => \(\{[\s\S]*data_medida: values\.dataMedida \|\| ""' "cliente monta payload de advertencias e suspensoes para o PostgreSQL"
   Assert-MatchText $script 'const success = id[\s\S]*\? await updateItem\("disciplinaryRecords", id, \{ \.\.\.values, updatedBy: getCurrentUserName\(\) \}\)[\s\S]*: await addItem\("disciplinaryRecords", \{ \.\.\.values, createdBy: getCurrentUserName\(\) \}\)' "formulario de advertencia/suspensao grava via PostgreSQL em vez de so localStorage"
   Assert-MatchText $script 'function excluirDisciplinaryRecord\(id\)[\s\S]*const deleted = await deleteItem\("disciplinaryRecords", id\)' "exclusao de advertencia/suspensao remove do PostgreSQL"
   Assert-MatchText $index 'name="dias_suspensao" type="number" min="1" step="1"[^>]*required' "formulario de suspensao exige a quantidade de dias"
@@ -480,7 +480,7 @@ Assert-MatchText $companyBirthdays '"admissao"[\s\S]*"unidade"[\s\S]*"4- PL."[\s
   Assert-MatchText $script 'if \(isSuspensao\)[\s\S]*replace\(/AVISO DE ADVERT\[.E\]NCIA AO EMPREGADO/, "AVISO DE SUSPENS.O AO EMPREGADO"\)[\s\S]*replace\(/identificado\\\(a\\\) ADVERTIDO\\\(A\\\) pelo/, `identificado\(a\) SUSPENSO\(A\) POR \$\{dias\} DIA\(S\) pelo`\)' "documento de suspensao troca o texto de advertencia e cita os dias"
   Assert-MatchText $script 'async function gerarDocumentoDisciplinary\(id\)[\s\S]*const templateFile = getDisciplinaryTemplateFile\(record\.unidade\);[\s\S]*fetch\(`assets/modelos-advertencia/\$\{templateFile\}`\)' "geracao do documento busca o modelo da unidade em assets/modelos-advertencia"
   Assert-MatchText $script 'data-action="gerar-documento-disciplinary" data-id="\$\{escapeHtml\(item\.id\)\}">Gerar documento</button>' "card de advertencia/suspensao tem botao para gerar o documento"
-  Assert-MatchText $script "case 'gerar-documento-disciplinary': gerarDocumentoDisciplinary\(id\); break;" "clique no botao de gerar documento dispara a geracao"
+  Assert-MatchText $script '"gerar-documento-disciplinary": \(id\) => gerarDocumentoDisciplinary\(id\)' "clique no botao de gerar documento dispara a geracao"
   Assert-MatchText $script 'diasSuspensao: row\.dias_suspensao \|\| ""' "cliente mapeia dias de suspensao vindos do PostgreSQL"
   Assert-MatchText $script 'dias_suspensao: values\.diasSuspensao \? Number\(values\.diasSuspensao\) : null' "cliente grava dias de suspensao como numero no PostgreSQL"
   Assert-True -Condition (Test-Path (Join-Path $ProjectRoot "assets/modelos-advertencia") -PathType Container) -Message "pasta de modelos de advertencia existe"
@@ -532,7 +532,7 @@ Assert-MatchText $companyBirthdays '"admissao"[\s\S]*"unidade"[\s\S]*"4- PL."[\s
   Assert-MatchText $script 'document\.getElementById\("vt-filter-nome"\)\?\.addEventListener\("input", renderVtRegistros\)[\s\S]*document\.getElementById\("vt-filter-mes"\)\?\.addEventListener\("change", renderVtRegistros\)[\s\S]*document\.getElementById\("vt-filter-unidade"\)\?\.addEventListener\("change", renderVtRegistros\)[\s\S]*document\.getElementById\("limpar-filtros-vt"\)' "filtros de VT atualizam e limpam a lista"
 Assert-MatchText $script 'document\.getElementById\("abrir-relatorio-vt"\)\?\.addEventListener\("click", showVtReportMenu\)' "botao de relatorio VT abre menu"
 Assert-MatchText $script 'document\.getElementById\("abrir-relatorio-disciplinary"\)\?\.addEventListener\("click", showDisciplinaryReportMenu\)' "botao de relatorio disciplinar abre menu"
-Assert-MatchText $script "case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary\(target\.dataset\.scope\); break;" "acao de gerar relatorio disciplinar esta conectada"
+Assert-MatchText $script '"gerar-relatorio-disciplinary": \(id, target\) => gerarRelatorioDisciplinary\(target\.dataset\.scope\)' "acao de gerar relatorio disciplinar esta conectada"
 Assert-MatchText $script 'sourceData\.candidaturas[\s\S]*type: "vaga"[\s\S]*Curriculo -' "acompanhamento inclui curriculos recebidos"
 Assert-True -Condition (-not ($script -match 'sourceData\.malotes|sourceData\.quadros|sourceData\.disciplinaryRecords|sourceData\.atestados|\(sourceData\.documentosContratados|const docs = typeof documentRecords|const upcoming = typeof getUpcomingEvents')) -Message "acompanhamento nao inclui malotes eventos documentos quadros atestados ou disciplinares"
 Assert-MatchText $script 'let allDashboardActivityItems = \[\][\s\S]*allDashboardActivityItems = sortedDashboardItems[\s\S]*visibleDashboardActivityItems = visibleDashboardItems[\s\S]*if \(dashboardActivityItemsReady\)[\s\S]*dashboardItems\.forEach' "modal acompanhar mantem historico completo enquanto painel mostra nao lidas"

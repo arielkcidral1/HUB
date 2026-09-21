@@ -1,0 +1,92 @@
+.disciplinary-file-field {
+  position: relative;
+  gap: 8px;
+}
+
+.disciplinary-file-input {
+  position: absolute;
+  inset: auto;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.disciplinary-file-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.disciplinary-file-field:hover .disciplinary-file-control,
+.disciplinary-file-field:focus-within .disciplinary-file-control {
+  border-color: var(--teal-border);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+}
+
+.disciplinary-file-button {
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: var(--teal);
+  color: #06201d;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.disciplinary-file-name {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.disciplinary-card-attachment {
+  margin-top: 14px;
+}
+
+
+.disciplinary-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: end;
+  gap: 8px;
+  width: 100%;
+}
+
+.disciplinary-filter-fields {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  width: max-content;
+  max-width: 100%;
+}
+
+.disciplinary-filter-fields input,
+.disciplinary-filter-fields select {
+  width: 150px;
+}
+
+.disciplinary-filter-fields #disciplinary-filter-name {
+  width: 110px;
+}
+
+.disciplinary-filter-fields #disciplinary-filter-unit {
+  width: 120px;
+}
+
+.disciplinary-filter-bar + #disciplinary-records {
+  margin-top: 18px;
+}
+

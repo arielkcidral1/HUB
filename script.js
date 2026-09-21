@@ -35,15 +35,6 @@ const CONTRACTOR_DOCUMENTS_BUCKET = "hub-contratados-documentos";
 const ATESTADOS_BUCKET = "hub-atestados";
 
 const ATESTADO_MAX_SIZE_BYTES = 3 * 1024 * 1024;
-const DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES = 3 * 1024 * 1024;
-const DISCIPLINARY_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
 const CONTRACTOR_DOCUMENT_MAX_SIZE_BYTES = 3 * 1024 * 1024;
 const RESUME_MAX_SIZE_BYTES = 3 * 1024 * 1024;
 const RESUME_ALLOWED_MIME_TYPES = new Set([
@@ -149,7 +140,6 @@ const TABLES = {
   vagas: "hub_vagas",
   eventos: "hub_eventos",
   vtRegistros: "hub_vt_registros",
-  disciplinaryRecords: "hub_advertencias_suspensoes",
   documentos: "hub_documentos",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
@@ -229,7 +219,6 @@ const defaultData = {
   vagas: [],
   eventos: [],
   vtRegistros: [],
-  disciplinaryRecords: [],
   documentos: [],
   documentosContratados: [],
   candidaturas: [],
@@ -239,6 +228,11 @@ const defaultData = {
   usuarios: [],
   readReceipts: [],
 };
+
+HubModules.list.forEach((mod) => {
+  TABLES[mod.collection] = mod.table;
+  defaultData[mod.collection] = [];
+});
 
 let data = (() => {
   try {
@@ -1348,7 +1342,7 @@ function loadLocalData() {
     vagas: parsed.vagas || [],
     eventos: parsed.eventos || [],
     vtRegistros: parsed.vtRegistros || [],
-    disciplinaryRecords: parsed.disciplinaryRecords || [],
+    ...Object.fromEntries(HubModules.list.map((mod) => [mod.collection, parsed[mod.collection] || []])),
     documentos: parsed.documentos || [],
     documentosContratados: (parsed.documentosContratados || [])
       .filter((item) => !String(item.id || "").startsWith("local-") && !item.pendingSync)
@@ -3521,6 +3515,9 @@ function mapAtestadoRow(row = {}) {
 }
 
 function mapRows(collection, rows) {
+  const hubModule = HubModules.byCollection(collection);
+  if (hubModule) return rows.map(hubModule.mapRow);
+
   if (collection === "readReceipts") {
     return rows.map((row) => ({
       id: row.id || `${row.user_id || row.user_key || "user"}:${row.item_id || row.notification_id || row.message_id || generateUUID()}`,
@@ -3686,26 +3683,6 @@ if (collection === "eventos") {
       valorPassagem: Number(row.valor_passagem) || 0,
       saldoAtual: Number(row.saldo_atual) || 0,
       valorNecessario: Number(row.valor_necessario) || 0,
-      createdBy: row.created_by || getSystemFallbackAuthor(),
-      createdAt: formatDate(row.created_at),
-      sortAt: row.created_at || "",
-    }));
-  }
-
-  if (collection === "disciplinaryRecords") {
-    return rows.map((row) => ({
-      id: row.id,
-      tipo: row.tipo || "advertencia",
-      colaborador: row.colaborador || "",
-      dataMedida: row.data_medida || "",
-      unidade: row.unidade || "",
-      local: row.local || "",
-      motivo: row.motivo || "",
-      diasSuspensao: row.dias_suspensao || "",
-      arquivoNome: row.arquivo_nome || "",
-      arquivoTamanho: row.arquivo_tamanho || 0,
-      arquivoTipo: row.arquivo_tipo || "",
-      arquivoUrl: row.arquivo_url || "",
       createdBy: row.created_by || getSystemFallbackAuthor(),
       createdAt: formatDate(row.created_at),
       sortAt: row.created_at || "",
@@ -4169,8 +4146,9 @@ function renderRealtimeUpdate(collection) {
     return;
   }
 
-  if (collection === "disciplinaryRecords") {
-    renderDisciplinaryRecords();
+  const hubModule = HubModules.byCollection(collection);
+  if (hubModule) {
+    hubModule.render();
     return;
   }
 
@@ -4211,6 +4189,9 @@ function toggleMobileMenu() {
 }
 
 function toDbPayload(collection, values) {
+  const hubModule = HubModules.byCollection(collection);
+  if (hubModule) return hubModule.toPayload(values);
+
   if (collection === "comunicados") {
     const payload = {
       autor: values.autor,
@@ -4306,23 +4287,6 @@ if (collection === "eventos") {
       valor_passagem: values.valorPassagem,
       saldo_atual: values.saldoAtual,
       valor_necessario: values.valorNecessario,
-      created_by: values.createdBy || getCurrentUserName(),
-    };
-  }
-
-  if (collection === "disciplinaryRecords") {
-    return {
-      tipo: values.tipo || "advertencia",
-      colaborador: values.colaborador,
-      data_medida: values.dataMedida || "",
-      unidade: values.unidade || "",
-      local: values.local || "",
-      motivo: values.motivo || "",
-      dias_suspensao: values.diasSuspensao ? Number(values.diasSuspensao) : null,
-      arquivo_nome: values.anexo?.name || null,
-      arquivo_tamanho: values.anexo?.size || null,
-      arquivo_tipo: values.anexo?.type || null,
-      arquivo_url: values.anexo?.url || null,
       created_by: values.createdBy || getCurrentUserName(),
     };
   }
@@ -4482,7 +4446,7 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
       "vagas",
       "eventos",
       "vtRegistros",
-      "disciplinaryRecords",
+      ...HubModules.list.map((mod) => mod.collection),
       "documentos",
       "documentosContratados",
       "candidaturas",
@@ -4605,16 +4569,6 @@ function withoutOptionalJobColumns(payload) {
 
 function withoutOptionalApplicationColumns(payload) {
   const { telefone, created_by, ...rest } = payload;
-  return rest;
-}
-
-function withoutDiasSuspensaoColumn(payload) {
-  const { dias_suspensao, ...rest } = payload;
-  return rest;
-}
-
-function withoutDisciplinaryAnexoColumns(payload) {
-  const { arquivo_nome, arquivo_tamanho, arquivo_tipo, arquivo_url, ...rest } = payload;
   return rest;
 }
 
@@ -5774,10 +5728,11 @@ async function addItem(collection, values) {
         return true;
       }
 
-      if (collection === "disciplinaryRecords" && isMissingColumn(error, "dias_suspensao")) {
+      const legacyInsert = HubModules.byCollection(collection)?.insertFallbacks?.find((fallback) => isMissingColumn(error, fallback.column));
+      if (legacyInsert) {
         const { data: insertedLegacy, error: retryError } = await postgresClient
           .from(TABLES[collection])
-          .insert(withoutDiasSuspensaoColumn(payload))
+          .insert(legacyInsert.strip(payload))
           .select("*")
           .single();
 
@@ -5785,37 +5740,13 @@ async function addItem(collection, values) {
 
         data[collection].unshift({
           ...mapRows(collection, [insertedLegacy])[0],
-          diasSuspensao: values.diasSuspensao || "",
+          ...legacyInsert.patch(values),
           createdBy: values.createdBy || getCurrentUserName(),
         });
         saveLocalData();
         setSyncStatus("PostgreSQL precisa migracao", false);
         renderAll();
-        showModal("Banco precisa atualizar", "O registro foi salvo, mas rode a migration 20260819000100 no PostgreSQL para gravar os dias de suspensao.", "info");
-        return true;
-      }
-
-      if (collection === "disciplinaryRecords" && isMissingColumn(error, "arquivo_nome")) {
-        const { data: insertedLegacy, error: retryError } = await postgresClient
-          .from(TABLES[collection])
-          .insert(withoutDisciplinaryAnexoColumns(payload))
-          .select("*")
-          .single();
-
-        if (retryError) throw retryError;
-
-        data[collection].unshift({
-          ...mapRows(collection, [insertedLegacy])[0],
-          arquivoNome: values.anexo?.name || "",
-          arquivoTamanho: values.anexo?.size || 0,
-          arquivoTipo: values.anexo?.type || "",
-          arquivoUrl: values.anexo?.url || "",
-          createdBy: values.createdBy || getCurrentUserName(),
-        });
-        saveLocalData();
-        setSyncStatus("PostgreSQL precisa migracao", false);
-        renderAll();
-        showModal("Banco precisa atualizar", "O registro foi salvo, mas rode a migration 20260825000100 no PostgreSQL para gravar o anexo.", "info");
+        showModal("Banco precisa atualizar", legacyInsert.message, "info");
         return true;
       }
 
@@ -5897,8 +5828,8 @@ if (collection === "eventos") {
           ? "Sem permissao para salvar a vaga. Verifique se seu usuario tem cargo 'RH' na tabela hub_users e se o e-mail do perfil coincide com o e-mail do login. Rode o hub-vagas-fix.sql para corrigir."
           : collection === "vagas"
             ? `Nao foi possivel salvar a vaga. ${error?.message || "Confira se as colunas descricao, requisitos e created_by existem em hub_vagas (rode hub-vagas-fix.sql)."}`
-            : collection === "disciplinaryRecords"
-              ? `Nao foi possivel salvar a advertencia/suspensao. ${error?.message || "Confira se a tabela hub_advertencias_suspensoes existe."} Rode o arquivo postgres/migrations/20260812000300_create_advertencias_suspensoes.sql no PostgreSQL para criar a tabela.`
+            : HubModules.byCollection(collection)?.saveErrorMessage
+              ? HubModules.byCollection(collection).saveErrorMessage(error)
               : collection === "documentos"
                 ? `Nao foi possivel salvar o documento. ${error?.message || "Confira as colunas da tabela hub_documentos (tipo, resumo, detalhes, dados, created_by)."}`
                 : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
@@ -6025,9 +5956,7 @@ if (collection === "eventos") {
       payload.updated_by = values.updatedBy || getCurrentUserName();
       payload.updated_at = new Date().toISOString();
     }
-    if (collection === "disciplinaryRecords") {
-      delete payload.created_by;
-    }
+    HubModules.byCollection(collection)?.prepareUpdate?.(payload);
     const { data: updated, error } = await postgresClient
       .from(TABLES[collection])
       .update(payload)
@@ -7359,320 +7288,6 @@ function gerarRelatorioVt(scope = "filtered") {
   document.getElementById("custom-modal")?.remove();
 }
 
-function getDisciplinaryTypeLabel(type) {
-  return String(type || "").toLowerCase() === "suspensao" ? "Suspensao" : "Advertencia";
-}
-
-function getActiveDisciplinaryTab() {
-  return document.querySelector("[data-disciplinary-doc].active")?.dataset.disciplinaryDoc || "";
-}
-
-function getFilteredDisciplinaryRecords() {
-  const tipoFilter = getActiveDisciplinaryTab();
-  const nameFilter = String(document.getElementById("disciplinary-filter-name")?.value || "").trim().toLowerCase();
-  const observationsFilter = String(document.getElementById("disciplinary-filter-observations")?.value || "").trim().toLowerCase();
-  const monthFilter = document.getElementById("disciplinary-filter-date")?.value || "";
-  const unitFilter = document.getElementById("disciplinary-filter-unit")?.value || "";
-
-  return (data.disciplinaryRecords || []).filter((item) => {
-    if (String(item.tipo || "advertencia").toLowerCase() !== tipoFilter) return false;
-    if (nameFilter && !String(item.colaborador || "").toLowerCase().includes(nameFilter)) return false;
-    if (observationsFilter && !String(item.motivo || "").toLowerCase().includes(observationsFilter)) return false;
-    if (monthFilter && String(item.dataMedida || "").slice(5, 7) !== monthFilter) return false;
-    if (unitFilter && item.unidade !== unitFilter) return false;
-    return true;
-  });
-}
-
-function updateDisciplinaryFilterClearButton() {
-  const clearButton = document.getElementById("clear-disciplinary-filters");
-  if (!clearButton) return;
-  clearButton.hidden = !Boolean(
-    String(document.getElementById("disciplinary-filter-name")?.value || "").trim()
-    || String(document.getElementById("disciplinary-filter-observations")?.value || "").trim()
-    || document.getElementById("disciplinary-filter-date")?.value
-    || document.getElementById("disciplinary-filter-unit")?.value
-  );
-}
-
-function renderDisciplinaryRecords() {
-  updateDisciplinaryFilterClearButton();
-  const records = getFilteredDisciplinaryRecords();
-  const emptyState = document.getElementById("disciplinary-empty-state");
-  const registrosPanel = document.getElementById("disciplinary-registros-panel");
-  const hasActiveTab = Boolean(getActiveDisciplinaryTab());
-  if (emptyState) emptyState.hidden = hasActiveTab;
-
-  if (registrosPanel) registrosPanel.hidden = !hasActiveTab || !records.length;
-
-  renderCards("disciplinary-records", records, (item) => `
-    <article class="item-card">
-      <div class="item-topline">
-        <p class="item-title">${escapeHtml(item.colaborador || "Funcionario nao informado")}</p>
-        <span class="tag">${escapeHtml(getDisciplinaryTypeLabel(item.tipo))}</span>
-      </div>
-      <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Nao informada")}</p>
-      <p><strong>Data:</strong> ${escapeHtml(formatEventDate(item.dataMedida || ""))}</p>
-      <p><strong>Local:</strong> ${escapeHtml(item.local || "Nao informado")}</p>
-      ${String(item.tipo || "").toLowerCase() === "suspensao" ? `<p><strong>Dias de suspensao:</strong> ${escapeHtml(item.diasSuspensao || "Nao informado")}</p>` : ""}
-      <p><strong>Motivo:</strong> ${escapeHtml(item.motivo || "Nao informado")}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt || "")} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</p>
-      <div class="job-actions">
-        <button class="secondary-link" type="button" data-action="gerar-documento-disciplinary" data-id="${escapeHtml(item.id)}">Gerar documento</button>
-        ${item.arquivoUrl ? `<button type="button" class="secondary-link private-file-button" data-private-storage-bucket="hub-medidas-disciplinares" data-private-storage-path="${escapeHtml(item.arquivoUrl)}" data-private-storage-name="${escapeHtml(item.arquivoNome || "anexo")}">Ver anexo</button>` : ""}
-        <button class="secondary-link" type="button" data-action="editar-disciplinary" data-id="${escapeHtml(item.id)}">Editar</button>
-        <button class="danger-button" type="button" data-action="excluir-disciplinary" data-id="${escapeHtml(item.id)}">Deletar</button>
-      </div>
-    </article>
-  `);
-}
-
-function getDisciplinaryReportRows(useFilters = true) {
-  const records = useFilters ? getFilteredDisciplinaryRecords() : (data.disciplinaryRecords || []);
-  return records.map((item) => ({
-    tipo: getDisciplinaryTypeLabel(item.tipo),
-    colaborador: item.colaborador || "Funcionario nao informado",
-    unidade: item.unidade || "Nao informada",
-    dataMedida: formatEventDate(item.dataMedida || ""),
-    local: item.local || "Nao informado",
-    motivo: item.motivo || "Nao informado",
-    registradoEm: formatVtReportDateTime(item.createdAt || todayLabel()),
-    registradoPor: item.createdBy || getSystemFallbackAuthor(),
-  }));
-}
-
-function buildDisciplinaryReportWorksheet(rows) {
-  const headers = ["Tipo", "Funcionario", "Unidade", "Data", "Local", "Motivo", "Registrado em", "Registrado por"];
-  const sheetRows = [
-    worksheetRowXml(["Relatorio de Advertencias e Suspensoes"], 1, 2),
-    worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
-    worksheetRowXml(headers, 5, 1),
-    ...rows.map((item, index) => worksheetRowXml([
-      item.tipo,
-      item.colaborador,
-      item.unidade,
-      item.dataMedida,
-      item.local,
-      item.motivo,
-      item.registradoEm,
-      item.registradoPor,
-    ], index + 6)),
-  ];
-  const lastRow = rows.length + 5;
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="A1:H${lastRow}"/>
-  <cols>
-    <col min="1" max="1" width="16" customWidth="1"/>
-    <col min="2" max="3" width="26" customWidth="1"/>
-    <col min="4" max="5" width="18" customWidth="1"/>
-    <col min="6" max="6" width="44" customWidth="1"/>
-    <col min="7" max="8" width="22" customWidth="1"/>
-  </cols>
-  <sheetData>${sheetRows.join("")}</sheetData>
-  <mergeCells count="2"><mergeCell ref="A1:H1"/><mergeCell ref="A2:H2"/></mergeCells>
-</worksheet>`;
-}
-
-function createDisciplinaryReportXlsxBlob(rows) {
-  const worksheet = buildDisciplinaryReportWorksheet(rows);
-  return createZipBlob([
-    { name: "[Content_Types].xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>` },
-    { name: "_rels/.rels", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
-    { name: "xl/workbook.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Medidas" sheetId="1" r:id="rId1"/></sheets></workbook>` },
-    { name: "xl/_rels/workbook.xml.rels", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
-    { name: "xl/styles.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2F7D6D"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` },
-    { name: "xl/worksheets/sheet1.xml", content: worksheet },
-  ]);
-}
-
-function readZipEntries(buffer) {
-  const view = new DataView(buffer);
-  const bytes = new Uint8Array(buffer);
-  let eocdOffset = -1;
-  for (let index = bytes.length - 22; index >= 0; index -= 1) {
-    if (view.getUint32(index, true) === 0x06054b50) {
-      eocdOffset = index;
-      break;
-    }
-  }
-  if (eocdOffset < 0) throw new Error("Modelo de documento invalido.");
-
-  const totalEntries = view.getUint16(eocdOffset + 10, true);
-  let centralOffset = view.getUint32(eocdOffset + 16, true);
-  const decoder = new TextDecoder();
-  const entries = [];
-  for (let index = 0; index < totalEntries; index += 1) {
-    if (view.getUint32(centralOffset, true) !== 0x02014b50) throw new Error("Modelo de documento invalido.");
-    const method = view.getUint16(centralOffset + 10, true);
-    const compressedSize = view.getUint32(centralOffset + 20, true);
-    const nameLength = view.getUint16(centralOffset + 28, true);
-    const extraLength = view.getUint16(centralOffset + 30, true);
-    const commentLength = view.getUint16(centralOffset + 32, true);
-    const localHeaderOffset = view.getUint32(centralOffset + 42, true);
-    const name = decoder.decode(bytes.subarray(centralOffset + 46, centralOffset + 46 + nameLength));
-    entries.push({ name, method, compressedSize, localHeaderOffset });
-    centralOffset += 46 + nameLength + extraLength + commentLength;
-  }
-
-  return entries.map((entry) => {
-    const localNameLength = view.getUint16(entry.localHeaderOffset + 26, true);
-    const localExtraLength = view.getUint16(entry.localHeaderOffset + 28, true);
-    const dataStart = entry.localHeaderOffset + 30 + localNameLength + localExtraLength;
-    return {
-      name: entry.name,
-      method: entry.method,
-      bytes: bytes.slice(dataStart, dataStart + entry.compressedSize),
-    };
-  });
-}
-
-async function inflateZipEntry(entry) {
-  if (entry.method === 0) return entry.bytes;
-  if (entry.method !== 8) throw new Error(`Metodo de compactacao do modelo nao suportado (${entry.method}).`);
-  if (typeof DecompressionStream === "undefined") {
-    throw new Error("Atualize o navegador (Chrome, Edge ou Firefox recentes) para gerar este documento.");
-  }
-  const stream = new Blob([entry.bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
-function escapeDocumentXmlText(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-const DISCIPLINARY_TEMPLATE_FILES = [
-  "01_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0001_17.docx",
-  "02_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0003_89.docx",
-  "03_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0004_60.docx",
-  "04_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0011_99.docx",
-  "05_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0013_50.docx",
-  "06_Advertencia_DPA_COMERCIO_DE_PNEUS_LTDA_CNPJ_10_432_113_0001_10.docx",
-  "07_Advertencia_DPA_COMERCIO_DE_PNEUS_LTDA_CNPJ_10_432_113_0002_09.docx",
-  "08_Advertencia_JPL_COMERCIO_DE_AUTOPECAS_LTDA_BESTEN_CNPJ_05_218_575_0001_07.docx",
-  "09_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0005_40.docx",
-  "10_Advertencia_GCS_COMERCIO_DE_PNEUS_LTDA_ACHEI_CNPJ_05_326_792_0001_02.docx",
-  "11_Advertencia_GCS_COMERCIO_DE_PNEUS_LTDA_ACHEI_CNPJ_05_326_792_0007_06.docx",
-  "12_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0009_74.docx",
-  "13_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0008_93.docx",
-  "14_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0007_02.docx",
-  "15_Advertencia_FAC_CNPJ_31_708_683_0001_58.docx",
-  "16_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0012_70.docx",
-  "17_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0014_31.docx",
-  "18_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0015_12.docx",
-  "19_Advertencia_TRINCA_CNPJ_56_067_067_0001_06.docx",
-  "20_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0016_01.docx",
-  "21_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0019_46.docx",
-  "22_Advertencia_FREDI_PNEUS_LTDA_CNPJ_80_934_631_0017_84.docx",
-];
-
-function getDisciplinaryTemplateFile(unidade) {
-  const index = UNIT_OPTIONS.indexOf(getCanonicalUnit(unidade));
-  return index >= 0 ? DISCIPLINARY_TEMPLATE_FILES[index] : null;
-}
-
-function buildMotivoRunsXml(motivo) {
-  const lines = String(motivo || "").split(/\r\n|\r|\n/).map((line) => escapeDocumentXmlText(line));
-  return lines
-    .map((line) => `<w:t xml:space="preserve">${line}</w:t>`)
-    .join("<w:br/></w:r><w:r>");
-}
-
-function buildDisciplinaryDocumentXml(xml, record) {
-  const isSuspensao = String(record.tipo || "").toLowerCase() === "suspensao";
-  const nome = escapeDocumentXmlText(record.colaborador);
-  const motivoRuns = buildMotivoRunsXml(record.motivo);
-  const local = escapeDocumentXmlText(record.local);
-  const [year, month, day] = String(record.dataMedida || "").split("-");
-  const dia = day ? String(Number(day)) : "____";
-  const mesExtenso = month ? (VT_MONTH_NAMES[Number(month) - 1] || "").toLowerCase() : "__________";
-  const ano = year || "______";
-
-  const motivoBlankLines = /MOTIVO: <\/w:t><\/w:r><w:r><w:t>_+<\/w:t><w:br\/><\/w:r><w:r><w:t>_+<\/w:t><w:br\/><\/w:r><w:r><w:t>_+<\/w:t><\/w:r>/;
-  let filled = xml
-    .replace(/NOME DO EMPREGADO: _+/, `NOME DO EMPREGADO: ${nome}`)
-    .replace(motivoBlankLines, `MOTIVO: </w:t></w:r><w:r>${motivoRuns}</w:r>`)
-    .replace(/MOTIVO: <\/w:t><\/w:r><w:r><w:t>_+/, `MOTIVO: </w:t></w:r><w:r>${motivoRuns}`)
-    .replace(/Local e data: _+, _+ de _+ de _+\./, `Local e data: ${local}, ${dia} de ${mesExtenso} de ${ano}.`);
-
-  if (isSuspensao) {
-    const dias = escapeDocumentXmlText(String(record.diasSuspensao || "").replace(/\D/g, "") || "___");
-    filled = filled
-      .replace(/AVISO DE ADVERT[ÊE]NCIA AO EMPREGADO/, "AVISO DE SUSPENSÃO AO EMPREGADO")
-      .replace(/identificado\(a\) ADVERTIDO\(A\) pelo/, `identificado(a) SUSPENSO(A) POR ${dias} DIA(S) pelo`);
-  }
-
-  return filled;
-}
-
-async function gerarDocumentoDisciplinary(id) {
-  const record = (data.disciplinaryRecords || []).find((item) => String(item.id) === String(id));
-  if (!record) return;
-
-  const templateFile = getDisciplinaryTemplateFile(record.unidade);
-  if (!templateFile) {
-    showModal("Sem modelo cadastrado", "Nao ha modelo de documento para a unidade deste registro.", "error");
-    return;
-  }
-
-  try {
-    const response = await fetch(`assets/modelos-advertencia/${templateFile}`);
-    if (!response.ok) throw new Error("Nao foi possivel carregar o modelo do documento.");
-    const templateBuffer = await response.arrayBuffer();
-    const entries = readZipEntries(templateBuffer);
-
-    const files = await Promise.all(entries.map(async (entry) => {
-      const inflated = await inflateZipEntry(entry);
-      if (entry.name !== "word/document.xml") return { name: entry.name, content: inflated };
-      const xml = new TextDecoder().decode(inflated);
-      return { name: entry.name, content: new TextEncoder().encode(buildDisciplinaryDocumentXml(xml, record)) };
-    }));
-
-    const blob = createZipBlob(files, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-    downloadBlob(blob, safeDownloadName(`${record.tipo}-${record.colaborador}`, "docx"));
-  } catch (error) {
-    console.error("Erro ao gerar documento disciplinar:", error);
-    showModal("Erro ao gerar documento", error.message || "Nao foi possivel gerar o documento.", "error");
-  }
-}
-
-function gerarRelatorioDisciplinary(scope = "filtered") {
-  const useFilters = scope !== "all";
-  const rows = getDisciplinaryReportRows(useFilters);
-  if (!rows.length) {
-    showModal("Relatorio vazio", "Nao ha advertencias ou suspensoes para gerar o relatorio.", "error");
-    return;
-  }
-  downloadBlob(createDisciplinaryReportXlsxBlob(rows), safeDownloadName(`relatorio-advertencias-suspensoes-${useFilters ? "filtrado" : "todos"}`, "xlsx"));
-  document.getElementById("custom-modal")?.remove();
-}
-
-function showDisciplinaryReportMenu() {
-  document.getElementById("custom-modal")?.remove();
-  const filteredCount = getFilteredDisciplinaryRecords().length;
-  const totalCount = (data.disciplinaryRecords || []).length;
-  const overlay = document.createElement("div");
-  overlay.id = "custom-modal";
-  overlay.className = "modal-overlay";
-  overlay.innerHTML = `
-    <div class="modal-card vt-report-modal">
-      <div class="modal-header info">Relatorio disciplinar</div>
-      <div class="modal-body">
-        <p>Escolha quais registros deseja exportar em .xlsx.</p>
-        <div class="vt-report-options">
-          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="filtered"><span>Registros filtrados</span><small>${escapeHtml(String(filteredCount))} registro(s)</small></button>
-          <button class="report-chip" type="button" data-action="gerar-relatorio-disciplinary" data-scope="all"><span>Todos os registros</span><small>${escapeHtml(String(totalCount))} registro(s) cadastrados</small></button>
-        </div>
-      </div>
-      <div class="modal-footer"><button class="secondary-link" type="button" data-action="close-modal">Cancelar</button></div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-}
-
 function updateVtFilterClearButton() {
   const clearButton = document.getElementById("limpar-filtros-vt");
   if (!clearButton) return;
@@ -7843,11 +7458,10 @@ function getViewForCollection(collection) {
     documentosContratados: "documentos-contratados",
     atestados: "documentos",
     vtRegistros: "gerenciamento-vt",
-    disciplinaryRecords: "advertencias-suspensoes",
     usuarios: "equipe",
     climaPesquisas: "teste-clima",
   };
-  return views[String(collection || "")] || "dashboard";
+  return views[String(collection || "")] || HubModules.byCollection(collection)?.view || "dashboard";
 }
 
 function getDashboardItemView(item = {}) {
@@ -9272,7 +8886,8 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!isAuthenticated()) return false;
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
-  if (["usuarios", "eventos", "vtRegistros", "disciplinaryRecords", "malotes", "vagas", "atestados", "quadros"].includes(collection)) return false;
+  if (["usuarios", "eventos", "vtRegistros", "malotes", "vagas", "atestados", "quadros"].includes(collection)) return false;
+  if (HubModules.byCollection(collection)?.silent) return false;
 
   if (!canAccessView(getViewForCollection(collection))) return false;
 
@@ -9990,7 +9605,7 @@ function renderAll() {
   });
 
   safeRenderSection("vt-registros", renderVtRegistros);
-  safeRenderSection("advertencias-suspensoes", renderDisciplinaryRecords);
+  HubModules.list.forEach((mod) => safeRenderSection(mod.view, mod.render));
   safeRenderSection("documentos-contratados", renderDocumentosContratados);
 
   safeRenderSection("chamados", renderChamadosSection);
@@ -10779,9 +10394,7 @@ document.addEventListener("keydown", (event) => {
     if (document.getElementById("documentos")?.classList.contains("active") && getActiveDocumentTab()) {
       deselectActiveDocumentTab();
     }
-    if (document.getElementById("advertencias-suspensoes")?.classList.contains("active") && getActiveDisciplinaryTab()) {
-      deselectActiveDisciplinaryTab();
-    }
+    HubModules.list.forEach((mod) => mod.onEscape?.());
   }
 });
 
@@ -11646,129 +11259,6 @@ document.getElementById("limpar-filtros-vt")?.addEventListener("click", () => {
   if (monthFilter) monthFilter.value = "";
   if (unitFilter) unitFilter.value = "";
   renderVtRegistros();
-});
-
-function deselectActiveDisciplinaryTab() {
-  document.querySelectorAll("[data-disciplinary-doc]").forEach((tab) => tab.classList.remove("active"));
-  document.querySelectorAll(".disciplinary-view").forEach((view) => view.classList.remove("active"));
-  renderDisciplinaryRecords();
-}
-
-function activateDisciplinaryTab(type) {
-  document.querySelectorAll("[data-disciplinary-doc]").forEach((tab) => tab.classList.toggle("active", tab.dataset.disciplinaryDoc === type));
-  document.querySelectorAll(".disciplinary-view").forEach((view) => {
-    view.classList.toggle("active", view.id === `disciplinary-${type}`);
-  });
-  renderDisciplinaryRecords();
-}
-
-document.querySelectorAll("[data-disciplinary-doc]").forEach((button) => {
-  button.addEventListener("click", () => activateDisciplinaryTab(button.dataset.disciplinaryDoc));
-});
-
-function validateDisciplinaryAttachment(file) {
-  if (!file || !file.name) return null;
-  if (file.size > DISCIPLINARY_ATTACHMENT_MAX_SIZE_BYTES) return "O anexo deve ter ate 3 MB.";
-  if (!DISCIPLINARY_ATTACHMENT_ALLOWED_MIME_TYPES.has(file.type)) return "Anexe somente imagem, PDF ou arquivo Word.";
-  return null;
-}
-
-async function uploadDisciplinaryAttachment(file) {
-  const path = `medidas-disciplinares/${generateUUID()}/${safePublicFileName(file.name || "anexo")}`;
-  await uploadPublicFile(file, path);
-  return { name: file.name || "anexo", size: file.size || 0, type: file.type || "application/octet-stream", url: path };
-}
-
-function updateDisciplinaryFileLabel(input, overrideName) {
-  const field = input?.closest("[data-disciplinary-anexo-field]");
-  const label = field?.querySelector(".disciplinary-file-name");
-  if (!label) return;
-  const file = input.files?.[0];
-  label.textContent = file?.name || overrideName || label.dataset.emptyLabel || "Nenhum arquivo escolhido";
-}
-
-document.querySelectorAll("[data-disciplinary-form]").forEach((formElement) => {
-  const unitField = formElement.elements.unidade;
-  const localField = formElement.elements.local;
-  unitField?.addEventListener("change", () => {
-    const city = getUnitCity(unitField.value);
-
-    if (localField) localField.value = city;
-  });
-
-  formElement.querySelectorAll(".disciplinary-file-input").forEach((input) => {
-    input.addEventListener("change", () => updateDisciplinaryFileLabel(input));
-  });
-
-  formElement.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const form = new FormData(formElement);
-    const tipo = formElement.dataset.disciplinaryForm || "advertencia";
-    const diasSuspensao = String(form.get("dias_suspensao") || "").trim();
-    if (tipo === "suspensao" && (!diasSuspensao || Number(diasSuspensao) < 1)) {
-      showModal("Dias obrigatorios", "Informe a quantidade de dias de suspensao.", "error");
-      return;
-    }
-    const file = form.get("anexo");
-    const fileError = validateDisciplinaryAttachment(file);
-    if (fileError) {
-      showModal("Anexo invalido", fileError, "error");
-      return;
-    }
-    let anexo = null;
-    if (file && file.name) {
-      try {
-        anexo = await uploadDisciplinaryAttachment(file);
-      } catch (error) {
-        showModal("Erro no anexo", error?.message || "Nao foi possivel enviar o anexo.", "error");
-        return;
-      }
-    }
-    const id = String(form.get("id") || "").trim();
-    if (id && !anexo) {
-      const existing = (data.disciplinaryRecords || []).find((item) => String(item.id) === id);
-      if (existing?.arquivoUrl) {
-        anexo = { name: existing.arquivoNome || "", size: existing.arquivoTamanho || 0, type: existing.arquivoTipo || "", url: existing.arquivoUrl };
-      }
-    }
-    const values = {
-      tipo,
-      colaborador: String(form.get("colaborador") || "").trim(),
-      dataMedida: String(form.get("data_medida") || ""),
-      unidade: String(form.get("unidade") || ""),
-      local: String(form.get("local") || "").trim(),
-      motivo: String(form.get("motivo") || "").trim(),
-      diasSuspensao: tipo === "suspensao" ? diasSuspensao : "",
-      anexo,
-    };
-    const success = id
-      ? await updateItem("disciplinaryRecords", id, { ...values, updatedBy: getCurrentUserName() })
-      : await addItem("disciplinaryRecords", { ...values, createdBy: getCurrentUserName() });
-    if (success) {
-      resetDisciplinaryForm(formElement);
-      if (typeof populateUnitSelects === "function") populateUnitSelects();
-      showModal(id ? "Registro atualizado" : "Registro salvo", `${getDisciplinaryTypeLabel(tipo)} ${id ? "atualizada" : "salva"} com sucesso.`, "info");
-    }
-  });
-
-  formElement.querySelector("[data-disciplinary-cancel-edit]")?.addEventListener("click", () => resetDisciplinaryForm(formElement));
-});
-
-document.getElementById("disciplinary-filter-name")?.addEventListener("input", renderDisciplinaryRecords);
-document.getElementById("disciplinary-filter-observations")?.addEventListener("input", renderDisciplinaryRecords);
-document.getElementById("disciplinary-filter-date")?.addEventListener("change", renderDisciplinaryRecords);
-document.getElementById("disciplinary-filter-unit")?.addEventListener("change", renderDisciplinaryRecords);
-document.getElementById("abrir-relatorio-disciplinary")?.addEventListener("click", showDisciplinaryReportMenu);
-document.getElementById("clear-disciplinary-filters")?.addEventListener("click", () => {
-  const nameFilter = document.getElementById("disciplinary-filter-name");
-  const observationsFilter = document.getElementById("disciplinary-filter-observations");
-  const dateFilter = document.getElementById("disciplinary-filter-date");
-  const unitFilter = document.getElementById("disciplinary-filter-unit");
-  if (nameFilter) nameFilter.value = "";
-  if (observationsFilter) observationsFilter.value = "";
-  if (dateFilter) dateFilter.value = "";
-  if (unitFilter) unitFilter.value = "";
-  renderDisciplinaryRecords();
 });
 
 const usuarioForm = document.getElementById("usuario-form");
@@ -13236,75 +12726,6 @@ async function excluirVtRegistro(id) {
   });
 };
 
-function excluirDisciplinaryRecord(id) {
-  const registro = (data.disciplinaryRecords || []).find((item) => String(item.id) === String(id));
-  if (!registro) return;
-
-  showPasswordActionModal({
-    title: "Deletar registro",
-    text: `Confirme a senha de exclusao para deletar a medida de "${registro.colaborador || "funcionario nao informado"}".`,
-    confirmText: "Deletar",
-    danger: true,
-    validatePassword: async (password) => verifyAuthorizationPassword(password),
-    onConfirm: async () => {
-      const deleted = await deleteItem("disciplinaryRecords", id);
-      if (deleted) {
-        showModal("Registro deletado", "A medida disciplinar foi removida.", "info");
-      }
-    },
-  });
-}
-
-function resetDisciplinaryForm(formElement) {
-  if (!formElement) return;
-  const tipo = formElement.dataset.disciplinaryForm;
-  formElement.reset();
-  if (formElement.elements.id) formElement.elements.id.value = "";
-  formElement.querySelector("[data-disciplinary-cancel-edit]")?.setAttribute("hidden", "");
-  formElement.querySelector("[data-disciplinary-anexo-field]")?.setAttribute("hidden", "");
-  const anexoInput = formElement.querySelector(".disciplinary-file-input");
-  if (anexoInput) updateDisciplinaryFileLabel(anexoInput);
-  const submitButton = formElement.querySelector('button[type="submit"]');
-  if (submitButton) submitButton.textContent = tipo === "suspensao" ? "Salvar suspensao" : "Salvar advertencia";
-}
-
-function editarDisciplinaryRecord(id) {
-  const registro = (data.disciplinaryRecords || []).find((item) => String(item.id) === String(id));
-  if (!registro) return;
-
-  showPasswordActionModal({
-    title: "Editar registro",
-    text: `Informe a senha para editar a medida de "${registro.colaborador || "funcionario nao informado"}".`,
-    confirmText: "Editar",
-    validatePassword: async (password) => password.trim() === "1001",
-    onConfirm: () => {
-      const tipo = String(registro.tipo || "").toLowerCase() === "suspensao" ? "suspensao" : "advertencia";
-      activateDisciplinaryTab(tipo);
-      const formElement = document.querySelector(`[data-disciplinary-form="${tipo}"]`);
-      if (!formElement) return;
-      formElement.elements.id.value = registro.id;
-      formElement.elements.colaborador.value = registro.colaborador || "";
-      formElement.elements.data_medida.value = registro.dataMedida || "";
-      setFieldValue(formElement.elements.unidade, registro.unidade || "");
-      formElement.elements.local.value = registro.local || "";
-      formElement.elements.motivo.value = registro.motivo || "";
-      if (tipo === "suspensao" && formElement.elements.dias_suspensao) {
-        formElement.elements.dias_suspensao.value = registro.diasSuspensao || "";
-      }
-      formElement.querySelector("[data-disciplinary-cancel-edit]")?.removeAttribute("hidden");
-      formElement.querySelector("[data-disciplinary-anexo-field]")?.removeAttribute("hidden");
-      const anexoInput = formElement.querySelector(".disciplinary-file-input");
-      if (anexoInput) {
-        anexoInput.value = "";
-        updateDisciplinaryFileLabel(anexoInput, registro.arquivoNome);
-      }
-      const submitButton = formElement.querySelector('button[type="submit"]');
-      if (submitButton) submitButton.textContent = "Salvar alteracoes";
-      formElement.scrollIntoView({ behavior: "smooth", block: "start" });
-    },
-  });
-}
-
 async function excluirDocumentoContratado(id) {
   const registro = (data.documentosContratados || []).find((item) => String(item.id) === String(id));
   if (!registro) return;
@@ -13798,6 +13219,7 @@ document.addEventListener('click', (event) => {
   if (!target) return;
 
   const { action, id } = target.dataset;
+  if (HubModules.runAction(action, id, target)) return;
 
   if (action === 'no-op') {
     event.stopPropagation();
@@ -13839,10 +13261,6 @@ document.addEventListener('click', (event) => {
     case 'editar-vt': editarVtRegistro(id); break;
     case 'excluir-vt': excluirVtRegistro(id); break;
     case 'gerar-relatorio-vt': gerarRelatorioVt(target.dataset.scope); break;
-    case 'editar-disciplinary': editarDisciplinaryRecord(id); break;
-    case 'excluir-disciplinary': excluirDisciplinaryRecord(id); break;
-    case 'gerar-documento-disciplinary': gerarDocumentoDisciplinary(id); break;
-    case 'gerar-relatorio-disciplinary': gerarRelatorioDisciplinary(target.dataset.scope); break;
     case 'editar-documento': editarDocumento(id); break;
     case 'baixar-documento-rh': baixarDocumentoRH(id); break;
     case 'excluir-documento': excluirDocumento(id); break;
