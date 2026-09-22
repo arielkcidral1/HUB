@@ -68,5 +68,5 @@ arquivos dentro de `app/adapters/www/pages/`.
 ## Seguranca
 
 Alteracoes de seguranca, autenticacao e autorizacao sao registradas em
-[`SECURITY_CHANGES.md`](SECURITY_CHANGES.md). Consulte esse arquivo antes de
+[`agents/SECURITY_CHANGES.md`](agents/SECURITY_CHANGES.md). Consulte esse arquivo antes de
 mexer em `api/auth.js`, `api/records.js`, `api/bootstrap.js` ou `api/files.js`.
