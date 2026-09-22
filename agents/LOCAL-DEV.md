@@ -9,8 +9,8 @@ Baixe em https://www.docker.com/products/docker-desktop
 
 ### 2. Iniciar PostgreSQL Local
 ```bash
-# Windows (PowerShell)
-.\setup-db-local.ps1
+# Windows (PowerShell), a partir da raiz do projeto
+.\scripts\setup-db-local.ps1
 # Escolha opção 1
 
 # macOS/Linux (Bash)
@@ -108,7 +108,7 @@ AUTH_SESSION_SECRET=...
 
 | Script | Função |
 |--------|--------|
-| `setup-db-local.ps1` | Menu interativo PostgreSQL (Windows) |
+| `scripts/setup-db-local.ps1` | Menu interativo PostgreSQL (Windows) |
 | `postgres/run-migration.js` | Cria tabelas do zero |
 
-Mais detalhes em **`setup-local-db.md`**
+Mais detalhes em **`setup-local-db.md`** (nesta mesma pasta)

@@ -39,8 +39,8 @@ npm --version
 ### Opção Recomendada: Docker
 
 ```powershell
-# Windows PowerShell
-.\setup-db-local.ps1
+# Windows PowerShell, a partir da raiz do projeto
+.\scripts\setup-db-local.ps1
 # Escolha opção 1
 ```
 
