@@ -16,15 +16,24 @@ servido como site estatico + API serverless.
 ## Estrutura
 
 ```
-api/            Endpoints serverless (auth, records, bootstrap, files, ...)
+api/                        Endpoints serverless (auth, records, bootstrap, files, ...)
+app/adapters/www/pages/     Paginas migradas (page.html, page.js, style.css por modulo)
+app/adapters/www/utils/     Utilitarios de frontend compartilhados (auth, cliente do banco, registry/loader)
+app/adapters/repositories/  Repositorios que fazem a ponte com o banco
+app/core/domain/            Regras de negocio puras
+app/core/usecases/          Fluxos de aplicacao
 assets/         Imagens, logos e modelos de documento
 docs/           Modelos e formularios internos (RH)
 imports/        Anotacoes/resumos de importacoes de dados
 postgres/       Migrations SQL e Edge Functions legadas
 scripts/        Scripts utilitarios (ex.: checagem de hashes de senha)
 tests/          Testes de unidade em PowerShell
-*.html, *.js    Paginas e scripts do frontend estatico
+index.html, script.js, style.css   Shell principal, ainda nao migrado modulo a modulo
 ```
+
+URLs publicas antigas (`/login.html`, `/vagas.html`, `/denuncia.html`, etc.)
+continuam funcionando via `rewrites` em `vercel.json`, que apontam para os
+arquivos dentro de `app/adapters/www/pages/`.
 
 ## Configuracao local
 

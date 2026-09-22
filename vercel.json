@@ -1,4 +1,19 @@
 {
+  "rewrites": [
+    { "source": "/login.html", "destination": "/app/adapters/www/pages/Login/page.html" },
+    { "source": "/account-loading.html", "destination": "/app/adapters/www/pages/AccountLoading/page.html" },
+    { "source": "/vagas.html", "destination": "/app/adapters/www/pages/Vagas/page.html" },
+    { "source": "/denuncia.html", "destination": "/app/adapters/www/pages/Denuncia/page.html" },
+    { "source": "/clima.html", "destination": "/app/adapters/www/pages/Clima/page.html" },
+    { "source": "/chamados.html", "destination": "/app/adapters/www/pages/Chamados/page.html" },
+    { "source": "/feedbacks.html", "destination": "/app/adapters/www/pages/Feedbacks/page.html" },
+    { "source": "/atestados.html", "destination": "/app/adapters/www/pages/Atestados/page.html" },
+    { "source": "/candidatura.html", "destination": "/app/adapters/www/pages/Candidatura/page.html" },
+    { "source": "/documentos-fredy.html", "destination": "/app/adapters/www/pages/DocumentosFredy/page.html" },
+    { "source": "/documentos-besten.html", "destination": "/app/adapters/www/pages/DocumentosBesten/page.html" },
+    { "source": "/documentos-achei.html", "destination": "/app/adapters/www/pages/DocumentosAchei/page.html" },
+    { "source": "/documentos-trinca.html", "destination": "/app/adapters/www/pages/DocumentosTrinca/page.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

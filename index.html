@@ -6,13 +6,13 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://challenges.cloudflare.com; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
     <title>HUB | RH</title>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
-    <script src="auth-entry.js?v=auth-entry-model-v23"></script>
+    <script src="app/adapters/www/utils/auth-entry.js?v=auth-entry-model-v23"></script>
     <script src="app/adapters/www/utils/registry.js"></script>
     <link rel="stylesheet" href="style.css?v=clima-spacing-v29" />
     <link rel="stylesheet" href="app/adapters/www/pages/AdvertenciasSuspensoes/style.css" />
-       <link rel="stylesheet" href="message-size-enhancement.css" />
-    <link rel="stylesheet" href="vagas-format.css" />
-    <link rel="stylesheet" href="vagas-admin-enhance.css" />
+       <link rel="stylesheet" href="app/adapters/www/utils/message-size-enhancement.css" />
+    <link rel="stylesheet" href="app/adapters/www/pages/Vagas/vagas-format.css" />
+    <link rel="stylesheet" href="app/adapters/www/pages/Vagas/admin.css" />
   </head>
   <body>
     <div class="app-loading-overlay" id="app-loading-overlay" aria-live="polite" aria-busy="true">
@@ -1564,15 +1564,15 @@
         </section>
       </main>
     </div>
-    <script src="hub-postgres-client.js?v=db-load-v3"></script>
+    <script src="app/adapters/www/utils/hub-postgres-client.js?v=db-load-v3"></script>
     <script src="assets/company-birthdays.js?v=2026-08-05"></script>
     <script src="app/core/domain/AdvertenciasSuspensoes/index.js"></script>
     <script src="app/adapters/repositories/AdvertenciasSuspensoes/index.js"></script>
     <script src="app/core/usecases/AdvertenciasSuspensoes/index.js"></script>
     <script src="app/adapters/www/pages/AdvertenciasSuspensoes/page.js"></script>
     <script src="script.js?v=chamado-cracha-v1"></script>
-    <script src="auth-display-guard.js?v=preserve-session-v8"></script>
-    <script src="vagas-admin-filters.js?v=vagas-admin-filters-v2"></script>
+    <script src="app/adapters/www/utils/auth-display-guard.js?v=preserve-session-v8"></script>
+    <script src="app/adapters/www/pages/Vagas/admin.js?v=vagas-admin-filters-v2"></script>
   </body>
 </html>
 
