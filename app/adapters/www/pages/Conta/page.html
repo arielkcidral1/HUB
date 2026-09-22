@@ -1,0 +1,188 @@
+        <section class="view" id="conta">
+          <div class="settings-shell">
+            <aside class="settings-panel" aria-label="Configuracoes do usuario">
+              <h2>Configuracoes</h2>
+              <label class="settings-search" aria-label="Pesquisar configuracoes">
+                <span aria-hidden="true">⌕</span>
+                <input id="settings-search-input" type="search" placeholder="Pesquisar configuracoes" autocomplete="off" />
+              </label>
+              <div class="settings-user-card">
+                <img id="settings-user-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392a7a2'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar">
+                <div>
+                  <strong id="settings-user-name">Usuario</strong>
+                  <span id="settings-user-role">Conta do HUB</span>
+                </div>
+              </div>
+              <div class="settings-list" id="settings-list">
+                <button class="settings-item active" type="button" data-settings-target="settings-account-panel" data-settings-keywords="conta seguranca dados conta"><span class="settings-item-icon settings-icon-account" aria-hidden="true"></span><span><strong>Conta</strong><small>Notificacoes de seguranca, dados da conta</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-privacy-panel" data-settings-keywords="privacidade contatos bloqueados mensagens temporarias"><span class="settings-item-icon settings-icon-privacy" aria-hidden="true"></span><span><strong>Privacidade</strong><small>Contatos bloqueados, mensagens temporarias</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-chats-panel" data-settings-keywords="conversas tema configuracoes conversas"><span class="settings-item-icon settings-icon-chats" aria-hidden="true"></span><span><strong>Conversas</strong><small>Tema, configuracoes de conversas</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-notifications-panel" data-settings-keywords="notificacoes mensagens avisos"><span class="settings-item-icon settings-icon-notifications" aria-hidden="true"></span><span><strong>Notificacoes</strong><small>Notificacoes de mensagens</small></span></button>
+                <button class="settings-item" type="button" data-settings-target="settings-shortcuts-panel" data-settings-keywords="atalhos teclado acoes rapidas"><span class="settings-item-icon settings-icon-shortcuts" aria-hidden="true"></span><span><strong>Atalhos de teclado</strong><small>Acoes rapidas</small></span></button>
+              </div>
+              <button class="settings-logout" id="settings-logout-button" type="button"><span aria-hidden="true">↪</span>Desconectar</button>
+            </aside>
+            <div class="settings-detail">
+              <form class="panel form-panel settings-detail-panel active" id="conta-form" data-settings-panel="settings-account-panel">
+              <div class="panel-header">
+                <h2>Configuração de conta</h2>
+              </div>
+              <label>Nome do Usuário
+                <input type="text" name="novo_nome" id="novo-nome" placeholder="Seu nome" />
+              </label>
+              <div class="account-photo-block">
+                <label class="account-photo-label">Foto de Perfil</label>
+                <div class="avatar-upload-wrapper">
+                  <img id="conta-avatar-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392a7a2'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar">
+                  <div class="stack-sm">
+                    <label class="secondary-link clickable fit-link flush-bottom" for="foto-perfil-input">Escolher nova foto</label>
+                    <input class="hidden" type="file" name="foto_perfil" id="foto-perfil-input" accept="image/png, image/jpeg, image/webp" />
+                    <span id="foto-perfil-filename" class="meta-sm">Nenhuma foto selecionada</span>
+                  </div>
+                </div>
+              </div>
+              <label>Cargo
+                <input id="conta-cargo" class="readonly-field" type="text" disabled />
+              </label>
+              <button class="secondary-link account-password-action fit-link" type="button" id="btn-redefinir-senha">Redefinir senha</button>
+              <button class="primary-button" type="submit">Atualizar conta</button>
+              </form>
+            <section class="panel settings-detail-panel" data-settings-panel="settings-privacy-panel">
+              <div class="panel-header"><h2>Privacidade</h2></div>
+              <p class="item-meta">Configurações de privacidade da conta e das conversas.</p>
+              <div class="settings-section">
+                <h3>Exibi&ccedil;&atilde;o</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-privacy-hide-presence" data-user-setting="hidePresence" />
+                  <span><strong>Ocultar status no cabe&ccedil;alho</strong><small>Remove cargo/status do menu do usu&aacute;rio e do cart&atilde;o de configura&ccedil;&otilde;es.</small></span>
+                </label>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-privacy-blur-previews" data-user-setting="blurChatPreviews" />
+                  <span><strong>Proteger pr&eacute;vias do chat</strong><small>Desfoca imagens e documentos anexados at&eacute; passar o mouse ou focar no item.</small></span>
+                </label>
+              </div>
+              <div class="settings-section">
+                <h3>Sess&atilde;o</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-privacy-local-only" data-user-setting="localPrivacyMode" />
+                  <span><strong>Modo privado local</strong><small>Mant&eacute;m prefer&ecirc;ncias somente neste navegador e evita exposi&ccedil;&atilde;o visual desnecess&aacute;ria.</small></span>
+                </label>
+              </div>
+            </section>
+            <section class="panel settings-detail-panel" data-settings-panel="settings-chats-panel">
+              <div class="panel-header"><h2>Conversas</h2></div>
+              <p class="item-meta">Preferências visuais e comportamento das conversas.</p>
+              <div class="settings-section">
+                <h3>Apar&ecirc;ncia</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-appearance-dark-mode" data-user-setting="darkMode" />
+                  <span><strong>Modo escuro</strong><small>Aplica um tema escuro em todo o sistema.</small></span>
+                </label>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-chat-compact" data-user-setting="compactMode" />
+                  <span><strong>Modo compacto</strong><small>Reduz espa&ccedil;amentos do chat e listas para caber mais informa&ccedil;&atilde;o na tela.</small></span>
+                </label>
+                <label class="settings-option">
+                  <span><strong>Tamanho das mensagens</strong><small>Ajusta a leitura das mensagens no canal de comunica&ccedil;&atilde;o.</small></span>
+                  <select id="settings-chat-message-size" data-user-setting="messageSize">
+                    <option value="normal">Normal</option>
+                    <option value="small">Pequeno</option>
+                    <option value="large">Grande</option>
+                  </select>
+                </label>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-chat-show-emojis" data-user-setting="showEmojiButton" />
+                  <span><strong>Mostrar bot&atilde;o de emojis</strong><small>Exibe ou oculta o seletor de emojis no compositor do chat.</small></span>
+                </label>
+              </div>
+              <div class="settings-section">
+                <h3>Envio</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-chat-enter-send" data-user-setting="enterToSend" />
+                  <span><strong>Enter envia mensagem</strong><small>Quando desativado, use Ctrl + Enter para enviar e Enter para quebrar linha.</small></span>
+                </label>
+              </div>
+            </section>
+            <section class="panel settings-detail-panel" data-settings-panel="settings-notifications-panel">
+              <div class="panel-header"><h2>Notificações</h2></div>
+              <p class="item-meta">Preferências de avisos e mensagens do sistema.</p>
+              <div class="settings-section">
+                <h3>Mensagens</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-notify-sound" data-user-setting="notificationSound" />
+                  <span><strong>Som de nova mensagem</strong><small>Toca um aviso discreto quando novas mensagens forem carregadas.</small></span>
+                </label>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-notify-desktop" data-user-setting="desktopNotifications" />
+                  <span><strong>Notifica&ccedil;&otilde;es do navegador</strong><small>Solicita permiss&atilde;o do navegador para avisos fora da aba.</small></span>
+                </label>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-notify-dashboard" data-user-setting="dashboardNotificationBadges" />
+                  <span><strong>Destacar novidades no painel</strong><small>Mostra os blocos de notifica&ccedil;&otilde;es minimalistas no acompanhamento.</small></span>
+                </label>
+              </div>
+            </section>
+            <section class="panel settings-detail-panel" data-settings-panel="settings-shortcuts-panel">
+              <div class="panel-header"><h2>Atalhos de teclado</h2></div>
+              <div class="settings-section">
+                <h3>Funcionamento</h3>
+                <label class="settings-option">
+                  <input type="checkbox" id="settings-shortcuts-enabled" data-user-setting="keyboardShortcuts" />
+                  <span><strong>Ativar atalhos de teclado</strong><small>Permite usar Ctrl + n&uacute;mero, Ctrl + K e Escape nas telas do HUB.</small></span>
+                </label>
+              </div>
+              <div class="settings-section">
+                <h3>Navegação</h3>
+                <div class="shortcuts-list">
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>1</kbd> a <kbd>0</kbd></div>
+                    <span class="shortcut-desc">Alternar entre abas de visualização</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>K</kbd></div>
+                    <span class="shortcut-desc">Filtrar mensagens especificas no chat</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Escape</kbd></div>
+                    <span class="shortcut-desc">Fechar modais e menus</span>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-section">
+                <h3>Mensagens</h3>
+                <div class="shortcuts-list">
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></div>
+                    <span class="shortcut-desc">Enviar mensagem</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Shift</kbd> + <kbd>Enter</kbd></div>
+                    <span class="shortcut-desc">Quebra de linha na mensagem</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>↑</kbd> / <kbd>↓</kbd></div>
+                    <span class="shortcut-desc">Navegar no histórico de mensagens</span>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-section">
+                <h3>Edição</h3>
+                <div class="shortcuts-list">
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>B</kbd></div>
+                    <span class="shortcut-desc">Negrito</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>I</kbd></div>
+                    <span class="shortcut-desc">Itálico</span>
+                  </div>
+                  <div class="shortcut-item">
+                    <div class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>U</kbd></div>
+                    <span class="shortcut-desc">Sublinhado</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+            </div>
+          </div>
+        </section>
