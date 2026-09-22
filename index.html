@@ -586,69 +586,7 @@
           </div>
         </section>
 
-        <section class="view" id="calendario">
-          <div class="workspace calendar-workspace">
-            <form class="panel form-panel" id="evento-form">
-              <div class="panel-header">
-                <h2>Novo evento</h2>
-              </div>
-              <input name="id" type="hidden" />
-              <label data-event-title-field="true">Atividade
-                <input name="titulo" placeholder="Ex: Treinamento de seguranca" required />
-              </label>
-              <label data-event-birthday-field="true" hidden>Aniversariante
-                <input name="aniversariante" placeholder="Nome do aniversariante" />
-              </label>
-              <label data-event-birthday-field="true" hidden>Unidade do aniversariante
-                <select name="unidade_aniversariante" data-unit-select data-unit-placeholder="Unidade"></select>
-              </label>
-              <label>Data
-                <input name="data" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" required />
-              </label>
-              <label data-event-required-field="true">Horario
-                <input name="horario" type="time" required />
-              </label>
-              <label data-event-required-field="true">Responsavel
-                <input name="responsavel" placeholder="Nome ou area responsavel" required />
-              </label>
-              <label>Tipo
-                <select name="tipo">
-                  <option>Evento</option>
-                  <option>Treinamento</option>
-                  <option>Reuniao</option>
-                  <option>Atividade</option>
-                  <option>Aniversário</option>
-                  <option>Entrevista</option>
-                </select>
-              </label>
-              <label data-event-optional-field="true">Observacoes
-                <textarea name="descricao" rows="4" placeholder="Detalhes, local ou participantes"></textarea>
-              </label>
-              <button class="primary-button" type="submit">Registrar evento</button>
-              <button class="secondary-link full-width-action" id="cancelar-edicao-evento" type="button" hidden>Cancelar edicao</button>
-            </form>
-
-            <div class="panel calendar-panel">
-              <div class="panel-header">
-                <div>
-                  <h2>Calendario do RH</h2>
-                  <p class="item-meta">Eventos e atividades registrados</p>
-                </div>
-                <div class="calendar-actions" aria-label="Navegar meses">
-                  <button class="secondary-link" id="previous-calendar-month" type="button">Mes anterior</button>
-                  <button class="secondary-link" id="next-calendar-month" type="button">Proximo mes</button>
-                </div>
-              </div>
-              <div class="calendar-event-legend" aria-label="Legenda dos tipos de evento">
-                <span><span class="event-icon event-icon-default" aria-hidden="true">EV</span> Evento</span>
-                <span><span class="event-icon event-icon-birthday" aria-hidden="true">AN</span> Aniversário</span>
-                <span><span class="event-icon event-icon-interview" aria-hidden="true">EN</span> Entrevista</span>
-              </div>
-              <div class="calendar-month" id="calendar-month"></div>
-              <div class="card-list" id="eventos-list"></div>
-            </div>
-          </div>
-        </section>
+        <script src="app/adapters/www/utils/loader.js" data-src="app/adapters/www/pages/Calendario/page.html"></script>
 
         <section class="view" id="documentos">
           <div class="document-workspace">
@@ -1445,6 +1383,10 @@
     <script src="app/adapters/repositories/GerenciamentoVT/index.js"></script>
     <script src="app/core/usecases/GerenciamentoVT/index.js"></script>
     <script src="app/adapters/www/pages/GerenciamentoVT/page.js"></script>
+    <script src="app/core/domain/Calendario/index.js"></script>
+    <script src="app/adapters/repositories/Calendario/index.js"></script>
+    <script src="app/core/usecases/Calendario/index.js"></script>
+    <script src="app/adapters/www/pages/Calendario/page.js"></script>
     <script src="app/adapters/repositories/Malotes/index.js"></script>
     <script src="app/core/usecases/Malotes/index.js"></script>
     <script src="app/adapters/www/pages/Malotes/page.js"></script>

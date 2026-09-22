@@ -136,7 +136,6 @@ const TABLES = {
   comunicados: "hub_chat_messages",
   chamados: "hub_chamados",
   vagas: "hub_vagas",
-  eventos: "hub_eventos",
   documentos: "hub_documentos",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
@@ -212,7 +211,6 @@ const defaultData = {
   comunicados: [],
   chamados: [],
   vagas: [],
-  eventos: [],
   documentos: [],
   documentosContratados: [],
   candidaturas: [],
@@ -251,8 +249,6 @@ const chatMediaSignedUrlCache = new Map();
 const TRANSPARENT_IMAGE_PLACEHOLDER = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
 let chamadosSelectionMode = false;
 let denunciasSelectionMode = false;
-let dashboardCalendarViewMode = "week";
-let visibleCalendarDate = new Date();
 let dashboardNotificationOffset = 0;
 let visibleDashboardActivityItems = [];
 let allDashboardActivityItems = [];
@@ -1323,7 +1319,6 @@ function loadLocalData() {
     comunicados: parsed.comunicados || [],
     chamados: parsed.chamados || [],
     vagas: parsed.vagas || [],
-    eventos: parsed.eventos || [],
     ...Object.fromEntries(HubModules.list.map((mod) => [mod.collection, parsed[mod.collection] || []])),
     documentos: parsed.documentos || [],
     documentosContratados: (parsed.documentosContratados || [])
@@ -1909,17 +1904,6 @@ function formatMaskedDate(value) {
 const formatDocumentDate = formatMaskedDate;
 const formatEventoDate   = formatMaskedDate;
 
-function eventoDateToIso(value) {
-  const match = String(value || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!match) return "";
-  return `${match[3]}-${match[2]}-${match[1]}`;
-}
-
-function normalizeEventDateKey(value) {
-  const match = String(value || "").match(/^\d{4}-\d{2}-\d{2}/);
-  return match ? match[0] : String(value || "");
-}
-
 function applyDateMask(input) {
   if (input.dataset.dateMaskApplied === "true") return;
   input.type = "text";
@@ -2251,408 +2235,6 @@ function formatWeekday(value) {
   return new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(parsed);
 }
 
-function dateKeyFromParts(year, month, day) {
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-function addDays(date, days) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-function getEasterDate(year) {
-  const a = year % 19;
-  const b = Math.floor(year / 100);
-  const c = year % 100;
-  const d = Math.floor(b / 4);
-  const e = b % 4;
-  const f = Math.floor((b + 8) / 25);
-  const g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30;
-  const i = Math.floor(c / 4);
-  const k = c % 4;
-  const l = (32 + 2 * e + 2 * i - h - k) % 7;
-  const m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const month = Math.floor((h + l - 7 * m + 114) / 31);
-  const day = ((h + l - 7 * m + 114) % 31) + 1;
-  return new Date(year, month - 1, day);
-}
-
-function getJoinvilleHolidayMap(year) {
-  const easter = getEasterDate(year);
-  const goodFriday = addDays(easter, -2);
-  const corpusChristi = addDays(easter, 60);
-  const holidays = [
-    [dateKeyFromParts(year, 1, 1), "Ano-novo"],
-    [dateKeyFromParts(year, 3, 9), "Aniversario de Joinville"],
-    [dateKeyFromParts(year, goodFriday.getMonth() + 1, goodFriday.getDate()), "Sexta-feira Santa"],
-    [dateKeyFromParts(year, 4, 21), "Tiradentes"],
-    [dateKeyFromParts(year, 5, 1), "Dia do Trabalhador"],
-    [dateKeyFromParts(year, corpusChristi.getMonth() + 1, corpusChristi.getDate()), "Corpus Christi"],
-    [dateKeyFromParts(year, 9, 7), "Independencia do Brasil"],
-    [dateKeyFromParts(year, 10, 12), "Nossa Senhora Aparecida"],
-    [dateKeyFromParts(year, 11, 2), "Finados"],
-    [dateKeyFromParts(year, 11, 15), "Proclamacao da Republica"],
-    [dateKeyFromParts(year, 11, 20), "Consciencia Negra"],
-    [dateKeyFromParts(year, 12, 25), "Natal"],
-  ];
-  return new Map(holidays);
-}
-
-function getHolidayForDate(date) {
-  if (!date) return null;
-  return getJoinvilleHolidayMap(Number(date.slice(0, 4))).get(date) || null;
-}
-
-function getCompanyBirthdayEvents() {
-  const birthdays = Array.isArray(window.HUB_COMPANY_BIRTHDAYS) ? window.HUB_COMPANY_BIRTHDAYS : [];
-  const visibleYear = visibleCalendarDate instanceof Date ? visibleCalendarDate.getFullYear() : new Date().getFullYear();
-  const currentYear = new Date().getFullYear();
-  const years = [...new Set([currentYear, currentYear + 1, visibleYear])].filter((year) => year <= 2026);
-  const seenBirthdayNames = new Set();
-  const editedBirthdayNames = new Set((data.eventos || [])
-    .map((item) => item.systemBirthdaySource || "")
-    .filter(Boolean)
-    .map((name) => normalizeLoginName(name)));
-  return years.flatMap((year) => birthdays.flatMap((item, index) => {
-    const birthDate = String(item.nascimento || "");
-    const admissionDate = String(item.admissao || "");
-    const birthMonthDay = birthDate.slice(5);
-    const admissionMonthDay = admissionDate.slice(5);
-    const birthEventDate = /^\d{2}-\d{2}$/.test(birthMonthDay) ? `${year}-${birthMonthDay}` : "";
-    const companyEventDate = /^\d{2}-\d{2}$/.test(admissionMonthDay) ? `${year}-${admissionMonthDay}` : "";
-    const nome = String(item.nome || "").trim();
-    const normalizedName = normalizeLoginName(nome);
-    const nameKey = `${year}:${normalizedName}`;
-    if (!nome || seenBirthdayNames.has(nameKey) || editedBirthdayNames.has(normalizedName)) return [];
-    seenBirthdayNames.add(nameKey);
-    const usuario = (data.usuarios || []).find((user) => normalizeLoginName(user.nome) === normalizeLoginName(nome));
-    const unidade = item.unidade || usuario?.unidade || usuario?.cargoUnidade || "";
-    return [
-      {
-        id: `birthday-${year}-${index}`,
-        titulo: "Aniversário",
-        data: birthEventDate,
-        horario: "",
-        responsavel: "",
-        tipo: "Aniversário",
-        descricao: nome,
-        aniversariante: nome,
-        unidade,
-        createdBy: "Planilha de aniversariantes",
-        createdAt: birthEventDate,
-        sortAt: birthEventDate,
-        systemBirthday: true,
-      },
-      {
-        id: `company-birthday-${year}-${index}`,
-        titulo: "Aniversário de empresa",
-        data: companyEventDate,
-        horario: "",
-        responsavel: "",
-        tipo: "Aniversário de empresa",
-        descricao: nome,
-        aniversariante: nome,
-        unidade,
-        admissao: admissionDate,
-        createdBy: "Planilha de aniversariantes",
-        createdAt: companyEventDate,
-        sortAt: companyEventDate,
-        systemBirthday: true,
-      },
-    ];
-  })).filter((item) => item.data && item.aniversariante);
-}
-
-function isBirthdayEvent(itemOrType = "") {
-  const type = typeof itemOrType === "object" ? itemOrType.tipo : itemOrType;
-  return normalizeEventType(type).startsWith("aniversario");
-}
-
-function isCompanyBirthdayEvent(item = {}) {
-  return normalizeEventType(item.tipo) === "aniversario de empresa";
-}
-
-function getEventDisplayTitle(item = {}) {
-  if (isCompanyBirthdayEvent(item)) return "Aniversário de empresa";
-  if (isBirthdayEvent(item)) return "Aniversário";
-  return item.titulo || "Evento";
-}
-
-function getCurrentEventAccessNames() {
-  const user = getCurrentUserRecord?.() || {};
-  return [
-    getCurrentUserName?.(),
-    currentUserProfile?.nome,
-    currentAuthUser?.user_metadata?.nome,
-    currentAuthUser?.user_metadata?.name,
-    currentAuthUser?.email,
-    user.nome,
-    user.email,
-  ]
-    .map((value) => normalizeLoginName(value))
-    .filter(Boolean);
-}
-
-function canCurrentUserAccessEventRecord(item = {}) {
-  if (isRhUser() || isCeoUser() || hasFredericoLevelAccess()) return true;
-  if (!isManagerUser()) return true;
-  if (isBirthdayEvent(item)) return true;
-  const author = normalizeLoginName(item.createdBy || "");
-  return Boolean(author && getCurrentEventAccessNames().includes(author));
-}
-
-function getAllEvents() {
-  return [...(data.eventos || []), ...getCompanyBirthdayEvents()]
-    .filter((item) => !isCompanyBirthdayEvent(item) && !String(item.id || "").startsWith("company-birthday-"))
-    .filter((item) => canCurrentUserAccessEventRecord(item));
-}
-
-function findCalendarEventById(id) {
-  return getAllEvents().find((item) => String(item.id) === String(id));
-}
-
-function getSortedEvents() {
-  return getAllEvents()
-    .slice()
-    .sort((a, b) => {
-      const dateCompare = String(a.data || "").localeCompare(String(b.data || ""));
-      if (dateCompare) return dateCompare;
-      const aBirthday = isBirthdayEvent(a);
-      const bBirthday = isBirthdayEvent(b);
-      if (aBirthday !== bBirthday) return aBirthday ? 1 : -1;
-      return String(a.horario || "00:00").localeCompare(String(b.horario || "00:00"));
-    });
-}
-
-function normalizeEventType(value = "") {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
-}
-
-function getEventTypeClass(item = {}) {
-  const type = normalizeEventType(item.tipo);
-  if (type.startsWith("aniversario")) return "event-type-birthday";
-  if (type === "entrevista") return "event-type-interview";
-  return "";
-}
-
-function getEventTagClass(item = {}) {
-  const typeClass = getEventTypeClass(item);
-  return typeClass ? `event-tag ${typeClass}` : "";
-}
-
-function getEventIcon(item = {}) {
-  if (isCompanyBirthdayEvent(item)) return { icon: "AE", className: "event-icon-company", label: "Aniversário de empresa" };
-  if (isBirthdayEvent(item)) return { icon: "AN", className: "event-icon-birthday", label: "Aniversário" };
-  if (normalizeEventType(item.tipo) === "entrevista") return { icon: "EN", className: "event-icon-interview", label: "Entrevista" };
-  return { icon: "EV", className: "event-icon-default", label: "Evento" };
-}
-
-function dayHasEventType(events = [], type) {
-  return events.some((item) => type === "aniversario" ? isBirthdayEvent(item) : normalizeEventType(item.tipo) === type);
-}
-
-function dayHasNonBirthdayEvent(events = []) {
-  return events.some((item) => !isBirthdayEvent(item));
-}
-
-function getEventScheduleMeta(item = {}) {
-  if (isBirthdayEvent(item)) return "Dia inteiro";
-  return `${formatEventTime(item.horario)} | Responsavel: ${item.responsavel || "Nao informado"}`;
-}
-
-function getBirthdayPerson(item = {}) {
-  return String(item.aniversariante || item.descricao || "").trim();
-}
-
-function getBirthdayUnit(item = {}) {
-  const directUnit = String(item.unidade || "").trim();
-  if (directUnit) return getCanonicalUnit(directUnit);
-  const name = getBirthdayPerson(item);
-  const usuario = (data.usuarios || []).find((user) => normalizeLoginName(user.nome) === normalizeLoginName(name));
-  return getCanonicalUnit(usuario?.unidade || usuario?.cargoUnidade || "");
-}
-
-function renderEventTitle(item = {}) {
-  const isBirthday = isBirthdayEvent(item);
-  const title = isBirthday ? getEventDisplayTitle(item) : item.titulo;
-  return `<p class="item-title">${escapeHtml(title || "Evento")}</p>`;
-}
-
-function renderEventDescription(item = {}, className = "") {
-  if (isBirthdayEvent(item)) {
-    const aniversariante = getBirthdayPerson(item);
-    const unidade = getBirthdayUnit(item);
-    const lines = [
-      aniversariante ? `${isCompanyBirthdayEvent(item) ? "Colaborador" : "Aniversariante"}: ${escapeHtml(aniversariante)}` : "",
-      unidade ? `Unidade: ${escapeHtml(unidade)}` : "",
-    ].filter(Boolean);
-    return lines.length ? `<p${className ? ` class="${className}"` : ""}>${lines.join("<br>")}</p>` : "";
-  }
-  const description = String(item.descricao || "").trim();
-  const text = description || "Sem observacoes adicionais.";
-  const classAttribute = className ? ` class="${className}"` : "";
-  return `<p${classAttribute}>${escapeHtml(text).replace(/\n/g, "<br>")}</p>`;
-}
-
-function getEventSummary(item = {}) {
-  if (isBirthdayEvent(item)) {
-    const person = getBirthdayPerson(item);
-    const unit = getBirthdayUnit(item);
-    return [person, unit].filter(Boolean).join(" | ") || formatEventDate(item.data);
-  }
-  const description = String(item.descricao || "").trim().replace(/\s+/g, " ");
-  return description || getEventScheduleMeta(item);
-}
-
-function renderCalendarEventCard(item = {}, tagName = "article", extraClass = "") {
-  const summary = getEventSummary(item);
-  const escapedId = escapeHtml(item.id);
-  const eventIcon = getEventIcon(item);
-  return `
-    <${tagName} class="calendar-event-block ${extraClass} ${getEventTypeClass(item)}" data-event-card="true" data-action="visualizar-evento" data-id="${escapedId}" role="button" tabindex="0">
-      <div class="item-topline">
-        <div class="calendar-event-heading">
-          <span class="event-icon ${eventIcon.className}" aria-label="${escapeHtml(eventIcon.label)}">${escapeHtml(eventIcon.icon)}</span>
-          ${renderEventTitle(item)}
-        </div>
-      </div>
-      <p class="calendar-event-date">${escapeHtml(formatEventDate(item.data))}</p>
-      <p class="calendar-event-summary">${escapeHtml(summary)}</p>
-    </${tagName}>
-  `;
-}
-
-function getEventListMeta(item = {}) {
-  if (isBirthdayEvent(item)) return `Data: ${formatEventDate(item.data)}`;
-  return `${formatEventDate(item.data)} | ${getEventScheduleMeta(item)}`;
-}
-
-function getUpcomingEvents() {
-  const today = getLocalDateKey();
-  const weekDates = getCurrentWeekDates();
-  const maxDateKey = weekDates[weekDates.length - 1];
-  return getSortedEvents().filter((item) => !isArchivedRecord(item) && !isBirthdayEvent(item) && item.data && item.data >= today && item.data <= maxDateKey);
-}
-
-function getCompactAgendaItems(events = []) {
-  const items = [];
-  const birthdayGroups = new Map();
-
-  events.forEach((item) => {
-    if (!isBirthdayEvent(item)) {
-      items.push({ kind: "event", event: item, dateTime: item.sortAt || item.data || "", priority: 0 });
-      return;
-    }
-
-    const key = item.data || "";
-    if (!birthdayGroups.has(key)) birthdayGroups.set(key, []);
-    birthdayGroups.get(key).push(item);
-  });
-
-  birthdayGroups.forEach((birthdays, date) => {
-    items.push({ kind: "birthdays", events: birthdays, date, dateTime: date, priority: 1 });
-  });
-
-  return items.sort((a, b) => {
-    const dateCompare = String(a.dateTime || "").localeCompare(String(b.dateTime || ""));
-    if (dateCompare) return dateCompare;
-    return (a.priority || 0) - (b.priority || 0);
-  });
-}
-
-function renderCompactAgendaItem(item) {
-  if (item.kind !== "birthdays") {
-    const event = item.event || {};
-    return renderCalendarEventCard(event, "li", "calendar-event-dashboard-block");
-  }
-
-  const birthdays = item.events || [];
-  const title = birthdays.length === 1 ? getEventDisplayTitle(birthdays[0]) : `${birthdays.length} aniversários`;
-  return `
-    <li class="calendar-event-block calendar-event-dashboard-block event-type-birthday compact-birthday-group">
-      <div class="item-topline">
-        <p class="item-title">${escapeHtml(title)}</p>
-        <span class="calendar-event-date">${escapeHtml(formatEventDate(item.date))}</span>
-      </div>
-      <div class="birthday-chip-list">
-        ${birthdays.map((birthday) => `<button type="button" data-action="visualizar-evento" data-id="${escapeHtml(birthday.id)}">${escapeHtml(getBirthdayPerson(birthday))}</button>`).join("")}
-      </div>
-    </li>
-  `;
-}
-
-function renderEventAudit(item) {
-  return `
-    <span>Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}</span>
-    ${item.updatedBy ? `<span>Editado por ${escapeHtml(item.updatedBy)}</span>` : ""}
-  `;
-}
-
-function visualizarEvento(id) {
-  const item = getAllEvents().find((eventItem) => String(eventItem.id) === String(id));
-  if (!item) return;
-
-  const existing = document.getElementById("custom-modal");
-  if (existing) existing.remove();
-
-  const overlay = document.createElement("div");
-  overlay.id = "custom-modal";
-  overlay.className = "modal-overlay";
-  const eventIcon = getEventIcon(item);
-  overlay.innerHTML = `
-    <div class="modal-card calendar-event-modal">
-      <div class="modal-header info calendar-event-modal-title">
-        <span class="event-icon ${eventIcon.className}" aria-label="${escapeHtml(eventIcon.label)}">${escapeHtml(eventIcon.icon)}</span>
-        ${escapeHtml(getEventDisplayTitle(item))}
-      </div>
-      <div class="modal-body">
-        <div class="calendar-event-modal-meta">
-          <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
-          <span>${escapeHtml(formatEventDate(item.data))}</span>
-          <span>${escapeHtml(getEventScheduleMeta(item))}</span>
-        </div>
-        ${renderEventDescription(item, "calendar-event-modal-description")}
-        <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
-      </div>
-      <div class="modal-footer modal-footer-split">
-        <button class="secondary-link" type="button" data-action="close-modal">Fechar</button>
-      </div>
-    </div>
-  `;
-  overlay.querySelector('[data-action="close-modal"]').addEventListener("click", () => overlay.remove());
-  overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) overlay.remove();
-  });
-  document.body.appendChild(overlay);
-}
-
-function getCurrentWeekDates() {
-  const today = new Date();
-  const start = new Date(today);
-  start.setDate(today.getDate() - today.getDay());
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-    return getLocalDateKey(date);
-  });
-}
-
-function isEventInMonth(item, baseDate = new Date()) {
-  if (!item.data) return false;
-  const eventDate = new Date(`${item.data}T00:00:00`);
-  return eventDate.getFullYear() === baseDate.getFullYear() && eventDate.getMonth() === baseDate.getMonth();
-}
-
-function isEventInCurrentMonth(item) {
-  return isEventInMonth(item);
-}
 
 function escapeHtml(value) {
   return String(value)
@@ -2938,53 +2520,6 @@ function showPublicVagaSingleFilterModal(type) {
 
   document.body.appendChild(overlay);
   overlay.querySelector(`#${inputId}`)?.focus();
-}
-
-function showDayEventsModal(date) {
-  const existing = document.getElementById("custom-modal");
-  if (existing) existing.remove();
-
-  const dayEvents = getSortedEvents().filter((item) => item.data === date);
-  const dayNumber = String(new Date(`${date}T00:00:00`).getDate()).padStart(2, "0");
-  const holiday = getHolidayForDate(date);
-  const title = `Agenda de ${formatEventDate(date)}`;
-  const holidayContent = holiday ? `<p class="day-holiday-note"><strong>Feriado:</strong> ${escapeHtml(holiday)}</p>` : "";
-  const eventContent = dayEvents.length
-    ? dayEvents
-      .map((item) => `
-          <article class="day-event-card ${getEventTypeClass(item)}" data-event-card="true" data-id="${escapeHtml(item.id)}">
-            <div class="item-topline">
-              ${renderEventTitle(item)}
-              <span class="tag ${getEventTagClass(item)}">${escapeHtml(item.tipo)}</span>
-            </div>
-            ${renderEventDescription(item, "day-event-description")}
-            <p class="item-meta">${escapeHtml(getEventListMeta(item))}</p>
-            <p class="item-meta event-audit-line">${renderEventAudit(item)}</p>
-          </article>
-        `)
-        .join("")
-    : `<p class="empty-state day-empty-state">Nenhum evento dia (${escapeHtml(dayNumber)})</p>`;
-  const content = `${holidayContent}${eventContent}`;
-
-  const overlay = document.createElement("div");
-  overlay.id = "custom-modal";
-  overlay.className = "modal-overlay";
-  overlay.innerHTML = `
-    <div class="modal-card day-events-modal">
-      <div class="modal-header info">${escapeHtml(title)}</div>
-      <div class="modal-body day-events-body">${content}</div>
-      <div class="modal-footer">
-        <button class="primary-button" type="button" data-action="close-modal">Fechar</button>
-      </div>
-    </div>
-  `;
-
-  overlay.querySelector('[data-action="close-modal"]').addEventListener("click", () => overlay.remove());
-  overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) overlay.remove();
-  });
-  document.body.appendChild(overlay);
-  overlay.querySelector("[data-modal-close]").focus();
 }
 
 function formatFileSize(bytes) {
@@ -3405,22 +2940,6 @@ function mapRows(collection, rows) {
       encerradoEm: row.encerrado_em || "",
     }));
   }
-if (collection === "eventos") {
-    return rows.map((row) => ({
-      id: row.id,
-      titulo: row.titulo,
-      data: normalizeEventDateKey(row.data),
-      horario: row.horario,
-      responsavel: row.responsavel,
-      tipo: row.tipo || "Evento",
-      descricao: row.descricao || "",
-      createdBy: row.created_by || getSystemFallbackAuthor(),
-      updatedBy: row.updated_by || "",
-      createdAt: formatDate(row.created_at),
-      sortAt: row.created_at || "",
-    }));
-  }
-
   if (collection === "documentos") {
     return rows.map((row) => ({
       id: row.id,
@@ -3967,18 +3486,6 @@ function toDbPayload(collection, values) {
     payload.created_by = values.createdBy || getCurrentUserName();
     return payload;
   }
-if (collection === "eventos") {
-    return {
-      titulo: values.titulo,
-      data: values.data,
-      horario: values.horario,
-      responsavel: values.responsavel,
-      tipo: values.tipo || "Evento",
-      descricao: values.descricao || "",
-      created_by: values.createdBy || getCurrentUserName(),
-      updated_by: values.updatedBy || null,
-    };
-  }
 
   if (collection === "documentos") {
     return {
@@ -4131,7 +3638,6 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
       "comunicados",
       "chamados",
       "vagas",
-      "eventos",
       ...HubModules.list.map((mod) => mod.collection),
       "documentos",
       "documentosContratados",
@@ -6466,7 +5972,6 @@ function getViewForCollection(collection) {
     chamados: "chamados",
     candidaturas: "vagas",
     vagas: "vagas",
-    eventos: "calendario",
     documentos: "documentos",
     documentosContratados: "documentos-contratados",
     atestados: "documentos",
@@ -6771,124 +6276,6 @@ function renderDashboard() {
   }
 
   renderDashboardCalendar(upcomingEvents);
-}
-
-function renderDashboardCalendar(upcomingEvents = getUpcomingEvents()) {
-  const strip = document.getElementById("dashboard-calendar-strip");
-  const list = document.getElementById("dashboard-events-list");
-  const title = document.getElementById("dashboard-calendar-title");
-  const toggleButton = document.getElementById("toggle-dashboard-calendar-view");
-  if (!strip || !list) return;
-
-  const today = new Date();
-  const currentMonth = visibleCalendarDate.getMonth();
-  const currentYear = visibleCalendarDate.getFullYear();
-  const weekDates = getCurrentWeekDates();
-  const leadingDays = new Date(currentYear, currentMonth, 1).getDay();
-  const monthDates = Array.from({ length: new Date(currentYear, currentMonth + 1, 0).getDate() }, (_, index) => {
-    const date = new Date(currentYear, currentMonth, index + 1);
-    return getLocalDateKey(date);
-  });
-  const visibleDates = dashboardCalendarViewMode === "week" ? weekDates : monthDates;
-  const visibleEvents =
-    dashboardCalendarViewMode === "week"
-      ? getSortedEvents().filter((item) => visibleDates.includes(item.data))
-      : getSortedEvents().filter((item) => isEventInMonth(item, visibleCalendarDate));
-
-  if (title) {
-    const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(visibleCalendarDate);
-    title.textContent = dashboardCalendarViewMode === "week" ? "Agenda da semana" : `Agenda do mes - ${monthLabel}`;
-  }
-  if (toggleButton) toggleButton.textContent = dashboardCalendarViewMode === "week" ? "Ver agenda do mes" : "Ver agenda da semana";
-  strip.classList.toggle("calendar-strip-month", dashboardCalendarViewMode === "month");
-
-  const todayKey = getLocalDateKey(today);
-  const monthHeader = dashboardCalendarViewMode === "month"
-    ? '<span class="calendar-strip-weekday">Dom</span><span class="calendar-strip-weekday">Seg</span><span class="calendar-strip-weekday">Ter</span><span class="calendar-strip-weekday">Qua</span><span class="calendar-strip-weekday">Qui</span><span class="calendar-strip-weekday">Sex</span><span class="calendar-strip-weekday">Sab</span>'
-    : "";
-  const leadingCells = dashboardCalendarViewMode === "month"
-    ? Array.from({ length: leadingDays }, () => '<div class="calendar-day muted"></div>').join("")
-    : "";
-  strip.innerHTML = monthHeader + leadingCells + visibleDates
-    .map((date) => {
-      const dayEvents = getSortedEvents().filter((item) => item.data === date);
-      const holiday = getHolidayForDate(date);
-      const isToday = date === todayKey;
-      const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
-      const hasBirthday = dayHasEventType(dayEvents, "aniversario");
-      const hasMainEvent = dayHasNonBirthdayEvent(dayEvents);
-      const hasInterview = dayHasEventType(dayEvents, "entrevista");
-      return `
-        <button class="calendar-day ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday && !hasMainEvent ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
-          <span class="calendar-weekday-label">${escapeHtml(formatWeekday(date))}</span>
-          <strong>${escapeHtml(new Date(`${date}T00:00:00`).getDate())}</strong>
-          ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
-          ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
-          ${dayEvents.slice(0, 2).map((item) => `<span class="calendar-event-preview ${getEventTypeClass(item)}" data-event-card="true" data-id="${escapeHtml(item.id)}">${escapeHtml(item.titulo)}</span>`).join("")}
-        </button>
-      `;
-    })
-    .join("");
-
-  if (!visibleEvents.length) {
-    list.innerHTML = '<li><p class="empty-state">Nenhum evento proximo registrado.</p></li>';
-    return;
-  }
-
-  list.innerHTML = getCompactAgendaItems(visibleEvents)
-    .slice(0, dashboardCalendarViewMode === "week" ? 5 : 8)
-    .map(renderCompactAgendaItem)
-    .join("");
-}
-
-function renderCalendar() {
-  const month = document.getElementById("calendar-month");
-  if (!month) return;
-
-  const today = new Date();
-  const year = visibleCalendarDate.getFullYear();
-  const monthIndex = visibleCalendarDate.getMonth();
-  const firstDay = new Date(year, monthIndex, 1);
-  const totalDays = new Date(year, monthIndex + 1, 0).getDate();
-  const leadingDays = firstDay.getDay();
-  const title = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(visibleCalendarDate);
-  const cells = [];
-  const todayKey = getLocalDateKey(today);
-
-  for (let index = 0; index < leadingDays; index += 1) {
-    cells.push('<div class="calendar-cell muted"></div>');
-  }
-
-  for (let day = 1; day <= totalDays; day += 1) {
-    const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const dayEvents = getSortedEvents().filter((item) => item.data === date);
-    const holiday = getHolidayForDate(date);
-    const isToday = date === todayKey;
-    const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00`).getDay());
-    const hasBirthday = dayHasEventType(dayEvents, "aniversario");
-    const hasMainEvent = dayHasNonBirthdayEvent(dayEvents);
-    const hasInterview = dayHasEventType(dayEvents, "entrevista");
-    cells.push(`
-      <button class="calendar-cell ${isWeekend ? "is-weekend" : ""} ${isToday ? "today" : ""} ${dayEvents.length ? "has-event" : ""} ${holiday ? "is-holiday" : ""} ${hasBirthday && !hasMainEvent ? "has-birthday" : ""} ${hasInterview ? "has-interview" : ""}" type="button" data-date="${escapeHtml(date)}" aria-label="Ver eventos de ${escapeHtml(formatEventDate(date))}">
-        <strong>${day}</strong>
-        ${isToday ? `<span class="calendar-today-label">Hoje</span>` : ""}
-        ${holiday ? `<span class="calendar-holiday-label" title="${escapeHtml(holiday)}">Feriado</span>` : ""}
-        ${dayEvents.slice(0, 2).map((item) => `<span class="${getEventTypeClass(item)}" data-event-card="true" data-id="${escapeHtml(item.id)}">${escapeHtml(item.titulo)}</span>`).join("")}
-      </button>
-    `);
-  }
-
-  const visibleEvents = getSortedEvents().filter((item) => isEventInMonth(item, visibleCalendarDate));
-
-  month.innerHTML = `
-    <div class="calendar-title">${escapeHtml(title)}</div>
-    <div class="calendar-weekdays">
-      <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sab</span>
-    </div>
-    <div class="calendar-grid">${cells.join("")}</div>
-  `;
-
-  renderCards("eventos-list", visibleEvents, (item) => renderCalendarEventCard(item, "article", "calendar-event-manage-block"));
 }
 
 async function syncRecordStatusSilently(collection, id, status) {
@@ -7811,7 +7198,7 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!isAuthenticated()) return false;
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
-  if (["usuarios", "eventos", "vagas", "atestados"].includes(collection)) return false;
+  if (["usuarios", "vagas", "atestados"].includes(collection)) return false;
   if (HubModules.byCollection(collection)?.silent) return false;
 
   if (!canAccessView(getViewForCollection(collection))) return false;
@@ -8367,7 +7754,6 @@ function renderAll() {
 
   }
 
-  safeRenderSection("calendario", renderCalendar);
   safeRenderSection("documentos-rh", renderDocumentRecords);
   safeRenderSection("equipe", renderTeamUsers);
   safeRenderSection("data-counts", publishHubDataCounts);
@@ -9604,129 +8990,6 @@ document.getElementById("cancelar-edicao-vaga")?.addEventListener("click", () =>
   vagaForm.querySelector('button[type="submit"]').textContent = "Salvar vaga";
 });
 
-const eventoForm = document.getElementById("evento-form");
-if (eventoForm) {
-  const updateEventoFormByType = () => {
-    const isBirthday = isBirthdayEvent(eventoForm.elements.tipo?.value);
-    eventoForm.querySelectorAll("[data-event-title-field], [data-event-required-field], [data-event-optional-field]").forEach((field) => {
-      field.hidden = isBirthday;
-      field.querySelectorAll("input, textarea, select").forEach((input) => {
-        if (input.name === "titulo" || input.name === "horario" || input.name === "responsavel") input.required = !isBirthday;
-        if (isBirthday) {
-          input.value = "";
-          input.setCustomValidity?.("");
-        }
-      });
-    });
-    eventoForm.querySelectorAll("[data-event-birthday-field]").forEach((field) => {
-      field.hidden = !isBirthday;
-      field.querySelectorAll("input, select").forEach((input) => {
-        input.required = isBirthday;
-        if (!isBirthday) {
-          input.value = "";
-          input.setCustomValidity?.("");
-        }
-      });
-    });
-  };
-
-  const eventoDataInput = eventoForm.elements.data;
-  if (eventoDataInput) {
-    eventoDataInput.value = formatEventoDate(eventoDataInput.value);
-    eventoDataInput.addEventListener("input", (event) => {
-      const input = event.target;
-      const pos = input.selectionStart;
-      const prev = input.value;
-      const next = formatEventoDate(prev);
-      input.value = next;
-
-      const diff = next.length - prev.length;
-      if (diff !== 0) input.setSelectionRange(pos + diff, pos + diff);
-      input.setCustomValidity("");
-    });
-  }
-
-  eventoForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const id = form.get("id") || formElement.dataset.editEventId || "";
-
-    const dataDisplay = String(form.get("data") || "");
-    const dataIso = eventoDateToIso(dataDisplay);
-    if (!dataIso) {
-      eventoDataInput?.setCustomValidity("Informe a data no formato dd/mm/aaaa.");
-      eventoDataInput?.reportValidity();
-      return;
-    }
-    const year = Number(dataIso.split("-")[0]);
-    if (year > 2026) {
-      eventoDataInput?.setCustomValidity("O ano não pode ser superior a 2026.");
-      eventoDataInput?.reportValidity();
-      return;
-    }
-    eventoDataInput?.setCustomValidity("");
-
-    const isBirthday = isBirthdayEvent(form.get("tipo"));
-    const aniversariante = String(form.get("aniversariante") || "").trim();
-    const unidadeAniversariante = String(form.get("unidade_aniversariante") || "").trim();
-    const editingEvent = id ? findCalendarEventById(id) : null;
-    const payload = {
-      titulo: isBirthday ? getEventDisplayTitle({ tipo: form.get("tipo") }) : form.get("titulo"),
-      data: dataIso,
-      horario: isBirthday ? "" : form.get("horario"),
-      responsavel: isBirthday ? "" : form.get("responsavel"),
-      tipo: isBirthday ? getEventDisplayTitle({ tipo: form.get("tipo") }) : form.get("tipo"),
-      descricao: isBirthday ? aniversariante : form.get("descricao"),
-      unidade: isBirthday ? unidadeAniversariante : "",
-      createdBy: editingEvent?.createdBy || getCurrentUserName(),
-    };
-    if (editingEvent?.systemBirthdaySource || editingEvent?.systemBirthday) {
-      payload.systemBirthdaySource = editingEvent.systemBirthdaySource || getBirthdayPerson(editingEvent);
-    }
-    const editableId = editingEvent?.systemBirthday ? "" : id;
-    const success = editableId ? await updateItem("eventos", editableId, { ...payload, updatedBy: getCurrentUserName() }) : await addItem("eventos", payload);
-    if (success) {
-      formElement.reset();
-      formElement.elements.id.value = "";
-      delete formElement.dataset.editEventId;
-      document.getElementById("cancelar-edicao-evento")?.setAttribute("hidden", "");
-      formElement.querySelector('button[type="submit"]').textContent = "Registrar evento";
-      updateEventoFormByType();
-    }
-  });
-
-  eventoForm.elements.tipo?.addEventListener("change", updateEventoFormByType);
-  updateEventoFormByType();
-}
-
-document.getElementById("cancelar-edicao-evento")?.addEventListener("click", () => {
-  if (!eventoForm) return;
-  eventoForm.reset();
-  eventoForm.elements.id.value = "";
-  delete eventoForm.dataset.editEventId;
-  document.getElementById("cancelar-edicao-evento").setAttribute("hidden", "");
-  eventoForm.querySelector('button[type="submit"]').textContent = "Registrar evento";
-  eventoForm.elements.tipo?.dispatchEvent(new Event("change"));
-});
-
-document.getElementById("toggle-dashboard-calendar-view")?.addEventListener("click", () => {
-  dashboardCalendarViewMode = dashboardCalendarViewMode === "week" ? "month" : "week";
-  renderDashboardCalendar();
-});
-
-document.getElementById("previous-calendar-month")?.addEventListener("click", () => {
-  visibleCalendarDate = new Date(visibleCalendarDate.getFullYear(), visibleCalendarDate.getMonth() - 1, 1);
-  renderCalendar();
-  renderDashboardCalendar();
-});
-
-document.getElementById("next-calendar-month")?.addEventListener("click", () => {
-  visibleCalendarDate = new Date(visibleCalendarDate.getFullYear(), visibleCalendarDate.getMonth() + 1, 1);
-  renderCalendar();
-  renderDashboardCalendar();
-});
-
 document.addEventListener("click", (event) => {
   const downloadUrlButton = event.target.closest("[data-download-url]");
   if (downloadUrlButton) {
@@ -9749,10 +9012,6 @@ document.addEventListener("click", (event) => {
     );
     return;
   }
-
-  const dayButton = event.target.closest("[data-date]");
-  if (!dayButton) return;
-  showDayEventsModal(dayButton.dataset.date);
 });
 
 const usuarioForm = document.getElementById("usuario-form");
@@ -10770,31 +10029,6 @@ function excluirCandidatura(id) {
   });
 }
 
-function openEventContextMenu(event, id) {
-  document.getElementById("event-context-menu")?.remove();
-  const item = findCalendarEventById(id);
-  if (!item) return;
-  const canDelete = !item.systemBirthday;
-  const menu = document.createElement("div");
-  menu.id = "event-context-menu";
-  menu.className = "board-context-menu event-context-menu";
-  menu.style.left = `${event.clientX}px`;
-  menu.style.top = `${event.clientY}px`;
-  menu.innerHTML = `
-    <button type="button" data-event-menu-action="edit">Editar evento</button>
-    ${canDelete ? '<button type="button" class="danger" data-event-menu-action="delete">Deletar evento</button>' : ""}
-  `;
-  menu.addEventListener("click", (clickEvent) => {
-    const actionButton = clickEvent.target.closest("[data-event-menu-action]");
-    if (!actionButton) return;
-    const action = actionButton.dataset.eventMenuAction;
-    menu.remove();
-    if (action === "edit") editarEvento(id);
-    if (action === "delete") excluirEvento(id);
-  });
-  document.body.appendChild(menu);
-}
-
 function editarDocumento(id) {
   const doc = getAccessibleDocumentRecord(id);
   if (!doc) {
@@ -10889,49 +10123,6 @@ async function excluirVaga(id) {
     validatePassword: async (password) => verifyAuthorizationPassword(password),
     onConfirm: async () => {
       await deleteItem("vagas", id);
-    },
-  });
-};
-
-function editarEvento(id) {
-  const evento = findCalendarEventById(id);
-  const form = document.getElementById("evento-form");
-  if (!evento || !form) return;
-
-  activateView("calendario");
-  form.elements.id.value = evento.systemBirthday ? "" : evento.id;
-  form.dataset.editEventId = String(evento.id || "");
-  form.elements.titulo.value = evento.titulo || "";
-
-  form.elements.data.value = formatEventoDate(evento.data || "");
-  form.elements.horario.value = evento.horario || "";
-  form.elements.responsavel.value = evento.responsavel || "";
-  form.elements.tipo.value = evento.tipo || "Evento";
-  form.elements.descricao.value = evento.descricao || "";
-  if (form.elements.aniversariante) {
-    form.elements.aniversariante.value = isBirthdayEvent(evento) ? getBirthdayPerson(evento) : "";
-  }
-  if (form.elements.unidade_aniversariante) {
-    setFieldValue(form.elements.unidade_aniversariante, isBirthdayEvent(evento) ? getBirthdayUnit(evento) : "");
-  }
-  form.elements.tipo?.dispatchEvent(new Event("change"));
-  document.getElementById("cancelar-edicao-evento")?.removeAttribute("hidden");
-  form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
-  form.scrollIntoView({ behavior: "smooth", block: "start" });
-  form.querySelector("input, select, textarea")?.focus({ preventScroll: true });
-};
-
-async function excluirEvento(id) {
-  const evento = findCalendarEventById(id);
-  if (!evento) return;
-
-  showConfirmActionModal({
-    title: "Deletar evento",
-    text: `Tem certeza que deseja deletar o evento "${evento.titulo}"?`,
-    confirmText: "Deletar",
-    danger: true,
-    onConfirm: async () => {
-      await deleteItem("eventos", id);
     },
   });
 };
