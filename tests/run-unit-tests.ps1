@@ -45,8 +45,8 @@ function Test-LoginHtml {
 }
 
 function Test-ClientSecurityFunctions {
-  $script = (Read-ProjectFile "script.js") + (Read-ProjectFile "app/core/domain/AdvertenciasSuspensoes/index.js") + (Read-ProjectFile "app/adapters/repositories/AdvertenciasSuspensoes/index.js") + (Read-ProjectFile "app/core/usecases/AdvertenciasSuspensoes/index.js") + (Read-ProjectFile "app/adapters/www/pages/AdvertenciasSuspensoes/page.js")
-  $index = (Read-ProjectFile "index.html") + (Read-ProjectFile "app/adapters/www/pages/AdvertenciasSuspensoes/page.html")
+  $script = (Read-ProjectFile "script.js") + (Read-ProjectFile "app/core/domain/AdvertenciasSuspensoes/index.js") + (Read-ProjectFile "app/adapters/repositories/AdvertenciasSuspensoes/index.js") + (Read-ProjectFile "app/core/usecases/AdvertenciasSuspensoes/index.js") + (Read-ProjectFile "app/adapters/www/pages/AdvertenciasSuspensoes/page.js") + (Read-ProjectFile "app/core/domain/GerenciamentoVT/index.js") + (Read-ProjectFile "app/adapters/repositories/GerenciamentoVT/index.js") + (Read-ProjectFile "app/core/usecases/GerenciamentoVT/index.js") + (Read-ProjectFile "app/adapters/www/pages/GerenciamentoVT/page.js")
+  $index = (Read-ProjectFile "index.html") + (Read-ProjectFile "app/adapters/www/pages/AdvertenciasSuspensoes/page.html") + (Read-ProjectFile "app/adapters/www/pages/GerenciamentoVT/page.html")
   $vagas = Read-ProjectFile "app/adapters/www/pages/Vagas/page.html"
   $chamados = Read-ProjectFile "app/adapters/www/pages/Chamados/page.html"
   $docsFredy = Read-ProjectFile "app/adapters/www/pages/DocumentosFredy/page.html"
@@ -462,7 +462,7 @@ Assert-MatchText $companyBirthdays '"admissao"[\s\S]*"unidade"[\s\S]*"4- PL."[\s
   Assert-MatchText $script 'function getVtFormValues\(formElement\).*colaborador: String\(form\.get\("colaborador"\).*unidade: String\(form\.get\("unidade"\).*mes: String\(form\.get\("mes"\).*valorNecessario: calculateVtValue' "VT le colaborador unidade mes e valor calculado para registro"
   Assert-MatchText $script 'const VT_MONTH_NAMES = \["Janeiro"[\s\S]*"Dezembro"\][\s\S]*VT_MONTH_NAMES\.includes\(values\.mes\)' "VT valida o mes pelo nome sem ano"
   Assert-MatchText $script 'if \(!hasFullName\(values\.colaborador\)\)' "VT valida nome e sobrenome no script"
-  Assert-MatchText $script 'vtRegistros: "hub_vt_registros"' "VT possui tabela PostgreSQL configurada"
+  Assert-MatchText $script 'collection: "vtRegistros",\s*table: "hub_vt_registros"' "VT possui tabela PostgreSQL configurada"
   Assert-MatchText $script 'collection: "disciplinaryRecords",\s*table: "hub_advertencias_suspensoes"' "advertencias e suspensoes possuem tabela PostgreSQL configurada"
   Assert-MatchText (Read-ProjectFile "api/db.js") '"hub_advertencias_suspensoes"' "API de registros permite a tabela de advertencias e suspensoes"
   Assert-MatchText (Read-ProjectFile "api/bootstrap.js") 'disciplinaryRecords: "hub_advertencias_suspensoes"' "bootstrap carrega advertencias e suspensoes do PostgreSQL"
@@ -524,10 +524,11 @@ Assert-MatchText $companyBirthdays '"admissao"[\s\S]*"unidade"[\s\S]*"4- PL."[\s
   Assert-MatchText $script 'downloadPrivateStorageFile\(\s*privateFileButton\.dataset\.privateStorageBucket[\s\S]*privateFileButton\.dataset\.privateStorageName' "clique em documento privado usa download"
   Assert-MatchText $script "case 'excluir-documento-contratado':\s*excluirDocumentoContratado\(id\);\s*break;" "acao de excluir documentos de contratado esta conectada"
   Assert-MatchText $script 'data-private-storage-bucket="\$\{CONTRACTOR_DOCUMENTS_BUCKET\}"' "lista abre documentos por URL privada"
-  Assert-MatchText $script 'if \(collection === "vtRegistros"\)[\s\S]*dias_uteis: values\.diasUteis[\s\S]*valor_necessario: values\.valorNecessario' "VT envia payload para colunas do PostgreSQL"
+  Assert-MatchText $script 'toPayload: \(values\) => \(\{[\s\S]*dias_uteis: values\.diasUteis[\s\S]*valor_necessario: values\.valorNecessario' "VT envia payload para colunas do PostgreSQL"
   Assert-MatchText $script 'id\s*\?\s*await updateItem\("vtRegistros", id, \{ \.\.\.values, updatedBy: getCurrentUserName\(\) \}\)[\s\S]*:\s*await addItem\("vtRegistros", \{ \.\.\.values, createdBy: getCurrentUserName\(\) \}\)' "VT cria e edita registros pelo fluxo PostgreSQL"
   Assert-MatchText $script 'function renderVtRegistros\(\).*vt-registros-list[\s\S]*item\.colaborador[\s\S]*item\.unidade[\s\S]*formatVtMonth\(item\.mes\)[\s\S]*item\.valorNecessario' "VT exibe registros salvos com unidade e mes"
-  Assert-MatchText $script 'function getFilteredVtRegistros\(\).*vt-filter-nome[\s\S]*vt-filter-mes[\s\S]*vt-filter-unidade[\s\S]*itemName\.includes\(nameFilter\)[\s\S]*item\.unidade !== unitFilter' "VT filtra registros por nome mes e unidade"
+  Assert-MatchText $script 'function getFilteredVtRegistros\(\)[\s\S]*vt-filter-nome[\s\S]*vt-filter-mes[\s\S]*vt-filter-unidade' "VT le os filtros de nome mes e unidade do DOM"
+  Assert-MatchText $script 'function filterVtRegistros\(registros, \{ nameFilter = "", monthFilter = "", unitFilter = "" \} = \{\}\)[\s\S]*itemName\.includes\(normalizedName\)[\s\S]*item\.unidade !== unitFilter' "VT filtra registros por nome mes e unidade"
   Assert-MatchText $script 'function updateVtFilterClearButton\(\).*limpar-filtros-vt[\s\S]*hasActiveFilter[\s\S]*clearButton\.hidden = !hasActiveFilter[\s\S]*function renderVtRegistros\(\)[\s\S]*updateVtFilterClearButton\(\)' "botao limpar VT aparece somente com filtro ativo"
   Assert-MatchText $script 'document\.getElementById\("vt-filter-nome"\)\?\.addEventListener\("input", renderVtRegistros\)[\s\S]*document\.getElementById\("vt-filter-mes"\)\?\.addEventListener\("change", renderVtRegistros\)[\s\S]*document\.getElementById\("vt-filter-unidade"\)\?\.addEventListener\("change", renderVtRegistros\)[\s\S]*document\.getElementById\("limpar-filtros-vt"\)' "filtros de VT atualizam e limpam a lista"
 Assert-MatchText $script 'document\.getElementById\("abrir-relatorio-vt"\)\?\.addEventListener\("click", showVtReportMenu\)' "botao de relatorio VT abre menu"
@@ -546,14 +547,14 @@ Assert-MatchText $script 'function showVtReportMenu\(\).*data-action="gerar-rela
   Assert-MatchText $script '<mergeCells count="2"><mergeCell ref="A1:H1"/><mergeCell ref="A2:H2"/></mergeCells>[\s\S]*alignment horizontal="center" vertical="center"' "relatorio VT centraliza nome e data de geracao"
   Assert-MatchText $script 'worksheetRowXml\(headers, 5, 1\)[\s\S]*<cellXfs count="4">[\s\S]*applyFont="1" applyFill="1"' "linha 5 do relatorio VT possui destaque"
   Assert-MatchText $script 'function gerarRelatorioVt\(scope = "filtered"\).*createVtReportXlsxBlob\(rows\)[\s\S]*safeDownloadName\(`relatorio-vt-\$\{useFilters \? "filtrado" : "todos"\}`, "xlsx"\)' "relatorio VT baixa arquivo xlsx"
-  Assert-MatchText $script "case 'gerar-relatorio-vt': gerarRelatorioVt\(target\.dataset\.scope\); break;" "acao de gerar relatorio VT esta conectada"
+  Assert-MatchText $script '"gerar-relatorio-vt": \(id, target\) => gerarRelatorioVt\(target\.dataset\.scope\)' "acao de gerar relatorio VT esta conectada"
   Assert-MatchText $script 'function renderVtRegistros\(\).*data-action="editar-vt"' "VT exibe botao para editar registro"
   Assert-MatchText $script 'function renderVtRegistros\(\).*data-action="excluir-vt"' "VT exibe botao para apagar registro"
   Assert-MatchText $script 'function editarVtRegistro\(id\).*form\.elements\.id\.value = registro\.id[\s\S]*form\.elements\.colaborador\.value = registro\.colaborador[\s\S]*setFieldValue\(form\.elements\.unidade[\s\S]*setFieldValue\(form\.elements\.mes[\s\S]*button\[type="submit"\]\x27\)\.textContent = "Salvar' "VT preenche formulario para editar registro"
   Assert-MatchText $script 'function resetVtForm\(\).*form\.elements\.id\.value = ""[\s\S]*cancelar-edicao-vt[\s\S]*button\[type="submit"\]\x27\)\.textContent = "Registrar' "VT cancela edicao e volta para cadastro"
   Assert-MatchText $script 'async function excluirVtRegistro\(id\).*showConfirmActionModal[\s\S]*deleteItem\("vtRegistros", id\)' "VT confirma e apaga registro pelo fluxo PostgreSQL"
-  Assert-MatchText $script "case 'editar-vt': editarVtRegistro\(id\); break;" "acao de editar VT esta conectada"
-  Assert-MatchText $script "case 'excluir-vt': excluirVtRegistro\(id\); break;" "acao de apagar VT esta conectada"
+  Assert-MatchText $script '"editar-vt": \(id\) => editarVtRegistro\(id\)' "acao de editar VT esta conectada"
+  Assert-MatchText $script '"excluir-vt": \(id\) => excluirVtRegistro\(id\)' "acao de apagar VT esta conectada"
   Assert-MatchText $script 'vtForm\.addEventListener\("input", updateVtCalculation\)' "VT atualiza calculo automaticamente"
   Assert-MatchText $script 'function renderItemSizeOptions\(type = "epi", selectedSize = "", itemName = ""\).*"EXG"' "tamanho EXG esta cadastrado"
   Assert-MatchText $script 'const isShoe = /sapat/i\.test\(itemName\)' "sapato usa regra propria de numeracao"

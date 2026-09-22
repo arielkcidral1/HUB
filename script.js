@@ -139,7 +139,6 @@ const TABLES = {
   quadros: "hub_quadros",
   vagas: "hub_vagas",
   eventos: "hub_eventos",
-  vtRegistros: "hub_vt_registros",
   documentos: "hub_documentos",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
@@ -218,7 +217,6 @@ const defaultData = {
   quadros: [],
   vagas: [],
   eventos: [],
-  vtRegistros: [],
   documentos: [],
   documentosContratados: [],
   candidaturas: [],
@@ -1341,7 +1339,6 @@ function loadLocalData() {
     quadros: parsed.quadros || defaultData.quadros || [],
     vagas: parsed.vagas || [],
     eventos: parsed.eventos || [],
-    vtRegistros: parsed.vtRegistros || [],
     ...Object.fromEntries(HubModules.list.map((mod) => [mod.collection, parsed[mod.collection] || []])),
     documentos: parsed.documentos || [],
     documentosContratados: (parsed.documentosContratados || [])
@@ -3673,22 +3670,6 @@ if (collection === "eventos") {
     }));
   }
 
-  if (collection === "vtRegistros") {
-    return rows.map((row) => ({
-      id: row.id,
-      colaborador: row.colaborador || "",
-      unidade: row.unidade || "",
-      mes: row.mes || "",
-      diasUteis: row.dias_uteis || 0,
-      valorPassagem: Number(row.valor_passagem) || 0,
-      saldoAtual: Number(row.saldo_atual) || 0,
-      valorNecessario: Number(row.valor_necessario) || 0,
-      createdBy: row.created_by || getSystemFallbackAuthor(),
-      createdAt: formatDate(row.created_at),
-      sortAt: row.created_at || "",
-    }));
-  }
-
   if (collection === "documentos") {
     return rows.map((row) => ({
       id: row.id,
@@ -4278,19 +4259,6 @@ if (collection === "eventos") {
     };
   }
 
-  if (collection === "vtRegistros") {
-    return {
-      colaborador: values.colaborador,
-      unidade: values.unidade,
-      mes: values.mes,
-      dias_uteis: values.diasUteis,
-      valor_passagem: values.valorPassagem,
-      saldo_atual: values.saldoAtual,
-      valor_necessario: values.valorNecessario,
-      created_by: values.createdBy || getCurrentUserName(),
-    };
-  }
-
   if (collection === "documentos") {
     return {
       tipo: values.type || "",
@@ -4445,7 +4413,6 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
       "quadros",
       "vagas",
       "eventos",
-      "vtRegistros",
       ...HubModules.list.map((mod) => mod.collection),
       "documentos",
       "documentosContratados",
@@ -6930,76 +6897,6 @@ function formatCurrencyInput(value) {
   return `${reais},${centavos}`;
 }
 
-function calculateVtValue(diasUteis, valorPassagem, saldoAtual) {
-  return Math.max(0, (Number(diasUteis) || 0) * (Number(valorPassagem) || 0) - (Number(saldoAtual) || 0));
-}
-
-const VT_MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
-function formatVtMonth(value) {
-  if (VT_MONTH_NAMES.includes(String(value || ""))) return String(value);
-  const match = String(value || "").match(/^(\d{4})-(\d{2})$/);
-  if (!match) return "Não informado";
-  const date = new Date(Number(match[1]), Number(match[2]) - 1, 1);
-  return new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(date);
-}
-
-function updateVtCalculation() {
-  const diasUteis = Number(document.getElementById("vt-dias-uteis")?.value || 0);
-  const valorPassagem = parseBrazilianCurrency(document.getElementById("vt-valor-passagem")?.value || 0);
-  const saldoAtual = Number(document.getElementById("vt-saldo-atual")?.value || 0);
-  const total = calculateVtValue(diasUteis, valorPassagem, saldoAtual);
-  const result = document.getElementById("vt-valor-necessario");
-  const detail = document.getElementById("vt-calculo-detalhe");
-  if (result) result.textContent = formatCurrencyBRL(total);
-  if (detail) {
-    detail.textContent = `${diasUteis || 0} dias - ${formatCurrencyBRL(valorPassagem)} - ${formatCurrencyBRL(saldoAtual)} = ${formatCurrencyBRL(total)}`;
-  }
-}
-
-function getVtFormValues(formElement) {
-  const form = new FormData(formElement);
-  const diasUteis = Number(form.get("dias_uteis") || 0);
-  const valorPassagem = parseBrazilianCurrency(form.get("valor_passagem") || 0);
-  const saldoAtual = Number(form.get("saldo_atual") || 0);
-  return {
-    colaborador: String(form.get("colaborador") || "").trim(),
-    unidade: String(form.get("unidade") || "").trim(),
-    mes: String(form.get("mes") || "").trim(),
-    diasUteis,
-    valorPassagem,
-    saldoAtual,
-    valorNecessario: calculateVtValue(diasUteis, valorPassagem, saldoAtual),
-  };
-}
-
-function getFilteredVtRegistros() {
-  const nameFilter = String(document.getElementById("vt-filter-nome")?.value || "").trim().toLowerCase();
-  const monthFilter = document.getElementById("vt-filter-mes")?.value || "";
-  const unitFilter = document.getElementById("vt-filter-unidade")?.value || "";
-
-  return (data.vtRegistros || []).filter((item) => {
-    const itemName = String(item.colaborador || "").toLowerCase();
-    const itemMonth = formatVtMonth(item.mes);
-    if (nameFilter && !itemName.includes(nameFilter)) return false;
-    if (monthFilter && itemMonth !== monthFilter) return false;
-    if (unitFilter && item.unidade !== unitFilter) return false;
-    return true;
-  });
-}
-
-function getVtReportFilterLabel(useFilters = true) {
-  if (!useFilters) return "Todos os registros";
-  const parts = [];
-  const nameFilter = String(document.getElementById("vt-filter-nome")?.value || "").trim();
-  const monthFilter = document.getElementById("vt-filter-mes")?.value || "";
-  const unitFilter = document.getElementById("vt-filter-unidade")?.value || "";
-  if (nameFilter) parts.push(`Nome: ${nameFilter}`);
-  if (monthFilter) parts.push(`Màs: ${monthFilter}`);
-  if (unitFilter) parts.push(`Unidade: ${unitFilter}`);
-  return parts.length ? parts.join(" | ") : "Sem filtros ativos";
-}
-
 function formatVtReportDateTime(value = new Date()) {
   if (value instanceof Date) {
     return value.toLocaleString("pt-BR", {
@@ -7014,52 +6911,6 @@ function formatVtReportDateTime(value = new Date()) {
     .replace(/(\d{1,2}:\d{2}):\d{2}/, "$1")
     .replace(/,\s*/g, " ")
     .trim();
-}
-
-function getVtReportRows(useFilters = true) {
-  const registros = useFilters ? getFilteredVtRegistros() : (data.vtRegistros || []);
-  return registros.map((item) => ({
-    colaborador: item.colaborador || "Colaborador não informado",
-    unidade: item.unidade || "Não informada",
-    mes: formatVtMonth(item.mes),
-    diasUteis: Number(item.diasUteis) || 0,
-    valorPassagem: Number(item.valorPassagem) || 0,
-    saldoAtual: Number(item.saldoAtual) || 0,
-    valorNecessario: Number(item.valorNecessario) || 0,
-    registradoEm: formatVtReportDateTime(item.createdAt || todayLabel()),
-  }));
-}
-
-function showVtReportMenu() {
-  const existing = document.getElementById("custom-modal");
-  if (existing) existing.remove();
-  const filteredCount = getFilteredVtRegistros().length;
-  const totalCount = (data.vtRegistros || []).length;
-  const overlay = document.createElement("div");
-  overlay.id = "custom-modal";
-  overlay.className = "modal-overlay";
-  overlay.innerHTML = `
-    <div class="modal-card vt-report-modal">
-      <div class="modal-header info">Relatório de VT</div>
-      <div class="modal-body">
-        <p>Escolha quais registros deseja exportar em .xlsx.</p>
-        <div class="vt-report-options">
-          <button class="report-chip" type="button" data-action="gerar-relatorio-vt" data-scope="filtered">
-            <span>Registros filtrados</span>
-            <small>${escapeHtml(String(filteredCount))} registro(s) - ${escapeHtml(getVtReportFilterLabel(true))}</small>
-          </button>
-          <button class="report-chip" type="button" data-action="gerar-relatorio-vt" data-scope="all">
-            <span>Todos os registros</span>
-            <small>${escapeHtml(String(totalCount))} registro(s) cadastrados</small>
-          </button>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="secondary-link" type="button" data-action="close-modal">Cancelar</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
 }
 
 function xmlEscape(value) {
@@ -7090,39 +6941,6 @@ function worksheetCellXml(value, rowIndex, colIndex, styleId = 0) {
 
 function worksheetRowXml(values, rowIndex, styleId = 0) {
   return `<row r="${rowIndex}">${values.map((value, colIndex) => worksheetCellXml(value, rowIndex, colIndex, styleId)).join("")}</row>`;
-}
-
-function buildVtReportWorksheet(rows) {
-  const headers = ["Colaborador", "Unidade", "Màs", "Dias úteis", "Valor da passagem", "Saldo atual", "Valor necessário", "Registrado em"];
-  const sheetRows = [
-    worksheetRowXml(["Relatório de Vale Transporte"], 1, 2),
-    worksheetRowXml([`Gerado em ${formatVtReportDateTime(new Date())}`], 2, 2),
-    worksheetRowXml(headers, 5, 1),
-    ...rows.map((item, index) => worksheetRowXml([
-      item.colaborador,
-      item.unidade,
-      item.mes,
-      item.diasUteis,
-      item.valorPassagem,
-      item.saldoAtual,
-      item.valorNecessario,
-      item.registradoEm,
-    ], index + 6)),
-  ];
-  const lastRow = rows.length + 5;
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="A1:H${lastRow}"/>
-  <cols>
-    <col min="1" max="1" width="30" customWidth="1"/>
-    <col min="2" max="3" width="18" customWidth="1"/>
-    <col min="4" max="4" width="12" customWidth="1"/>
-    <col min="5" max="7" width="18" customWidth="1"/>
-    <col min="8" max="8" width="22" customWidth="1"/>
-  </cols>
-  <sheetData>${sheetRows.join("")}</sheetData>
-  <mergeCells count="2"><mergeCell ref="A1:H1"/><mergeCell ref="A2:H2"/></mergeCells>
-</worksheet>`;
 }
 
 function makeCrc32Table() {
@@ -7212,116 +7030,6 @@ function createZipBlob(files, mimeType = "application/vnd.openxmlformats-officed
   return new Blob([new Uint8Array(output)], { type: mimeType });
 }
 
-function createVtReportXlsxBlob(rows) {
-  const worksheet = buildVtReportWorksheet(rows);
-  return createZipBlob([
-    {
-      name: "[Content_Types].xml",
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-</Types>`,
-    },
-    {
-      name: "_rels/.rels",
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>`,
-    },
-    {
-      name: "xl/workbook.xml",
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="Registros VT" sheetId="1" r:id="rId1"/></sheets>
-</workbook>`,
-    },
-    {
-      name: "xl/_rels/workbook.xml.rels",
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>`,
-    },
-    {
-      name: "xl/styles.xml",
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <fonts count="2">
-    <font><sz val="11"/><name val="Calibri"/></font>
-    <font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font>
-  </fonts>
-  <fills count="3">
-    <fill><patternFill patternType="none"/></fill>
-    <fill><patternFill patternType="gray125"/></fill>
-    <fill><patternFill patternType="solid"><fgColor rgb="FF2F7D6D"/><bgColor indexed="64"/></patternFill></fill>
-  </fills>
-  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
-  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="4">
-    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
-    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
-    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-  </cellXfs>
-  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
-</styleSheet>`,
-    },
-    { name: "xl/worksheets/sheet1.xml", content: worksheet },
-  ]);
-}
-
-function gerarRelatorioVt(scope = "filtered") {
-  const useFilters = scope !== "all";
-  const rows = getVtReportRows(useFilters);
-  if (!rows.length) {
-    showModal("Relatório vazio", "Não há registros de VT para gerar o relatório.", "error");
-    return;
-  }
-  const blob = createVtReportXlsxBlob(rows);
-  downloadBlob(blob, safeDownloadName(`relatorio-vt-${useFilters ? "filtrado" : "todos"}`, "xlsx"));
-  document.getElementById("custom-modal")?.remove();
-}
-
-function updateVtFilterClearButton() {
-  const clearButton = document.getElementById("limpar-filtros-vt");
-  if (!clearButton) return;
-  const hasActiveFilter = Boolean(
-    String(document.getElementById("vt-filter-nome")?.value || "").trim()
-    || document.getElementById("vt-filter-mes")?.value
-    || document.getElementById("vt-filter-unidade")?.value
-  );
-  clearButton.hidden = !hasActiveFilter;
-}
-
-function renderVtRegistros() {
-  updateVtFilterClearButton();
-  renderCards("vt-registros-list", getFilteredVtRegistros(), (item) => `
-    <article class="item-card">
-      <div class="item-topline">
-        <p class="item-title">${escapeHtml(item.colaborador || "Colaborador não informado")}</p>
-        <span class="tag">${escapeHtml(formatCurrencyBRL(item.valorNecessario))}</span>
-      </div>
-      <p><strong>Unidade:</strong> ${escapeHtml(item.unidade || "Não informada")}</p>
-      <p><strong>Màs:</strong> ${escapeHtml(formatVtMonth(item.mes))}</p>
-      <p><strong>Dias úteis:</strong> ${escapeHtml(String(item.diasUteis || 0))}</p>
-      <p><strong>Valor da passagem:</strong> ${escapeHtml(formatCurrencyBRL(item.valorPassagem))}</p>
-      <p><strong>Saldo atual:</strong> ${escapeHtml(formatCurrencyBRL(item.saldoAtual))}</p>
-      <p><strong>Valor registrado:</strong> ${escapeHtml(formatCurrencyBRL(item.valorNecessario))}</p>
-      <p class="item-meta">${escapeHtml(item.createdAt || todayLabel())} | Registrado por ${escapeHtml(item.createdBy || getCurrentUserName())}</p>
-      <div class="job-actions section-top">
-        <button class="secondary-link" type="button" data-action="editar-vt" data-id="${escapeHtml(item.id)}">Editar</button>
-        <button class="danger-button" type="button" data-action="excluir-vt" data-id="${escapeHtml(item.id)}">Apagar registro</button>
-      </div>
-    </article>
-  `);
-}
-
 function formatContractorDocumentList(documentos = []) {
   if (!documentos.length) return '<p class="empty-state">Nenhum arquivo vinculado.</p>';
   return documentos.map((doc, index) => {
@@ -7403,16 +7111,6 @@ function renderDocumentosContratados() {
   `);
 }
 
-function resetVtForm() {
-  const form = document.getElementById("vt-form");
-  if (!form) return;
-  form.reset();
-  form.elements.id.value = "";
-  document.getElementById("cancelar-edicao-vt")?.setAttribute("hidden", "");
-  form.querySelector('button[type="submit"]').textContent = "Registrar cálculo VT";
-  updateVtCalculation();
-}
-
 function applyRoleAccess() {
   if (!isAuthenticated() || isPublicPage() || !document.querySelector(".nav-list")) return;
   refreshCurrentUserRoleFromData();
@@ -7457,7 +7155,6 @@ function getViewForCollection(collection) {
     documentos: "documentos",
     documentosContratados: "documentos-contratados",
     atestados: "documentos",
-    vtRegistros: "gerenciamento-vt",
     usuarios: "equipe",
     climaPesquisas: "teste-clima",
   };
@@ -8886,7 +8583,7 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!isAuthenticated()) return false;
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
-  if (["usuarios", "eventos", "vtRegistros", "malotes", "vagas", "atestados", "quadros"].includes(collection)) return false;
+  if (["usuarios", "eventos", "malotes", "vagas", "atestados", "quadros"].includes(collection)) return false;
   if (HubModules.byCollection(collection)?.silent) return false;
 
   if (!canAccessView(getViewForCollection(collection))) return false;
@@ -9604,7 +9301,6 @@ function renderAll() {
     `);
   });
 
-  safeRenderSection("vt-registros", renderVtRegistros);
   HubModules.list.forEach((mod) => safeRenderSection(mod.view, mod.render));
   safeRenderSection("documentos-contratados", renderDocumentosContratados);
 
@@ -11211,56 +10907,6 @@ document.addEventListener("click", (event) => {
   showDayEventsModal(dayButton.dataset.date);
 });
 
-const vtForm = document.getElementById("vt-form");
-if (vtForm) {
-  vtForm.elements.valor_passagem?.addEventListener("input", (event) => {
-    event.currentTarget.value = formatCurrencyInput(event.currentTarget.value);
-  });
-  vtForm.addEventListener("input", updateVtCalculation);
-  vtForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const id = form.get("id");
-    const values = getVtFormValues(formElement);
-    if (!hasFullName(values.colaborador)) {
-      showModal("Colaborador obrigatório", "Informe nome e sobrenome do colaborador para registrar o cálculo de VT.", "error");
-      return;
-    }
-    if (!values.unidade) {
-      showModal("Unidade obrigatória", "Informe a unidade do trabalhador para registrar o cálculo de VT.", "error");
-      return;
-    }
-    if (!VT_MONTH_NAMES.includes(values.mes)) {
-      showModal("Màs obrigatório", "Informe o màs de referência para registrar o cálculo de VT.", "error");
-      return;
-    }
-    const success = id
-      ? await updateItem("vtRegistros", id, { ...values, updatedBy: getCurrentUserName() })
-      : await addItem("vtRegistros", { ...values, createdBy: getCurrentUserName() });
-    if (success) {
-      resetVtForm();
-      showModal(id ? "VT atualizado" : "VT registrado", id ? "O registro de vale-transporte foi atualizado com sucesso." : "O cálculo de vale-transporte foi registrado com sucesso.", "info");
-    }
-  });
-  document.getElementById("cancelar-edicao-vt")?.addEventListener("click", resetVtForm);
-  updateVtCalculation();
-}
-
-document.getElementById("vt-filter-nome")?.addEventListener("input", renderVtRegistros);
-document.getElementById("vt-filter-mes")?.addEventListener("change", renderVtRegistros);
-document.getElementById("vt-filter-unidade")?.addEventListener("change", renderVtRegistros);
-document.getElementById("abrir-relatorio-vt")?.addEventListener("click", showVtReportMenu);
-document.getElementById("limpar-filtros-vt")?.addEventListener("click", () => {
-  const nameFilter = document.getElementById("vt-filter-nome");
-  const monthFilter = document.getElementById("vt-filter-mes");
-  const unitFilter = document.getElementById("vt-filter-unidade");
-  if (nameFilter) nameFilter.value = "";
-  if (monthFilter) monthFilter.value = "";
-  if (unitFilter) unitFilter.value = "";
-  renderVtRegistros();
-});
-
 const usuarioForm = document.getElementById("usuario-form");
 if (usuarioForm) {
   usuarioForm.querySelector('[name="cpf"]')?.addEventListener("input", (event) => {
@@ -12708,24 +12354,6 @@ async function excluirEvento(id) {
   });
 };
 
-async function excluirVtRegistro(id) {
-  const registro = (data.vtRegistros || []).find((item) => String(item.id) === String(id));
-  if (!registro) return;
-
-  showConfirmActionModal({
-    title: "Apagar registro de VT",
-    text: `Tem certeza que deseja apagar o registro de VT de "${registro.colaborador || "colaborador não informado"}"?`,
-    confirmText: "Apagar",
-    danger: true,
-    onConfirm: async () => {
-      const deleted = await deleteItem("vtRegistros", id);
-      if (deleted) {
-        showModal("Registro apagado", "O registro de vale-transporte foi apagado com sucesso.", "info");
-      }
-    },
-  });
-};
-
 async function excluirDocumentoContratado(id) {
   const registro = (data.documentosContratados || []).find((item) => String(item.id) === String(id));
   if (!registro) return;
@@ -12755,24 +12383,6 @@ async function excluirDocumentoContratado(id) {
     },
   });
 }
-
-function editarVtRegistro(id) {
-  const registro = (data.vtRegistros || []).find((item) => String(item.id) === String(id));
-  const form = document.getElementById("vt-form");
-  if (!registro || !form) return;
-
-  form.elements.id.value = registro.id;
-  form.elements.colaborador.value = registro.colaborador || "";
-  setFieldValue(form.elements.unidade, registro.unidade || "");
-  setFieldValue(form.elements.mes, formatVtMonth(registro.mes) === "Não informado" ? "" : formatVtMonth(registro.mes));
-  form.elements.dias_uteis.value = registro.diasUteis || "";
-  form.elements.valor_passagem.value = formatCurrencyInput(String(Math.round(Number(registro.valorPassagem || 0) * 100)));
-  form.elements.saldo_atual.value = registro.saldoAtual ?? "";
-  document.getElementById("cancelar-edicao-vt")?.removeAttribute("hidden");
-  form.querySelector('button[type="submit"]').textContent = "Salvar alterações";
-  updateVtCalculation();
-  form.scrollIntoView({ behavior: "smooth", block: "start" });
-};
 
 function editarMalote(id) {
   const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
@@ -13258,9 +12868,6 @@ document.addEventListener('click', (event) => {
       editarEvento(id);
       break;
     case 'excluir-evento': excluirEvento(id); break;
-    case 'editar-vt': editarVtRegistro(id); break;
-    case 'excluir-vt': excluirVtRegistro(id); break;
-    case 'gerar-relatorio-vt': gerarRelatorioVt(target.dataset.scope); break;
     case 'editar-documento': editarDocumento(id); break;
     case 'baixar-documento-rh': baixarDocumentoRH(id); break;
     case 'excluir-documento': excluirDocumento(id); break;

@@ -1,0 +1,88 @@
+        <section class="view" id="gerenciamento-vt">
+          <div class="single-workspace">
+            <form class="panel form-panel" id="vt-form">
+              <div class="panel-header">
+                <div>
+                  <h2>Gerenciamento VT</h2>
+                  <p class="item-meta">Calcule o valor necessário de vale-transporte para o colaborador</p>
+                </div>
+              </div>
+              <input name="id" type="hidden" />
+              <label>Nome e sobrenome do colaborador
+                <input id="vt-colaborador" name="colaborador" type="text" minlength="3" maxlength="120" pattern="\S+\s+\S+.*" placeholder="Nome e sobrenome" autocomplete="off" required />
+              </label>
+              <div class="form-grid form-grid-md">
+                <label>Mês
+                  <select id="vt-mes" name="mes" required>
+                    <option value="" disabled selected>Selecione o mês</option>
+                    <option>Janeiro</option>
+                    <option>Fevereiro</option>
+                    <option>Março</option>
+                    <option>Abril</option>
+                    <option>Maio</option>
+                    <option>Junho</option>
+                    <option>Julho</option>
+                    <option>Agosto</option>
+                    <option>Setembro</option>
+                    <option>Outubro</option>
+                    <option>Novembro</option>
+                    <option>Dezembro</option>
+                  </select>
+                </label>
+                <label>Unidade do trabalhador
+                  <select id="vt-unidade" name="unidade" data-unit-select required></select>
+                </label>
+              </div>
+              <div class="form-grid form-grid-md">
+                <label>Dias úteis no mês
+                  <input id="vt-dias-uteis" name="dias_uteis" type="number" min="0" step="1" placeholder="Ex: 22" required />
+                </label>
+                <label>Valor da passagem
+                  <input id="vt-valor-passagem" name="valor_passagem" type="text" inputmode="numeric" pattern="\d+,\d{2}" maxlength="8" placeholder="Ex: 5,50" autocomplete="off" required />
+                </label>
+                <label>Saldo atual
+                  <input id="vt-saldo-atual" name="saldo_atual" type="number" min="0" step="0.01" placeholder="Ex: 30,00" required />
+                </label>
+              </div>
+              <div class="vt-result-card" aria-live="polite">
+                <span>Valor necessário</span>
+                <strong id="vt-valor-necessario">R$ 0,00</strong>
+                <p id="vt-calculo-detalhe">Informe os dados para calcular.</p>
+              </div>
+              <button class="primary-button" type="submit">Registrar cálculo VT</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-vt" type="button" hidden>Cancelar edição</button>
+            </form>
+            <div class="panel">
+              <div class="panel-header vt-records-header">
+                <div>
+                  <h2>Registros de VT</h2>
+                  <p class="item-meta">Histórico dos cálculos registrados</p>
+                </div>
+                <div class="vt-filter-bar" aria-label="Filtros de registros de VT">
+                  <button class="secondary-link vt-report-button" id="abrir-relatorio-vt" type="button">Relatório</button>
+                  <div class="vt-filter-fields">
+                    <input id="vt-filter-nome" type="search" placeholder="Nome" autocomplete="off" aria-label="Filtrar por nome" />
+                    <select id="vt-filter-mes" aria-label="Filtrar por mês">
+                      <option value="">Mês</option>
+                      <option>Janeiro</option>
+                      <option>Fevereiro</option>
+                      <option>Março</option>
+                      <option>Abril</option>
+                      <option>Maio</option>
+                      <option>Junho</option>
+                      <option>Julho</option>
+                      <option>Agosto</option>
+                      <option>Setembro</option>
+                      <option>Outubro</option>
+                      <option>Novembro</option>
+                      <option>Dezembro</option>
+                    </select>
+                    <select id="vt-filter-unidade" data-unit-select data-unit-placeholder="Unidade" aria-label="Filtrar por unidade"></select>
+                  </div>
+                  <button class="secondary-link compact-filter-button" id="limpar-filtros-vt" type="button" hidden>Limpar</button>
+                </div>
+              </div>
+              <div class="card-list" id="vt-registros-list"></div>
+            </div>
+          </div>
+        </section>
