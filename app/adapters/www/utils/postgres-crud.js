@@ -1050,3 +1050,51 @@ if (collection === "eventos") {
     return false;
   }
 }
+
+async function loadPublicData() {
+  if (!isPublicJobsPage()) return;
+
+  try {
+    const response = await fetch(`/api/records?table=${encodeURIComponent(TABLES.vagas)}&select=*&order=${encodeURIComponent(JSON.stringify([{ column: "created_at", ascending: false }]))}`);
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Nao foi possivel carregar vagas publicas.");
+
+    const rows = result.data || [];
+    data.vagas = mapRows("vagas", rows || []);
+    renderPublicVagas();
+  } catch (error) {
+    console.error("Erro ao carregar vagas publicas:", error);
+    renderPublicVagas();
+  }
+}
+
+async function loadIndexVagasData(options = {}) {
+  const { render = true } = options;
+  if (!document.getElementById("vagas-list")) return false;
+
+  try {
+    const order = encodeURIComponent(JSON.stringify([{ column: "created_at", ascending: false }]));
+    const [vagasResponse, candidaturasResponse] = await Promise.all([
+      fetch(`/api/records?table=${encodeURIComponent(TABLES.vagas)}&select=*&order=${order}`, { credentials: "same-origin" }),
+      fetch(`/api/records?table=${encodeURIComponent(TABLES.candidaturas)}&select=*&order=${order}`, { credentials: "same-origin" }),
+    ]);
+    const vagasResult = await vagasResponse.json().catch(() => ({}));
+    const candidaturasResult = await candidaturasResponse.json().catch(() => ({}));
+    if (!vagasResponse.ok) throw new Error(vagasResult.error || "Nao foi possivel carregar vagas no index.");
+    if (!candidaturasResponse.ok) throw new Error(candidaturasResult.error || "Nao foi possivel carregar curriculos no index.");
+
+    data.vagas = mapRows("vagas", vagasResult.data || []);
+    data.candidaturas = mapRows("candidaturas", candidaturasResult.data || []);
+    saveLocalData();
+    publishHubDataCounts();
+    if (render) {
+      safeRenderSection("vagas", renderVagasSection);
+      safeRenderSection("dashboard", renderDashboard);
+    }
+    return true;
+  } catch (error) {
+    console.error("Erro ao carregar vagas e curriculos no index:", error);
+    return false;
+  }
+}
