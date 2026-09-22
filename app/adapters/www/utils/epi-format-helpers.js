@@ -85,8 +85,6 @@ function formatPhone(value) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
-const DATE_MASK_MAX_YEAR = 2026;
-
 function formatMaskedDate(value) {
   const raw = String(value || "");
   const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);

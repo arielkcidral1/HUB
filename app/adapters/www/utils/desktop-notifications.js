@@ -77,7 +77,6 @@ async function requestDesktopNotificationPermission({ showSuccess = true } = {})
   }
 }
 
-const HUB_NOTIFICATION_PERMISSION_PROMPT_ID = "hub-notification-permission-prompt";
 let hubNotificationPermissionInteractionBound = false;
 
 function getNotificationPermissionDismissedKey() {
@@ -227,8 +226,6 @@ function playUserNotificationSound() {
 
   }
 }
-
-const HUB_NOTIFICATION_POPOUT_CONTAINER_ID = "hub-notification-popout-container";
 
 function ensureUserNotificationPopoutContainer() {
   let container = document.getElementById(HUB_NOTIFICATION_POPOUT_CONTAINER_ID);

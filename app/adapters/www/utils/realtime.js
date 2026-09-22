@@ -11,7 +11,6 @@ async function refreshFromPostgreSQL() {
 }
 
 let lastAutoRefreshAt = 0;
-const AUTO_REFRESH_MIN_GAP_MS = 60000;
 
 function setupAutoRefresh() {
   if (refreshTimer) return;

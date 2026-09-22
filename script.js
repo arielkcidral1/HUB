@@ -24,7 +24,6 @@ let appInitializationPromise = null;
 const privateAvatarUrlCache = new Map();
 const privateAvatarUrlRequests = new Map();
 const chatMediaSignedUrlCache = new Map();
-const TRANSPARENT_IMAGE_PLACEHOLDER = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
 let chamadosSelectionMode = false;
 let denunciasSelectionMode = false;
 let dashboardNotificationOffset = 0;
@@ -40,7 +39,6 @@ let hubPollingNotificationKeys = new Set();
 let hubPollingNotificationsReady = false;
 let shownNotificationKeys = loadShownNotificationKeys();
 let initialNotificationSnapshotReady = false;
-const HUB_NOTIFICATION_SERVICE_WORKER_PATH = "hub-notifications-sw.js";
 let chatMessageFilterQuery = "";
 let chatMessageFilterVisible = false;
 const localChatEchoMessages = new Map();
@@ -56,33 +54,6 @@ let readRhMessageIds = loadReadRhMessageIds();
 let dismissedNotificationIds = loadDismissedNotificationIds();
 window.editingDocId = null;
 
-const UNIT_OPTIONS = [
-  "1- MTZ",
-  "2- SBS",
-  "3- ITJ 1",
-  "4- PLÇ",
-  "5- GUA",
-  "7- DPA JC",
-  "9- DPA IRI",
-  "10- JPL",
-  "11- BC",
-  "12- GCS GPO",
-  "12- GCS JLLE",
-  "13- JRG 1",
-  "14- BRQ",
-  "15- FLN",
-  "17- FAC",
-  "19- RNG 1",
-  "20- BNU 1",
-  "21- JRG 2",
-  "22- TRINCA",
-  "23- ITJ 2",
-  "26- BNU 2",
-  "28- ARA",
-  "00- Brasil",
-];
-UNIT_OPTIONS.splice(3, 1, "4- PL\u00C7");
-
 function normalizeUnitText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -90,11 +61,6 @@ function normalizeUnitText(value) {
     .toLowerCase()
     .trim();
 }
-
-const UNIT_ALIASES = {
-  jrg: "13- JRG 1",
-  jgr: "13- JRG 1",
-};
 
 function getCanonicalUnit(value) {
   const raw = String(value || "").trim();
@@ -106,29 +72,6 @@ function getCanonicalUnit(value) {
   return raw;
 }
 
-const UNIT_CITY_ALIASES = {
-  brasil: "Brasil",
-  mtz: "Joinville",
-  sbs: "Sao Bento do Sul",
-  itj: "Itajai",
-  plc: "Palhoca",
-  gua: "Joinville",
-  "dpa jc": "Joinville",
-  "dpa iri": "Joinville",
-  jpl: "Joinville",
-  bc: "Balneario Camboriu",
-  "gcs gpo": "Araquari",
-  gcs: "Joinville",
-  jrg: "Jaragua do Sul",
-  brq: "Brusque",
-  fln: "Florianopolis",
-  fac: "Joinville",
-  rng: "Rio Negrinho",
-  bnu: "Blumenau",
-  trinca: "Joinville",
-  ara: "Araquari",
-};
-
 function getUnitCity(value) {
   const unit = getCanonicalUnit(value);
   const text = normalizeUnitText(unit).replace(/^\d+\s*-\s*/, "");
@@ -139,58 +82,6 @@ function getUnitCity(value) {
     .find((alias) => text.includes(alias));
   return key ? UNIT_CITY_ALIASES[key] : "";
 }
-
-const EPI_OPTIONS = [
-  "Luva PU",
-  "Luva Pigmentada",
-  "Luva de Raspa",
-  "Luva nitrilica",
-  "Oculos Transparente",
-  "Oculos Verde",
-  "Mascara com Filtro",
-  "Respirador PFF2",
-  "Protetor Auricular",
-  "Protetor Auricular tipo concha",
-  "Avental de Raspa",
-  "Sapatão",
-  "Luva de Vaqueta",
-  "Creme de Proteção",
-];
-
-const UNIFORM_OPTIONS = [
-  "Camiseta Operacional Fredy - Pneus",
-  "Camiseta Chefe de Pátio - Fredy Pneus",
-  "Moletom Operacional - Fredy Pneus",
-  "Camisa Social Azul - Fredy Pneus",
-  "Camisa Social Branca Fredy - Pneus",
-  "Calça Operacional Fredy - Pneus",
-  "Camiseta Operacional - GCS",
-  "Camiseta Cinza Claro - GCS",
-  "Camisa Polo - GCS",
-  "Calça Operacional - GCS",
-  "Bermuda Operacional - GCS",
-  "Camiseta Operacional - JPL",
-  "Camisa Polo - JPL",
-  "Moletom Operacional - JPL",
-  "Calça Operacional - JPL",
-  "Camiseta - FAC",
-];
-
-const ITEM_TYPE_OPTIONS = {
-  epi: {
-    label: "EPIs",
-    options: EPI_OPTIONS,
-  },
-  uniforme: {
-    label: "Uniforme",
-    options: UNIFORM_OPTIONS,
-  },
-  cracha: {
-    label: "Crachá",
-    options: [],
-  },
-};
-
 
 function withTimeout(promise, ms, fallbackValue = null) {
   return Promise.race([
