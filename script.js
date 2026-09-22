@@ -134,7 +134,6 @@ const TABLES = {
   denuncias: "hub_denuncias",
   feedbacks: "hub_feedbacks",
   comunicados: "hub_chat_messages",
-  malotes: "hub_malotes",
   chamados: "hub_chamados",
   quadros: "hub_quadros",
   vagas: "hub_vagas",
@@ -212,7 +211,6 @@ const defaultData = {
   denuncias: [],
   feedbacks: [],
   comunicados: [],
-  malotes: [],
   chamados: [],
   quadros: [],
   vagas: [],
@@ -1334,7 +1332,6 @@ function loadLocalData() {
     denuncias: parsed.denuncias || [],
     feedbacks: parsed.feedbacks || [],
     comunicados: parsed.comunicados || [],
-    malotes: parsed.malotes || [],
     chamados: parsed.chamados || [],
     quadros: parsed.quadros || defaultData.quadros || [],
     vagas: parsed.vagas || [],
@@ -1771,97 +1768,6 @@ function setFieldValue(field, value) {
   field.value = value || "";
 }
 
-function getSelectedMaloteDestino() {
-  const value = document.getElementById("malote-destino-filter")?.value || "";
-  return normalizeUnitText(value) === normalizeUnitText("Todos os destinos") ? "" : value;
-}
-
-function getMaloteFilterValues() {
-  const destino = getSelectedMaloteDestino();
-  const status = document.getElementById("malote-status-filter")?.value || "";
-  return {
-    destino: String(destino || "").trim().toLowerCase(),
-    status: ["todos os status", "todos"].includes(normalizeEventType(status)) ? "" : normalizeEventType(status),
-    colaborador: String(document.getElementById("malote-filter-colaborador")?.value || "").trim().toLowerCase(),
-    codigo: String(document.getElementById("malote-code-search")?.value || "").trim(),
-  };
-}
-
-function getMaloteCollaboratorSearchText(item = {}) {
-  const groups = normalizeMaloteCollaborators(item);
-  return groups.map((group) => String(group.colaborador || "").toLowerCase()).join(" ");
-}
-
-function formatRequestCode(value) {
-  const digits = String(value || "").replace(/\D/g, "").slice(0, 5);
-  return digits.length > 4 ? `${digits.slice(0, 4)}-${digits.slice(4)}` : digits;
-}
-
-function getMaloteCodeSearch() {
-  return String(document.getElementById("malote-code-search")?.value || "").trim();
-}
-
-function getFilteredMalotes() {
-  const filters = getMaloteFilterValues();
-  const selectedDestino = filters.destino;
-  const selectedStatus = filters.status;
-  const selectedColaborador = filters.colaborador;
-  const search = filters.codigo;
-  const searchDigits = search.replace(/\D/g, "");
-
-  return data.malotes.filter((item) => {
-    if (selectedDestino && String(item.destino || "").toLowerCase() !== selectedDestino) return false;
-    if (selectedStatus && normalizeEventType(item.status) !== selectedStatus) return false;
-    if (selectedColaborador && !getMaloteCollaboratorSearchText(item).includes(selectedColaborador)) return false;
-    if (!searchDigits) return true;
-
-    const code = String(item.codigoSolicitacao || "");
-    const codeDigits = code.replace(/\D/g, "");
-    const idDigits = String(item.id || "").replace(/\D/g, "");
-    return codeDigits.includes(searchDigits) || idDigits.includes(searchDigits);
-  });
-}
-
-function renderMaloteReport() {
-  const target = document.getElementById("malote-report");
-  if (!target) return;
-
-  const selectedDestino = getSelectedMaloteDestino();
-  const search = getMaloteCodeSearch();
-  const source = getFilteredMalotes();
-  const byDestino = data.malotes.reduce((acc, item) => {
-    const key = item.destino || "Sem destino";
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
-  const topDestino = Object.entries(byDestino).sort((a, b) => b[1] - a[1])[0];
-  const separacao = source.filter((item) => item.status === "Separação").length;
-  const entrega = source.filter((item) => item.status === "Entrega").length;
-
-  target.innerHTML = `
-    <article class="report-chip">
-      <span>${selectedDestino || search ? "Resultado filtrado" : "Total geral"}</span>
-      <strong>${source.length}</strong>
-      <small>${escapeHtml([selectedDestino, search ? `Código: ${search}` : ""].filter(Boolean).join(" | ") || "Todos os destinos")}</small>
-    </article>
-    <article class="report-chip">
-      <span>Em separacao</span>
-      <strong>${separacao}</strong>
-      <small>Malotes pendentes</small>
-    </article>
-    <article class="report-chip">
-      <span>Em entrega</span>
-      <strong>${entrega}</strong>
-      <small>Malotes em entrega</small>
-    </article>
-    <article class="report-chip">
-      <span>Destino com mais malotes</span>
-      <strong>${topDestino ? topDestino[1] : 0}</strong>
-      <small>${escapeHtml(topDestino ? topDestino[0] : "Sem dados")}</small>
-    </article>
-  `;
-}
-
 function toValidDate(value) {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -2199,16 +2105,6 @@ function hasFullName(value) {
   return /\S+\s+\S+/.test(String(value || "").trim());
 }
 
-function readMaloteCollaborators(formElement) {
-  return [...formElement.querySelectorAll("[data-malote-collaborator]")]
-    .map((block) => {
-      const colaborador = block.querySelector('[name="malote_colaborador[]"]')?.value.trim() || "";
-      const itens = readEpiItems(block);
-      return { colaborador, itens };
-    })
-    .filter((group) => group.colaborador && group.itens.length);
-}
-
 function readChamadoCollaborators(formElement) {
   return [...formElement.querySelectorAll("[data-chamado-collaborator]")]
     .map((block) => {
@@ -2248,24 +2144,6 @@ function createEpiRow(nome = "", quantidade = "") {
 
 function createMaloteItemRow(item = {}) {
   return createChamadoEpiRow(item.nome || "", item.quantidade || "", item.tamanho || "Nao se aplica", item.tipo || "", item.funcao || "", item.cpf || "");
-}
-
-function createMaloteCollaboratorBlock(group = {}) {
-  const itens = group.itens?.length ? group.itens : [{ nome: "", quantidade: "", tamanho: "Nao se aplica" }];
-  return `
-    <div class="malote-collaborator" data-malote-collaborator>
-      <div class="item-topline">
-        <label>Colaborador que irá receber
-          <input name="malote_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\\S+\\s+\\S+.*" placeholder="Nome e sobrenome" autocomplete="off" value="${escapeHtml(group.colaborador || "")}" required />
-        </label>
-        <button class="danger-button remove-malote-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
-      </div>
-      <div class="malote-collaborator-items" data-malote-collaborator-items>
-        ${itens.map((item) => createMaloteItemRow(item)).join("")}
-      </div>
-      <button class="secondary-link add-malote-item" type="button">Adicionar item para este colaborador</button>
-    </div>
-  `;
 }
 
 function createChamadoCollaboratorBlock(group = {}) {
@@ -2318,28 +2196,6 @@ function resetEpiRows(items = [{ nome: "", quantidade: "", tamanho: "Nao se apli
     : createChamadoEpiRow();
 }
 
-function normalizeMaloteCollaborators(malote = {}) {
-  if (Array.isArray(malote.colaboradores) && malote.colaboradores.length) {
-    return malote.colaboradores
-      .map((group) => ({
-        colaborador: String(group.colaborador || "").trim(),
-        itens: Array.isArray(group.itens) ? group.itens.filter((item) => item?.nome) : [],
-      }))
-      .filter((group) => group.colaborador && group.itens.length);
-  }
-
-  const legacyItems = parseEpiItems(malote.epis);
-  if (!legacyItems.length) return [];
-  return [{ colaborador: malote.colaborador || "Nao informado", itens: legacyItems }];
-}
-
-function resetMaloteCollaborators(groups = [{ colaborador: "", itens: [{ nome: "", quantidade: "", tamanho: "Nao se aplica" }] }]) {
-  const list = document.getElementById("epi-list");
-  if (!list) return;
-  const safeGroups = groups.length ? groups : [{ colaborador: "", itens: [{ nome: "", quantidade: "", tamanho: "Nao se aplica" }] }];
-  list.innerHTML = safeGroups.map((group) => createMaloteCollaboratorBlock(group)).join("");
-}
-
 function resetChamadoCollaborators(groups = [{ colaborador: "", itens: [{ nome: "", quantidade: "", tamanho: "Nao se aplica" }] }]) {
   const list = document.getElementById("epi-list");
   if (!list) return;
@@ -2373,63 +2229,6 @@ function parseEpiItems(value) {
       tamanho: "Nao se aplica",
     }))
     .filter((item) => item.nome);
-}
-
-function renderMaloteEpisDetails(epis) {
-  const items = parseEpiItems(epis);
-  if (!items.length) return `<p><strong>EPI:</strong> ${escapeHtml(epis || "Nao informado")}</p>`;
-
-  return items
-    .map((item) => `
-      <div class="malote-epi-detail">
-        <p><strong>EPI:</strong> ${escapeHtml(item.nome || "Nao informado")}</p>
-        <p><strong>Tamanho do EPI:</strong> ${escapeHtml(item.tamanho || "Nao se aplica")}</p>
-        <p><strong>Quantidade:</strong> ${escapeHtml(item.quantidade || "1")}</p>
-      </div>
-    `)
-    .join("");
-}
-
-function renderMaloteCollaboratorsDetails(malote = {}) {
-  const groups = normalizeMaloteCollaborators(malote);
-  if (!groups.length) return renderMaloteEpisDetails(malote.epis);
-
-  return groups
-    .map((group) => `
-      <div class="malote-collaborator-detail">
-        <p><strong>Colaborador:</strong> ${escapeHtml(group.colaborador || "Nao informado")}</p>
-        <ul>
-          ${group.itens.map((item) => `
-            <li>
-              ${escapeHtml(item.nome || "Nao informado")}
-              - Tamanho: ${escapeHtml(item.tamanho || "Nao se aplica")}
-              - Quantidade: ${escapeHtml(item.quantidade || "1")}
-            </li>
-          `).join("")}
-        </ul>
-      </div>
-    `)
-    .join("");
-}
-
-function renderMaloteCardContent(item, options = {}) {
-  const { showAudit = true, showActions = true } = options;
-  return `
-    <div class="item-topline"><p class="item-title">Malote de EPI</p><span class="${badgeClass(item.status)}">${escapeHtml(item.status)}</span></div>
-    <p><strong>Destino:</strong> ${escapeHtml(item.destino || "Nao informado")}</p>
-      <p><strong>Origem:</strong> ${escapeHtml(item.origem || "Nao informada")}</p>
-      <p><strong>Código da Solicitação:</strong> ${escapeHtml(item.codigoSolicitacao || "Nao informado")}</p>
-    ${renderMaloteCollaboratorsDetails(item)}
-    ${item.observacoes ? `<p><strong>Observações:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
-    ${showAudit ? `<p class="item-meta">${escapeHtml(item.createdAt)} | Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}</p>` : ""}
-    ${showActions ? `
-      <div class="job-actions">
-        <button class="secondary-link" type="button" data-action="editar-malote" data-id="${escapeHtml(item.id)}">Editar</button>
-        <button class="secondary-link" type="button" data-action="baixar-documento-malote" data-id="${escapeHtml(item.id)}">Baixar documento</button>
-        <button class="danger-button" type="button" data-action="excluir-malote" data-id="${escapeHtml(item.id)}">Deletar</button>
-      </div>
-    ` : ""}
-  `;
 }
 
 function todayLabel() {
@@ -3577,23 +3376,6 @@ function mapRows(collection, rows) {
     });
   }
 
-if (collection === "malotes") {
-  return rows.map((row) => ({
-    id: row.id,
-    destino: row.destino,
-    origem: row.origem || "",
-    epis: row.epis,
-    colaboradores: parseJsonArray(row.colaboradores),
-    codigoSolicitacao: row.codigo_solicitacao || "",
-    observacoes: row.observacoes || "",
-    status: row.status,
-    createdBy: row.created_by || getSystemFallbackAuthor(),
-    updatedBy: row.updated_by || "",
-    createdAt: formatDate(row.created_at),
-    sortAt: row.created_at || "",
-  }));
-}
-
   if (collection === "chamados") {
     return rows.map((row) => ({
       id: row.id,
@@ -4210,20 +3992,6 @@ function toDbPayload(collection, values) {
     };
   }
 
- if (collection === "malotes") {
-  return {
-    destino: values.destino,
-    origem: values.origem || "",
-    epis: values.epis,
-    colaboradores: values.colaboradores || [],
-    codigo_solicitacao: values.codigoSolicitacao || "",
-    observacoes: values.observacoes || "",
-    status: values.status || "Separação",
-    created_by: values.createdBy || getCurrentUserName(),
-    updated_by: values.updatedBy || null,
-  };
-}
-
   if (collection === "chamados") {
     const payload = {};
     if ("solicitante" in values) payload.solicitante = values.solicitante;
@@ -4408,7 +4176,6 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
       "denuncias",
       "feedbacks",
       "comunicados",
-      "malotes",
       "chamados",
       "quadros",
       "vagas",
@@ -7149,7 +6916,6 @@ function getViewForCollection(collection) {
     chamados: "chamados",
     candidaturas: "vagas",
     vagas: "vagas",
-    malotes: "malotes",
     eventos: "calendario",
     quadros: "quadros",
     documentos: "documentos",
@@ -8583,7 +8349,7 @@ function shouldNotifyRealtimeItem(collection, item = {}, action = "INSERT") {
   if (!isAuthenticated()) return false;
   if (!item || action === "DELETE") return false;
   if (!["INSERT", "UPDATE"].includes(action)) return false;
-  if (["usuarios", "eventos", "malotes", "vagas", "atestados", "quadros"].includes(collection)) return false;
+  if (["usuarios", "eventos", "vagas", "atestados", "quadros"].includes(collection)) return false;
   if (HubModules.byCollection(collection)?.silent) return false;
 
   if (!canAccessView(getViewForCollection(collection))) return false;
@@ -9291,15 +9057,6 @@ function renderAll() {
 
   safeRenderSection("chat-channels", renderChatChannels);
   safeRenderSection("chat", renderChat);
-
-  safeRenderSection("malote-report", renderMaloteReport);
-  safeRenderSection("malotes", () => {
-    renderCards("malotes-list", getFilteredMalotes(), (item) => `
-      <article class="item-card">
-        ${renderMaloteCardContent(item)}
-      </article>
-    `);
-  });
 
   HubModules.list.forEach((mod) => safeRenderSection(mod.view, mod.render));
   safeRenderSection("documentos-contratados", renderDocumentosContratados);
@@ -10120,22 +9877,6 @@ document.getElementById("chat-message-filter-close")?.addEventListener("click", 
   clearChatMessageFilter();
 });
 
-document.getElementById("malote-destino-filter")?.addEventListener("change", () => {
-  renderAll();
-});
-
-document.getElementById("malote-status-filter")?.addEventListener("change", () => {
-  renderAll();
-});
-
-document.getElementById("malote-filter-colaborador")?.addEventListener("input", renderAll);
-
-document.getElementById("malote-code-search")?.addEventListener("input", () => {
-  const field = document.getElementById("malote-code-search");
-  if (field) field.value = formatRequestCode(field.value);
-  renderAll();
-});
-
 document.getElementById("chamado-filter-destino")?.addEventListener("change", renderChamadosSection);
 document.getElementById("chamado-filter-colaborador")?.addEventListener("input", renderChamadosSection);
 document.getElementById("chamado-filter-codigo")?.addEventListener("input", (event) => {
@@ -10615,115 +10356,6 @@ if (chatForm) {
     }, 0);
   });
 }
-
-const maloteForm = document.getElementById("malote-form");
-if (maloteForm) {
-  document.getElementById("adicionar-colaborador-malote")?.addEventListener("click", () => {
-    const list = document.getElementById("epi-list");
-    if (!list) return;
-    list.insertAdjacentHTML("afterbegin", createMaloteCollaboratorBlock());
-    populateEpiSelects();
-  });
-
-  document.getElementById("epi-list")?.addEventListener("click", (event) => {
-    const addItemButton = event.target.closest(".add-malote-item");
-    if (addItemButton) {
-      const block = addItemButton.closest("[data-malote-collaborator]");
-      const itemsList = block?.querySelector("[data-malote-collaborator-items]");
-      if (!itemsList) return;
-      itemsList.insertAdjacentHTML("afterbegin", createMaloteItemRow());
-      populateEpiSelects();
-      return;
-    }
-
-    const removeCollaboratorButton = event.target.closest(".remove-malote-collaborator");
-    if (removeCollaboratorButton) {
-      const blocks = document.querySelectorAll("#epi-list [data-malote-collaborator]");
-      if (blocks.length <= 1) return;
-      removeCollaboratorButton.closest("[data-malote-collaborator]")?.remove();
-      return;
-    }
-
-    const button = event.target.closest(".remove-epi");
-    if (!button) return;
-    const block = button.closest("[data-malote-collaborator]");
-    const rows = block?.querySelectorAll(".epi-row") || [];
-    if (rows.length <= 1) return;
-    button.closest(".epi-row")?.remove();
-  });
-
-  document.getElementById("epi-list")?.addEventListener("change", (event) => {
-    const typeSelect = event.target.closest("[data-item-type-select]");
-    if (!typeSelect) return;
-    const row = typeSelect.closest(".epi-row");
-    const fieldsContainer = row?.querySelector("[data-epi-row-fields]");
-    if (fieldsContainer) fieldsContainer.innerHTML = renderEpiRowFields(typeSelect.value, {});
-  });
-
-  document.getElementById("epi-list")?.addEventListener("input", (event) => {
-    const cpfInput = event.target.closest('[name="cracha_cpf[]"]');
-    if (!cpfInput) return;
-    cpfInput.value = formatCpf(cpfInput.value);
-  });
-
-  document.getElementById("epi-list")?.addEventListener("change", (event) => {
-    const nameSelect = event.target.closest('[name="epi_nome[]"]');
-    if (!nameSelect) return;
-    const row = nameSelect.closest(".epi-row");
-    const type = row?.querySelector('[name="epi_tipo[]"]')?.value || "epi";
-    const sizeSelect = row?.querySelector('[name="epi_tamanho[]"]');
-    if (sizeSelect) sizeSelect.innerHTML = renderItemSizeOptions(type, sizeSelect.value, nameSelect.value);
-  });
-
-  maloteForm.elements.codigo_solicitacao?.addEventListener("input", (event) => {
-    event.currentTarget.value = formatRequestCode(event.currentTarget.value);
-  });
-
-  maloteForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const formElement = event.target;
-    const form = new FormData(formElement);
-    const id = form.get("id");
-    const codigoSolicitacao = String(form.get("codigo_solicitacao") || "").replace(/\D/g, "");
-    if (!/^\d{5}$/.test(codigoSolicitacao)) {
-      showModal("Código inválido", "Informe o Código da Solicitação no formato 0000-0.", "error");
-      return;
-    }
-    const colaboradores = readMaloteCollaborators(formElement);
-    if (!colaboradores.length || colaboradores.some((group) => !hasFullName(group.colaborador))) {
-      showModal("Colaborador e EPIs obrigatorios", "Informe nome e sobrenome do colaborador e adicione pelo menos um EPI ou uniforme para ele.", "error");
-      return;
-    }
-    const epiItems = colaboradores.flatMap((group) => group.itens);
-
-    const payload = {
-      destino: form.get("destino"),
-      origem: form.get("origem"),
-      codigoSolicitacao: `${codigoSolicitacao.slice(0, 4)}-${codigoSolicitacao.slice(4)}`,
-      observacoes: String(form.get("observacoes") || "").trim(),
-      colaboradores,
-      epis: formatEpiItems(epiItems),
-      status: form.get("status"),
-      createdBy: getCurrentUserName(),
-    };
-    const success = id ? await updateItem("malotes", id, { ...payload, updatedBy: getCurrentUserName() }) : await addItem("malotes", payload);
-    if (success) {
-      formElement.reset();
-      formElement.elements.id.value = "";
-      resetMaloteCollaborators();
-      document.getElementById("cancelar-edicao-malote")?.setAttribute("hidden", "");
-      formElement.querySelector('button[type="submit"]').textContent = "Salvar malote";
-    }
-  });
-}
-
-document.getElementById("cancelar-edicao-malote")?.addEventListener("click", () => {
-  maloteForm.reset();
-  maloteForm.elements.id.value = "";
-  resetMaloteCollaborators();
-  document.getElementById("cancelar-edicao-malote").setAttribute("hidden", "");
-  maloteForm.querySelector('button[type="submit"]').textContent = "Salvar malote";
-});
 
 const vagaForm = document.getElementById("vaga-form");
 if (vagaForm) {
@@ -12384,177 +12016,6 @@ async function excluirDocumentoContratado(id) {
   });
 }
 
-function editarMalote(id) {
-  const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
-  const form = document.getElementById("malote-form");
-  if (!malote || !form) return;
-
-  setFieldValue(form.elements.id, malote.id);
-  setFieldValue(form.elements.destino, malote.destino || "");
-  setFieldValue(form.elements.origem, malote.origem || "");
-  setFieldValue(form.elements.codigo_solicitacao, malote.codigoSolicitacao || "");
-  setFieldValue(form.elements.observacoes, malote.observacoes || "");
-  setFieldValue(form.elements.status, malote.status || "Separação");
-  resetMaloteCollaborators(normalizeMaloteCollaborators(malote));
-  document.getElementById("cancelar-edicao-malote")?.removeAttribute("hidden");
-  form.querySelector('button[type="submit"]').textContent = "Salvar alteracoes";
-  form.scrollIntoView({ behavior: "smooth", block: "start" });
-};
-
-function baixarDocumentoMalote(id) {
-  const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
-  if (!malote) return;
-
-  const collaboratorGroups = normalizeMaloteCollaborators(malote);
-  const documentItems = collaboratorGroups.length
-    ? collaboratorGroups.flatMap((group) => group.itens.map((item) => ({ ...item, colaborador: group.colaborador })))
-    : parseEpiItems(malote.epis).map((item) => ({ ...item, colaborador: "Nao informado" }));
-  const epiRows = (documentItems.length ? documentItems : [{ nome: malote.epis || "Nao informado", tamanho: "Nao se aplica", quantidade: "1", colaborador: "Nao informado" }])
-    .map((item, index) => `
-      <tr>
-        <td>${index + 1}</td>
-        <td>${escapeHtml(item.colaborador || "Nao informado")}</td>
-        <td>${escapeHtml(item.nome || "Nao informado")}</td>
-        <td>${escapeHtml(item.tamanho || "Nao se aplica")}</td>
-        <td>${escapeHtml(item.quantidade || "1")}</td>
-      </tr>
-    `)
-    .join("");
-
-  const conteudo = `
-    <!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <style>
-          @page { size: A4; margin: 16mm; }
-          body { font-family: Arial, Helvetica, sans-serif; color: #111827; font-size: 11px; }
-          .doc { border: 1px solid #111827; padding: 10px; }
-          .top-note { border: 1px solid #9ca3af; padding: 6px; font-size: 9px; text-transform: uppercase; margin-bottom: 8px; }
-          .header { display: table; width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-          .header > div { display: table-cell; border: 1px solid #111827; padding: 8px; vertical-align: middle; }
-          .brand { width: 58%; }
-          .brand h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
-          .brand p { margin: 4px 0 0; font-size: 10px; }
-          .number { width: 22%; text-align: center; }
-          .number strong { display: block; font-size: 18px; margin-top: 4px; }
-          .status { width: 20%; text-align: center; }
-          .section-title { background: #e5e7eb; border: 1px solid #111827; padding: 5px; font-weight: bold; text-transform: uppercase; margin-top: 8px; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #111827; padding: 6px; vertical-align: top; }
-          th { background: #f3f4f6; text-transform: uppercase; font-size: 9px; }
-          .field-label { display: block; font-size: 8px; color: #374151; text-transform: uppercase; margin-bottom: 4px; }
-          .field-value { font-size: 12px; font-weight: bold; min-height: 16px; }
-          .muted { color: #6b7280; font-weight: normal; }
-          .signature { height: 72px; }
-          .table-col-item { width: 8%; }
-          .table-col-epi-size { width: 22%; }
-          .table-col-quantity { width: 16%; }
-        </style>
-      </head>
-      <body>
-        <div class="doc">
-          <div class="top-note">Recebemos os materiais constantes neste documento de malote de EPI.</div>
-          <div class="header">
-            <div class="brand">
-              <h1>HUB RH</h1>
-              <p>Controle interno de malotes de EPI</p>
-              <p class="muted">Documento gerado automaticamente pelo sistema</p>
-            </div>
-            <div class="number">
-              <span class="field-label">Nº do malote</span>
-              <strong>${escapeHtml(String(malote.codigoSolicitacao || malote.id || ""))}</strong>
-            </div>
-            <div class="status">
-              <span class="field-label">Status</span>
-              <div class="field-value">${escapeHtml(malote.status || "")}</div>
-            </div>
-          </div>
-
-          <div class="section-title">Dados do malote</div>
-          <table>
-            <tr>
-              <td>
-                <span class="field-label">Destino</span>
-                <div class="field-value">${escapeHtml(malote.destino || "Nao informado")}</div>
-              </td>
-              <td>
-                <span class="field-label">Origem</span>
-                <div class="field-value">${escapeHtml(malote.origem || "Nao informada")}</div>
-              </td>
-              <td>
-                <span class="field-label">Data</span>
-                <div class="field-value">${escapeHtml(malote.createdAt || "")}</div>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <span class="field-label">Registrado por</span>
-                <div class="field-value">${escapeHtml(malote.createdBy || getSystemFallbackAuthor())}</div>
-              </td>
-              <td>
-                <span class="field-label">Alterado por</span>
-                <div class="field-value">${escapeHtml(malote.updatedBy || "Sem alteracoes")}</div>
-              </td>
-              <td>
-                <span class="field-label">Emissao</span>
-                <div class="field-value">${escapeHtml(formatDateTime(new Date().toISOString()))}</div>
-              </td>
-            </tr>
-          </table>
-
-          <div class="section-title">Dados dos EPIs</div>
-          <table>
-            <thead>
-              <tr>
-                <th class="table-col-item">Item</th>
-                <th>Colaborador</th>
-                <th>EPI</th>
-                <th class="table-col-epi-size">Tamanho do EPI</th>
-                <th class="table-col-quantity">Quantidade</th>
-              </tr>
-            </thead>
-            <tbody>${epiRows}</tbody>
-          </table>
-
-          <div class="section-title">Observações</div>
-          <table>
-            <tr>
-              <td style="min-height:48px; height:48px;">
-                <div class="field-value" style="font-weight:normal; white-space:pre-wrap;">${malote.observacoes ? escapeHtml(malote.observacoes) : '<span style="color:#9ca3af;">Sem observações.</span>'}</div>
-              </td>
-            </tr>
-          </table>
-        </div>
-      </body>
-    </html>
-  `;
-
-  const blob = new Blob(["\ufeff", conteudo], { type: "application/msword;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  const safeNumero = String(malote.codigoSolicitacao || malote.id || "malote").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "");
-  link.href = url;
-  link.download = `malote-${safeNumero || "sem-numero"}.doc`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-};
-
-async function excluirMalote(id) {
-  const malote = (data.malotes || []).find((item) => String(item.id) === String(id));
-  if (!malote) return;
-
-  showPasswordActionModal({
-    title: "Deletar malote",
-    text: `Confirme a senha de autorizacao para deletar o malote para "${malote.destino}".`,
-    confirmText: "Deletar",
-    danger: true,
-    validatePassword: async (password) => deleteMaloteWithAuthorization(id, password),
-    onConfirm: async () => {},
-  });
-};
 
 async function verifyAuthorizationPassword(password) {
   const response = await fetch("/api/malote-delete", {
@@ -12568,23 +12029,6 @@ async function verifyAuthorizationPassword(password) {
   if (result.error === "Senha de autorizacao invalida.") return false;
 
   return response.status !== 401 && response.status !== 403;
-}
-
-async function deleteMaloteWithAuthorization(id, password) {
-  const response = await fetch("/api/malote-delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, password }),
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    if (result.error && result.error !== "Senha de autorizacao invalida.") showModal("Erro ao deletar malote", result.error, "error");
-    return false;
-  }
-  data.malotes = (data.malotes || []).filter((item) => String(item.id) !== String(id));
-  saveLocalData();
-  renderAll();
-  return true;
 }
 
 const documentFieldLabels = {
@@ -12856,9 +12300,6 @@ document.addEventListener('click', (event) => {
     case 'reabrir-feedback':
       reabrirFeedback(id);
       break;
-    case 'editar-malote': editarMalote(id); break;
-    case 'baixar-documento-malote': baixarDocumentoMalote(id); break;
-    case 'excluir-malote': excluirMalote(id); break;
     case 'open-dashboard-activity': openDashboardActivity(target.dataset.index); break;
     case 'visualizar-evento': visualizarEvento(id); break;
     case 'editar-vaga': editarVaga(id); break;
@@ -13560,15 +13001,6 @@ function setupVagasFormScrollGrid() {
   });
 }
 
-function setupMalotesFormScrollGrid() {
-  setupFormScrollGrid({
-    listId: "malotes-list",
-    formId: "malote-form",
-    expandedWorkspaceClass: "malotes-workspace-expanded",
-    expandedListClass: "malotes-two-col",
-  });
-}
-
 function setupEquipeFormScrollGrid() {
   setupFormScrollGrid({
     listId: "usuarios-list",
@@ -13582,7 +13014,6 @@ function setupEquipeFormScrollGrid() {
 
 document.addEventListener("DOMContentLoaded", () => {
   setupVagasFormScrollGrid();
-  setupMalotesFormScrollGrid();
   setupEquipeFormScrollGrid();
 });
 
