@@ -601,3 +601,452 @@ async function loadFromPostgreSQL(options = {}) {
     return false;
   }
 }
+
+async function addItem(collection, values) {
+  if (!postgresClient) {
+    appendLocalInsertedItem(collection, values);
+    saveLocalData();
+    renderAll();
+    return true;
+  }
+
+  try {
+    const isPublicInsert = isPublicInsertOnlyCollection(collection);
+    const { _turnstileToken, ...cleanValues } = values;
+    const payload = isPublicInsert
+      ? toPublicSubmissionPayload(collection, cleanValues)
+      : toDbPayload(collection, values);
+
+    if (isPublicInsert) {
+      const inserted = await submitPublicRecord(collection, payload, _turnstileToken);
+      data[collection].unshift(inserted ? mapRows(collection, [inserted])[0] : {
+        id: generateUUID(),
+        createdAt: todayLabel(),
+        sortAt: new Date().toISOString(),
+        createdBy: values.createdBy || getCurrentUserName(),
+        ...values,
+      });
+      if (!isPublicPage()) {
+        saveLocalData();
+        renderAll();
+      }
+      return true;
+    }
+
+    const { data: inserted, error } = await postgresClient
+      .from(TABLES[collection])
+      .insert(payload)
+      .select("*")
+      .single();
+
+    if (error) {
+      if (isMissingCreatedByColumn(error)) {
+        const { data: insertedWithoutAuthor, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutCreatedBy(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedWithoutAuthor])[0],
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL sem autoria", false);
+        renderAll();
+        return true;
+      }
+
+      if (collection === "malotes" && isMissingColumn(error, "updated_by")) {
+        const { data: insertedWithoutEditor, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutUpdatedBy(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedWithoutEditor])[0],
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        renderAll();
+        return true;
+      }
+
+      const legacyInsert = HubModules.byCollection(collection)?.insertFallbacks?.find((fallback) => isMissingColumn(error, fallback.column));
+      if (legacyInsert) {
+        const { data: insertedLegacy, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(legacyInsert.strip(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedLegacy])[0],
+          ...legacyInsert.patch(values),
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        renderAll();
+        showModal("Banco precisa atualizar", legacyInsert.message, "info");
+        return true;
+      }
+
+      if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos") || isMissingColumn(error, "unidade"))) {
+        const { data: insertedLegacy, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutOptionalJobColumns(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedLegacy])[0],
+          descricao: values.descricao || "",
+          requisitos: values.requisitos || "",
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        renderAll();
+        showModal("Banco precisa atualizar", "A vaga foi salva em modo compatibilidade. Rode o postgres-schema.sql atualizado para gravar descricao e requisitos em colunas proprias.", "info");
+        return true;
+      }
+
+      if (collection === "candidaturas" && isMissingColumn(error, "telefone")) {
+        const { data: insertedLegacy, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .insert(withoutOptionalApplicationColumns(payload))
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+
+        data[collection].unshift({
+          ...mapRows(collection, [insertedLegacy])[0],
+          telefone: values.telefone || "",
+          createdBy: values.createdBy || getCurrentUserName(),
+        });
+        saveLocalData();
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        renderAll();
+        showModal("Banco precisa atualizar", "A candidatura foi salva, mas rode o postgres-schema.sql atualizado para gravar telefone no banco.", "info");
+        return true;
+      }
+
+      throw error;
+    }
+
+    data[collection].unshift(mapRows(collection, [inserted])[0]);
+    saveLocalData();
+    setSyncStatus("PostgreSQL EIXO online", true);
+    renderAll();
+    return true;
+  } catch (error) {
+    console.error("Erro ao salvar no PostgreSQL:", error);
+if (collection === "eventos") {
+      data[collection].unshift({
+        id: generateUUID(),
+        createdAt: todayLabel(),
+        sortAt: new Date().toISOString(),
+        createdBy: values.createdBy || getCurrentUserName(),
+        ...values,
+      });
+      saveLocalData();
+      setSyncStatus("Evento salvo localmente", false);
+      renderAll();
+      showModal("Evento salvo localmente", "Rode o SQL do calendario no PostgreSQL para sincronizar esta agenda entre computadores.", "info");
+      return true;
+    }
+    setSyncStatus("Erro no PostgreSQL", false);
+    const isRlsBlock = error?.code === "42501" || error?.message?.includes("row-level security") || error?.code === "PGRST301";
+    const isNoRows = error?.code === "PGRST116";
+    const message = isPublicInsertOnlyCollection(collection)
+      ? (error?.message || "Nao foi possivel enviar o formulario publico.")
+      : collection === "chamados"
+        ? "Nao foi possivel abrir o chamado. Rode o arquivo fix-chamados-postgres.sql no PostgreSQL para criar a tabela hub_chamados."
+        : collection === "vagas" && (isRlsBlock || isNoRows)
+          ? "Sem permissao para salvar a vaga. Verifique se seu usuario tem cargo 'RH' na tabela hub_users e se o e-mail do perfil coincide com o e-mail do login. Rode o hub-vagas-fix.sql para corrigir."
+          : collection === "vagas"
+            ? `Nao foi possivel salvar a vaga. ${error?.message || "Confira se as colunas descricao, requisitos e created_by existem em hub_vagas (rode hub-vagas-fix.sql)."}`
+            : HubModules.byCollection(collection)?.saveErrorMessage
+              ? HubModules.byCollection(collection).saveErrorMessage(error)
+              : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
+    showModal("Erro ao Salvar", message, "error");
+    return false;
+  }
+}
+
+async function addChatMessage(values) {
+  if (!postgresClient) {
+    return {
+      id: generateUUID(),
+      createdAt: todayLabel(),
+      sortAt: new Date().toISOString(),
+      createdBy: values.createdBy || getCurrentUserName(),
+      ...values,
+    };
+  }
+
+  try {
+    const { data: inserted, error } = await postgresClient
+      .from(TABLES.comunicados)
+      .insert(toDbPayload("comunicados", values))
+      .select("*")
+      .single();
+
+    if (error) throw error;
+
+    setSyncStatus("PostgreSQL EIXO online", true);
+    return mapRows("comunicados", [inserted])[0];
+  } catch (error) {
+    console.error("Erro ao salvar mensagem no PostgreSQL:", error);
+    setSyncStatus("Erro no chat", false);
+    showModal("Erro ao enviar", "Nao foi possivel enviar a mensagem. Confira a conexao e tente novamente.", "error");
+    return null;
+  }
+}
+
+async function deleteChatMessageRecord(id) {
+  beginChatMutation();
+  const current = data.comunicados || [];
+  const removed = current.find((item) => String(item.id) === String(id));
+  if (!removed) {
+    endChatMutation();
+    return false;
+  }
+
+  rememberDeletedChatMessage(id);
+  sendChatRealtimeBroadcast("chat", { action: "delete", id });
+  data.comunicados = current.filter((item) => String(item.id) !== String(id));
+  saveLocalDataDebounced();
+  renderChat({ skipPostRender: true });
+  window.setTimeout(() => {
+    renderDashboard();
+    renderChatChannels();
+  }, 0);
+
+  if (!postgresClient || String(id).startsWith("pending-")) {
+    endChatMutation();
+    return true;
+  }
+
+  try {
+    const { data: deletedRows, error } = await postgresClient
+      .from(TABLES.comunicados)
+      .delete()
+      .eq("id", id)
+      .select("id");
+
+    if (error) throw error;
+    if (!deletedRows?.length) throw new Error("Delete nao confirmado pelo PostgreSQL.");
+
+    setSyncStatus("PostgreSQL EIXO online", true);
+    return true;
+  } catch (error) {
+    console.error("Erro ao excluir mensagem no PostgreSQL:", error);
+    forgetDeletedChatMessage(id);
+    sendChatRealtimeBroadcast("chat", { action: "upsert", message: removed, localEcho: true, forceRestore: true });
+    data.comunicados = [removed, ...(data.comunicados || []).filter((item) => String(item.id) !== String(id))];
+    saveLocalDataDebounced();
+    renderChat({ skipPostRender: true });
+    window.setTimeout(() => {
+      renderDashboard();
+      renderChatChannels();
+    }, 0);
+    setSyncStatus("Erro no chat", false);
+    showModal("Erro ao excluir", "Nao foi possivel excluir a mensagem. Confira a conexao e tente novamente.", "error");
+    return false;
+  } finally {
+    endChatMutation();
+  }
+}
+
+async function updateItem(collection, id, values) {
+  if (!id) return false;
+
+  if (!postgresClient) {
+    data[collection] = (data[collection] || []).map((item) =>
+      String(item.id) === String(id) ? { ...item, ...values } : item
+    );
+    saveLocalData();
+    renderAll();
+    return true;
+  }
+
+  try {
+    const payload = toDbPayload(collection, values);
+    if (collection === "malotes") {
+      delete payload.created_by;
+      payload.updated_by = values.updatedBy || getCurrentUserName();
+    }
+if (collection === "eventos") {
+      delete payload.created_by;
+      payload.updated_by = values.updatedBy || getCurrentUserName();
+    }
+    if (collection === "chamados") {
+      delete payload.created_by;
+    }
+    if (collection === "vagas") {
+      delete payload.created_by;
+    }
+    HubModules.byCollection(collection)?.prepareUpdate?.(payload);
+    const { data: updated, error } = await postgresClient
+      .from(TABLES[collection])
+      .update(payload)
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (error) {
+      if (isMissingCreatedByColumn(error)) {
+        const { data: updatedWithoutAuthor, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .update(withoutCreatedBy(payload))
+          .eq("id", id)
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+        mergeRealtimeRow(collection, updatedWithoutAuthor, "UPDATE");
+        renderRealtimeUpdate(collection);
+        setSyncStatus("PostgreSQL sem autoria", false);
+        return true;
+      }
+
+      if ((collection === "malotes" || collection === "eventos") && isMissingColumn(error, "updated_by")) {
+        const { data: updatedWithoutEditor, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .update(withoutUpdatedBy(payload))
+          .eq("id", id)
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+        mergeRealtimeRow(collection, {
+          ...updatedWithoutEditor,
+          updated_by: values.updatedBy || getCurrentUserName(),
+        }, "UPDATE");
+        renderRealtimeUpdate(collection);
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        return true;
+      }
+
+      if (collection === "vagas" && (isMissingColumn(error, "descricao") || isMissingColumn(error, "requisitos") || isMissingColumn(error, "unidade"))) {
+        const { data: updatedLegacy, error: retryError } = await postgresClient
+          .from(TABLES[collection])
+          .update(withoutOptionalJobColumns(payload))
+          .eq("id", id)
+          .select("*")
+          .single();
+
+        if (retryError) throw retryError;
+        mergeRealtimeRow(collection, {
+          ...updatedLegacy,
+          descricao: values.descricao || "",
+          requisitos: values.requisitos || "",
+        }, "UPDATE");
+        renderRealtimeUpdate(collection);
+        setSyncStatus("PostgreSQL precisa migracao", false);
+        showModal("Banco precisa atualizar", "A vaga foi atualizada em modo compatibilidade. Rode o postgres-schema.sql atualizado para gravar descricao e requisitos em colunas proprias.", "info");
+        return true;
+      }
+
+      throw error;
+    }
+
+    mergeRealtimeRow(collection, updated, "UPDATE");
+    renderRealtimeUpdate(collection);
+    setSyncStatus("PostgreSQL EIXO online", true);
+    return true;
+  } catch (error) {
+    console.error("Erro ao atualizar no PostgreSQL:", error);
+if (collection === "eventos") {
+      data[collection] = (data[collection] || []).map((item) =>
+        String(item.id) === String(id)
+          ? { ...item, ...values, createdBy: item.createdBy || values.createdBy || getCurrentUserName(), updatedBy: values.updatedBy || getCurrentUserName() }
+          : item
+      );
+      saveLocalData();
+      setSyncStatus("Evento atualizado localmente", false);
+      renderAll();
+      showModal("Evento atualizado localmente", "Rode o SQL do calendario no PostgreSQL para sincronizar esta agenda entre computadores.", "info");
+      return true;
+    }
+    setSyncStatus("Erro no PostgreSQL", false);
+    const isRlsBlock = error?.code === "42501" || error?.message?.includes("row-level security") || error?.code === "PGRST301";
+    const isNoRows   = error?.code === "PGRST116";
+    const message =
+      collection === "chamados"
+        ? "O PostgreSQL bloqueou o arquivamento do chamado. Rode o arquivo fix-arquivar-chamados-postgres.sql no PostgreSQL para liberar UPDATE em hub_chamados."
+        : collection === "vagas" && (isRlsBlock || isNoRows)
+          ? "Sem permissao para editar a vaga. Verifique se seu usuario tem cargo 'RH' em hub_users com o mesmo e-mail do login."
+          : collection === "vagas"
+            ? `Nao foi possivel editar a vaga. ${error?.message || "Confira as colunas de hub_vagas (rode hub-vagas-fix.sql)."}`
+            : "Nao foi possivel atualizar o registro no PostgreSQL.";
+    showModal("Erro ao Atualizar", message, "error");
+    return false;
+  }
+}
+
+async function deleteItem(collection, id) {
+  if (!id) return false;
+
+  if (!postgresClient) {
+    data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
+    if (collection === "vagas") {
+      data.candidaturas = (data.candidaturas || []).filter((item) => String(item.vaga_id) !== String(id));
+    }
+    saveLocalData();
+    renderAll();
+    return true;
+  }
+
+  try {
+    if (collection === "vagas") {
+      const { error: candidaturaError } = await postgresClient.from(TABLES.candidaturas).delete().eq("vaga_id", id);
+      if (candidaturaError) throw candidaturaError;
+    }
+
+    const { data: deletedRows, error } = await postgresClient.from(TABLES[collection]).delete().eq("id", id).select("id");
+    if (error) throw error;
+
+    if (!deletedRows?.length) {
+      setSyncStatus("Delete pendente no PostgreSQL", false);
+      showModal("Permissao de Delete", "O PostgreSQL nao confirmou a exclusao da vaga. Rode o postgres-schema.sql atualizado para liberar DELETE em hub_vagas.", "error");
+      await refreshFromPostgreSQL();
+      return false;
+    }
+
+    data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
+    if (collection === "vagas") {
+      data.candidaturas = (data.candidaturas || []).filter((item) => String(item.vaga_id) !== String(id));
+    }
+    saveLocalData();
+    renderAll();
+    setSyncStatus("PostgreSQL EIXO online", true);
+    return true;
+  } catch (error) {
+    console.error("Erro ao deletar no PostgreSQL:", error);
+if (collection === "eventos") {
+      data[collection] = (data[collection] || []).filter((item) => String(item.id) !== String(id));
+      saveLocalData();
+      renderAll();
+      setSyncStatus("Evento deletado localmente", false);
+      showModal("Evento deletado localmente", "Rode o SQL do calendario no PostgreSQL para sincronizar esta agenda entre computadores.", "info");
+      return true;
+    }
+    setSyncStatus("Erro no PostgreSQL", false);
+    showModal("Erro ao Deletar", "Nao foi possivel deletar o registro no PostgreSQL.", "error");
+    return false;
+  }
+}
