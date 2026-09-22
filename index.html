@@ -529,49 +529,7 @@
           </div>
         </section>
 
-        <section class="view" id="quadros">
-          <div class="boards-workspace">
-            <div class="panel boards-toolbar">
-              <div class="panel-header split-header flush-bottom">
-                <div>
-                  <h2>Quadros</h2>
-                  <p class="item-meta">Organize tarefas em listas, cartoes e prioridades</p>
-                </div>
-                <form class="boards-create-form" id="board-form">
-                  <input name="nome" placeholder="Novo quadro" autocomplete="off" required />
-                  <button class="primary-button" type="submit">Criar quadro</button>
-                </form>
-              </div>
-              <div class="board-tabs" id="board-tabs"></div>
-            </div>
-
-            <div class="boards-main" id="boards-main">
-              <aside class="panel board-side-panel">
-                <form class="board-card-form" id="board-card-form">
-                  <h3>Novo cartao</h3>
-                  <input name="edit_list_index" type="hidden" />
-                  <input name="edit_card_index" type="hidden" />
-                  <label>Titulo
-                    <input name="titulo" placeholder="Titulo do cartao" autocomplete="off" required />
-                  </label>
-                  <label>Descricao
-                    <textarea name="descricao" rows="4" placeholder="Detalhes, checklist ou contexto"></textarea>
-                  </label>
-                  <label>Prioridade
-                    <select name="prioridade">
-                      <option>Normal</option>
-                      <option>Alta</option>
-                      <option>Urgente</option>
-                    </select>
-                  </label>
-                  <button class="primary-button" type="submit">Adicionar cartao</button>
-                  <button class="secondary-link full-width-action" id="cancelar-edicao-board-card" type="button" hidden>Cancelar edicao</button>
-                </form>
-              </aside>
-              <div class="boards-lanes" id="boards-lanes"></div>
-            </div>
-          </div>
-        </section>
+        <script src="app/adapters/www/utils/loader.js" data-src="app/adapters/www/pages/Quadros/page.html"></script>
 
         <section class="view" id="vagas">
           <div class="workspace">
@@ -1490,6 +1448,9 @@
     <script src="app/adapters/repositories/Malotes/index.js"></script>
     <script src="app/core/usecases/Malotes/index.js"></script>
     <script src="app/adapters/www/pages/Malotes/page.js"></script>
+    <script src="app/adapters/repositories/Quadros/index.js"></script>
+    <script src="app/core/usecases/Quadros/index.js"></script>
+    <script src="app/adapters/www/pages/Quadros/page.js"></script>
     <script src="script.js?v=chamado-cracha-v1"></script>
     <script src="app/adapters/www/utils/auth-display-guard.js?v=preserve-session-v8"></script>
     <script src="app/adapters/www/pages/Vagas/admin.js?v=vagas-admin-filters-v2"></script>
