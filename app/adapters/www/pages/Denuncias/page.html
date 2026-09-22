@@ -1,0 +1,31 @@
+        <section class="view" id="denuncias">
+          <div class="panel panel-spaced">
+            <div class="panel-header split-header flush-bottom">
+              <div>
+                <h2>Gestão de Denúncias Anônimas</h2>
+                <p class="item-meta">Clique numa denúncia para ler o conteúdo e movê-la para a lista de Lidas</p>
+              </div>
+              <div class="job-actions flush-top">
+                <button class="danger-button" id="excluir-arquivadas-denuncias" type="button" hidden>Apagar arquivadas</button>
+                <button class="secondary-link" id="toggle-archived-denuncias" type="button">Mostrar arquivadas</button>
+                <a class="secondary-link" id="open-denuncia-public" href="denuncia.html" target="_blank" rel="noreferrer">Abrir canal público</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="workspace">
+            <div class="panel">
+              <div class="panel-header">
+                <h2 id="denuncias-primary-title">Não Lidas</h2>
+              </div>
+              <div class="card-list denuncia-list" id="denuncias-nao-lidas"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Lidas</h2>
+              </div>
+              <div class="card-list denuncia-list" id="denuncias-lidas"></div>
+            </div>
+          </div>
+        </section>

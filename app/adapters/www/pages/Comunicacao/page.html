@@ -1,0 +1,48 @@
+        <section class="view" id="comunicacao">
+          <div class="chat-workspace">
+            <aside class="panel chat-sidebar">
+              <div class="panel-header">
+                <h2>Canais</h2>
+              </div>
+              <div class="channel-list" id="chat-channel-list"></div>
+            </aside>
+
+            <div class="panel chat-panel">
+              <div class="panel-header">
+                <div>
+                  <h2 id="chat-title">Chat geral RH</h2>
+                  <p class="item-meta" id="chat-subtitle">Mensagens e arquivos compartilhados pela equipe</p>
+                </div>
+              </div>
+              <div class="chat-message-filter" id="chat-message-filter-wrap" hidden>
+                <span aria-hidden="true">⌕</span>
+                <input id="chat-message-filter" type="search" placeholder="Filtrar mensagens deste chat" autocomplete="off" />
+                <button class="chat-message-filter-close" id="chat-message-filter-close" type="button" title="Fechar filtro" aria-label="Fechar filtro de mensagens">✕</button>
+              </div>
+              <div class="chat-feed" id="chat-feed" aria-live="polite"></div>
+              <form class="chat-composer" id="chat-form">
+                <div class="chat-attachment-preview" id="chat-attachment-preview" hidden aria-live="polite"></div>
+                <div class="chat-attach-menu-wrap">
+                  <button class="chat-attach-button" id="chat-attach-menu-button" type="button" data-action="toggle-chat-attach-menu" aria-label="Adicionar anexo" aria-expanded="false">+</button>
+                  <div class="chat-attach-menu" id="chat-attach-menu" hidden>
+                    <button type="button" data-action="chat-attach-option" data-attach-type="document"><span aria-hidden="true">▣</span>Documento</button>
+                    <button type="button" data-action="chat-attach-option" data-attach-type="media"><span aria-hidden="true">▧</span>Fotos e v&iacute;deos</button>
+                    <button type="button" data-action="chat-attach-option" data-attach-type="poll"><span aria-hidden="true">◈</span>Enquete</button>
+                  </div>
+                </div>
+                <input id="chat-file" name="arquivo" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/webm,audio/mp4,.m4a,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                <div class="chat-emoji-menu-wrap">
+                  <button class="chat-emoji-button" id="chat-emoji-button" type="button" data-action="toggle-chat-emoji-menu" aria-label="Abrir emojis" aria-expanded="false">&#128522;</button>
+                  <div class="chat-emoji-menu" id="chat-emoji-menu" hidden aria-label="Emojis do chat"></div>
+                </div>
+                <textarea name="mensagem" rows="1" placeholder="Escreva uma mensagem para o RH" autocomplete="off"></textarea>
+                <button class="secondary-link poll-button" id="create-poll-button" type="button" data-action="open-chat-poll" hidden>Enquete</button>
+                <button class="record-audio-button" id="record-audio-button" type="button" aria-label="Gravar áudio" title="Gravar áudio">
+                  <img src="assets/microphone-icon.png" alt="" aria-hidden="true" />
+                  <span class="recording-duration" id="recording-duration" aria-live="polite">00:00</span>
+                </button>
+                <button class="primary-button send-button" type="submit">Enviar</button>
+              </form>
+            </div>
+          </div>
+        </section>

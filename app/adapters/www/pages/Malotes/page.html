@@ -1,0 +1,108 @@
+        <section class="view" id="malotes">
+          <div class="workspace">
+            <form class="panel form-panel" id="malote-form">
+              <div class="panel-header">
+                <h2>Cadastrar malote</h2>
+              </div>
+              <input name="id" type="hidden" />
+              <label>Código da Solicitação
+                <input name="codigo_solicitacao" type="text" inputmode="numeric" maxlength="6" pattern="\d{4}-\d" placeholder="xxxx-x" required />
+              </label>
+              <label>Destino
+                <select name="destino" data-unit-select required></select>
+              </label>
+              <label>Origem
+                <select name="origem" data-unit-select required></select>
+              </label>
+              <div class="dynamic-fieldset">
+                <div class="item-topline">
+                  <span>Colaboradores e itens</span>
+                  <button class="secondary-link" id="adicionar-colaborador-malote" type="button">Adicionar colaborador</button>
+                </div>
+                <div class="epi-list" id="epi-list">
+                  <div class="malote-collaborator" data-malote-collaborator>
+                    <div class="item-topline">
+                      <label>Colaborador que irá receber
+                        <input name="malote_colaborador[]" type="text" minlength="3" maxlength="120" pattern="\S+\s+\S+.*" placeholder="Nome e sobrenome" autocomplete="off" required />
+                      </label>
+                      <button class="danger-button remove-malote-collaborator" type="button" aria-label="Remover colaborador">Remover colaborador</button>
+                    </div>
+                    <div class="malote-collaborator-items" data-malote-collaborator-items>
+                      <div class="epi-row">
+                        <label>Tipo
+                          <select name="epi_tipo[]" data-item-type-select required>
+                            <option value="epi">EPIs</option>
+                            <option value="uniforme">Uniforme</option>
+                          </select>
+                        </label>
+                        <span class="epi-row-fields" data-epi-row-fields>
+                          <label>Nome
+                            <select name="epi_nome[]" data-item-select data-epi-select required>
+                              <option value="">Selecione</option>
+                            </select>
+                          </label>
+                          <label>Quantidade
+                            <input name="epi_quantidade[]" type="number" min="1" step="1" placeholder="1" required />
+                          </label>
+                          <label>Tamanho
+                            <select name="epi_tamanho[]" required>
+                              <option>Nao se aplica</option>
+                              <option>PP</option>
+                              <option>P</option>
+                              <option>M</option>
+                              <option>G</option>
+                              <option>GG</option>
+                              <option>XG</option>
+                              <option>EXG</option>
+                              <option>EXGG</option>
+                              <option>EXGGG</option>
+                              <option>EXGGGG</option>
+                            </select>
+                          </label>
+                        </span>
+                        <button class="danger-button remove-epi" type="button" aria-label="Remover item">Remover</button>
+                      </div>
+                    </div>
+                    <button class="secondary-link add-malote-item" type="button">Adicionar item para este colaborador</button>
+                  </div>
+                </div>
+              </div>
+              <label>Status
+                <select name="status">
+                  <option>Separação</option>
+                  <option>Entrega</option>
+                </select>
+              </label>
+              <label>Observações
+                <textarea name="observacoes" rows="3" maxlength="1000" placeholder="Informações adicionais (opcional)"></textarea>
+              </label>
+              <button class="primary-button" type="submit">Salvar malote</button>
+              <button class="secondary-link full-width-action" id="cancelar-edicao-malote" type="button" hidden>Cancelar edicao</button>
+            </form>
+            <div class="panel">
+              <div class="panel-header">
+                <h2>Malotes cadastrados</h2>
+              </div>
+              <label>Filtrar por destino
+                <select id="malote-destino-filter" data-unit-select data-unit-placeholder="Todos os destinos">
+                  <option value="">Todos os destinos</option>
+                </select>
+              </label>
+              <label>Filtrar por status
+                <select id="malote-status-filter" aria-label="Filtrar malotes por status">
+                  <option value="">Todos os status</option>
+                  <option value="Entrega">Entregues</option>
+                  <option value="Separacao">Em separação</option>
+                </select>
+              </label>
+              <label>Filtrar por colaborador
+                <input id="malote-filter-colaborador" type="search" placeholder="Colaborador" autocomplete="off" />
+              </label>
+              <label>Buscar por Código da Solicitação
+                <input id="malote-code-search" type="search" inputmode="numeric" maxlength="6" placeholder="xxxx-x" autocomplete="off" />
+              </label>
+              <div class="malote-report" id="malote-report"></div>
+              <div class="card-list" id="malotes-list"></div>
+            </div>
+          </div>
+        </section>
