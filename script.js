@@ -136,7 +136,6 @@ const TABLES = {
   comunicados: "hub_chat_messages",
   chamados: "hub_chamados",
   vagas: "hub_vagas",
-  documentos: "hub_documentos",
   documentosContratados: "hub_documentos_contratados",
   candidaturas: "hub_candidaturas",
   atestados: "hub_atestados",
@@ -211,7 +210,6 @@ const defaultData = {
   comunicados: [],
   chamados: [],
   vagas: [],
-  documentos: [],
   documentosContratados: [],
   candidaturas: [],
   atestados: [],
@@ -277,19 +275,6 @@ let readNotificationIds = loadReadNotificationIds();
 let readRhMessageIds = loadReadRhMessageIds();
 let dismissedNotificationIds = loadDismissedNotificationIds();
 window.editingDocId = null;
-
-const documentLabels = {
-  admissao: "Checklist de Admissao",
-  ausencia: "Entrevista ausencia",
-  desligamento: "Entrevista de Desligamento",
-  beneficios: "Adesao plano saude e odonto",
-  "feedback-operacional": "Feedback operacional",
-  "feedback-fredy": "Feedback Fredy Pneus",
-  ferias: "Solicitacao de Ferias",
-  "movimentacao-pessoal": "MP - Movimentacao Pessoal",
-  "requisicao-pessoal": "RP - Requisicao Pessoal",
-  "solicitacao-desligamento": "SD - Solicitacao de Desligamento",
-};
 
 const UNIT_OPTIONS = [
   "1- MTZ",
@@ -1320,7 +1305,6 @@ function loadLocalData() {
     chamados: parsed.chamados || [],
     vagas: parsed.vagas || [],
     ...Object.fromEntries(HubModules.list.map((mod) => [mod.collection, parsed[mod.collection] || []])),
-    documentos: parsed.documentos || [],
     documentosContratados: (parsed.documentosContratados || [])
       .filter((item) => !String(item.id || "").startsWith("local-") && !item.pendingSync)
       .map(mapContractorDocumentRow),
@@ -1838,39 +1822,6 @@ function formatPhone(value) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
-function formatCurrencyBR(value) {
-  const digits = String(value || "").replace(/\D/g, "");
-  if (!digits) return "";
-  const amount = Number(digits) / 100;
-  return amount.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
-function formatAbsencePeriod(value) {
-  const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
-  const formatDay = (value) => {
-    if (!value) return "";
-    if (value.length < 2) return value;
-    return String(Math.min(Math.max(Number(value), 1), 31)).padStart(2, "0");
-  };
-  const formatMonth = (value) => {
-    if (!value) return "";
-    if (value.length < 2) return value;
-    return String(Math.min(Math.max(Number(value), 1), 12)).padStart(2, "0");
-  };
-  const firstDay = formatDay(digits.slice(0, 2));
-  const firstMonth = formatMonth(digits.slice(2, 4));
-  const secondDay = formatDay(digits.slice(4, 6));
-  const secondMonth = formatMonth(digits.slice(6, 8));
-
-  if (digits.length <= 2) return firstDay;
-  if (digits.length <= 4) return `${firstDay}/${firstMonth}`;
-  if (digits.length <= 6) return `${firstDay}/${firstMonth} a ${secondDay}`;
-  return `${firstDay}/${firstMonth} a ${secondDay}/${secondMonth}`;
-}
-
 const DATE_MASK_MAX_YEAR = 2026;
 
 function formatMaskedDate(value) {
@@ -1916,52 +1867,12 @@ function applyDateMask(input) {
   input.value = formatMaskedDate(input.value);
 }
 
-function normalizeDocumentDateInputs(root = document) {
-
-  root.querySelectorAll('[data-doc-form] input[type="date"], #evento-form input[type="date"]').forEach(applyDateMask);
-
-  root.querySelectorAll('[data-date-mask="true"]').forEach((input) => {
-    input.value = formatMaskedDate(input.value);
-  });
-}
-
-function formatTimeRange(value) {
-  const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
-  const formatHour = (value) => {
-    if (!value) return "";
-    if (value.length < 2) return value;
-    return String(Math.min(Number(value), 23)).padStart(2, "0");
-  };
-  const formatMinute = (value) => {
-    if (!value) return "";
-    if (value.length < 2) return value;
-    return String(Math.min(Number(value), 59)).padStart(2, "0");
-  };
-  const firstHour = formatHour(digits.slice(0, 2));
-  const firstMinute = formatMinute(digits.slice(2, 4));
-  const secondHour = formatHour(digits.slice(4, 6));
-  const secondMinute = formatMinute(digits.slice(6, 8));
-
-  if (digits.length <= 2) return firstHour;
-  if (digits.length <= 4) return `${firstHour}:${firstMinute}`;
-  if (digits.length <= 6) return `${firstHour}:${firstMinute} às ${secondHour}`;
-  return `${firstHour}:${firstMinute} às ${secondHour}:${secondMinute}`;
-}
-
 function formatCpf(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 3) return digits;
   if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
   if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
-}
-
-function formatRg(value) {
-  const digits = String(value || "").replace(/\D/g, "").slice(0, 9);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
-  if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
-  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}-${digits.slice(8)}`;
 }
 
 function isTodayLabel(value) {
@@ -2940,22 +2851,6 @@ function mapRows(collection, rows) {
       encerradoEm: row.encerrado_em || "",
     }));
   }
-  if (collection === "documentos") {
-    return rows.map((row) => ({
-      id: row.id,
-      type: row.tipo || "",
-      summary: row.resumo || "",
-      details: row.detalhes || "",
-      formData: row.dados && typeof row.dados === "object" ? row.dados : {},
-      createdBy: row.created_by || getSystemFallbackAuthor(),
-      createdAt: formatDateTime(row.created_at),
-      sortAt: row.created_at || "",
-      updatedBy: row.updated_by || "",
-      updatedAt: row.updated_at ? formatDateTime(row.updated_at) : "",
-      updatedSortAt: row.updated_at || "",
-    }));
-  }
-
   if (collection === "atestados") {
     return rows.map(mapAtestadoRow);
   }
@@ -3388,11 +3283,6 @@ function renderRealtimeUpdate(collection) {
     return;
   }
 
-  if (collection === "documentos") {
-    renderDocumentRecords();
-    return;
-  }
-
   renderAll();
 }
 
@@ -3475,17 +3365,6 @@ function toDbPayload(collection, values) {
     payload.status = values.status || "Aberto";
     payload.created_by = values.createdBy || getCurrentUserName();
     return payload;
-  }
-
-  if (collection === "documentos") {
-    return {
-      tipo: values.type || "",
-      resumo: values.summary || "",
-      detalhes: values.details || "",
-      dados: values.formData || {},
-      created_by: values.createdBy || getCurrentUserName(),
-      updated_by: values.updatedBy || null,
-    };
   }
 
   if (collection === "climaConfig") {
@@ -3629,7 +3508,6 @@ function applyBootstrapRowsToState(bootstrapRows, options = {}) {
       "chamados",
       "vagas",
       ...HubModules.list.map((mod) => mod.collection),
-      "documentos",
       "documentosContratados",
       "candidaturas",
       "atestados",
@@ -5012,9 +4890,7 @@ if (collection === "eventos") {
             ? `Nao foi possivel salvar a vaga. ${error?.message || "Confira se as colunas descricao, requisitos e created_by existem em hub_vagas (rode hub-vagas-fix.sql)."}`
             : HubModules.byCollection(collection)?.saveErrorMessage
               ? HubModules.byCollection(collection).saveErrorMessage(error)
-              : collection === "documentos"
-                ? `Nao foi possivel salvar o documento. ${error?.message || "Confira as colunas da tabela hub_documentos (tipo, resumo, detalhes, dados, created_by)."}`
-                : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
+              : "Nao foi possivel salvar no PostgreSQL. Confira se as tabelas hub_* existem no projeto EIXO.";
     showModal("Erro ao Salvar", message, "error");
     return false;
   }
@@ -5132,11 +5008,6 @@ if (collection === "eventos") {
     }
     if (collection === "vagas") {
       delete payload.created_by;
-    }
-    if (collection === "documentos") {
-      delete payload.created_by;
-      payload.updated_by = values.updatedBy || getCurrentUserName();
-      payload.updated_at = new Date().toISOString();
     }
     HubModules.byCollection(collection)?.prepareUpdate?.(payload);
     const { data: updated, error } = await postgresClient
@@ -5881,7 +5752,6 @@ function getViewForCollection(collection) {
     chamados: "chamados",
     candidaturas: "vagas",
     vagas: "vagas",
-    documentos: "documentos",
     documentosContratados: "documentos-contratados",
     atestados: "documentos",
     usuarios: "equipe",
@@ -7663,7 +7533,6 @@ function renderAll() {
 
   }
 
-  safeRenderSection("documentos-rh", renderDocumentRecords);
   safeRenderSection("equipe", renderTeamUsers);
   safeRenderSection("data-counts", publishHubDataCounts);
 
@@ -7866,118 +7735,6 @@ document.getElementById("dashboard-notifications-prev")?.addEventListener("click
   dashboardNotificationOffset = Math.max(0, dashboardNotificationOffset - 3);
   renderDashboard();
 });
-
-function getActiveDocumentTab() {
-  return document.querySelector("#documentos .doc-tab.active")?.dataset.doc || "";
-}
-
-function getDocumentFilterValues() {
-  return {
-    nome: String(document.getElementById("document-filter-name")?.value || "").trim().toLowerCase(),
-    tipo: getActiveDocumentTab(),
-    cpf: String(document.getElementById("document-filter-cpf")?.value || "").replace(/\D/g, ""),
-  };
-}
-
-function updateDocumentFilterClearButton() {
-  const clearButton = document.getElementById("clear-document-filters");
-  if (!clearButton) return;
-  const filters = getDocumentFilterValues();
-  clearButton.hidden = !Boolean(filters.nome || filters.cpf);
-}
-
-function getDocumentRecordCpf(item = {}) {
-  return String(item.formData?.cpf || "").replace(/\D/g, "");
-}
-
-function getCurrentDocumentAccessNames() {
-  const user = getCurrentUserRecord?.() || {};
-  return [
-    getCurrentUserName?.(),
-    currentUserProfile?.nome,
-    currentAuthUser?.user_metadata?.nome,
-    currentAuthUser?.user_metadata?.name,
-    currentAuthUser?.email,
-    user.nome,
-    user.email,
-  ]
-    .map((value) => normalizeLoginName(value))
-    .filter(Boolean);
-}
-
-function hasFullDocumentAccess() {
-  return isRhUser() || hasFredericoLevelAccess();
-}
-
-function canCurrentUserAccessDocumentRecord(item = {}) {
-  if (hasFullDocumentAccess()) return true;
-  if (!isManagerUser()) return true;
-  const author = normalizeLoginName(item.createdBy || item.ownerName || item.autor || "");
-  return Boolean(author && getCurrentDocumentAccessNames().includes(author));
-}
-
-function filterDocumentRecords(items = []) {
-  const filters = getDocumentFilterValues();
-  return items.filter((item) => {
-    if (!canCurrentUserAccessDocumentRecord(item)) return false;
-
-    if (filters.nome) {
-      const collaboratorName = String(item.formData?.colaborador || item.summary || "").toLowerCase();
-      if (!collaboratorName.includes(filters.nome)) return false;
-    }
-
-    if (item.type !== filters.tipo) return false;
-
-    if (filters.cpf) {
-      const cpf = getDocumentRecordCpf(item);
-      if (!cpf.includes(filters.cpf)) return false;
-    }
-
-    return true;
-  });
-}
-
-function renderDocumentRecords() {
-  const target = document.getElementById("document-records");
-  if (!target) return;
-
-  const records = filterDocumentRecords(data.documentos || []);
-  const emptyState = document.getElementById("documentos-empty-state");
-  const registrosPanel = document.getElementById("documentos-registros-panel");
-  const hasActiveTab = Boolean(getActiveDocumentTab());
-  if (emptyState) emptyState.hidden = hasActiveTab;
-
-  if (registrosPanel) registrosPanel.hidden = !hasActiveTab || !records.length;
-
-  if (!records.length) {
-    target.innerHTML = "";
-    return;
-  }
-
-  target.innerHTML = records
-    .map((item) => `
-      <article class="item-card">
-        <div class="item-topline">
-          <p class="item-title">${escapeHtml(documentLabels[item.type] || item.type)}</p>
-          <div>
-            <button type="button" class="tag tag-button teal-tag-button" data-action="baixar-documento-rh" data-id="${item.id}">Gerar documento</button>
-            <button type="button" class="tag tag-button teal-tag-button" data-action="editar-documento" data-id="${item.id}">Editar</button>
-            <button type="button" class="tag alert tag-button" data-action="excluir-documento" data-id="${item.id}">Excluir</button>
-          </div>
-        </div>
-        <p>${escapeHtml(item.summary)}</p>
-        <p class="item-meta">${escapeHtml(item.updatedAt || item.createdAt)}</p>
-        <p class="item-meta">Registrado por ${escapeHtml(item.createdBy || getSystemFallbackAuthor())}${item.updatedBy ? ` | Alterado por ${escapeHtml(item.updatedBy)}` : ""}</p>
-      </article>
-    `)
-    .join("");
-}
-
-function getAccessibleDocumentRecord(id) {
-  const doc = (data.documentos || []).find((item) => String(item.id) === String(id));
-  if (!doc || !canCurrentUserAccessDocumentRecord(doc)) return null;
-  return doc;
-}
 
 function renderChat(options = {}) {
   const { skipPostRender = false } = options;
@@ -8397,9 +8154,6 @@ document.getElementById("mobile-menu-toggle")?.addEventListener("click", toggleM
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeMobileMenu();
-    if (document.getElementById("documentos")?.classList.contains("active") && getActiveDocumentTab()) {
-      deselectActiveDocumentTab();
-    }
     HubModules.list.forEach((mod) => mod.onEscape?.());
   }
 });
@@ -8443,24 +8197,6 @@ document.getElementById("limpar-filtros-vagas")?.addEventListener("click", () =>
   renderAll();
 });
 
-document.getElementById("document-filter-name")?.addEventListener("input", () => {
-  renderDocumentRecords();
-  updateDocumentFilterClearButton();
-});
-document.getElementById("document-filter-cpf")?.addEventListener("input", (event) => {
-  const field = event.currentTarget;
-  field.value = String(field.value || "").replace(/\D/g, "").slice(0, 11);
-  renderDocumentRecords();
-  updateDocumentFilterClearButton();
-});
-document.getElementById("clear-document-filters")?.addEventListener("click", () => {
-  ["document-filter-name", "document-filter-cpf"].forEach((id) => {
-    const field = document.getElementById(id);
-    if (field) field.value = "";
-  });
-  renderDocumentRecords();
-  updateDocumentFilterClearButton();
-});
 
 
 document.getElementById("public-vaga-cargo-filter")?.addEventListener("input", (event) => {
@@ -8475,112 +8211,6 @@ document.getElementById("clear-public-vaga-filters")?.addEventListener("click", 
   publicVagaCargoFilter = "";
   publicVagaCidadeFilter = "";
   renderPublicVagas();
-});
-
-function cancelActiveDocumentEditing() {
-  if (!window.editingDocId) return;
-  window.editingDocId = null;
-  document.querySelectorAll("[data-doc-form]").forEach(form => {
-    form.reset();
-    const btn = form.querySelector("button[type='submit']");
-    if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
-  });
-}
-
-function deselectActiveDocumentTab() {
-  document.querySelectorAll("#documentos .doc-tab").forEach((item) => item.classList.remove("active"));
-  document.querySelectorAll("#documentos .doc-view").forEach((view) => view.classList.remove("active"));
-  cancelActiveDocumentEditing();
-  renderDocumentRecords();
-  updateDocumentFilterClearButton();
-}
-
-document.querySelectorAll("#documentos .doc-tab").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll("#documentos .doc-tab").forEach((item) => item.classList.remove("active"));
-    document.querySelectorAll("#documentos .doc-view").forEach((view) => view.classList.remove("active"));
-    button.classList.add("active");
-    document.getElementById(`doc-${button.dataset.doc}`)?.classList.add("active");
-
-    if (button.dataset.doc) {
-      renderDocumentRecords();
-      updateDocumentFilterClearButton();
-    }
-
-    cancelActiveDocumentEditing();
-  });
-});
-
-document.querySelectorAll("[data-doc-form]").forEach((formElement) => {
-  normalizeDocumentDateInputs(formElement);
-
-  formElement.addEventListener("input", (event) => {
-    if (event.target.name === "cpf") {
-      event.target.value = formatCpf(event.target.value);
-    }
-    if (event.target.name === "rg") {
-      event.target.value = formatRg(event.target.value);
-    }
-    if (["telefone", "celular"].includes(event.target.name)) {
-      event.target.value = formatPhone(event.target.value);
-    }
-    if (["salario", "salario_atual", "salario_proposto", "faixa_salarial"].includes(event.target.name)) {
-      event.target.value = formatCurrencyBR(event.target.value);
-    }
-    if (event.target.name === "data_ausencia") {
-      event.target.value = formatAbsencePeriod(event.target.value);
-    }
-    if (event.target.dataset.dateMask === "true" || event.target.dataset.docDate === "true") {
-      const pos = event.target.selectionStart;
-      const prev = event.target.value;
-      const next = formatMaskedDate(prev);
-      event.target.value = next;
-      const diff = next.length - prev.length;
-      if (diff !== 0) event.target.setSelectionRange(pos + diff, pos + diff);
-    }
-    if (["horario_trabalho", "horario_atraso"].includes(event.target.name)) {
-      event.target.value = formatTimeRange(event.target.value);
-    }
-  });
-
-  formElement.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    normalizeDocumentDateInputs(event.currentTarget);
-    const form = new FormData(event.currentTarget);
-    const entries = [...form.entries()].filter(([, value]) => String(value || "").trim());
-    const collaborator = form.get("colaborador") || form.get("cargo") || "Registro sem colaborador";
-    const details = entries
-      .filter(([key]) => key !== "colaborador")
-      .slice(0, 4)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join(" | ");
-
-    let success;
-
-    if (window.editingDocId) {
-      success = await updateItem("documentos", window.editingDocId, {
-        summary: String(collaborator),
-        details: details || "Registro salvo",
-        formData: Object.fromEntries(entries),
-        updatedBy: getCurrentUserName(),
-      });
-      if (success) {
-        window.editingDocId = null;
-        const btn = event.currentTarget.querySelector("button[type='submit']");
-        if (btn && btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
-      }
-    } else {
-      success = await addItem("documentos", {
-        type: event.currentTarget.dataset.docForm,
-        summary: String(collaborator),
-        details: details || "Registro salvo",
-        formData: Object.fromEntries(entries),
-        createdBy: getCurrentUserName(),
-      });
-    }
-
-    if (success) event.currentTarget.reset();
-  });
 });
 
 const denunciaForm = document.getElementById("denuncia-form");
@@ -9920,57 +9550,6 @@ function excluirCandidatura(id) {
   });
 }
 
-function editarDocumento(id) {
-  const doc = getAccessibleDocumentRecord(id);
-  if (!doc) {
-    showModal("Acesso restrito", "Voce so pode acessar documentos gerados pelo seu usuario.", "error");
-    return;
-  }
-
-  window.editingDocId = id;
-
-  document.querySelectorAll("#documentos .doc-tab").forEach((item) => item.classList.remove("active"));
-  document.querySelectorAll("#documentos .doc-view").forEach((view) => view.classList.remove("active"));
-
-  const tabButton = document.querySelector(`#documentos .doc-tab[data-doc="${doc.type}"]`);
-  if (tabButton) tabButton.classList.add("active");
-
-  const viewElement = document.getElementById(`doc-${doc.type}`);
-  if (viewElement) viewElement.classList.add("active");
-
-  const form = document.querySelector(`form[data-doc-form="${doc.type}"]`);
-  if (form && doc.formData) {
-    Object.entries(doc.formData).forEach(([key, value]) => {
-      if (form.elements[key]) setFieldValue(form.elements[key], value);
-    });
-    normalizeDocumentDateInputs(form);
-    const btn = form.querySelector("button[type='submit']");
-    if (btn) {
-      if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
-      btn.textContent = "Salvar alterações";
-    }
-    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-};
-
-function excluirDocumento(id) {
-  const doc = getAccessibleDocumentRecord(id);
-  if (!doc) {
-    showModal("Acesso restrito", "Voce so pode excluir documentos gerados pelo seu usuario.", "error");
-    return;
-  }
-  showPasswordActionModal({
-    title: "Excluir registro",
-    text: `Confirme a senha de autorizacao para excluir o registro "${documentLabels[doc.type] || doc.type}" de ${doc.summary || "colaborador nao informado"}.`,
-    confirmText: "Excluir",
-    danger: true,
-    validatePassword: async (password) => verifyAuthorizationPassword(password),
-    onConfirm: async () => {
-      await deleteItem("documentos", id);
-    },
-  });
-};
-
 async function excluirUsuario(id) {
   const user = (data.usuarios || []).find((item) => String(item.id) === String(id));
   if (!user) return;
@@ -10033,237 +9612,6 @@ async function verifyAuthorizationPassword(password) {
   return response.status !== 401 && response.status !== 403;
 }
 
-const documentFieldLabels = {
-  colaborador: "Colaborador",
-  cpf: "CPF",
-  rg: "RG",
-  cargo: "Cargo",
-  funcao: "Função",
-  filial: "Filial / Unidade",
-  setor: "Setor",
-  data: "Data de admissão",
-  data_admissao: "Data de admissão",
-  data_desligamento: "Data de desligamento",
-  data_solicitacao: "Data da solicitação",
-  data_entrevista: "Data da entrevista",
-  data_ausencia: "Data(s) da ausência",
-  data_feedback: "Data do feedback",
-  data_registro: "Data do registro",
-  data_abertura: "Data de abertura",
-  data_inicio: "Data de início",
-  data_movimentacao: "Data da movimentação",
-  salario: "Salário",
-  salario_atual: "Salário atual",
-  salario_proposto: "Salário proposto",
-  faixa_salarial: "Faixa salarial",
-  horario_trabalho: "Horário de trabalho",
-  horario_atraso: "Horário / período",
-  centro_custo: "Centro de custo",
-  requisitante: "Requisitante",
-  lider: "Gestor / líder avaliador",
-  gestor: "Gestor imediato",
-  gestor_aplicador: "Gestor aplicador",
-  gestor_solicitante: "Gestor solicitante",
-  entrevistador: "Entrevistador",
-  motivo: "Motivo",
-  observacoes: "Observações",
-  feedback: "Feedback final",
-  positivos: "Pontos positivos",
-  melhorias: "Pontos a desenvolver",
-  acao: "Plano de ação",
-  plano_acao: "Plano de ação",
-  justificativa: "Justificativa",
-  justificativa_movimentacao: "Justificativa da movimentação",
-  descricao: "Descrição",
-  requisitos: "Requisitos",
-  pontos_atencao: "Pontos de atenção",
-};
-
-const documentLongFieldKeys = new Set([
-  "observacoes",
-  "feedback",
-  "positivos",
-  "melhorias",
-  "acao",
-  "plano_acao",
-  "justificativa",
-  "justificativa_movimentacao",
-  "descricao",
-  "requisitos",
-  "pontos_atencao",
-  "motivo",
-  "impacto",
-  "situacao",
-  "expectativa_colaborador",
-  "acompanhamento",
-  "dependentes",
-]);
-
-function normalizeDownloadText(value) {
-  return String(value || "").trim();
-}
-
-function formatFormDate(value) {
-  if (!value) return "";
-  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return match ? `${match[3]}/${match[2]}/${match[1]}` : String(value);
-}
-
-function getDocValue(formData, key) {
-  const value = formData?.[key] || "";
-  return key.includes("data") || key === "admissao" ? formatFormDate(value) : normalizeDownloadText(value);
-}
-
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
-function dataUrlToBlob(dataUrl) {
-  const [header = "", base64 = ""] = String(dataUrl || "").split(",");
-  const mimeMatch = header.match(/^data:([^;]+);base64$/i);
-  const mimeType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return new Blob([bytes], { type: mimeType });
-}
-
-function safeDownloadName(title, ext) {
-  const safeTitle = String(title || "documento").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "");
-  return `${safeTitle.toLowerCase()}-${Date.now()}.${ext}`;
-}
-
-function getDocumentFieldLabel(key) {
-  return documentFieldLabels[key] || String(key || "")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function buildStyledDocumentRows(formData = {}) {
-  const entries = Object.entries(formData).filter(([, value]) => String(value || "").trim());
-  const compactRows = entries.filter(([key]) => !documentLongFieldKeys.has(key));
-  const longRows = entries.filter(([key]) => documentLongFieldKeys.has(key));
-
-  const compactHtml = compactRows.map(([key, value]) => `
-    <tr>
-      <td class="label-cell">${escapeHtml(getDocumentFieldLabel(key))}</td>
-      <td class="value-cell">${escapeHtml(getDocValue(formData, key)).replace(/\n/g, "<br>")}</td>
-    </tr>
-  `).join("");
-
-  const longHtml = longRows.map(([key]) => `
-    <section class="note-section">
-      <h3>${escapeHtml(getDocumentFieldLabel(key))}</h3>
-      <p>${escapeHtml(getDocValue(formData, key)).replace(/\n/g, "<br>")}</p>
-    </section>
-  `).join("");
-
-  return { compactHtml, longHtml };
-}
-
-function downloadStyledRhDocument(doc, title) {
-  const { compactHtml, longHtml } = buildStyledDocumentRows(doc.formData || {});
-  const emittedAt = formatDateTime(new Date().toISOString());
-  const owner = doc.updatedBy || doc.createdBy || getCurrentUserName();
-  const html = `
-    <!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <style>
-          @page { size: A4; margin: 18mm 16mm; }
-          * { box-sizing: border-box; }
-          body { margin: 0; font-family: 'Calibri', 'Segoe UI', Arial, Helvetica, sans-serif; color: #1f2933; background: #ffffff; font-size: 10.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
-          .document { width: 100%; }
-
-          .letterhead { display: table; width: 100%; padding-bottom: 12px; border-bottom: 3px solid #1f3a3a; }
-          .letterhead-brand, .letterhead-meta { display: table-cell; vertical-align: bottom; }
-          .letterhead-brand h1 { margin: 0; font-size: 20px; font-weight: 700; color: #1f3a3a; letter-spacing: 2px; }
-          .letterhead-brand p { margin: 3px 0 0; font-size: 9px; color: #6b7c7c; text-transform: uppercase; letter-spacing: 1.5px; }
-          .letterhead-meta { text-align: right; font-size: 9px; color: #4b5b5b; line-height: 1.6; }
-          .letterhead-meta strong { color: #1f3a3a; }
-
-          .doc-title { margin-top: 18px; margin-bottom: 4px; }
-          .doc-title .doc-kicker { margin: 0; font-size: 9px; font-weight: 700; color: #1f7a6f; text-transform: uppercase; letter-spacing: 2px; }
-          .doc-title h2 { margin: 4px 0 0; font-size: 17px; font-weight: 700; color: #1f2933; }
-          .doc-title p { margin: 5px 0 0; font-size: 10.5px; color: #6b7c7c; font-style: italic; }
-          .doc-title-rule { height: 1px; background: #d8e0e0; margin: 12px 0 18px; }
-
-          .section-heading { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; margin: 0 0 10px; border-bottom: 1px solid #1f3a3a; }
-
-          .data-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-          .data-table td { border: 1px solid #d8e0e0; padding: 7px 10px; vertical-align: top; }
-          .data-table td.label-cell { width: 32%; background: #f4f7f7; font-size: 9px; font-weight: 700; color: #4b5b5b; text-transform: uppercase; letter-spacing: .5px; }
-          .data-table td.value-cell { font-size: 11px; color: #1f2933; font-weight: 500; }
-
-          .note-section { margin-top: 16px; }
-          .note-section h3 { margin: 0 0 6px; font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; border-bottom: 1px solid #1f3a3a; }
-          .note-section p { margin: 0; padding: 10px 12px; border: 1px solid #d8e0e0; border-radius: 2px; min-height: 46px; line-height: 1.65; white-space: normal; color: #344048; background: #fafcfc; }
-
-          .signature-box { display: table; width: 100%; margin-top: 56px; table-layout: fixed; }
-          .signature-col { display: table-cell; width: 50%; padding: 0 24px; text-align: center; }
-          .signature-line { border-top: 1px solid #1f2933; margin: 0 0 6px; }
-          .signature-col span { font-size: 9.5px; font-weight: 700; color: #1f3a3a; text-transform: uppercase; letter-spacing: .8px; }
-
-          .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #d8e0e0; color: #9aa8a8; font-size: 8.5px; text-align: center; letter-spacing: .5px; text-transform: uppercase; }
-        </style>
-      </head>
-      <body>
-        <main class="document">
-          <header class="letterhead">
-            <div class="letterhead-brand">
-              <h1>HUB RH</h1>
-              <p>Departamento de Recursos Humanos</p>
-            </div>
-            <div class="letterhead-meta">
-              Emitido em <strong>${escapeHtml(emittedAt)}</strong><br />
-              Responsável: <strong>${escapeHtml(owner)}</strong>
-            </div>
-          </header>
-
-          <section class="doc-title">
-            <p class="doc-kicker">Documento interno</p>
-            <h2>${escapeHtml(title)}</h2>
-            <p>${escapeHtml(doc.summary || "Registro de rotina RH")}</p>
-          </section>
-          <div class="doc-title-rule"></div>
-
-          <p class="section-heading">Dados do registro</p>
-          <table class="data-table">${compactHtml || '<tr><td class="label-cell">Registro</td><td class="value-cell">Sem dados cadastrados.</td></tr>'}</table>
-
-          ${longHtml}
-
-          <div class="signature-box">
-            <div class="signature-col"><div class="signature-line"></div><span>Assinatura do colaborador</span></div>
-            <div class="signature-col"><div class="signature-line"></div><span>Assinatura do RH / gestor</span></div>
-          </div>
-          <div class="footer">Documento interno HUB RH &middot; Conferir dados antes de assinar ou arquivar</div>
-        </main>
-      </body>
-    </html>
-  `;
-
-  downloadBlob(new Blob(["\ufeff", html], { type: "application/msword;charset=utf-8" }), safeDownloadName(title, "doc"));
-}
-
-function baixarDocumentoRH(id) {
-  const doc = getAccessibleDocumentRecord(id);
-  if (!doc) {
-    showModal("Acesso restrito", "Voce so pode gerar documentos criados pelo seu usuario.", "error");
-    return;
-  }
-  const title = documentLabels[doc.type] || doc.type;
-  downloadStyledRhDocument(doc, title);
-};
-
 document.addEventListener('click', (event) => {
   if (event.target.closest("#dashboard-notifications-tracker")) {
     event.preventDefault();
@@ -10311,9 +9659,6 @@ document.addEventListener('click', (event) => {
       editarEvento(id);
       break;
     case 'excluir-evento': excluirEvento(id); break;
-    case 'editar-documento': editarDocumento(id); break;
-    case 'baixar-documento-rh': baixarDocumentoRH(id); break;
-    case 'excluir-documento': excluirDocumento(id); break;
     case 'excluir-documento-contratado': excluirDocumentoContratado(id); break;
     case 'ver-clima-pesquisa': verClimaPesquisa(id); break;
     case 'excluir-clima-pesquisa': excluirClimaPesquisa(id); break;
