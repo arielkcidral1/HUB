@@ -1,0 +1,68 @@
+.chamado-list .item-card {
+  background: var(--dashboard-chamado-bg);
+  border-color: var(--dashboard-chamado-border);
+}
+
+.chamados-records-header {
+  align-items: center;
+  gap: 16px;
+}
+
+.chamados-records-header h2 {
+  flex: 0 0 auto;
+  margin-right: auto;
+}
+
+.chamados-filter-bar {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+  margin-left: auto;
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.chamados-filter-fields {
+  display: grid;
+  grid-template-columns: 120px 150px 86px 105px;
+  gap: 8px;
+  align-items: center;
+}
+
+.chamados-filter-fields.vaga-filter-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.chamados-filter-fields.vaga-filter-fields input,
+.chamados-filter-fields.vaga-filter-fields select {
+  width: 160px;
+  height: 34px;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+}
+
+.chamados-filter-fields input,
+.chamados-filter-fields select {
+  max-width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+}
+
+.chamados-filter-bar .compact-filter-button {
+  width: fit-content;
+  min-height: 30px;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  justify-self: end;
+}

@@ -53,7 +53,7 @@ function Test-ClientSecurityFunctions {
   $docsBesten = Read-ProjectFile "app/adapters/www/pages/DocumentosBesten/page.html"
   $docsAchei = Read-ProjectFile "app/adapters/www/pages/DocumentosAchei/page.html"
   $docsTrinca = Read-ProjectFile "app/adapters/www/pages/DocumentosTrinca/page.html"
-  $style = (Read-ProjectFile "style.css") + (Read-ProjectFile "app/adapters/www/pages/AdvertenciasSuspensoes/style.css")
+  $style = (Read-ProjectFile "style.css") + (Read-ProjectFile "app/adapters/www/pages/AdvertenciasSuspensoes/style.css") + (Read-ProjectFile "app/adapters/www/pages/Vagas/vagas-format.css") + (Read-ProjectFile "app/adapters/www/pages/Calendario/style.css") + (Read-ProjectFile "app/adapters/www/pages/Comunicacao/style.css") + (Read-ProjectFile "app/adapters/www/pages/Equipe/style.css") + (Read-ProjectFile "app/adapters/www/pages/Denuncias/style.css") + (Read-ProjectFile "app/adapters/www/pages/Chamados/style.css") + (Read-ProjectFile "app/adapters/www/pages/Quadros/style.css") + (Read-ProjectFile "app/adapters/www/pages/Clima/style.css") + (Read-ProjectFile "app/adapters/www/pages/DocumentosContratados/style.css") + (Read-ProjectFile "app/adapters/www/pages/Malotes/style.css") + (Read-ProjectFile "app/adapters/www/pages/GerenciamentoVT/style.css") + (Read-ProjectFile "app/adapters/www/pages/Conta/style.css") + (Read-ProjectFile "app/adapters/www/pages/Atestados/style.css")
   $companyBirthdays = Read-ProjectFile "assets/company-birthdays.js"
   $accountLoadingGuard = Read-ProjectFile "app/adapters/www/pages/AccountLoading/guard.js"
   $postgresClient = Read-ProjectFile "app/adapters/www/utils/hub-postgres-client.js"

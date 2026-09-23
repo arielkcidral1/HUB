@@ -1,0 +1,104 @@
+.vt-result-card {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 18px;
+  border: 2px solid var(--teal);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--teal-surface), var(--surface));
+  box-shadow: var(--shadow-xs);
+}
+
+.vt-result-card span {
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+
+.vt-result-card strong {
+  color: var(--teal-dark);
+  font-size: clamp(26px, 4vw, 40px);
+  line-height: 1;
+}
+
+.vt-result-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.vt-records-header {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.vt-filter-bar {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+  margin-left: auto;
+}
+
+.vt-report-button {
+  width: fit-content;
+  min-height: 32px;
+  padding: 7px 12px;
+  font-size: 12px;
+  border-radius: 999px;
+}
+
+.vt-filter-fields {
+  display: grid;
+  grid-template-columns: 120px 105px 130px;
+  gap: 8px;
+  align-items: center;
+}
+
+.vt-filter-bar:has(.document-filter-fields) + #document-records {
+  margin-top: 20px;
+}
+
+.vt-filter-fields input,
+.vt-filter-fields select {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+}
+
+.vt-filter-bar .compact-filter-button {
+  width: fit-content;
+  min-height: 30px;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  justify-self: end;
+}
+
+.vt-report-modal .modal-body {
+  display: grid;
+  gap: 14px;
+}
+
+.vt-report-options {
+  display: grid;
+  gap: 10px;
+}
+
+.vt-report-options .report-chip {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.vt-report-options .report-chip:hover {
+  border-color: var(--teal-border);
+  background: var(--teal-surface);
+  transform: translateY(-1px);
+}

@@ -46,3 +46,35 @@
     grid-template-columns: 1fr;
   }
 }
+
+.vaga-filter-checkbox {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  height: 34px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  margin: 0;
+  font-size: 12px;
+  line-height: normal;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+}
+
+.vaga-filter-checkbox input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  cursor: pointer;
+  accent-color: var(--teal);
+}
