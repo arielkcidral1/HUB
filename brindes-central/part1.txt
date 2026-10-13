@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Brindes Fim de Ano 2026 • Central</title>
+<style>
+:root{--navy:#0d3155;--blue:#1f5f96;--light:#eef5fb;--ink:#182433;--muted:#667789;--line:#d9e3ec;--ok:#18794e;--white:#fff}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f8fb;color:var(--ink)}
+header{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;padding:26px 18px}
+.wrap{max-width:1180px;margin:auto;padding:0 12px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.85;font-weight:700}
+h1{margin:7px 0 5px;font-size:clamp(28px,7vw,44px)} header p{margin:0;opacity:.9}
+.tabs{display:flex;gap:8px;margin:20px 0;overflow:auto} .tab{border:1px solid var(--line);background:#fff;padding:10px 14px;border-radius:999px;font-weight:700;white-space:nowrap} .tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.panel{display:none} .panel.active{display:block}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(19,52,82,.06);margin-bottom:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field label{display:block;font-size:13px;font-weight:800;margin-bottom:7px}
+.field select{width:100%;min-height:48px;padding:12px;border:1px solid #cbd8e4;border-radius:12px;background:#fff;font-size:16px;color:#182433}
+.badge{display:inline-flex;background:var(--light);color:var(--navy);font-weight:800;border-radius:999px;padding:8px 11px;font-size:13px}
+.hidden{display:none!important}
+.section-title{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:22px 0 12px}
+.section-title h2{margin:0;font-size:22px} .section-title small{color:var(--muted)}
+.gifts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.gift{background:#fff;border:2px solid transparent;border-radius:16px;padding:12px;box-shadow:0 3px 14px rgba(15,47,78,.07);cursor:pointer}
+.gift.used{opacity:.45;filter:grayscale(.35)} .gift img{width:100%;height:145px;object-fit:contain;border-radius:10px;background:#fff}
+.gift strong{display:block;margin-top:8px} .from{font-size:12px;color:var(--muted);margin-top:3px} .draghint{font-size:11px;color:var(--blue);font-weight:800;margin-top:7px}
+.priorities{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.slot{min-height:180px;border:2px dashed #a8bbcc;border-radius:16px;background:#f9fbfd;padding:12px;text-align:center}
+.slot .n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--navy);color:#fff;font-weight:900}
+.slot h3{margin:7px 0} .slot img{width:100%;height:100px;object-fit:contain} .slot .empty{color:#8191a1;margin:30px 0}
+.slot button{border:0;background:transparent;color:#a52a2a;font-weight:800;padding:7px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px} .btn{border:0;border-radius:12px;padding:12px 16px;font-weight:800} .btn.primary{background:var(--navy);color:#fff} .btn.secondary{background:#e8f1f8;color:var(--navy)} .btn.ghost{background:#fff;border:1px solid var(--line)}
+.notice{padding:12px 14px;border-radius:12px;background:#fff8e8;border:1px solid #f1d59b;color:#6d4a00;font-size:13px;margin-bottom:14px} .success{background:#eaf8f1;border-color:#b8e4cc;color:#12603c}
+table{width:100%;border-collapse:collapse;font-size:13px} th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top} th{background:#f4f8fb;color:var(--navy)} .tablewrap{overflow:auto;max-height:500px;border:1px solid var(--line);border-radius:12px}
+footer{padding:28px 20px 40px;color:#7a8997;text-align:center;font-size:12px}
+.mobilehelp{display:none}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}.gifts{grid-template-columns:repeat(2,1fr)}.priorities{grid-template-columns:1fr}.gift img{height:125px}.mobilehelp{display:block}.desktophelp{display:none}}
+@media(max-width:460px){.gifts{grid-template-columns:1fr}.card{padding:15px}header{padding:22px 16px}}
+
+@media(max-width:760px){
+  .tabs{display:grid;grid-template-columns:1fr 1fr;overflow:visible}
+  .tab{width:100%;padding:12px 8px;font-size:14px}
+  .field select{
+    display:block;
+    width:100%;
+    max-width:100%;
+    height:52px;
+    min-height:52px;
+    font-size:16px !important;
+    line-height:1.2;
+    padding:0 42px 0 14px;
+    border-radius:12px;
+    background-color:#fff;
+    color:#182433;
+  }
+  .card{overflow:visible}
+}
+
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="eyebrow">Matriz • Central</div><h1>Brindes Fim de Ano 2026</h1><p>Escolha três prioridades entre os brindes da sua faixa de tempo de empresa.</p></div></header>
+<main class="wrap">
+<div class="tabs"><button class="tab active" data-tab="choice">Escolha do colaborador</button><button class="tab" data-tab="rh">Relatório RH</button></div>
+
+<section id="choice" class="panel active">
+<div class="card">
+<div class="grid2">
+<div class="field"><label for="employee">Seu nome</label><select id="employee">
+<option value="">Selecione seu nome...</option>
+<option value="ALEXSANDRO CARDOSO DOS SANTOS" data-band="Acima de 15 anos">ALEXSANDRO CARDOSO DOS SANTOS</option>
+<option value="ANDREI PISCIONERI" data-band="7 meses a 1 ano">ANDREI PISCIONERI</option>
+<option value="ANDRESSA CAROLINE ARMILIATO" data-band="7 meses a 1 ano">ANDRESSA CAROLINE ARMILIATO</option>
+<option value="DAIANE BILK REIBERG" data-band="11 a 15 anos">DAIANE BILK REIBERG</option>
+<option value="FREDERICO CARDOSO DOS SANTOS" data-band="Acima de 15 anos">FREDERICO CARDOSO DOS SANTOS</option>
+<option value="JOSE ALCIONE BAYER" data-band="Acima de 15 anos">JOSE ALCIONE BAYER</option>
+<option value="JOSE MEDEIROS DE OLIVEIRA" data-band="7 meses a 1 ano">JOSE MEDEIROS DE OLIVEIRA</option>
+<option value="KATIA CAROLINA DE OLIVEIRA OURIQUES" data-band="6 a 10 anos">KATIA CAROLINA DE OLIVEIRA OURIQUES</option>
+<option value="KELEN CRISTINA UBIALI DALMAS" data-band="6 a 10 anos">KELEN CRISTINA UBIALI DALMAS</option>
+<option value="LIDIANE MAYER" data-band="11 a 15 anos">LIDIANE MAYER</option>
+<option value="LUCIANE MENDES GONÇALVES" data-band="7 meses a 1 ano">LUCIANE MENDES GONÇALVES</option>
+<option value="MARIA ELIZABETH ANGELI SPECK" data-band="Acima de 15 anos">MARIA ELIZABETH ANGELI SPECK</option>
+<option value="MAYARA FERNANDA MATTOS" data-band="2 a 5 anos">MAYARA FERNANDA MATTOS</option>
+<option value="PABLO HESPANHOL PEDRO" data-band="Até 6 meses">PABLO HESPANHOL PEDRO</option>
+<option value="PATRICIA NUNES DE BORBA" data-band="7 meses a 1 ano">PATRICIA NUNES DE BORBA</option>
+<option value="SABRINA MACHADO SANTOS" data-band="7 meses a 1 ano">SABRINA MACHADO SANTOS</option>
+<option value="SIRLEIA SANTIAGO" data-band="Acima de 15 anos">SIRLEIA SANTIAGO</option>
+<option value="TANIA ELISA HEIDRICH" data-band="6 a 10 anos">TANIA ELISA HEIDRICH</option>
+<option value="VANESSA PACHECO VENANC
